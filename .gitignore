@@ -1,3 +1,4 @@
+!.yarn/install-state.gz
 *.log
 .cache
 packages/*/cypress/screenshots
