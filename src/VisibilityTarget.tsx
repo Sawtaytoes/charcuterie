@@ -1,5 +1,4 @@
 import {
-  FunctionComponent,
   JSXElementConstructor,
   memo,
   ReactElement,

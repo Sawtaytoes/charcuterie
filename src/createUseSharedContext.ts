@@ -1,6 +1,5 @@
 import {
   SetStateAction,
-  useAtom,
   WritableAtom,
 } from 'jotai'
 import {
