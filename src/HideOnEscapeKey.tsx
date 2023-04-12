@@ -6,7 +6,6 @@ import {
 } from 'react'
 
 import {
-  Visibilities,
   VisibilityContext,
 } from './VisibilityContext'
 

@@ -3,16 +3,10 @@ import {
   SetStateAction,
   WritableAtom,
 } from 'jotai'
-import {
-  useMemo,
-} from 'react'
 
 import {
   createUseSharedContext,
 } from './createUseSharedContext'
-import {
-  VisibilityContextKey,
-} from './useSharedVisibilityContext'
 import {
   defaultVisibilityControlContextValue,
   VisibilityControlContextProps,

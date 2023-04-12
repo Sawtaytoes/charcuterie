@@ -5,7 +5,7 @@ export const TransplatePropsType<
   childProps: PropsIn
 ) => (
   PropsOut
-),
+)
 
 export const defaultTranslateProps = (
   props,
