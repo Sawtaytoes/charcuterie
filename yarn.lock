@@ -5027,7 +5027,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/react@npm:>=16":
+"@types/react@npm:>=16, @types/react@npm:^18.0.34":
   version: 18.0.34
   resolution: "@types/react@npm:18.0.34"
   dependencies:
@@ -6403,6 +6403,7 @@ __metadata:
     "@testing-library/react-hooks": ^8.0.1
     "@testing-library/user-event": ^14.4.3
     "@types/node": ^18.15.11
+    "@types/react": ^18.0.34
     "@yarnpkg/sdks": ^3.0.0-rc.42
     delay-cli: ^2.0.0
     eslint: ^8.38.0
