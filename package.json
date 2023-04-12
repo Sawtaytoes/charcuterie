@@ -8,11 +8,11 @@
   "scripts": {
     "ci:buildAll": "npm-run-all --sequential ci:test ci:buildPackage",
     "ci:buildPackage": "rollup --config",
-    "ci:buildStorybook": "build-storybook",
+    "ci:buildStorybook": "storybook build",
     "ci:testStorybook": "delay 10 && test-storybook --watch",
     "ci:test": "npm-run-all --race --parallel dev:storybook ci:testStorybook",
     "dev": "dev:storybook",
-    "dev:storybook": "start-storybook --port 6006 --ci",
+    "dev:storybook": "storybook dev --port 6006 --ci",
     "dev:testStorybook": "delay 10 && test-storybook --watch",
     "dev:test": "npm-run-all --parallel dev:storybook dev:testStorybook",
     "start": "yarn && yarn dev"
@@ -60,10 +60,11 @@
     "@storybook/addon-essentials": "^7.0.3",
     "@storybook/addon-interactions": "^7.0.3",
     "@storybook/addon-links": "^7.0.3",
-    "@storybook/builder-vite": "^7.0.3",
+    "@storybook/addon-mdx-gfm": "7.0.3",
     "@storybook/jest": "^0.1.0",
     "@storybook/node-logger": "^7.0.3",
     "@storybook/react": "^7.0.3",
+    "@storybook/react-vite": "7.0.3",
     "@storybook/test-runner": "^0.10.0",
     "@storybook/testing-library": "^0.1.0",
     "@testing-library/jest-dom": "^5.16.5",
@@ -89,6 +90,7 @@
     "rollup-plugin-gzip": "^3.1.0",
     "rollup-plugin-sourcemaps": "^0.6.3",
     "rollup-plugin-terser": "^7.0.2",
+    "storybook": "7.0.3",
     "typescript": "^5.0.4"
   },
   "repository": {

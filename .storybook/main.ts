@@ -1,18 +1,14 @@
 module.exports = {
-  addons: [
-    "@storybook/addon-links",
-    "@storybook/addon-essentials",
-    "@storybook/addon-interactions",
-  ],
-  core: {
-    builder: '@storybook/builder-vite',
+  addons: ["@storybook/addon-links", "@storybook/addon-essentials", "@storybook/addon-interactions", "@storybook/addon-mdx-gfm"],
+  framework: {
+    name: "@storybook/react-vite",
+    options: {}
   },
-  framework: "@storybook/react",
   features: {
-    interactionsDebugger: true,
+    interactionsDebugger: true
   },
-  stories: [
-    "../src/**/*.stories.mdx",
-    "../src/**/*.stories.@(js|jsx|ts|tsx)"
-  ],
-}
+  stories: ["../src/**/*.stories.mdx", "../src/**/*.stories.@(js|jsx|ts|tsx)"],
+  docs: {
+    autodocs: true
+  }
+};
