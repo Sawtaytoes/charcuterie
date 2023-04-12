@@ -56,6 +56,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["@testing-library/react", "virtual:c2c1ce71d738670b727805a51606e34faa255306df014421de5d028a6d5c9c5023d331c3107710e2d316fe6becd4528d14fc105aa68a4b800cfd1133890ce33c#npm:14.0.0"],\
             ["@testing-library/react-hooks", "virtual:c2c1ce71d738670b727805a51606e34faa255306df014421de5d028a6d5c9c5023d331c3107710e2d316fe6becd4528d14fc105aa68a4b800cfd1133890ce33c#npm:8.0.1"],\
             ["@testing-library/user-event", "virtual:c2c1ce71d738670b727805a51606e34faa255306df014421de5d028a6d5c9c5023d331c3107710e2d316fe6becd4528d14fc105aa68a4b800cfd1133890ce33c#npm:14.4.3"],\
+            ["@types/node", "npm:18.15.11"],\
             ["@yarnpkg/sdks", "npm:3.0.0-rc.42"],\
             ["delay-cli", "npm:2.0.0"],\
             ["eslint", "npm:8.38.0"],\
@@ -7316,6 +7317,13 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["@types/node", "npm:17.0.34"]\
           ],\
           "linkType": "HARD"\
+        }],\
+        ["npm:18.15.11", {\
+          "packageLocation": "./.yarn/cache/@types-node-npm-18.15.11-fd8ceaaffd-977b4ad047.zip/node_modules/@types/node/",\
+          "packageDependencies": [\
+            ["@types/node", "npm:18.15.11"]\
+          ],\
+          "linkType": "HARD"\
         }]\
       ]],\
       ["@types/node-fetch", [\
@@ -9171,6 +9179,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["@testing-library/react", "virtual:c2c1ce71d738670b727805a51606e34faa255306df014421de5d028a6d5c9c5023d331c3107710e2d316fe6becd4528d14fc105aa68a4b800cfd1133890ce33c#npm:14.0.0"],\
             ["@testing-library/react-hooks", "virtual:c2c1ce71d738670b727805a51606e34faa255306df014421de5d028a6d5c9c5023d331c3107710e2d316fe6becd4528d14fc105aa68a4b800cfd1133890ce33c#npm:8.0.1"],\
             ["@testing-library/user-event", "virtual:c2c1ce71d738670b727805a51606e34faa255306df014421de5d028a6d5c9c5023d331c3107710e2d316fe6becd4528d14fc105aa68a4b800cfd1133890ce33c#npm:14.4.3"],\
+            ["@types/node", "npm:18.15.11"],\
             ["@yarnpkg/sdks", "npm:3.0.0-rc.42"],\
             ["delay-cli", "npm:2.0.0"],\
             ["eslint", "npm:8.38.0"],\
@@ -17679,7 +17688,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
           "packageDependencies": [\
             ["rollup-plugin-sourcemaps", "virtual:c2c1ce71d738670b727805a51606e34faa255306df014421de5d028a6d5c9c5023d331c3107710e2d316fe6becd4528d14fc105aa68a4b800cfd1133890ce33c#npm:0.6.3"],\
             ["@rollup/pluginutils", "virtual:7bf75e45f971aeb6614fe679218a69e8d9a6eca7addd8a041708e82296d61ce393149f2356688ec00d8cda1ad3bd5fc7d1816eac8355a0c2cb0505ce7b1b06b8#npm:3.1.0"],\
-            ["@types/node", null],\
+            ["@types/node", "npm:18.15.11"],\
             ["@types/rollup", null],\
             ["rollup", "npm:3.20.2"],\
             ["source-map-resolve", "npm:0.6.0"]\
