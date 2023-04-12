@@ -1,6 +1,6 @@
-!.yarn/install-state.gz
 *.log
 .cache
+install-state.gz
 packages/*/cypress/screenshots
 packages/*/cypress/videos
 dist
