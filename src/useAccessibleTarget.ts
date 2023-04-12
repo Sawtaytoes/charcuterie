@@ -27,7 +27,7 @@ export const useAccessibleTarget = (
       id
     )
   )
-  
+
   useEffect(
     () => {
       const unregisterTargetId = (
@@ -35,7 +35,7 @@ export const useAccessibleTarget = (
           uniqueId,
         )
       )
-      
+
       return () => {
         unregisterTargetId()
       }
@@ -45,7 +45,7 @@ export const useAccessibleTarget = (
       registerTargetId,
     ],
   )
-  
+
   return {
     id: uniqueId,
     triggerIds,

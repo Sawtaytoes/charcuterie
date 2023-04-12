@@ -33,5 +33,5 @@ const MemoizedHtmlPickerSelector = (
 )
 
 export {
-  MemoizedHtmlPickerSelector as HtmlPickerSelector
+  MemoizedHtmlPickerSelector as HtmlPickerSelector,
 }

@@ -35,7 +35,7 @@ export const useAccessibleTrigger = (
           uniqueId,
         )
       )
-      
+
       return () => {
         unregisterTriggerId()
       }
@@ -45,7 +45,7 @@ export const useAccessibleTrigger = (
       registerTriggerId,
     ],
   )
-  
+
   return {
     id: uniqueId,
     targetIds,

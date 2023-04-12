@@ -62,9 +62,10 @@ expect
       )
     ) {
       return {
+        message: () => (
+          'only buttons or elements with role button and a valid aria-pressed attribute can be used with .toBePressed().'
+        ),
         pass: false,
-        message: () =>
-          `only buttons or elements with role button and a valid aria-pressed attribute can be used with .toBePressed().`,
       }
     }
 

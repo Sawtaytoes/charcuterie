@@ -51,7 +51,7 @@ const MultiplePickerProvider: (
   value = (
     defaultProps
     .value
-  )
+  ),
 }) => {
   const providerValue = (
     useMemo(

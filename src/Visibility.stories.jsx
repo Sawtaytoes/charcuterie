@@ -386,21 +386,21 @@ export const TargetWithTarget = () => (
       </button>
     </VisibilityTrigger>
 
-      <VisibilityTarget>
-        <VisibilityContent>
-          <VisibilityTrigger>
-            <VisibilityTarget>
-              <HtmlContent>
-                <div className="overlay">
-                  <div modalOlassName="modalContent">
+    <VisibilityTarget>
+      <VisibilityContent>
+        <VisibilityTrigger>
+          <VisibilityTarget>
+            <HtmlContent>
+              <div className="overlay">
+                <div modalOlassName="modalContent">
                     Revealed content
-                  </div>
                 </div>
-              </HtmlContent>
-            </VisibilityTarget>
-          </VisibilityTrigger>
-        </VisibilityContent>
-      </VisibilityTarget>
+              </div>
+            </HtmlContent>
+          </VisibilityTarget>
+        </VisibilityTrigger>
+      </VisibilityContent>
+    </VisibilityTarget>
   </VisibilityProvider>
 )
 
