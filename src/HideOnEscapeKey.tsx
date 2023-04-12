@@ -10,7 +10,6 @@ import {
   VisibilityContext,
 } from './VisibilityContext'
 
-
 const HideOnEscapeKey: (
   FunctionComponent
 ) = () => {

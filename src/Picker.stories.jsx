@@ -60,8 +60,8 @@ const InputOption = ({
   children,
   isSelected,
   name,
-  selectOption,
   optionType,
+  selectOption,
   value,
 }) => (
   <label>
@@ -81,8 +81,8 @@ const InputButtonOption = ({
   children,
   isSelected,
   name,
-  selectOption,
   optionType,
+  selectOption,
 }) => (
   <input
     aria-pressed={isSelected}
@@ -96,8 +96,8 @@ const InputButtonOption = ({
 const InputRoleOption = ({
   children,
   isSelected,
-  selectOption,
   optionType,
+  selectOption,
 }) => (
   <span
     aria-checked={isSelected}

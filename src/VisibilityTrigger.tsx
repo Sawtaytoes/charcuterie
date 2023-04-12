@@ -85,7 +85,7 @@ const VisibilityTrigger: (
     toggle: toggleLinked,
   } = (
     useVisibility({
-      contextKey: linkedContextKey
+      contextKey: linkedContextKey,
     })
   )
 

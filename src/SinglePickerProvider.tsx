@@ -51,7 +51,7 @@ const SinglePickerProvider: (
   value = (
     defaultProps
     .value
-  )
+  ),
 }) => {
   const providerValue = (
     useMemo(
