@@ -5,34 +5,14 @@ module.exports = {
     "@storybook/addon-interactions",
   ],
   core: {
-    builder: 'webpack5',
+    builder: '@storybook/builder-vite',
   },
   framework: "@storybook/react",
   features: {
     interactionsDebugger: true,
   },
-  managerWebpack: (
-    config,
-  ) => {
-    config
-    .target = (
-      'web'
-    )
-
-    return config
-  },
   stories: [
     "../src/**/*.stories.mdx",
     "../src/**/*.stories.@(js|jsx|ts|tsx)"
   ],
-  webpackFinal: (
-    config,
-  ) => {
-    config
-    .target = (
-      'web'
-    )
-
-    return config
-  },
 }
