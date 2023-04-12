@@ -1,0 +1,98 @@
+{
+  "name": "charcuterie",
+  "version": "1.0.0",
+  "description": "Every logic component for all component libraries.",
+  "author": "Kevin Ghadyani",
+  "packageManager": "yarn@3.5.0",
+  "main": "dist/cjs",
+  "scripts": {
+    "ci:buildAll": "npm-run-all --sequential ci:test ci:buildPackage",
+    "ci:buildPackage": "rollup --config",
+    "ci:buildStorybook": "build-storybook",
+    "ci:testStorybook": "delay 10 && test-storybook --watch",
+    "ci:test": "npm-run-all --race --parallel dev:storybook ci:testStorybook",
+    "dev": "dev:storybook",
+    "dev:storybook": "start-storybook --port 6006 --ci",
+    "dev:testStorybook": "delay 10 && test-storybook --watch",
+    "dev:test": "npm-run-all --parallel dev:storybook dev:testStorybook",
+    "start": "yarn && yarn dev"
+  },
+  "browser": "dist/charcuterie.umd.min.js",
+  "umd:main": "dist/charcuterie.umd.js",
+  "module": "dist/esm",
+  "types": "src/index.d.ts",
+  "source": "src",
+  "sideEffects": [
+    "*.expect.js",
+    "*.expect.ts"
+  ],
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "peerDependencies": {
+    "react": ">=16",
+    "typescript": ">=4"
+  },
+  "resolutions": {
+    "jest": "^27.5.1",
+    "jest-runner": "^27.5.1",
+    "jest-environment-node": "27.5.1"
+  },
+  "dependencies": {
+    "@emotion/react": "^11.9.3",
+    "@emotion/styled": "^11.9.3",
+    "@mui/material": "^5.8.4",
+    "jotai": "^1.6.7"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.18.9",
+    "@babel/eslint-parser": "^7.18.9",
+    "@babel/preset-env": "^7.18.9",
+    "@babel/preset-react": "^7.18.6",
+    "@babel/preset-typescript": "^7.18.6",
+    "@ghadyani-eslint/eslint-config-node": "^2.2.10",
+    "@ghadyani-eslint/eslint-config-react": "^2.2.10",
+    "@oneform/react": "^2.0.1",
+    "@rollup/plugin-babel": "^5.3.1",
+    "@rollup/plugin-node-resolve": "^13.3.0",
+    "@storybook/addon-actions": "^6.5.6",
+    "@storybook/addon-essentials": "^6.5.6",
+    "@storybook/addon-interactions": "^6.5.6",
+    "@storybook/addon-links": "^6.5.6",
+    "@storybook/builder-webpack5": "^6.5.6",
+    "@storybook/jest": "^0.0.10",
+    "@storybook/manager-webpack5": "^6.5.6",
+    "@storybook/node-logger": "^6.5.6",
+    "@storybook/react": "^6.5.6",
+    "@storybook/test-runner": "^0.1.1",
+    "@storybook/testing-library": "^0.0.11",
+    "@testing-library/jest-dom": "^5.16.4",
+    "@testing-library/react": "^13.2.0",
+    "@testing-library/react-hooks": "^8.0.0",
+    "@testing-library/user-event": "^14.2.0",
+    "delay-cli": "^2.0.0",
+    "eslint": "^8.20.0",
+    "eslint-plugin-compat": "^4.0.2",
+    "eslint-plugin-cypress": "^2.12.1",
+    "eslint-plugin-import": "^2.26.0",
+    "eslint-plugin-jest": "^26.6.0",
+    "eslint-plugin-react": "^7.30.1",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-sort-destructure-keys": "^1.4.0",
+    "jest": "^28.1.0",
+    "npm-run-all": "^4.1.5",
+    "react": "^18.1.0",
+    "react-dom": "^18.1.0",
+    "rollup": "^2.77.2",
+    "rollup-plugin-analyzer": "^4.0.0",
+    "rollup-plugin-gzip": "^3.0.1",
+    "rollup-plugin-sourcemaps": "^0.6.3",
+    "rollup-plugin-terser": "^7.0.2",
+    "typescript": "^4.9.5"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Sawtaytoes/charcuterie.git"
+  }
+}
