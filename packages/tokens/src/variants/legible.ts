@@ -251,6 +251,8 @@ export const legible: Variant = {
       fast: "100ms",
       normal: "160ms",
       slow: "240ms",
+      loopFast: "660ms",
+      loopSlow: "1200ms",
     },
   },
 

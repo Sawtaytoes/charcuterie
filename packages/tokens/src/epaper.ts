@@ -162,6 +162,14 @@ export const epaperColours: Record<
 /**
  * ePaper refreshes in whole seconds. Every duration is zero, and
  * that is a hard fact about the hardware rather than a preference.
+ *
+ * The loop durations matter more than the transition ones here. A
+ * transition that never fires is invisible; a *looping* animation
+ * on a panel that takes seconds to repaint is a device that looks
+ * broken and a battery that drains. Anything that would loop must
+ * be switched off outright rather than merely set to zero — an
+ * `animation` with a `0ms` duration still holds its first
+ * keyframe, which for a sweep means an empty bar.
  */
 export const epaperMotion = {
   duration: {
@@ -169,6 +177,8 @@ export const epaperMotion = {
     fast: "0ms",
     normal: "0ms",
     slow: "0ms",
+    loopFast: "0ms",
+    loopSlow: "0ms",
   },
   easing: {
     standard: "linear",

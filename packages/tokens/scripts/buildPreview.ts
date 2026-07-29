@@ -822,13 +822,13 @@ const buildEpaperCss = () => [
 ].join("\n")
 
 const html = `<!doctype html>
-<html lang="en" data-variant="hairline" data-scheme="dark" data-density="comfortable">
+<html lang="en" data-variant="daylight" data-scheme="dark" data-density="comfortable">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Charcuterie M0 &mdash; visual directions</title>
 <style>
-${buildVariablesCss(variants, "hairline")}
+${buildVariablesCss(variants, "daylight")}
 ${buildEpaperCss()}
 ${previewStyles}
 
@@ -859,9 +859,9 @@ ${previewStyles}
     <span class="ch-toolbar__label">Variant</span>
     ${
   variants
-    .map((variant, index) => (
+    .map((variant) => (
       `<button class="ch-button ch-button--secondary ch-button--sm" type="button" data-axis="variant" data-value="${variant.name}" aria-pressed="${
-        index === 0 ? "true" : "false"
+        variant.name === "daylight" ? "true" : "false"
       }">${escapeHtml(variant.title)}</button>`
     ))
     .join("\n    ")

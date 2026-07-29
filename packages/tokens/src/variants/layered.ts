@@ -252,6 +252,8 @@ export const layered: Variant = {
       fast: "140ms",
       normal: "220ms",
       slow: "340ms",
+      loopFast: "780ms",
+      loopSlow: "1500ms",
     },
     easing: {
       // Overshoots slightly — this is the "springy" in the bet.
