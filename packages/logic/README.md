@@ -119,10 +119,10 @@ Mutation-checked, because a green suite that cannot fail proves nothing:
 | multiset → plain `Set` in `registrations.ts` | 15 core properties fail |
 | Preact `useStoreValue` stops subscribing | 10 Preact properties fail, React unaffected |
 
-> **Sandbox note.** `PLAYWRIGHT_BROWSERS_PATH` points at `/opt/pw-browsers`, which ships
-> Chromium build 1228; this repo's Playwright wants 1234. Run the browser project with
-> `PLAYWRIGHT_BROWSERS_PATH="$HOME/.cache/ms-playwright"` until the sandbox image catches
-> up.
+> **Sandbox note, corrected 2026-07-29 (M3).** `PLAYWRIGHT_BROWSERS_PATH` points at
+> `/opt/pw-browsers`, which now ships **both** chromium 1234 and
+> `chromium_headless_shell-1234`. No override is needed, and the one M2 recommended
+> (`$HOME/.cache/ms-playwright`) now *breaks* the run — that directory no longer exists.
 
 ## What is deliberately not here
 
