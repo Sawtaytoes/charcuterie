@@ -1,0 +1,18 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "types": ["node"],
+    "noEmit": true,
+    // No JSX anywhere in this package, deliberately. The
+    // conformance harness mounts a one-line host component with
+    // `createElement`, which means the same test file works for
+    // React and Preact without a JSX transform, two Vite plugins,
+    // or an `jsxImportSource` per project. M3 (`@charcuterie/ui`)
+    // is where JSX arrives.
+    "jsx": "preserve"
+  },
+  "include": ["src/**/*.ts", "*.ts"]
+}
