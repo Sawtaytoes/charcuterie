@@ -7,14 +7,8 @@
  * to stay understandable when a token role is added at 11pm.
  */
 
-import {
-  mkdirSync,
-  writeFileSync,
-} from "node:fs"
-import {
-  dirname,
-  join,
-} from "node:path"
+import { mkdirSync, writeFileSync } from "node:fs"
+import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 
 import {
@@ -35,9 +29,7 @@ import { variants } from "../src/variants/index.ts"
 const DEFAULT_VARIANT = "daylight"
 
 const distDirectory = join(
-  dirname(
-    dirname(fileURLToPath(import.meta.url)),
-  ),
+  dirname(dirname(fileURLToPath(import.meta.url))),
   "dist",
 )
 
@@ -46,10 +38,7 @@ mkdirSync(distDirectory, { recursive: true })
 const artifacts = [
   {
     name: "variables.css",
-    contents: buildVariablesCss(
-      variants,
-      DEFAULT_VARIANT,
-    ),
+    contents: buildVariablesCss(variants, DEFAULT_VARIANT),
   },
   {
     name: "theme.css",
@@ -57,18 +46,13 @@ const artifacts = [
   },
   {
     name: "tokens.json",
-    contents: `${
-      JSON.stringify(
-        Object.fromEntries(
-          variants.map((variant) => [
-            variant.name,
-            variant,
-          ]),
-        ),
-        null,
-        2,
-      )
-    }\n`,
+    contents: `${JSON.stringify(
+      Object.fromEntries(
+        variants.map((variant) => [variant.name, variant]),
+      ),
+      null,
+      2,
+    )}\n`,
   },
 ]
 

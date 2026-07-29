@@ -127,25 +127,18 @@ export const epaperColours: Record<
       strong: SPECTRA_6.black,
       focus: SPECTRA_6.black,
     },
-    intent: (
-      [
-        "neutral",
-        "accent",
-        "success",
-        "warning",
-        "danger",
-        "info",
-      ] as IntentName[]
-    ).reduce(
-      (intents, name) => ({
-        ...intents,
-        [name]: buildIntent(SPECTRA_6.black),
-      }),
-      {} as Record<
-        IntentName,
-        Record<IntentRole, string>
-      >,
-    ),
+    intent: Object.fromEntries(
+      (
+        [
+          "neutral",
+          "accent",
+          "success",
+          "warning",
+          "danger",
+          "info",
+        ] as IntentName[]
+      ).map((name) => [name, buildIntent(SPECTRA_6.black)]),
+    ) as Record<IntentName, Record<IntentRole, string>>,
     focus: {
       ring: SPECTRA_6.black,
       ringOffset: SPECTRA_6.white,

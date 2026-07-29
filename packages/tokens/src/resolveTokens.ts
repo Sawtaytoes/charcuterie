@@ -39,10 +39,7 @@ export type ResolvedTokens = {
   focusRing: Variant["focusRing"]
 }
 
-const scaleRem = (
-  value: string,
-  multiplier: number,
-) => {
+const scaleRem = (value: string, multiplier: number) => {
   const match = /^(-?[\d.]+)rem$/.exec(value)
 
   if (!match) {
@@ -50,9 +47,8 @@ const scaleRem = (
   }
 
   return `${
-    Math.round(
-      Number(match[1]) * multiplier * 10000,
-    ) / 10000
+    Math.round(Number(match[1]) * multiplier * 10000) /
+    10000
   }rem`
 }
 
@@ -62,12 +58,12 @@ const scaleFontSizes = (
 ): TypographyTokens => ({
   ...typography,
   fontSize: Object.fromEntries(
-    Object
-      .entries(typography.fontSize)
-      .map(([step, value]) => [
+    Object.entries(typography.fontSize).map(
+      ([step, value]) => [
         step,
         scaleRem(value, multiplier),
-      ]),
+      ],
+    ),
   ) as TypographyTokens["fontSize"],
 })
 
@@ -80,11 +76,10 @@ const scaleFontSizes = (
 const resolveControl = (
   variant: Variant,
   density: Density,
-): ControlTokens => (
+): ControlTokens =>
   density === "comfortable"
     ? variant.control
     : densityControl[density]
-)
 
 export const resolveTokens = ({
   density = "comfortable",
@@ -99,9 +94,9 @@ export const resolveTokens = ({
 
   if (!variant) {
     throw new Error(
-      `Unknown variant "${variantName}". Known: ${
-        [...variantsByName.keys()].join(", ")
-      }`,
+      `Unknown variant "${variantName}". Known: ${[
+        ...variantsByName.keys(),
+      ].join(", ")}`,
     )
   }
 

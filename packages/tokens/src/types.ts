@@ -17,10 +17,7 @@
 
 export type Scheme = "light" | "dark"
 
-export type Density =
-  | "comfortable"
-  | "compact"
-  | "kiosk"
+export type Density = "comfortable" | "compact" | "kiosk"
 
 /**
  * The generalization of ripdeck's `TONE_CLASS` map, which is
@@ -101,10 +98,7 @@ export type SchemeColours = {
   surface: Record<SurfaceRole, string>
   content: Record<ContentRole, string>
   border: Record<BorderRole, string>
-  intent: Record<
-    IntentName,
-    Record<IntentRole, string>
-  >
+  intent: Record<IntentName, Record<IntentRole, string>>
   focus: {
     ring: string
     ringOffset: string
@@ -150,18 +144,12 @@ export type TypographyTokens = {
     "xs" | "sm" | "md" | "lg" | "xl" | "2xl",
     string
   >
-  lineHeight: Record<
-    "tight" | "normal" | "relaxed",
-    string
-  >
+  lineHeight: Record<"tight" | "normal" | "relaxed", string>
   fontWeight: Record<
     "normal" | "medium" | "semibold" | "bold",
     string
   >
-  letterSpacing: Record<
-    "tight" | "normal" | "wide",
-    string
-  >
+  letterSpacing: Record<"tight" | "normal" | "wide", string>
 }
 
 export type ControlTokens = {
