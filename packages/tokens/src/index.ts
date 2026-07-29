@@ -9,29 +9,26 @@
  */
 
 export {
+  buildColourProperties,
+  buildDensityProperties,
+  buildThemeCss,
+  buildVariablesCss,
+} from "./buildCss.ts"
+export type { ContrastResult } from "./contrast.ts"
+export {
   getApcaLc,
   getContrast,
   getContrastRatio,
 } from "./contrast.ts"
-export type { ContrastResult } from "./contrast.ts"
-
+export type { ContrastCheck } from "./contrastAudit.ts"
 export {
   auditScheme,
   getAliasDrift,
   getFailures,
   INTENT_NAMES,
 } from "./contrastAudit.ts"
-export type { ContrastCheck } from "./contrastAudit.ts"
-
-export {
-  buildColourProperties,
-  buildDensityProperties,
-  buildThemeCss,
-  buildVariablesCss,
-} from "./buildCss.ts"
-
-export { resolveTokens } from "./resolveTokens.ts"
 export type { ResolvedTokens } from "./resolveTokens.ts"
+export { resolveTokens } from "./resolveTokens.ts"
 
 export {
   container,
@@ -41,16 +38,6 @@ export {
   screen,
   space,
 } from "./scales.ts"
-
-export {
-  daylight,
-  hairline,
-  layered,
-  legible,
-  variants,
-  variantsByName,
-} from "./variants/index.ts"
-
 export type {
   BorderRole,
   ContentRole,
@@ -68,3 +55,11 @@ export type {
   TypographyTokens,
   Variant,
 } from "./types.ts"
+export {
+  daylight,
+  hairline,
+  layered,
+  legible,
+  variants,
+  variantsByName,
+} from "./variants/index.ts"

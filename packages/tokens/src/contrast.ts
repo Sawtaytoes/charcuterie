@@ -61,28 +61,27 @@ const parseHex = (hex: string): Rgb => {
 const toLinear = (channel: number) => {
   const srgb = channel / 255
 
-  return (
-    srgb <= 0.04045
-      ? srgb / 12.92
-      : ((srgb + 0.055) / 1.055) ** 2.4
-  )
+  return srgb <= 0.04045
+    ? srgb / 12.92
+    : ((srgb + 0.055) / 1.055) ** 2.4
 }
 
-const getRelativeLuminance = (rgb: Rgb) => (
-  0.2126 * toLinear(rgb[0])
-  + 0.7152 * toLinear(rgb[1])
-  + 0.0722 * toLinear(rgb[2])
-)
+const getRelativeLuminance = (rgb: Rgb) =>
+  0.2126 * toLinear(rgb[0]) +
+  0.7152 * toLinear(rgb[1]) +
+  0.0722 * toLinear(rgb[2])
 
 export const getContrastRatio = (
   foreground: string,
   background: string,
 ) => {
-  const foregroundLuminance =
-    getRelativeLuminance(parseHex(foreground))
+  const foregroundLuminance = getRelativeLuminance(
+    parseHex(foreground),
+  )
 
-  const backgroundLuminance =
-    getRelativeLuminance(parseHex(background))
+  const backgroundLuminance = getRelativeLuminance(
+    parseHex(background),
+  )
 
   const lighter = Math.max(
     foregroundLuminance,
@@ -112,7 +111,7 @@ const REVERSE_TEXT = 0.62
 const REVERSE_BACKGROUND = 0.65
 
 const BLACK_THRESHOLD = 0.022
-const BLACK_CLAMP = 1.414
+const BLACK_CLAMP = Math.SQRT2
 const SCALE_BLACK_ON_WHITE = 1.14
 const SCALE_WHITE_ON_BLACK = 1.14
 const LOW_OFFSET = 0.027
@@ -121,17 +120,15 @@ const DELTA_Y_MIN = 0.0005
 
 const getApcaLuminance = (rgb: Rgb) => {
   const luminance =
-    RED_COEFFICIENT * (rgb[0] / 255) ** MAIN_TRC
-    + GREEN_COEFFICIENT * (rgb[1] / 255) ** MAIN_TRC
-    + BLUE_COEFFICIENT * (rgb[2] / 255) ** MAIN_TRC
+    RED_COEFFICIENT * (rgb[0] / 255) ** MAIN_TRC +
+    GREEN_COEFFICIENT * (rgb[1] / 255) ** MAIN_TRC +
+    BLUE_COEFFICIENT * (rgb[2] / 255) ** MAIN_TRC
 
   // Soft-clamp near black, where display flare dominates.
-  return (
-    luminance < BLACK_THRESHOLD
-      ? luminance
-        + (BLACK_THRESHOLD - luminance) ** BLACK_CLAMP
-      : luminance
-  )
+  return luminance < BLACK_THRESHOLD
+    ? luminance +
+        (BLACK_THRESHOLD - luminance) ** BLACK_CLAMP
+    : luminance
 }
 
 /**
@@ -152,45 +149,38 @@ export const getApcaLc = (
   )
 
   if (
-    Math.abs(backgroundLuminance - textLuminance)
-    < DELTA_Y_MIN
+    Math.abs(backgroundLuminance - textLuminance) <
+    DELTA_Y_MIN
   ) {
     return 0
   }
 
   if (backgroundLuminance > textLuminance) {
     const contrast =
-      (backgroundLuminance ** NORM_BACKGROUND
-        - textLuminance ** NORM_TEXT)
-      * SCALE_BLACK_ON_WHITE
+      (backgroundLuminance ** NORM_BACKGROUND -
+        textLuminance ** NORM_TEXT) *
+      SCALE_BLACK_ON_WHITE
 
-    return (
-      contrast < LOW_CLIP
-        ? 0
-        : (contrast - LOW_OFFSET) * 100
-    )
+    return contrast < LOW_CLIP
+      ? 0
+      : (contrast - LOW_OFFSET) * 100
   }
 
   const contrast =
-    (backgroundLuminance ** REVERSE_BACKGROUND
-      - textLuminance ** REVERSE_TEXT)
-    * SCALE_WHITE_ON_BLACK
+    (backgroundLuminance ** REVERSE_BACKGROUND -
+      textLuminance ** REVERSE_TEXT) *
+    SCALE_WHITE_ON_BLACK
 
-  return (
-    contrast > -LOW_CLIP
-      ? 0
-      : (contrast + LOW_OFFSET) * 100
-  )
+  return contrast > -LOW_CLIP
+    ? 0
+    : (contrast + LOW_OFFSET) * 100
 }
 
 export const getContrast = (
   foreground: string,
   background: string,
 ): ContrastResult => {
-  const ratio = getContrastRatio(
-    foreground,
-    background,
-  )
+  const ratio = getContrastRatio(foreground, background)
 
   return {
     ratio,

@@ -21,32 +21,27 @@ import { variants } from "../src/variants/index.ts"
 
 const SCHEMES: Scheme[] = ["light", "dark"]
 
-const formatLc = (lc: number) => (
+const formatLc = (lc: number) =>
   `${lc < 0 ? "" : "+"}${lc.toFixed(1)}`
-)
 
 let failureCount = 0
 
 for (const variant of variants) {
   for (const scheme of SCHEMES) {
-    const checks = auditScheme(
-      variant.schemes[scheme],
-    )
+    const checks = auditScheme(variant.schemes[scheme])
 
     const failures = getFailures(checks)
-    const drift = getAliasDrift(
-      variant.schemes[scheme],
-    )
+    const drift = getAliasDrift(variant.schemes[scheme])
 
     failureCount += failures.length + drift.length
 
     const worst = checks
       .filter((entry) => !entry.isExempt)
-      .reduce((lowest, entry) => (
+      .reduce((lowest, entry) =>
         entry.result.ratio < lowest.result.ratio
           ? entry
-          : lowest
-      ))
+          : lowest,
+      )
 
     console.log(
       `\n${variant.name} / ${scheme} — ${checks.length} pairs, ${
@@ -57,9 +52,9 @@ for (const variant of variants) {
     console.log(
       `  tightest passing margin: ${worst.label} ` +
         `${worst.result.ratio.toFixed(2)}:1 ` +
-        `(needs ${worst.threshold}, APCA Lc ${
-          formatLc(worst.result.lc)
-        })`,
+        `(needs ${worst.threshold}, APCA Lc ${formatLc(
+          worst.result.lc,
+        )})`,
     )
 
     for (const message of drift) {

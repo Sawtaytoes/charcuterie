@@ -17,14 +17,8 @@
  * of previewing components before any component exists.
  */
 
-import {
-  mkdirSync,
-  writeFileSync,
-} from "node:fs"
-import {
-  dirname,
-  join,
-} from "node:path"
+import { mkdirSync, writeFileSync } from "node:fs"
+import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 
 import {
@@ -44,22 +38,18 @@ import {
   posterTiles,
   queueRows,
 } from "../src/fixtures/fleetData.ts"
-import { previewStyles } from "./previewStyles.ts"
-import type {
-  Scheme,
-  Variant,
-} from "../src/types.ts"
+import type { Scheme, Variant } from "../src/types.ts"
 import { variants } from "../src/variants/index.ts"
+import { previewStyles } from "./previewStyles.ts"
 
 const SCHEMES: Scheme[] = ["dark", "light"]
 
-const escapeHtml = (text: string) => (
+const escapeHtml = (text: string) =>
   text
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
-)
 
 // ---------------------------------------------------------------
 // Fixture → intent mapping
@@ -105,9 +95,8 @@ const BAY_FILL: Record<string, string> = {
 // `ReactNode` — but it does have to prove an icon button works.
 // ---------------------------------------------------------------
 
-const icon = (paths: string) => (
+const icon = (paths: string) =>
   `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${paths}</svg>`
-)
 
 const ICON_REFRESH = icon(
   '<path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/>',
@@ -151,8 +140,7 @@ const renderButtonRow = () => `
 
 const renderBadges = () => `
 <div class="ch-row">
-  ${
-  [
+  ${[
     "neutral",
     "accent",
     "success",
@@ -160,22 +148,21 @@ const renderBadges = () => `
     "danger",
     "info",
   ]
-    .map((intent) => (
-      `<span class="ch-badge ch-badge--${intent}"><span class="ch-dot" aria-hidden="true"></span>${intent}</span>`
-    ))
-    .join("\n  ")
-}
+    .map(
+      (intent) =>
+        `<span class="ch-badge ch-badge--${intent}"><span class="ch-dot" aria-hidden="true"></span>${intent}</span>`,
+    )
+    .join("\n  ")}
 </div>
 <div class="ch-row" style="margin-block-start: var(--space-3);">
-  ${
-  jobSteps
-    .map((step) => (
-      `<span class="ch-badge ch-badge--${
-        STEP_INTENT[step.status]
-      }">${step.status}</span>`
-    ))
-    .join("\n  ")
-}
+  ${jobSteps
+    .map(
+      (step) =>
+        `<span class="ch-badge ch-badge--${
+          STEP_INTENT[step.status]
+        }">${step.status}</span>`,
+    )
+    .join("\n  ")}
 </div>
 <p class="ch-caption" style="margin-block-start: var(--space-3);">
   Real <code>statusClassMap</code> keys from <code>mux-magic/&hellip;/StatusBadge.tsx</code>.<br>
@@ -214,10 +201,11 @@ const renderProgress = () => `
   </div>
 </div>`
 
-const renderBays = (limit = bayRows.length) => (
+const renderBays = (limit = bayRows.length) =>
   bayRows
     .slice(0, limit)
-    .map((row) => `
+    .map(
+      (row) => `
 <div class="ch-bay">
   <div class="ch-bay__head">
     <span class="ch-bay__name">${escapeHtml(row.bay)}</span>
@@ -225,53 +213,54 @@ const renderBays = (limit = bayRows.length) => (
     ${
       row.verdict
         ? `<span class="ch-badge ch-badge--${
-          VERDICT_INTENT[row.verdict.tone]
-        }">${
-          row.verdict.confidence ?? row.verdict.tone
-        }</span>`
+            VERDICT_INTENT[row.verdict.tone]
+          }">${
+            row.verdict.confidence ?? row.verdict.tone
+          }</span>`
         : `<span class="ch-badge ch-badge--info">ripping</span>`
     }
   </div>
   ${
-      row.state === "indeterminate"
-        ? `<div class="ch-progress ch-progress--indeterminate" role="progressbar" aria-label="Working, no measurable progress yet"></div>`
-        : row.state === "idle"
+    row.state === "indeterminate"
+      ? `<div class="ch-progress ch-progress--indeterminate" role="progressbar" aria-label="Working, no measurable progress yet"></div>`
+      : row.state === "idle"
         ? ""
-        : `<div class="ch-progress" role="progressbar" aria-valuenow="${row.percent}" aria-valuemin="0" aria-valuemax="100" aria-label="${
-          escapeHtml(row.bay)
-        } rip progress"><div class="ch-progress__fill ch-progress__fill--${
-          BAY_FILL[row.state]
-        }" style="inline-size: ${row.percent}%;"></div></div>`
-    }
+        : `<div class="ch-progress" role="progressbar" aria-valuenow="${row.percent}" aria-valuemin="0" aria-valuemax="100" aria-label="${escapeHtml(
+            row.bay,
+          )} rip progress"><div class="ch-progress__fill ch-progress__fill--${
+            BAY_FILL[row.state]
+          }" style="inline-size: ${row.percent}%;"></div></div>`
+  }
   <div class="ch-bay__detail">${escapeHtml(row.detail)}</div>
   ${
-      row.verdict
-        ? `<div class="ch-verdict ch-verdict--${row.verdict.tone}">${
-          escapeHtml(row.verdict.message)
-        }</div>`
-        : ""
-    }
-</div>`)
+    row.verdict
+      ? `<div class="ch-verdict ch-verdict--${row.verdict.tone}">${escapeHtml(
+          row.verdict.message,
+        )}</div>`
+      : ""
+  }
+</div>`,
+    )
     .join("\n")
-)
 
-const renderSteps = (limit = jobSteps.length) => (
+const renderSteps = (limit = jobSteps.length) =>
   jobSteps
     .slice(0, limit)
-    .map((step) => `
+    .map(
+      (step) => `
 <div class="ch-step">
   <span class="ch-badge ch-badge--${
-      STEP_INTENT[step.status]
-    }">${step.status}</span>
-  <span class="ch-step__name">${
-      escapeHtml(step.command)
-    }</span>
-  <span class="ch-step__detail">${
-      escapeHtml(step.detail)
-    }</span>
-</div>`)
+    STEP_INTENT[step.status]
+  }">${step.status}</span>
+  <span class="ch-step__name">${escapeHtml(
+    step.command,
+  )}</span>
+  <span class="ch-step__detail">${escapeHtml(
+    step.detail,
+  )}</span>
+</div>`,
+    )
     .join("\n")
-)
 
 const renderEmptyState = () => `
 <div class="ch-empty">
@@ -285,19 +274,19 @@ const renderEmptyState = () => `
 
 const renderLive = () => `
 <div class="ch-stack">
-  ${
-  connectionStates
-    .map((state) => `
+  ${connectionStates
+    .map(
+      (state) => `
   <span class="ch-live ch-live--${state.status}">
-    <span class="ch-badge ch-badge--${state.intent}"><span class="ch-dot" aria-hidden="true"></span><span class="ch-live__label">${
-      escapeHtml(state.label)
-    }</span></span>
-    <span class="ch-live__detail">${
-      escapeHtml(state.detail)
-    }</span>
-  </span>`)
-    .join("\n")
-}
+    <span class="ch-badge ch-badge--${state.intent}"><span class="ch-dot" aria-hidden="true"></span><span class="ch-live__label">${escapeHtml(
+      state.label,
+    )}</span></span>
+    <span class="ch-live__detail">${escapeHtml(
+      state.detail,
+    )}</span>
+  </span>`,
+    )
+    .join("\n")}
 </div>
 <p class="ch-caption" style="margin-block-start: var(--space-3);">
   Four repos hand-roll this differently today. It is also the thing users read most.
@@ -313,25 +302,23 @@ const renderTabs = () => `
 
 const renderTiles = (limit = posterTiles.length) => `
 <div class="ch-tiles">
-  ${
-  posterTiles
+  ${posterTiles
     .slice(0, limit)
-    .map((tile) => `
+    .map(
+      (tile) => `
   <div class="ch-tile">
     <div class="ch-tile__art">${
-      tile.isArtworkMissing
-        ? "<span>no artwork</span>"
-        : ""
+      tile.isArtworkMissing ? "<span>no artwork</span>" : ""
     }</div>
-    <div class="ch-tile__title">${
-      escapeHtml(tile.title)
-    }</div>
-    <div class="ch-tile__meta">${
-      escapeHtml(tile.meta)
-    }</div>
-  </div>`)
-    .join("\n")
-}
+    <div class="ch-tile__title">${escapeHtml(
+      tile.title,
+    )}</div>
+    <div class="ch-tile__meta">${escapeHtml(
+      tile.meta,
+    )}</div>
+  </div>`,
+    )
+    .join("\n")}
 </div>`
 
 const renderModal = () => `
@@ -362,50 +349,46 @@ const renderSkeletons = () => `
 </div>`
 
 const renderLog = () => `
-<div class="ch-log" role="log" aria-label="Rip log">${
-  logLines
-    .map((line) => (
+<div class="ch-log" role="log" aria-label="Rip log">${logLines
+  .map(
+    (line) =>
       `<div class="ch-log__line${
         line.includes("Error") || line.includes("aborted")
           ? " ch-log__line--error"
           : line.includes("retry")
-          ? " ch-log__line--warn"
-          : ""
-      }">${escapeHtml(line)}</div>`
-    ))
-    .join("")
-}</div>`
+            ? " ch-log__line--warn"
+            : ""
+      }">${escapeHtml(line)}</div>`,
+  )
+  .join("")}</div>`
 
 const renderQueue = () => `
 <div class="ch-stack">
-  ${
-  queueRows
-    .map((row) => `
+  ${queueRows
+    .map(
+      (row) => `
   <div class="ch-step">
-    <span class="ch-step__name" style="font-family: var(--font-sans); font-weight: var(--font-weight-medium);">${
-      escapeHtml(row.title)
-    }</span>
-    <span class="ch-step__detail">${
-      escapeHtml(row.meta)
-    }</span>
+    <span class="ch-step__name" style="font-family: var(--font-sans); font-weight: var(--font-weight-medium);">${escapeHtml(
+      row.title,
+    )}</span>
+    <span class="ch-step__detail">${escapeHtml(
+      row.meta,
+    )}</span>
     ${
       row.isPinned
         ? '<span class="ch-badge ch-badge--accent">pinned</span>'
         : ""
     }
-  </div>`)
-    .join("\n")
-}
+  </div>`,
+    )
+    .join("\n")}
 </div>`
 
 // ---------------------------------------------------------------
 // The board
 // ---------------------------------------------------------------
 
-const panel = (
-  title: string,
-  body: string,
-) => `
+const panel = (title: string, body: string) => `
 <div class="ch-panel">
   <h3>${title}</h3>
   ${body}
@@ -423,18 +406,14 @@ const renderFullBoard = () => `
   ${panel("Spinner &amp; Skeleton", renderSkeletons())}
   ${panel("Badge / StatusPill", renderBadges())}
   ${panel("ProgressBar", renderProgress())}
-  ${
-  panel(
+  ${panel(
     "ripdeck bays &mdash; real verdict text, including a mid-rip and a failure",
     renderBays(),
-  )
-}
-  ${
-  panel(
+  )}
+  ${panel(
     "mux-magic sequence &mdash; real command names, mid-run",
     renderSteps(),
-  )
-}
+  )}
   ${panel("LiveStatusIndicator", renderLive())}
   ${panel("Tabs", renderTabs())}
   ${panel("EmptyState", renderEmptyState())}
@@ -442,13 +421,12 @@ const renderFullBoard = () => `
   ${panel("MediaTile grid", renderTiles())}
   ${panel("plex-channels queue", renderQueue())}
   ${panel("LogViewer", renderLog())}
-  ${
-  panel(
+  ${panel(
     "Card &mdash; identical markup at three container widths",
     `<div class="ch-row" style="align-items: stretch;">
-      ${
-      ["15rem", "24rem", "34rem"]
-        .map((width) => `
+      ${["15rem", "24rem", "34rem"]
+        .map(
+          (width) => `
       <div style="inline-size: ${width};">
         <div class="ch-caption" style="margin-block-end: var(--space-2);">container: ${width}</div>
         <div class="ch-card">
@@ -461,26 +439,23 @@ const renderFullBoard = () => `
             <div class="ch-progress__fill ch-progress__fill--running" style="inline-size: 68%;"></div>
           </div>
         </div>
-      </div>`)
-        .join("")
-    }
+      </div>`,
+        )
+        .join("")}
     </div>
     <p class="ch-caption" style="margin-block-start: var(--space-3);">
       The header only splits into two columns past 26rem of <em>container</em> width &mdash; not viewport width.
       Resizing the window cannot demonstrate this, which is why the three are shown side by side.
     </p>`,
-  )
-}
-  ${
-  panel(
+  )}
+  ${panel(
     "Form control &amp; focus",
     `<div class="ch-row" style="align-items: flex-start;">
       <div style="inline-size: 16rem;"><input class="ch-input" placeholder="Filter bays&hellip;" aria-label="Filter bays"></div>
       <div style="inline-size: 16rem;"><input class="ch-input" value="not-a-path" aria-invalid="true" aria-label="Output path"></div>
       <span class="ch-metric" data-pair="border.strong on surface.raised"></span>
     </div>`,
-  )
-}
+  )}
 </div>`
 
 // ---------------------------------------------------------------
@@ -489,20 +464,20 @@ const renderFullBoard = () => `
 
 const renderMiniBoard = () => `
 ${renderTabs()}
-<div style="margin-block-start: var(--space-3);">${
-  renderBays(3)
-}</div>
-<div style="margin-block-start: var(--space-3);">${
-  renderSteps(4)
-}</div>
+<div style="margin-block-start: var(--space-3);">${renderBays(
+  3,
+)}</div>
+<div style="margin-block-start: var(--space-3);">${renderSteps(
+  4,
+)}</div>
 <div class="ch-row" style="margin-block-start: var(--space-4);">
   <button class="ch-button ch-button--primary" type="button">Start rip</button>
   <button class="ch-button ch-button--secondary" type="button">Details</button>
   <button class="ch-button ch-button--danger" type="button">Abort</button>
 </div>
-<div style="margin-block-start: var(--space-4);">${
-  renderTiles(3)
-}</div>`
+<div style="margin-block-start: var(--space-4);">${renderTiles(
+  3,
+)}</div>`
 
 /**
  * The runbook mandates showing the current UI alongside the
@@ -569,20 +544,20 @@ const renderCompare = () => `
     which is exactly how a real app will carry them.
   </p>
   <div class="ch-compare" id="ch-compare">
-    ${
-  variants
-    .map((variant) => `
+    ${variants
+      .map(
+        (variant) => `
     <div class="ch-compare__cell" data-variant="${variant.name}" data-scheme="dark" data-density="comfortable" data-compare-cell>
-      <div class="ch-compare__name">${
-      escapeHtml(variant.title)
-    }</div>
-      <div class="ch-compare__desc">${
-      escapeHtml(variant.description)
-    }</div>
+      <div class="ch-compare__name">${escapeHtml(
+        variant.title,
+      )}</div>
+      <div class="ch-compare__desc">${escapeHtml(
+        variant.description,
+      )}</div>
       ${renderMiniBoard()}
-    </div>`)
-    .join("")
-}
+    </div>`,
+      )
+      .join("")}
     ${renderControls()}
   </div>
 </div>`
@@ -616,9 +591,9 @@ const FRAMES = [
     height: 500,
     isCircular: false,
     density: "comfortable",
-    body: `${renderTabs()}<div style="margin-block-start: var(--space-3);">${
-      renderBays(3)
-    }</div>`,
+    body: `${renderTabs()}<div style="margin-block-start: var(--space-3);">${renderBays(
+      3,
+    )}</div>`,
   },
   {
     label: "1920x1080 - desktop (cropped)",
@@ -626,9 +601,9 @@ const FRAMES = [
     height: 420,
     isCircular: false,
     density: "compact",
-    body: `<div style="margin-block-start: var(--space-2);">${
-      renderSteps(8)
-    }</div>`,
+    body: `<div style="margin-block-start: var(--space-2);">${renderSteps(
+      8,
+    )}</div>`,
   },
   {
     label: "xander - TV across a room (kiosk density)",
@@ -649,27 +624,25 @@ const renderFrames = () => `
     variant and scheme selected above.
   </p>
   <div class="ch-frames">
-    ${
-  FRAMES
-    .map((frame) => `
+    ${FRAMES.map(
+      (frame) => `
     <div class="ch-frame">
-      <div class="ch-frame__label">${
-      escapeHtml(frame.label)
-    }</div>
+      <div class="ch-frame__label">${escapeHtml(
+        frame.label,
+      )}</div>
       <div class="ch-frame__viewport${
-      frame.isCircular
-        ? " ch-frame__viewport--circular"
-        : ""
-    }" data-frame data-density="${frame.density}" data-scheme="dark" style="inline-size: ${frame.width}px; block-size: ${frame.height}px;">
+        frame.isCircular
+          ? " ch-frame__viewport--circular"
+          : ""
+      }" data-frame data-density="${frame.density}" data-scheme="dark" style="inline-size: ${frame.width}px; block-size: ${frame.height}px;">
         <div class="ch-frame__inner"${
-      frame.isCircular
-        ? ' style="display:flex; align-items:center; justify-content:center;"'
-        : ""
-    }>${frame.body}</div>
+          frame.isCircular
+            ? ' style="display:flex; align-items:center; justify-content:center;"'
+            : ""
+        }>${frame.body}</div>
       </div>
-    </div>`)
-    .join("")
-}
+    </div>`,
+    ).join("")}
 
     <div class="ch-frame">
       <div class="ch-frame__label">800x480 - Spectra 6 ePaper (fixed profile, does not follow the axes)</div>
@@ -697,9 +670,7 @@ const renderContrastTable = (
   variant: Variant,
   scheme: Scheme,
 ) => {
-  const checks = auditScheme(
-    variant.schemes[scheme],
-  )
+  const checks = auditScheme(variant.schemes[scheme])
 
   const failures = getFailures(checks)
 
@@ -711,44 +682,44 @@ const renderContrastTable = (
     ${escapeHtml(variant.title)} / ${scheme}
     &mdash; ${checks.length} pairs,
     ${
-    failures.length === 0
-      ? "all clear"
-      : `<span style="color: var(--color-intent-danger-content);">${failures.length} failing</span>`
-  }
+      failures.length === 0
+        ? "all clear"
+        : `<span style="color: var(--color-intent-danger-content);">${failures.length} failing</span>`
+    }
   </summary>
   <table class="ch-table" style="margin-block-start: var(--space-4);">
     <thead>
       <tr><th>Pair</th><th>Colours</th><th>WCAG 2.2</th><th>Needs</th><th>APCA Lc</th><th>Verdict</th></tr>
     </thead>
     <tbody>
-      ${
-    checks
-      .map((entry) => `
+      ${checks
+        .map(
+          (entry) => `
       <tr>
         <td>${escapeHtml(entry.label)}</td>
         <td class="ch-num">
           <span class="ch-swatch" style="background:${entry.foreground}"></span>
           <span class="ch-swatch" style="background:${entry.background}"></span>
         </td>
-        <td class="ch-num">${
-        entry.result.ratio.toFixed(2)
-      }:1</td>
+        <td class="ch-num">${entry.result.ratio.toFixed(
+          2,
+        )}:1</td>
         <td class="ch-num">${entry.threshold}:1</td>
         <td class="ch-num">${
-        entry.result.lc < 0 ? "" : "+"
-      }${entry.result.lc.toFixed(1)}</td>
+          entry.result.lc < 0 ? "" : "+"
+        }${entry.result.lc.toFixed(1)}</td>
         <td>${
-        entry.isExempt
-          ? `<span class="ch-badge ch-badge--neutral">exempt</span> <span class="ch-caption">${
-            escapeHtml(entry.exemptReason)
-          }</span>`
-          : entry.result.ratio >= entry.threshold
-          ? '<span class="ch-badge ch-badge--success">pass</span>'
-          : '<span class="ch-badge ch-badge--danger">FAIL</span>'
-      }</td>
-      </tr>`)
-      .join("")
-  }
+          entry.isExempt
+            ? `<span class="ch-badge ch-badge--neutral">exempt</span> <span class="ch-caption">${escapeHtml(
+                entry.exemptReason,
+              )}</span>`
+            : entry.result.ratio >= entry.threshold
+              ? '<span class="ch-badge ch-badge--success">pass</span>'
+              : '<span class="ch-badge ch-badge--danger">FAIL</span>'
+        }</td>
+      </tr>`,
+        )
+        .join("")}
     </tbody>
   </table>
 </details>`
@@ -763,63 +734,57 @@ const renderContrast = () => `
     mean gating on a moving target. This is the same audit <code>yarn check:contrast</code> fails CI
     on &mdash; a board printing numbers nothing enforces would be decoration.
   </p>
-  ${
-  variants
-    .flatMap((variant) => (
-      SCHEMES.map((scheme) => (
-        renderContrastTable(variant, scheme)
-      ))
-    ))
-    .join("")
-}
+  ${variants
+    .flatMap((variant) =>
+      SCHEMES.map((scheme) =>
+        renderContrastTable(variant, scheme),
+      ),
+    )
+    .join("")}
 </div>`
 
 // ---------------------------------------------------------------
 // Page shell
 // ---------------------------------------------------------------
 
-const buildAuditData = () => (
+const buildAuditData = () =>
   JSON.stringify(
     Object.fromEntries(
-      variants.flatMap((variant) => (
+      variants.flatMap((variant) =>
         SCHEMES.map((scheme) => [
           `${variant.name}|${scheme}`,
           Object.fromEntries(
-            auditScheme(variant.schemes[scheme])
-              .map((entry) => [
+            auditScheme(variant.schemes[scheme]).map(
+              (entry) => [
                 entry.label,
                 {
                   ratio: Number(
                     entry.result.ratio.toFixed(2),
                   ),
-                  lc: Number(
-                    entry.result.lc.toFixed(1),
-                  ),
+                  lc: Number(entry.result.lc.toFixed(1)),
                   threshold: entry.threshold,
                   isPass:
-                    entry.isExempt
-                    || entry.result.ratio
-                      >= entry.threshold,
+                    entry.isExempt ||
+                    entry.result.ratio >= entry.threshold,
                 },
-              ]),
+              ],
+            ),
           ),
-        ])
-      )),
+        ]),
+      ),
     ),
   )
-)
 
-const buildEpaperCss = () => [
-  '[data-epaper="spectra6"] {',
-  ...buildColourProperties(
-    epaperColours.spectra6,
-  ),
-  "  --duration-instant: 0ms;",
-  "  --duration-fast: 0ms;",
-  "  --duration-normal: 0ms;",
-  "  --duration-slow: 0ms;",
-  "}",
-].join("\n")
+const buildEpaperCss = () =>
+  [
+    '[data-epaper="spectra6"] {',
+    ...buildColourProperties(epaperColours.spectra6),
+    "  --duration-instant: 0ms;",
+    "  --duration-fast: 0ms;",
+    "  --duration-normal: 0ms;",
+    "  --duration-slow: 0ms;",
+    "}",
+  ].join("\n")
 
 const html = `<!doctype html>
 <html lang="en" data-variant="daylight" data-scheme="dark" data-density="comfortable">
@@ -857,39 +822,36 @@ ${previewStyles}
   <span class="ch-title">Charcuterie M0 &mdash; pick a visual direction</span>
   <div class="ch-toolbar__group">
     <span class="ch-toolbar__label">Variant</span>
-    ${
-  variants
-    .map((variant) => (
-      `<button class="ch-button ch-button--secondary ch-button--sm" type="button" data-axis="variant" data-value="${variant.name}" aria-pressed="${
-        variant.name === "daylight" ? "true" : "false"
-      }">${escapeHtml(variant.title)}</button>`
-    ))
-    .join("\n    ")
-}
+    ${variants
+      .map(
+        (variant) =>
+          `<button class="ch-button ch-button--secondary ch-button--sm" type="button" data-axis="variant" data-value="${variant.name}" aria-pressed="${
+            variant.name === "daylight" ? "true" : "false"
+          }">${escapeHtml(variant.title)}</button>`,
+      )
+      .join("\n    ")}
   </div>
   <div class="ch-toolbar__group">
     <span class="ch-toolbar__label">Scheme</span>
-    ${
-  ["dark", "light"]
-    .map((scheme, index) => (
-      `<button class="ch-button ch-button--secondary ch-button--sm" type="button" data-axis="scheme" data-value="${scheme}" aria-pressed="${
-        index === 0 ? "true" : "false"
-      }">${scheme}</button>`
-    ))
-    .join("\n    ")
-}
+    ${["dark", "light"]
+      .map(
+        (scheme, index) =>
+          `<button class="ch-button ch-button--secondary ch-button--sm" type="button" data-axis="scheme" data-value="${scheme}" aria-pressed="${
+            index === 0 ? "true" : "false"
+          }">${scheme}</button>`,
+      )
+      .join("\n    ")}
   </div>
   <div class="ch-toolbar__group">
     <span class="ch-toolbar__label">Density</span>
-    ${
-  ["comfortable", "compact", "kiosk"]
-    .map((density, index) => (
-      `<button class="ch-button ch-button--secondary ch-button--sm" type="button" data-axis="density" data-value="${density}" aria-pressed="${
-        index === 0 ? "true" : "false"
-      }">${density}</button>`
-    ))
-    .join("\n    ")
-}
+    ${["comfortable", "compact", "kiosk"]
+      .map(
+        (density, index) =>
+          `<button class="ch-button ch-button--secondary ch-button--sm" type="button" data-axis="density" data-value="${density}" aria-pressed="${
+            index === 0 ? "true" : "false"
+          }">${density}</button>`,
+      )
+      .join("\n    ")}
   </div>
 </div>
 
@@ -988,23 +950,18 @@ applyMetrics()
 `
 
 const outputDirectory = join(
-  dirname(
-    dirname(fileURLToPath(import.meta.url)),
-  ),
+  dirname(dirname(fileURLToPath(import.meta.url))),
   "preview",
 )
 
 mkdirSync(outputDirectory, { recursive: true })
 
-const outputPath = join(
-  outputDirectory,
-  "index.html",
-)
+const outputPath = join(outputDirectory, "index.html")
 
 writeFileSync(outputPath, html, "utf8")
 
 console.log(
-  `wrote ${outputPath} (${
-    Math.round(html.length / 1024)
-  } KB, self-contained)`,
+  `wrote ${outputPath} (${Math.round(
+    html.length / 1024,
+  )} KB, self-contained)`,
 )
