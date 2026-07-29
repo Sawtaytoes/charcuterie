@@ -15,3 +15,9 @@ packages/tokens/preview
 
 # tsc incremental state
 *.tsbuildinfo
+
+# Vitest browser-mode failure artefacts: a screenshot of the page at
+# the moment an assertion failed, written next to the test. Scratch —
+# the same convention as the workspace-wide __screenshots__ rule.
+__screenshots__
+.vitest-attachments

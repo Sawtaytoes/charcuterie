@@ -16,11 +16,6 @@ export default defineConfig(
       ".yarn/**",
       "packages/eslint-config/src/__fixtures__/**",
       "packages/tokens/preview/**",
-      // v1's source, parked here until M2 ports it. It predates
-      // every rule in this config; linting it now would produce
-      // several hundred errors about code that is going to be
-      // rewritten. M2 deletes this line as it goes.
-      "packages/logic/**",
     ],
   },
   createTypedRules({

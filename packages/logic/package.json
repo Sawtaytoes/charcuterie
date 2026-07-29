@@ -1,0 +1,92 @@
+{
+  "name": "@charcuterie/logic",
+  "version": "0.0.0",
+  "description": "The five Charcuterie state kinds — Visibility, VisibilityGroup, SinglePicker, MultiplePicker, RovingFocus, and Status — as framework-free cores with React and Preact bindings.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/react/index.js",
+  "types": "./dist/react/index.d.ts",
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "exports": {
+    ".": {
+      "source": "./src/react/index.ts",
+      "types": "./dist/react/index.d.ts",
+      "default": "./dist/react/index.js"
+    },
+    "./core": {
+      "source": "./src/core/index.ts",
+      "types": "./dist/core/index.d.ts",
+      "default": "./dist/core/index.js"
+    },
+    "./preact": {
+      "source": "./src/preact/index.ts",
+      "types": "./dist/preact/index.d.ts",
+      "default": "./dist/preact/index.js"
+    },
+    "./jotai": {
+      "source": "./src/jotai/index.ts",
+      "types": "./dist/jotai/index.d.ts",
+      "default": "./dist/jotai/index.js"
+    },
+    "./signals": {
+      "source": "./src/signals/index.ts",
+      "types": "./dist/signals/index.d.ts",
+      "default": "./dist/signals/index.js"
+    },
+    "./src/*": "./src/*"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "prepack": "yarn build",
+    "test": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "@preact/signals-core": ">=1.8",
+    "jotai": ">=2",
+    "preact": ">=10.11",
+    "react": ">=18"
+  },
+  "peerDependenciesMeta": {
+    "@preact/signals-core": {
+      "optional": true
+    },
+    "jotai": {
+      "optional": true
+    },
+    "preact": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@preact/signals-core": "^1.8.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitest/browser": "^4.1.8",
+    "@vitest/browser-playwright": "^4.1.8",
+    "fast-check": "^4.9.0",
+    "jotai": "^2.20.0",
+    "playwright": "^1.61.1",
+    "preact": "^10.28.3",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.8"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Sawtaytoes/charcuterie.git",
+    "directory": "packages/logic"
+  }
+}
