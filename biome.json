@@ -1,0 +1,17 @@
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "extends": ["@charcuterie/biome-config"],
+  "files": {
+    "includes": [
+      "./**",
+      "!**/dist",
+      "!**/node_modules",
+      "!**/storybook-static",
+      "!.yarn",
+      "!docs/previews",
+      "!packages/tokens/preview",
+      "!packages/eslint-config/**/__fixtures__",
+      "!packages/logic"
+    ]
+  }
+}

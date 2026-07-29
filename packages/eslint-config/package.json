@@ -1,0 +1,43 @@
+{
+  "name": "@charcuterie/eslint-config",
+  "version": "0.0.0",
+  "description": "The house ESLint rules Biome cannot express: type-aware naming, identifier length, and logical-properties-only.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./*": "./src/*"
+  },
+  "files": [
+    "src"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "scripts": {
+    "test": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "eslint": ">=10",
+    "typescript-eslint": ">=8"
+  },
+  "dependencies": {
+    "@vitest/eslint-plugin": "^1.6.20",
+    "eslint-plugin-react": "^7.37.5"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.2",
+    "eslint": "^10.3.0",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.59.2",
+    "vitest": "^4.1.8"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Sawtaytoes/charcuterie.git",
+    "directory": "packages/eslint-config"
+  }
+}
