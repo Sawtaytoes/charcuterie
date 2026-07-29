@@ -248,6 +248,8 @@ export const hairline: Variant = {
       fast: "90ms",
       normal: "120ms",
       slow: "180ms",
+      loopFast: "620ms",
+      loopSlow: "1100ms",
     },
   },
 

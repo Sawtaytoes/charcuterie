@@ -49,6 +49,8 @@ export const defaultMotion: MotionTokens = {
     fast: "120ms",
     normal: "200ms",
     slow: "320ms",
+    loopFast: "700ms",
+    loopSlow: "1300ms",
   },
   easing: {
     standard: "cubic-bezier(0.2, 0, 0, 1)",

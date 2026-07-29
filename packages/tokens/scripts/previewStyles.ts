@@ -7,6 +7,16 @@
  * drawn from the token layer alone, the token layer is missing a
  * role, and M0 is exactly when finding that out is cheap.
  *
+ * The first draft broke that rule and it cost something real. The
+ * looping animations were written with literal durations
+ * (`700ms`, `1300ms`) on the reasoning that a spinner's speed is
+ * not a theme decision. It is: the ePaper profile sets every
+ * duration to zero, the literals were beyond its reach, and an
+ * 800x480 panel that repaints in whole seconds got a sweeping
+ * progress bar. Hence `--duration-loop-fast` / `--duration-loop-slow`
+ * — and hence the rule is "nothing literal", with no carve-out for
+ * values that feel like implementation detail.
+ *
  * **Logical properties only.** `padding-inline`, `margin-block`,
  * `inset-inline-start`, `border-inline-start`, `text-align: start`.
  * Never `left`/`right`/`padding-left`. This board is the first
@@ -134,7 +144,7 @@ body {
   border: 2px solid var(--color-border-strong);
   border-block-start-color: var(--color-intent-accent-solid);
   border-radius: var(--radius-full);
-  animation: ch-spin 700ms linear infinite;
+  animation: ch-spin var(--duration-loop-fast) linear infinite;
   flex: none;
 }
 .ch-button .ch-spinner { border-color: currentColor; border-block-start-color: transparent; opacity: 0.85; }
@@ -157,7 +167,7 @@ body {
     var(--color-intent-neutral-surface-hover),
     transparent
   );
-  animation: ch-shimmer 1400ms var(--easing-standard) infinite;
+  animation: ch-shimmer var(--duration-loop-slow) var(--easing-standard) infinite;
 }
 @keyframes ch-shimmer {
   from { transform: translateX(-100%); }
@@ -218,15 +228,50 @@ body {
   inline-size: 35%;
   border-radius: var(--radius-full);
   background-color: var(--color-intent-accent-solid);
-  animation: ch-sweep 1300ms var(--easing-standard) infinite;
+  animation: ch-sweep var(--duration-loop-slow) var(--easing-standard) infinite;
 }
 @keyframes ch-sweep {
   from { transform: translateX(-100%); }
   to { transform: translateX(340%); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .ch-progress--indeterminate::after { animation: none; inline-size: 100%; opacity: 0.4; }
+  .ch-progress--indeterminate::after { animation: none; inline-size: 100%; background-image: var(--ch-hatch); background-color: transparent; }
 }
+
+/* The static stand-in for anything that would otherwise move.
+   Hard colour stops only — no gradient interpolation and no
+   opacity — so it survives a six-colour panel that would dither
+   anything in between into a smear. Reads as "indefinite" rather
+   than as a percentage, which an empty or full bar both fail at. */
+:root { --ch-hatch: repeating-linear-gradient(45deg, var(--color-content-muted) 0 4px, transparent 4px 8px); }
+
+/* ---------- ePaper: remove motion, don't just shorten it -------
+
+   Zeroing --duration-* is necessary but not sufficient. A
+   transition with a 0ms duration genuinely does nothing, but an
+   animation with a 0ms duration still holds keyframe zero — for
+   the indeterminate sweep that is a bar parked off-screen, i.e. an
+   empty track, i.e. exactly the "wedged drive" misreading the
+   component exists to avoid.
+
+   So animation is switched off outright and every moving
+   affordance owes a static fallback. Opacity is unavailable here
+   too, which rules out the usual dimming trick. */
+
+[data-epaper] .ch-spinner,
+[data-epaper] .ch-skeleton::after,
+[data-epaper] .ch-live .ch-dot,
+[data-epaper] .ch-progress--indeterminate::after {
+  animation: none;
+}
+[data-epaper] .ch-progress--indeterminate::after {
+  inline-size: 100%;
+  background-color: transparent;
+  background-image: var(--ch-hatch);
+}
+[data-epaper] .ch-skeleton::after { background-image: none; }
+[data-epaper] .ch-button .ch-spinner { opacity: 1; }
+[data-epaper] .ch-tile:hover .ch-tile__art { transform: none; }
 
 /* ---------- Card ---------- */
 
@@ -297,7 +342,7 @@ body {
 .ch-live { display: inline-flex; align-items: center; gap: var(--space-2); font-size: var(--font-size-sm); }
 .ch-live__label { font-weight: var(--font-weight-medium); }
 .ch-live__detail { color: var(--color-content-muted); font-size: var(--font-size-xs); }
-.ch-live--connecting .ch-dot, .ch-live--reconnecting .ch-dot { animation: ch-pulse 1200ms var(--easing-standard) infinite; }
+.ch-live--connecting .ch-dot, .ch-live--reconnecting .ch-dot { animation: ch-pulse var(--duration-loop-slow) var(--easing-standard) infinite; }
 @keyframes ch-pulse { 50% { opacity: 0.25; } }
 @media (prefers-reduced-motion: reduce) { .ch-live .ch-dot { animation: none; } }
 

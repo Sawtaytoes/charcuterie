@@ -118,6 +118,20 @@ export type MotionTokens = {
     fast: string
     normal: string
     slow: string
+    /**
+     * Looping affordances — spinner, skeleton shimmer,
+     * indeterminate sweep, live-status pulse.
+     *
+     * A separate ramp from the transition durations above, because
+     * they answer a different question. A transition duration is
+     * "how long does this change take"; a loop duration is "how
+     * fast does this repeat forever", and a 120ms spinner is a
+     * strobe. Keeping them in the token set at all is what lets
+     * the ePaper profile and `prefers-reduced-motion` reach them —
+     * writing `700ms` inline puts them beyond the theme's reach.
+     */
+    loopFast: string
+    loopSlow: string
   }
   easing: {
     standard: string
