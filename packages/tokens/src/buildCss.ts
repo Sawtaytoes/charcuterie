@@ -273,6 +273,127 @@ export const buildVariablesCss = (
 }
 
 /**
+ * The names `theme.css` publishes into Tailwind's own namespaces,
+ * beyond colour.
+ *
+ * Colour is a namespace Tailwind has no default content for, so
+ * publishing it only adds utilities. These five are different:
+ * Tailwind ships its own `--text-*`, `--leading-*`, `--shadow-*`,
+ * `--ease-*`, and `--spacing`, so every entry here **redefines
+ * what an existing utility means** in every consumer.
+ *
+ * That is the point. `text-sm` has to be our type ramp or it is
+ * not our type ramp — and ours is density-aware, so a component
+ * writing `text-sm` grows on the kiosk while one writing
+ * Tailwind's default does not. The same argument the M1 collision
+ * audit made for `--radius-*` and `--tracking-*` carrying a
+ * variant's character applies here; the difference is only that
+ * those collide implicitly at `:root` while these are stated.
+ *
+ * The alternative — components writing
+ * `text-(length:--font-size-sm)` everywhere — puts a token
+ * indirection in every className and still leaves `text-sm`
+ * meaning Tailwind's 0.875rem for anyone who forgets. Bridging
+ * once, here, is the honest version.
+ *
+ * Deliberately **not** bridged: `--space-*` stays off `--spacing`
+ * as a name (Tailwind's is a single multiplier, ours is a stepped
+ * scale) but the multiplier is published so `p-3` is a token
+ * value rather than a coincidence — the two happen to agree at
+ * 4px today and this is what keeps them agreeing on purpose.
+ * `--duration-*` and `--control-*` have no Tailwind namespace at
+ * all, so components reach them as `duration-(--duration-fast)`
+ * and `h-(--control-height-md)`.
+ */
+export const THEME_BRIDGES = {
+  "--text-": "--font-size-",
+  "--leading-": "--line-height-",
+  "--shadow-": "--elevation-",
+  "--ease-": "--easing-",
+  "--spacing": "--space-1",
+} as const
+
+const FONT_SIZE_STEPS = [
+  "xs",
+  "sm",
+  "md",
+  "lg",
+  "xl",
+  "2xl",
+] as const
+
+const LINE_HEIGHT_STEPS = [
+  "tight",
+  "normal",
+  "relaxed",
+] as const
+
+/**
+ * `none` is omitted: Tailwind's own `shadow-none` already emits
+ * `box-shadow: none`, and ePaper collapses every elevation step to
+ * `none` at the variable level, so a `shadow-none` that reads a
+ * variable would buy nothing.
+ */
+const ELEVATION_STEPS = ["low", "medium", "high"] as const
+
+const EASING_STEPS = [
+  "standard",
+  "entrance",
+  "exit",
+  "emphasized",
+] as const
+
+const buildThemeBridges = () => [
+  ...FONT_SIZE_STEPS.map(
+    (step) => `  --text-${step}: var(--font-size-${step});`,
+  ),
+  ...LINE_HEIGHT_STEPS.map(
+    (step) =>
+      `  --leading-${step}: var(--line-height-${step});`,
+  ),
+  ...ELEVATION_STEPS.map(
+    (step) =>
+      `  --shadow-${step}: var(--elevation-${step});`,
+  ),
+  ...EASING_STEPS.map(
+    (step) => `  --ease-${step}: var(--easing-${step});`,
+  ),
+  // Tailwind multiplies this by the utility's number, so it has to
+  // be the scale's *step*, not a scale entry: `p-3` is
+  // `calc(var(--spacing) * 3)`, which is `space[3]` only because
+  // `space[1]` is the base. Reading it from the scale rather than
+  // writing `0.25rem` is what makes the two impossible to drift.
+  `  --spacing: ${space[1]};`,
+]
+
+/**
+ * `cq-sm:` … `cq-xl:` — our container-query scale as Tailwind
+ * variants.
+ *
+ * **Generated because it cannot be a variable.** A container query's
+ * condition is resolved by the browser before custom properties
+ * exist, so `@container (min-inline-size: var(--cq-sm))` is invalid
+ * CSS — the threshold has to be a literal. Emitting the literal
+ * *from the scale* is the only way to have one source of truth and a
+ * working query, which is exactly the kind of thing a generator is
+ * for.
+ *
+ * Deliberately not Tailwind's own `@sm:`/`@md:` container variants:
+ * those read `--container-*`, which is the namespace M1 moved our
+ * scale **off** because Tailwind owns it for `max-w-*` at different
+ * sizes. `cq-` matches the `--cq-*` custom properties, so the
+ * variant and the variable are the same word.
+ *
+ * `min-inline-size` rather than `min-width`, per the
+ * logical-properties rule.
+ */
+const buildContainerQueryVariants = () =>
+  Object.entries(containerQuery).map(
+    ([name, value]) =>
+      `@custom-variant cq-${name} (@container (min-inline-size: ${value}));`,
+  )
+
+/**
  * The Tailwind v4 entry point. `@theme` turns `--color-*` into
  * `bg-*` / `text-*` / `border-*` utilities; `@custom-variant dark`
  * points Tailwind's `dark:` at our attribute rather than at its
@@ -286,6 +407,8 @@ export const buildThemeCss = () =>
     '@import "./variables.css";',
     "",
     '@custom-variant dark (&:where([data-scheme="dark"], [data-scheme="dark"] *));',
+    "",
+    ...buildContainerQueryVariants(),
     "",
     "@theme inline {",
     ...[
@@ -322,6 +445,8 @@ export const buildThemeCss = () =>
           `  --color-intent-${intent}-${role}: var(--color-intent-${intent}-${role});`,
       ),
     ),
+    "",
+    ...buildThemeBridges(),
     "}",
     "",
   ].join("\n")
