@@ -5,26 +5,45 @@
   "license": "MIT",
   "type": "module",
   "sideEffects": false,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "publishConfig": {
     "access": "public",
     "provenance": true
   },
   "exports": {
-    ".": "./src/index.ts",
-    "./epaper": "./src/epaper.ts",
+    ".": {
+      "source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./epaper": {
+      "source": "./src/epaper.ts",
+      "types": "./dist/epaper.d.ts",
+      "default": "./dist/epaper.js"
+    },
     "./theme.css": "./dist/theme.css",
     "./variables.css": "./dist/variables.css",
-    "./*": "./src/*"
+    "./tokens.json": "./dist/tokens.json",
+    "./src/*": "./src/*"
   },
   "files": [
     "dist",
     "src"
   ],
   "scripts": {
+    "build": "tsc -p tsconfig.build.json && node scripts/buildTokens.ts",
     "build:tokens": "node scripts/buildTokens.ts",
     "check:contrast": "node scripts/checkContrast.ts",
+    "prepack": "yarn build",
     "preview:themes": "node scripts/buildPreview.ts",
+    "test": "vitest",
     "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.2",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.8"
   },
   "repository": {
     "type": "git",

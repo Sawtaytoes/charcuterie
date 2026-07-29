@@ -13,10 +13,7 @@
  * a preference.
  */
 
-import type {
-  ControlTokens,
-  Density,
-} from "./types.ts"
+import type { ControlTokens, Density } from "./types.ts"
 
 /** 4px base. Index is the step, value is the length. */
 export const space = {
@@ -152,10 +149,7 @@ export const densityControl: Record<
  * Per-density type scale multiplier. Kiosk reads from across a
  * room; compact is trying to fit a bay list on one screen.
  */
-export const densityFontScale: Record<
-  Density,
-  number
-> = {
+export const densityFontScale: Record<Density, number> = {
   comfortable: 1,
   compact: 0.9375,
   kiosk: 1.1875,

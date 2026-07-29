@@ -32,9 +32,4 @@ export const variantsByName = new Map(
   variants.map((variant) => [variant.name, variant]),
 )
 
-export {
-  daylight,
-  hairline,
-  layered,
-  legible,
-}
+export { daylight, hairline, layered, legible }

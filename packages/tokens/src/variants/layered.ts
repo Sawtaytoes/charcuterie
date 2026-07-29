@@ -17,7 +17,6 @@
 import type { Variant } from "../types.ts"
 import {
   defaultControl,
-  defaultMotion,
   defaultTypography,
 } from "../variantDefaults.ts"
 

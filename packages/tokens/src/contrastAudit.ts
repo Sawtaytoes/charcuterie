@@ -16,10 +16,8 @@
  *    for everyone than the exemption.
  */
 
+import type { ContrastResult } from "./contrast.ts"
 import { getContrast } from "./contrast.ts"
-import type {
-  ContrastResult,
-} from "./contrast.ts"
 import type {
   Density,
   IntentName,
@@ -75,19 +73,18 @@ export const auditScheme = (
   colour: SchemeColours,
 ): ContrastCheck[] => [
   // --- Text on surfaces -------------------------------------
-  ...(
-    ["base", "raised", "overlay"] as const
-  ).flatMap((surfaceRole) => (
-    (["primary", "secondary", "muted"] as const)
-      .map((contentRole) => (
-        check({
-          label: `content.${contentRole} on surface.${surfaceRole}`,
-          foreground: colour.content[contentRole],
-          background: colour.surface[surfaceRole],
-          threshold: 4.5,
-        })
-      ))
-  )),
+  ...(["base", "raised", "overlay"] as const).flatMap(
+    (surfaceRole) =>
+      (["primary", "secondary", "muted"] as const).map(
+        (contentRole) =>
+          check({
+            label: `content.${contentRole} on surface.${surfaceRole}`,
+            foreground: colour.content[contentRole],
+            background: colour.surface[surfaceRole],
+            threshold: 4.5,
+          }),
+      ),
+  ),
 
   check({
     label: "content.disabled on surface.base",
@@ -200,31 +197,25 @@ export const auditScheme = (
 export const getAliasDrift = (
   colour: SchemeColours,
 ): string[] => [
-  ...(
-    colour.content.onAccent
-      === colour.intent.accent.onSolid
-      ? []
-      : [
+  ...(colour.content.onAccent ===
+  colour.intent.accent.onSolid
+    ? []
+    : [
         `content.onAccent (${colour.content.onAccent}) !== intent.accent.onSolid (${colour.intent.accent.onSolid})`,
-      ]
-  ),
-  ...(
-    colour.border.focus === colour.focus.ring
-      ? []
-      : [
+      ]),
+  ...(colour.border.focus === colour.focus.ring
+    ? []
+    : [
         `border.focus (${colour.border.focus}) !== focus.ring (${colour.focus.ring})`,
-      ]
-  ),
+      ]),
 ]
 
-export const getFailures = (
-  checks: ContrastCheck[],
-) => (
-  checks.filter((entry) => (
-    !entry.isExempt
-    && entry.result.ratio < entry.threshold
-  ))
-)
+export const getFailures = (checks: ContrastCheck[]) =>
+  checks.filter(
+    (entry) =>
+      !entry.isExempt &&
+      entry.result.ratio < entry.threshold,
+  )
 
 export type SchemeAudit = {
   variant: string

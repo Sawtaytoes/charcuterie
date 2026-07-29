@@ -9,7 +9,8 @@ names — they import `@charcuterie/ui/tokens`. It is a build-graph split, not a
 
 ## Running it
 
-Node 24 runs the TypeScript directly, so **nothing needs installing** to use any of this:
+Node 24 runs the TypeScript directly, so **nothing needs installing** to use any of
+the scripts:
 
 ```bash
 node scripts/checkContrast.ts   # the WCAG 2.2 AA gate — exits non-zero on failure
@@ -17,9 +18,28 @@ node scripts/buildTokens.ts     # → dist/variables.css, dist/theme.css, dist/t
 node scripts/buildPreview.ts    # → preview/index.html, the M0 bake-off board
 ```
 
-The repo root is still charcuterie v1's `package.json`; converting it to a Yarn 4
-workspace root happens at M1, along with Vitest, Biome, and ESLint. Until then these
-three commands are the whole build.
+That is deliberate and worth keeping: the M0 bake-off shipped before this workspace
+existed, and a token change should stay one command away from a rebuilt board.
+
+Through Yarn, from anywhere in the repo:
+
+```bash
+yarn workspace @charcuterie/tokens build   # tsc → dist/*.js + .d.ts, then the CSS
+yarn workspace @charcuterie/tokens test    # Vitest, including the contrast gate
+```
+
+`build` runs on `prepack`, so `dist/` is generated rather than committed.
+
+**Both source workflows are live at once** because `tsconfig.base.json` sets
+`rewriteRelativeImportExtensions`. Source imports siblings as `./contrast.ts` — which
+is what lets Node run it with no build — and tsc rewrites those to `./contrast.js` on
+the way out. Without that flag the two workflows are mutually exclusive.
+
+### The contrast gate is now a test
+
+`src/contrast.test.ts` wraps the same audit `scripts/checkContrast.ts` prints. That is
+the *only* thing M1 changed about it. One source of truth, asked by the board, the
+script, and CI alike — a script gates only what somebody remembers to run.
 
 ## The two tiers
 
@@ -112,3 +132,22 @@ value is a bug waiting for the first person who tunes only one of them.
 Copy any file in `src/variants/`, change the values, add it to `src/variants/index.ts`,
 then run `node scripts/checkContrast.ts`. If it exits zero, run `buildPreview.ts` and look
 at it. Both steps are required — the gate proves it is *readable*, not that it is *good*.
+
+`src/variants.test.ts` also holds the properties a new direction is most likely to
+break: light mode is not pure white, `raised` and `sunken` are actually separated from
+`base`, every intent carries all seven roles, every swatch is opaque 6-digit hex, and
+the focus ring has a non-zero width. Update the roster assertion in that file when you
+add one; that assertion exists so a variant cannot be added *silently*.
+
+## Known gap: only the colour namespace reaches Tailwind
+
+`theme.css` maps `--color-*` into `@theme`, which is what generates `bg-*` / `text-*` /
+`border-*`. It does **not** yet map radius, spacing, or type — our `--radius-*`,
+`--space-*`, and `--font-size-*` would have to be republished under Tailwind's
+`--radius-*` / `--spacing-*` / `--text-*` namespaces to become `rounded-*`, `p-*`, and
+`text-*` utilities.
+
+Until then a consumer reads those through `var(--radius-lg)` rather than a utility, and
+`packages/docs/src/TokenSpecimen.tsx` is written that way on purpose so the gap stays
+visible instead of quietly falling back to Tailwind's defaults. It did not block M1 —
+mux-magic's swap is colour-only — but it is a real item, not a stylistic choice.
