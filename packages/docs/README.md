@@ -5,8 +5,20 @@ The Storybook host. **Private** — the fleet reads it, nobody installs it.
 ```bash
 yarn storybook          # dev server on :6006
 yarn build:storybook    # → storybook-static/
-yarn test --run         # from the repo root; runs the story a11y gate too
+yarn vitest run --project storybook   # from the repo root: every story, every play, axe
 ```
+
+## Stories live in `@charcuterie/ui`, not here
+
+`.storybook/main.ts` globs `../../ui/src/**/*.stories.tsx` and `../../ui/src/**/*.mdx`, so a
+component's `Component.tsx` / `.stories.tsx` / `.mdx` stay siblings — matching mux-magic.
+This package is the *host*: the three toolbars, the a11y gate, and the token stylesheet.
+
+That stylesheet, `src/styles/tokens.css`, also carries two lines M3 added and nothing else
+would have: `@import "@charcuterie/ui/src/styles.css"` (the looping animations, imported from
+source so Storybook works before anything is built) and `@source "../../../ui/src"` —
+without which Tailwind never scans the components and every one of them renders unstyled with
+no error.
 
 ## The three toolbars are the production mechanism
 
@@ -41,7 +53,8 @@ Opting a story out requires `a11y: { test: "todo" }` with a comment linking an i
 ## `TokenSpecimen` is throwaway
 
 It is not a library component and not a candidate to become one. It exists to prove the
-substrate before M3 builds anything real on it.
+substrate before M3 builds anything real on it — which it now has, so this is history
+rather than the only board here.
 
 Two things it demonstrates on purpose:
 
@@ -49,9 +62,12 @@ Two things it demonstrates on purpose:
   `bg-intent-danger-solid`. Those exist only because `@charcuterie/tokens/theme.css` put
   `--color-*` into an `@theme` block, which is the identical mechanism mux-magic picks
   up in its four-line swap.
-- **Radius, spacing, and type come through `var()`** rather than a utility, because
-  `theme.css` maps only the colour namespace into `@theme` so far. See the "Known gap"
-  section of [`packages/tokens/README.md`](../tokens/README.md).
+- **Radius, spacing, and type come through `var()`** rather than a utility. That was the
+  known gap at M1, and **M3 closed it**: `theme.css` now publishes `--text-*`,
+  `--leading-*`, `--shadow-*`, `--ease-*`, and `--spacing`, so `@charcuterie/ui` writes
+  `text-md` / `shadow-low` / `p-3` directly
+  ([decision](../../docs/decisions/2026-07-29-theme-css-bridges-tailwind-namespaces.md)).
+  The `var()` calls here are left as-is, as the before-picture.
 
 Every class name is written out in full. Tailwind v4 scans source text for *complete*
 class strings, so `` `bg-intent-${intent}-solid` `` generates nothing at all and fails
@@ -60,21 +76,15 @@ rather than "the scanner never saw it".
 
 ## Sandbox note: Playwright browsers
 
-The story tests run in `@vitest/browser` + chromium. In the agent sandbox,
-`/opt/pw-browsers` is root-owned and holds chromium build **1228**, while this
-workspace's Playwright wants **1234**, so the run fails with a misleading "Playwright
-was just installed" banner.
-
-Install once into a writable cache and point at it:
+The story tests run in `@vitest/browser` + chromium, and **need no environment override**.
+`/opt/pw-browsers` now holds both chromium **1234** and `chromium_headless_shell-1234`,
+which is what this workspace's Playwright wants:
 
 ```bash
-PLAYWRIGHT_BROWSERS_PATH=/home/node/.cache/ms-playwright \
-  yarn workspace @charcuterie/docs exec playwright install chromium
-
-PLAYWRIGHT_BROWSERS_PATH=/home/node/.cache/ms-playwright yarn test --run
+yarn vitest run --project storybook
 ```
 
-This is a sandbox-image mismatch rather than anything about this repo — mux-magic's
-pinned Playwright wants build 1224 and is equally unserved by the baked-in 1228. It is
-deliberately **not** hardcoded into a script, because that path is wrong on any other
-machine.
+Corrected 2026-07-29 (M3). M1 and M2 both documented a
+`PLAYWRIGHT_BROWSERS_PATH=/home/node/.cache/ms-playwright` workaround for an image that
+shipped build 1228; that directory no longer exists, so following the old instruction now
+*causes* the "Playwright was just installed" banner instead of avoiding it.
