@@ -1,0 +1,27 @@
+{
+  "name": "@charcuterie/biome-config",
+  "version": "0.0.0",
+  "description": "The shared Biome formatter and linter settings for the Charcuterie fleet.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./config.json",
+  "exports": {
+    ".": "./config.json",
+    "./config.json": "./config.json"
+  },
+  "files": [
+    "config.json"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "scripts": {
+    "typecheck": "echo \"no TypeScript in @charcuterie/biome-config\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Sawtaytoes/charcuterie.git",
+    "directory": "packages/biome-config"
+  }
+}
