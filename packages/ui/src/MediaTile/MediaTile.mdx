@@ -1,0 +1,51 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as MediaTileStories from "./MediaTile.stories";
+
+<Meta of={MediaTileStories} />
+
+# MediaTile
+
+Three repos, and shipping one of these is what makes plex-channels, image-viewer, and
+gallery-downloader look like one family instead of three.
+
+<Canvas of={MediaTileStories.Grid} />
+
+## Props
+
+<Controls />
+
+## The three states no hand-rolled version models
+
+| State | What it does | Why |
+| --- | --- | --- |
+| loading | `Skeleton` at the tile's exact aspect ratio | A 200-poster grid that reflows on load loses the user's place |
+| error | Keeps the box, keeps the name (`role="img"` with the same `alt`) | A broken `<img>` collapses to a glyph and takes the row height with it |
+| cached | Checks `complete`/`naturalWidth` on mount and on every `src` change | A `complete` image never fires `load`, so an `onLoad`-only tile shimmers over a perfectly good poster forever |
+
+Those are a `useStatus` machine rather than a `useState<string>`, which is what makes
+`loaded → error` impossible instead of merely unlikely — see `mediaStatus.ts`. A browser
+does not fire `error` on an image it has already decoded, so an app that thinks it saw that
+is misreading its own event wiring, and the machine throws rather than flickering a fallback
+over a good poster.
+
+<Canvas of={MediaTileStories.AllStates} />
+
+## Sizing
+
+The tile is a container query (the caption's type steps up past `--cq-sm`), which means it
+may not be sized by its own contents: put it in a grid track or give it a definite inline
+size. In a shrink-to-fit parent it collapses to min-content — the same constraint `Card`
+carries, and for the same reason.
+
+## Names
+
+`alt` is required. When `href` is set, the link carries `aria-label={title}` and the image
+goes `alt=""` — an agent writing `getByRole("link", { name: "Blade Runner" })` should not
+have to know whether a subtitle happened to be rendered, and two names for one link is a
+screen reader reading it twice.
+
+The caption's type steps up past `--cq-sm`, so a tile in a dense 8-across grid and the same
+tile in a 3-across one are both legible.
+
+<Canvas of={MediaTileStories.Responsive} />

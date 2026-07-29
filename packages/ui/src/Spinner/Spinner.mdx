@@ -1,0 +1,36 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as SpinnerStories from "./Spinner.stories";
+
+<Meta of={SpinnerStories} />
+
+# Spinner
+
+**Zero of these exist anywhere in the fleet.** Not one repo has a spinner; every app
+renders bare `"loading…"` text. Best effort-to-payoff component in M3.
+
+<Canvas of={SpinnerStories.Default} />
+
+## Props
+
+<Controls />
+
+## Three things a hand-rolled `animate-spin` does not do
+
+1. **It is a live region.** `role="status"` with the label inside, so the load is
+   announced. A rotating `<div>` announces nothing.
+2. **It stops.** The animation runs at `--duration-loop-fast`, which
+   `prefers-reduced-motion` zeroes and `@charcuterie/ui/styles.css` then switches off
+   outright. Tailwind's `animate-spin` hardcodes 1s straight past the media query.
+3. **It is findable.** `role="status"` takes **no accessible name from its content** — it
+   is a live region, not a widget — so the component sets `aria-label` as well. Without
+   that, `getByRole("status", { name: "Loading…" })` matches nothing, and axe never
+   mentions it.
+
+## Reduced motion
+
+There is deliberately no "reduced motion" story: it is a browser state, not a prop. Toggle
+it (DevTools → Rendering → Emulate `prefers-reduced-motion`) against `AllStates` — the
+ring must stop, stay a ring, and keep its label.
+
+<Canvas of={SpinnerStories.AllStates} />

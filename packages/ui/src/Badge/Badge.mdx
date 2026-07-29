@@ -1,0 +1,43 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as BadgeStories from "./Badge.stories";
+
+<Meta of={BadgeStories} />
+
+# Badge
+
+Four repos, and rip-deck declares the **identical** `TONE_CLASS` map twice —
+`VerdictBadge.tsx` and `TowerAlerts.tsx`, same five hardcoded hexes, related only by
+copy-paste. mux-magic's `statusClassMap` is the same idea spelled a third way, keyed by a
+bare `string`, so an unrecognised status renders with no colour and no error.
+
+<Canvas of={BadgeStories.Default} />
+
+## Props
+
+<Controls />
+
+## Where the status half lives
+
+`intent` covers the colour. Which *state* maps to which intent — and what it is called in
+English — lives in `statusIntent.ts` as exhaustive switches over the machines
+`@charcuterie/logic` ships:
+
+```tsx
+<Badge intent={getAsyncIntent(status)}>{getAsyncLabel(status)}</Badge>
+```
+
+That is the whole of mux-magic's `StatusBadge`, and adding a state to the machine is a
+compile error here rather than a blank pill in production.
+
+<Canvas of={BadgeStories.Interactive} />
+
+## No implicit role
+
+A badge is a word about something else. It is not a live region, and `role="status"` would
+make every re-render announce itself. Where a status genuinely needs announcing, that is
+`LiveStatusIndicator`; where a badge needs a name beyond its text, `aria-label` still
+works. Hover styling is deliberately absent too — `INTENT_HOVER_CLASS` is opt-in, so a
+verdict pill cannot imply it is clickable.
+
+<Canvas of={BadgeStories.AllVariants} />

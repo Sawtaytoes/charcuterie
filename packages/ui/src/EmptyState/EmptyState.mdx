@@ -1,0 +1,40 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as EmptyStateStories from "./EmptyState.stories";
+
+<Meta of={EmptyStateStories} />
+
+# EmptyState
+
+**Six repos, eleven-plus copies** — plex-channels alone has five `li.empty`s and castkit
+six `.idle`s. Every copy is a bare string in a `<div>`, so "no results", "not started yet",
+and "the socket died" all look identical and none of them is findable by role.
+
+Designed fresh rather than ported: the two repos that had a real `EmptyState` with typed
+variants were bambuddy and spoolbuddy, which are upstream projects rather than Kevin's
+code, so that evidence was withdrawn from the plan.
+
+<Canvas of={EmptyStateStories.Default} />
+
+## Props
+
+<Controls />
+
+## Why there is no `variant`
+
+"Empty" and "failed" differ in wording and in whether there is a retry button — both props
+already. A `variant="error"` that only changes a colour invites callers to encode the
+meaning in the colour alone, which is the one thing a colour cannot carry.
+
+<Canvas of={EmptyStateStories.AllVariants} />
+
+## The heading is the handle
+
+`headingLevel` is the caller's, because only the caller knows what this sits under. A real
+heading makes `getByRole("heading", { name: "No discs queued" })` work, where `getByText`
+against eleven copies of "Nothing here" does not.
+
+The `md` size gains air past `--cq-md`, so the same component is tight in a 15rem sidebar
+and generous filling a dashboard — decided by the panel, not the window.
+
+<Canvas of={EmptyStateStories.Responsive} />

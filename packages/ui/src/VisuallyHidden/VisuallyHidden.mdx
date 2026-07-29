@@ -1,0 +1,29 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as VisuallyHiddenStories from "./VisuallyHidden.stories";
+
+<Meta of={VisuallyHiddenStories} />
+
+# VisuallyHidden
+
+Text for assistive technology and for nobody else. A Layer-0 primitive, and the one every
+other component in M3 leans on: it is how a `Spinner` says "Loading…" without printing it,
+how a `ProgressBar`'s label stays discoverable when the design does not show it, and how an
+`IconButton`'s glyph gets a name.
+
+<Canvas of={VisuallyHiddenStories.Default} />
+
+## Props
+
+<Controls />
+
+## Nothing to own
+
+`sr-only` is Tailwind's own — the clip-rect technique, unchanged since it was
+`.visuallyhidden` in HTML5 Boilerplate. Never `display: none` and never
+`visibility: hidden`: both remove the node from the accessibility tree, which is the exact
+opposite of the requirement. The `Interactive` story asserts both halves — present to a
+query, one pixel to the layout.
+
+This component's story set is deliberately short. It has no variants, no states, and no
+container-query behaviour; the mandated five would be four empty boards.

@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@charcuterie/tokens": "workspace:*",
+    "@charcuterie/ui": "workspace:*",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },
@@ -30,6 +31,7 @@
     "@vitest/browser-playwright": "^4.1.8",
     "playwright": "^1.61.1",
     "storybook": "^10.3.6",
+    "storybook-addon-pseudo-states": "^10.5.5",
     "tailwindcss": "^4.3.0",
     "typescript": "^6.0.3",
     "vite": "^8.0.16",

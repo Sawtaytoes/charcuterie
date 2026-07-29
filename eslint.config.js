@@ -22,13 +22,20 @@ export default defineConfig(
     tsconfigRootDir: import.meta.dirname,
   }),
   createReactRules({
-    files: ["packages/docs/**/*.tsx"],
+    files: [
+      "packages/docs/**/*.tsx",
+      "packages/ui/**/*.tsx",
+    ],
   }),
   // The logical-properties rule applies to shipped component
-  // markup. `packages/docs` is where the first of it lives; M3
-  // adds `packages/ui/**/*.tsx` alongside it.
+  // markup, which as of M3 is `packages/ui` — every className in
+  // there is the fleet's markup, so `pl-`/`mr-`/`text-left` fail
+  // the lint rather than reaching a consumer.
   createLogicalPropertiesRules({
-    files: ["packages/docs/**/*.tsx"],
+    files: [
+      "packages/docs/**/*.tsx",
+      "packages/ui/**/*.tsx",
+    ],
   }),
   createStoryOverrides({}),
   createTestRules({}),

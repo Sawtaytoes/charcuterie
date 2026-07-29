@@ -1,0 +1,44 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as ButtonStories from "./Button.stories";
+
+<Meta of={ButtonStories} />
+
+# Button
+
+Hand-rolled in **seven repos**, each with its own primary/secondary/danger/ghost pair and
+its own idea of what "disabled" looks like. This is the single largest duplication in the
+fleet.
+
+Six intents x four appearances x three sizes, all of it from tier-2 tokens — so a variant
+swap or a density flip repaints every button on the page with no prop change and no
+re-render.
+
+<Canvas of={ButtonStories.Default} />
+
+## Props
+
+<Controls />
+
+## What it fixes
+
+| Fleet behaviour today | Here |
+| --- | --- |
+| `<button>` with no `type`, submitting the form it happens to sit in | `type="button"` by default |
+| `outline-none` with nothing put back, or a ring on mouse click | `focus-visible` only, at the variant's own ring width |
+| A spinner that replaces the label, so you cannot tell what you pressed | Spinner replaces `iconStart`; the label stays, `aria-busy` goes on |
+| A `size="kiosk"` prop, or a second component for touch | `data-density="kiosk"` on `<html>` |
+
+## Accessibility contract
+
+- The accessible name is the children. A glyph is not a name — use `IconButton`, which
+  requires one.
+- `isLoading` disables the button and announces through the `Spinner`'s `role="status"`.
+- `isDisabled` renders a real `disabled` attribute: skipped by Tab, ignored by click, and
+  reported to assistive technology. The `DisabledDoesNotFire` story asserts all three.
+- Contrast on the disabled treatment leans on WCAG 1.4.3's exemption for *inactive*
+  controls, which is honest only on something actually disabled — see `DISABLED_CLASS`.
+
+<Canvas of={ButtonStories.AllVariants} />
+
+<Canvas of={ButtonStories.AllStates} />
