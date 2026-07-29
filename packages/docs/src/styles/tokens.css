@@ -10,6 +10,20 @@
  * entire diff mux-magic takes. */
 @import "@charcuterie/tokens/theme.css";
 
+/* The four looping affordances — spinner, shimmer, sweep, pulse —
+ * and their reduced-motion fallbacks. Imported from `src` rather
+ * than `dist` on purpose: Storybook has to work before anything is
+ * built, and a stale `dist/styles.css` silently themes the canvas
+ * with yesterday's keyframes. Published consumers import
+ * `@charcuterie/ui/styles.css`. */
+@import "@charcuterie/ui/src/styles.css";
+
+/* Tailwind's automatic source detection starts from this file's own
+ * package, so it never sees `packages/ui` — and every component
+ * would render unstyled with no error. `tailwindCandidates.test.ts`
+ * is the second line of defence; this is the first. */
+@source "../../../ui/src";
+
 @layer base {
   body {
     background-color: var(--color-surface-base);

@@ -6,12 +6,24 @@ const config: StorybookConfig = {
   stories: [
     "../src/**/*.stories.{ts,tsx}",
     "../src/**/*.mdx",
+    // Stories live next to their component, in `@charcuterie/ui` —
+    // matching mux-magic, where `Component.tsx` / `.stories.tsx` /
+    // `.mdx` / `.test.tsx` are siblings. This package is only the
+    // host; nothing about the components lives here.
+    "../../ui/src/**/*.stories.tsx",
+    "../../ui/src/**/*.mdx",
   ],
   addons: [
     "@storybook/addon-docs",
     "@storybook/addon-a11y",
     "@storybook/addon-themes",
     "@storybook/addon-vitest",
+    // Answers one of the plan's open questions: the pseudo-states
+    // addon does support Storybook 10 — it version-matches the
+    // installed 10.5.5 exactly. Without it, an `AllStates` story
+    // cannot show hover or active at all, and "trust me, the hover
+    // colour is fine" is not a design review.
+    "storybook-addon-pseudo-states",
   ],
   core: {
     disableTelemetry: true,

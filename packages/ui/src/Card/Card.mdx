@@ -1,0 +1,53 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as CardStories from "./Card.stories";
+
+<Meta of={CardStories} />
+
+# Card
+
+Five repos, and the reason it is P0 is the `<section>`: give a card a heading and it becomes
+a **landmark**, so `getByRole("region", { name: "Bay 3" })` scopes every query inside it.
+Without that, an agent driving a 16-bay tower sees sixteen identical "Start" buttons and no
+way to say which one it means. The `Interactive` story asserts exactly that.
+
+<Canvas of={CardStories.Default} />
+
+## Props
+
+<Controls />
+
+## Density is not a prop
+
+The withdrawn bambuddy evidence included a `CardDensityProvider`, and it is the wrong shape
+for this fleet: density is a global axis on `<html>`, so a compact bay list is
+`data-density="compact"` on the page rather than a context around the cards. `padding`
+stays a prop because a card wrapping a poster grid genuinely has none — a layout fact, not
+a density one.
+
+## Names must be unique
+
+Two `<section>`s sharing an accessible name is axe's `landmark-unique`, and it is a real
+finding rather than a technicality: a screen-reader user navigating by landmark gets two
+"Bay 3" regions and no way to tell them apart. A card with no heading is not a landmark at
+all, deliberately — it has nothing to be named.
+
+`raised` means *more separated from base*, not *lighter*, which is why light mode's base is
+`#F5F7FA` and its raised is white.
+
+<Canvas of={CardStories.AllVariants} />
+
+## Container queries, not media queries
+
+> **One constraint that comes with the territory.** `container-type: inline-size` implies
+> `contain: inline-size`, so a `Card` may not be sized by its own contents. In a grid track,
+> a block flow, or a `flex-1` slot it is fine — that is nearly every real placement. Drop one
+> into a shrink-to-fit parent (`items-start`, an `inline-flex` row) and it collapses to
+> min-content, wrapping every line after one word. Give it a definite inline size there.
+
+
+The header stacks below `--cq-sm` and sits on one row above it, and the container is the
+**card**. The same card in a sidebar and full-bleed on a dashboard is the case a media query
+cannot tell apart, and it is where the fleet's poster grids look wrong today.
+
+<Canvas of={CardStories.Responsive} />

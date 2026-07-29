@@ -1,0 +1,130 @@
+/* `@charcuterie/ui/styles.css` — the four looping affordances, and
+ * nothing else.
+ *
+ * Every other visual in this package is a Tailwind utility reading
+ * a token, which is what makes a scheme/density/variant flip a
+ * repaint with no re-render. Animation is the one thing utilities
+ * cannot express against our tokens: Tailwind's own `animate-spin`
+ * and `animate-pulse` hardcode 1s and 2s, ignore
+ * `prefers-reduced-motion`, and are therefore beyond the theme's
+ * reach — which is exactly why `MotionTokens` carries a separate
+ * `loopFast`/`loopSlow` ramp.
+ *
+ * Consumers import this once, after `@charcuterie/tokens/theme.css`.
+ *
+ * The reduced-motion block is not a nicety. `variables.css` already
+ * collapses every duration to `0ms`, and for a *transition* that is
+ * the whole fix — but `animation: sweep 0ms infinite` still paints
+ * its first keyframe forever, and the first keyframe of a sweep is
+ * an off-screen bar. So each loop is switched off outright and owes
+ * a static fallback that still reads correctly, which is what the
+ * `@media` block below supplies. A spinner that stops spinning must
+ * still say "loading", and it does: the label is text in a
+ * `role="status"`, not the animation. */
+
+@keyframes charcuterie-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes charcuterie-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+
+  to {
+    background-position: -100% 0;
+  }
+}
+
+/* Logical, not `translateX`. A sweep is the one animation whose
+ * direction carries meaning — it reads as "moving forward" — so in
+ * RTL it has to move the other way, and `inset-inline-start` is
+ * what makes that free. */
+@keyframes charcuterie-sweep {
+  from {
+    inset-inline-start: -40%;
+  }
+
+  to {
+    inset-inline-start: 100%;
+  }
+}
+
+@keyframes charcuterie-pulse {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.45;
+    transform: scale(0.82);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.charcuterie-spin {
+  animation: charcuterie-spin var(--duration-loop-fast)
+    linear infinite;
+}
+
+.charcuterie-shimmer {
+  background-image: linear-gradient(
+    90deg,
+    var(--color-surface-sunken) 0%,
+    var(--color-surface-raised) 50%,
+    var(--color-surface-sunken) 100%
+  );
+  background-size: 200% 100%;
+  animation: charcuterie-shimmer var(--duration-loop-slow)
+    var(--easing-standard) infinite;
+}
+
+.charcuterie-sweep {
+  animation: charcuterie-sweep var(--duration-loop-slow)
+    var(--easing-standard) infinite;
+}
+
+.charcuterie-pulse {
+  animation: charcuterie-pulse var(--duration-loop-slow)
+    var(--easing-standard) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .charcuterie-spin,
+  .charcuterie-shimmer,
+  .charcuterie-sweep,
+  .charcuterie-pulse {
+    animation: none;
+  }
+
+  /* Flat, not mid-gradient: a stopped shimmer left holding its
+   * first keyframe is a lopsided highlight that reads as a
+   * rendering bug rather than as a placeholder. */
+  .charcuterie-shimmer {
+    background-image: none;
+    background-color: var(--color-surface-sunken);
+  }
+
+  /* The sweep's static fallback carries the whole meaning of the
+   * indeterminate state — "working, no measurable progress" — so it
+   * fills the track with hatching rather than parking a bar at one
+   * end, where it would read as either finished or stuck. */
+  .charcuterie-sweep {
+    inset-inline-start: 0;
+    inline-size: 100%;
+    background-image: repeating-linear-gradient(
+      135deg,
+      currentColor 0,
+      currentColor 2px,
+      transparent 2px,
+      transparent 6px
+    );
+  }
+}
