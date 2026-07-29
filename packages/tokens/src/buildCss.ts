@@ -17,7 +17,7 @@
 
 import { INTENT_NAMES } from "./contrastAudit.ts"
 import {
-  container,
+  containerQuery,
   densityControl,
   densityFontScale,
   layer,
@@ -91,8 +91,8 @@ const buildStructuralProperties = () => [
   ...Object.entries(screen).map(([name, value]) =>
     declare(`--screen-${name}`, value),
   ),
-  ...Object.entries(container).map(([name, value]) =>
-    declare(`--container-${name}`, value),
+  ...Object.entries(containerQuery).map(([name, value]) =>
+    declare(`--cq-${name}`, value),
   ),
 ]
 
