@@ -12,3 +12,6 @@ storybook-static
 # docs/previews/ deliberately; the scratch output does not.
 packages/tokens/dist
 packages/tokens/preview
+
+# tsc incremental state
+*.tsbuildinfo
