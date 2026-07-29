@@ -139,15 +139,44 @@ break: light mode is not pure white, `raised` and `sunken` are actually separate
 the focus ring has a non-zero width. Update the roster assertion in that file when you
 add one; that assertion exists so a variant cannot be added *silently*.
 
-## Known gap: only the colour namespace reaches Tailwind
+## Closed at M3: the structural namespaces now reach Tailwind too
 
-`theme.css` maps `--color-*` into `@theme`, which is what generates `bg-*` / `text-*` /
-`border-*`. It does **not** yet map radius, spacing, or type — our `--radius-*`,
-`--space-*`, and `--font-size-*` would have to be republished under Tailwind's
-`--radius-*` / `--spacing-*` / `--text-*` namespaces to become `rounded-*`, `p-*`, and
-`text-*` utilities.
+`theme.css` maps `--color-*` into `@theme`, which generates `bg-*` / `text-*` / `border-*`.
+As of M3 it also **bridges five structural namespaces**, so a component writes ordinary
+utilities and gets our values:
 
-Until then a consumer reads those through `var(--radius-lg)` rather than a utility, and
-`packages/docs/src/TokenSpecimen.tsx` is written that way on purpose so the gap stays
-visible instead of quietly falling back to Tailwind's defaults. It did not block M1 —
-mux-magic's swap is colour-only — but it is a real item, not a stylistic choice.
+| Published | Reads | Utility it fixes |
+| --- | --- | --- |
+| `--text-{xs…2xl}` | `--font-size-*` | `text-sm` — and ours is density-scaled |
+| `--leading-*` | `--line-height-*` | `leading-normal` |
+| `--shadow-{low,medium,high}` | `--elevation-*` | `shadow-low`, scheme-aware |
+| `--ease-*` | `--easing-*` | `ease-standard` |
+| `--spacing` | `space[1]` | `p-3` is a token value, not a coincidence |
+
+`--radius-*`, `--tracking-*`, `--font-*`, and `--font-weight-*` needed no bridge: they
+collide with Tailwind's namespaces at `:root` already, which the M1 collision audit pinned
+as intended. `--duration-*` and `--control-*` have no Tailwind namespace at all, so
+components reach them as `duration-(--duration-fast)` and `h-(--control-height-md)`.
+
+The set is pinned by `THEME_BRIDGES` and asserted both ways in `tailwindCollisions.test.ts`:
+an unpublished-but-declared bridge fails, and so does a published-but-undeclared one. Every
+entry deliberately **redefines an existing utility in every consumer** — that is the point,
+and it is why it is a decision rather than a tweak:
+[the ADR](../../docs/decisions/2026-07-29-theme-css-bridges-tailwind-namespaces.md).
+
+`packages/docs/src/TokenSpecimen.tsx` still reads them through `var()`. It is left that way
+as the before-picture; `@charcuterie/ui` is the after.
+
+## Container-query variants are generated here too
+
+`theme.css` emits one `@custom-variant` per step of the container-query scale, with a
+**literal** threshold, because a container query's condition is resolved before custom
+properties exist — `@container (min-inline-size: var(--cq-sm))` is invalid CSS:
+
+```css
+@custom-variant cq-sm (@container (min-inline-size: 24rem));
+```
+
+So `cq-sm:` … `cq-xl:` are ours, matching `--cq-*`, rather than Tailwind's `@sm:`, which
+reads the `--container-*` namespace our scale deliberately moved off.
+[Decision](../../docs/decisions/2026-07-29-container-query-variants-are-generated.md).
