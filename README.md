@@ -6,9 +6,13 @@ place and every app inherits look, behaviour, and accessibility.
 > **This is the `v2` branch.** v1 — the Children-First React state library from
 > [this talk](https://www.youtube.com/watch?v=n62Pc4KV4SM) — lives on `master` and still
 > works. Its state hooks were rewritten as `@charcuterie/logic` in M2; its **component**
-> files were not ported and M3 will want them —
+> files were not ported, and M4's overlays are what will want them —
 > [the M2 handoff](docs/2026-07-29-m2-logic-conformance.md) lists which ones and the one
 > command that retrieves each.
+
+**M0–M3 have landed.** Next is M4: Modal on native `<dialog>`, Popover, and **Tabs**, which
+is the state layer's falsification point. Start from
+[the M3 handoff](docs/2026-07-29-m3-p0-components.md).
 
 ## Packages
 
@@ -19,7 +23,7 @@ place and every app inherits look, behaviour, and accessibility.
 | [`@charcuterie/eslint-config`](packages/eslint-config/README.md) | **live** | The rules Biome cannot express. |
 | [`@charcuterie/docs`](packages/docs/README.md) | **live**, private | Storybook host. |
 | [`@charcuterie/logic`](packages/logic/README.md) | **live** | The five state kinds as framework-free cores, plus React 19 and Preact bindings and optional Jotai/signals store adapters. |
-| `@charcuterie/ui` | M3 | Components; re-exports tokens at `@charcuterie/ui/tokens`. |
+| [`@charcuterie/ui`](packages/ui/README.md) | **live** | The P0 components — Spinner, Skeleton, Button, IconButton, Badge, ProgressBar, EmptyState, Card, LiveStatusIndicator, MediaTile, VisuallyHidden. Re-exports tokens at `@charcuterie/ui/tokens`. |
 | `@charcuterie/rx` | M7 | Design doc + ADR only, deliberately not built. |
 
 Dependency direction is one-way: `tokens ← logic ← ui`. Forbidden forever:
@@ -41,9 +45,9 @@ Yarn 4, `node-modules` linker, TypeScript 6, Vitest 4, Biome 2, ESLint 10 — ma
 `mux-magic`, the reference app for every convention here. Copy its conventions rather
 than inventing new ones.
 
-Browser-mode tests — Storybook's, and `@charcuterie/logic`'s React/Preact conformance
-run — need a chromium matching this repo's Playwright. The agent sandbox ships an older
-one; see the Playwright note in
+Browser-mode tests — Storybook's, and `@charcuterie/logic`'s React/Preact conformance run —
+need a chromium matching this repo's Playwright, which the agent sandbox now ships at
+`/opt/pw-browsers`. No environment override; see the note in
 [`packages/logic/README.md`](packages/logic/README.md#testing).
 
 ## Where the reasoning lives
@@ -51,10 +55,15 @@ one; see the Playwright note in
 - [`docs/decisions/`](docs/decisions/README.md) — settled calls, newest first. **Check
   here before proposing a change**; a decision on file overrides a default instinct, and
   a past one is superseded by a new dated file rather than edited.
+- Milestone handoffs, which supersede the plan where they disagree:
+  [M1 tokens](docs/2026-07-29-m1-mux-magic-token-swap.md) ·
+  [M2 logic](docs/2026-07-29-m2-logic-conformance.md) ·
+  [M3 components](docs/2026-07-29-m3-p0-components.md).
 - The plan and phasing:
   `agentic/docs/research/2026-07-29-charcuterie-component-library-plan.md`.
-- [`docs/previews/`](docs/previews/) — the archived M0 bake-off board and its
-  screenshots. Rebuild with `yarn preview:themes`.
+- [`docs/previews/`](docs/previews/) — the archived M0 bake-off board, the M1 swap
+  measurements, and M3's component boards. Rebuild the bake-off with
+  `yarn preview:themes`.
 
 ## The three things most likely to get "fixed" by mistake
 
