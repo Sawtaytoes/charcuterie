@@ -6,3 +6,9 @@ packages/*/cypress/videos
 dist
 node_modules
 storybook-static
+
+# Generated token artifacts — rebuilt by scripts/buildTokens.ts and
+# scripts/buildPreview.ts. The M0 winner's board gets promoted into
+# docs/previews/ deliberately; the scratch output does not.
+packages/tokens/dist
+packages/tokens/preview
