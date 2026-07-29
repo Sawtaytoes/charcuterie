@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "allowJs": false,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "isolatedModules": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "target": "ESNext",
+    "useDefineForClassFields": true,
+
+    // Every package's source imports siblings with an explicit
+    // `.ts` extension, because Node 24 runs the TypeScript
+    // directly — `node scripts/buildTokens.ts` needs no install,
+    // which is what let M0 ship before this workspace existed.
+    //
+    // `rewriteRelativeImportExtensions` is what lets that same
+    // source also emit valid JS: tsc rewrites `./contrast.ts` to
+    // `./contrast.js` on the way out. Without it the two
+    // workflows are mutually exclusive.
+    "allowImportingTsExtensions": true,
+    "rewriteRelativeImportExtensions": true
+  }
+}

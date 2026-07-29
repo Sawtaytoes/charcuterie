@@ -1,0 +1,18 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // The config itself is plain ESM JavaScript, matching
+    // `mux-magic/eslint.config.js`. An ESLint config that needs a
+    // build step to lint is a bootstrapping problem nobody wants
+    // on a fresh clone.
+    "allowJs": true,
+    "checkJs": false,
+    "lib": ["ESNext"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "types": ["node"],
+    "noEmit": true
+  },
+  "include": ["src/**/*.ts", "src/**/*.js", "*.ts"],
+  "exclude": ["src/__fixtures__"]
+}
