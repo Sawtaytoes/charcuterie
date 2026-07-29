@@ -36,6 +36,14 @@ const declare = (
   value: string,
 ) => `  ${name}: ${value};`
 
+/** `surfaceHover` → `surface-hover`, `loopFast` → `loop-fast`. */
+const toKebab = (name: string) => (
+  name.replace(
+    /[A-Z]/g,
+    (character) => `-${character.toLowerCase()}`,
+  )
+)
+
 export const buildColourProperties = (
   colour: SchemeColours,
 ): string[] => [
@@ -125,7 +133,7 @@ const buildVariantProperties = (
   ...Object
     .entries(variant.motion.duration)
     .map(([step, value]) => (
-      declare(`--duration-${step}`, value)
+      declare(`--duration-${toKebab(step)}`, value)
     )),
   ...Object
     .entries(variant.motion.easing)
@@ -303,6 +311,13 @@ export const buildVariablesCss = (
   // Every duration collapses to zero under reduced motion, in one
   // place. `mux-magic/…/styles/builderStyles.css` currently
   // hand-writes this per animation, which is how one gets missed.
+  //
+  // Zeroing a duration is necessary but not sufficient for looping
+  // animations: `animation: sweep 0ms infinite` still holds the
+  // first keyframe, which for a sweep is an off-screen bar. So the
+  // loop durations are zeroed *and* `animation` is switched off
+  // outright, and any component with a moving affordance owes a
+  // static fallback that still reads correctly.
   blocks.push(
     "",
     "@media (prefers-reduced-motion: reduce) {",
@@ -311,6 +326,8 @@ export const buildVariablesCss = (
     "    --duration-fast: 0ms;",
     "    --duration-normal: 0ms;",
     "    --duration-slow: 0ms;",
+    "    --duration-loop-fast: 0ms;",
+    "    --duration-loop-slow: 0ms;",
     "  }",
     "}",
     "",

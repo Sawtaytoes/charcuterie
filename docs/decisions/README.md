@@ -8,6 +8,8 @@ decision overrides an instinct.
 
 | Date | Decision | Summary |
 | --- | --- | --- |
+| 2026-07-29 | [**`daylight` is the default visual direction**](2026-07-29-daylight-is-the-default-visual-direction.md) | **M0 winner.** Light-first, cool neutrals, blue-violet accent, roomier rows, restrained motion. The other three stay as working `data-variant` alternates. Default *scheme* stays `dark`, so M1's "looks identical after the token swap" proof still means something. |
+| 2026-07-29 | [ePaper removes animation, not just shortens it](2026-07-29-epaper-removes-animation-not-just-shortens-it.md) | Loop durations are tokens; ePaper and `prefers-reduced-motion` set `animation: none` rather than a `0ms` duration, because a zero-duration animation still holds keyframe zero — which for the indeterminate sweep is an empty bar, i.e. the exact "wedged drive" misreading it exists to avoid. Every moving affordance owes an opacity-free static fallback. |
 | 2026-07-29 | [ePaper is a profile, not a scheme](2026-07-29-epaper-is-a-profile-not-a-scheme.md) | ePaper ships as `@charcuterie/tokens/epaper`, outside the three composing axes, because it *removes* capabilities (no hover, opacity, shadow, transition; six colours) rather than restyling them — and `data-scheme="epaper"` would wrongly imply a `data-variant` still applies. |
 | 2026-07-29 | [Gate contrast on WCAG 2.2 AA, report APCA](2026-07-29-contrast-gate-wcag-report-apca.md) | WCAG 2.2 fails CI; APCA Lc is printed next to every number but never gated, since WCAG 3 is still a draft. Only pairs WCAG actually requires are gated — scoping 1.4.11 to real control boundaries took the audit from 65 reported failures to 7 real ones. Also fails on alias drift. |
 | 2026-07-29 | [`colour` in TypeScript, `--color-*` in CSS](2026-07-29-colour-in-typescript-color-in-css.md) | Deliberate split: TS matches the fleet's British spelling (`e6Colour`, `colourMode`), CSS matches Tailwind v4's `@theme` namespace, which is the only one that generates `bg-*`/`text-*`. Renaming the CSS side silently produces zero utilities. |
@@ -17,7 +19,6 @@ decision overrides an instinct.
 These were settled in the plan but are not yet in effect in code, so they get their record
 when the code lands rather than now:
 
-- The winning visual direction (**pending — M0 is awaiting the owner's pick**)
 - The state-layer choice: Charcuterie's model on `@floating-ui/react`, and why not
   Radix / Base UI / Ark UI — M2
 - The five state kinds, extending the original three-state thesis — M2

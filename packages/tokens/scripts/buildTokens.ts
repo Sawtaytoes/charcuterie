@@ -24,12 +24,15 @@ import {
 import { variants } from "../src/variants/index.ts"
 
 /**
- * Until M0 concludes, there is no winner — so the default is the
- * first candidate and the value is meaningless. The pick replaces
- * this with the chosen name, and that one-line diff is the whole
- * "the winner is already a real theme file" claim.
+ * The M0 winner, picked 2026-07-29. See
+ * `docs/decisions/2026-07-29-daylight-is-the-default-visual-direction.md`.
+ *
+ * That this is a one-line change — and that `hairline`, `layered`,
+ * and `legible` keep working as alternate `data-variant` values
+ * with no further work — is the payoff for generating the bake-off
+ * from real token files instead of drawing it.
  */
-const DEFAULT_VARIANT = "hairline"
+const DEFAULT_VARIANT = "daylight"
 
 const distDirectory = join(
   dirname(
