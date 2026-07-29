@@ -1,0 +1,56 @@
+import { Meta } from "@storybook/addon-docs/blocks"
+
+<Meta title="Tokens/Overview" />
+
+# The token layer
+
+Three axes, all `<html>` data attributes, all composing:
+
+| Attribute | Values | Changes |
+| --- | --- | --- |
+| `data-scheme` | `light` · `dark` | colour only |
+| `data-density` | `comfortable` · `compact` · `kiosk` | control sizing + type scale |
+| `data-variant` | `daylight` · `hairline` · `layered` · `legible` | the visual direction |
+
+Switch any of them in the toolbar above. **Nothing in React observes the change** —
+that is the whole design. One attribute flip re-themes every component with zero
+re-render, because components name semantic roles (`surface.raised`,
+`intent.danger.solid`) and the roles resolve through CSS custom properties.
+
+If a component ever needs a `useTheme()` hook to respond correctly, the token layer
+has failed, and this toolbar is where it shows up first.
+
+## ePaper is not a fourth axis
+
+It is a separate export, `@charcuterie/tokens/epaper`, because it *removes*
+capabilities rather than restyling them: no hover, no opacity, no shadow, no
+transition, and a fixed six-colour palette the panel can physically render.
+Modelling it as `data-scheme="epaper"` would imply a `data-variant` still applies to
+it, which it cannot.
+
+## Defaults
+
+`daylight` won the M0 bake-off and is the default `data-variant`. The default
+*scheme* stays **dark**, deliberately — picking a light-first direction is not the
+same as flipping the fleet to light, and the kiosk Pis stay pinned to dark. A light
+kiosk in a dark room is a lamp.
+
+The three losing directions are live alternates rather than deleted files. That they
+cost nothing to keep is the payoff for generating the bake-off board from token files
+instead of drawing it.
+
+## Contrast is a test, not a guideline
+
+`packages/tokens/src/contrast.test.ts` walks every content-on-surface and intent pair
+across every (variant × scheme) and fails below threshold.
+
+- **WCAG 2.2 is the gate** — 4.5:1 for text, 3:1 for control boundaries and focus
+  indicators. Normative, and what an audit will use.
+- **APCA is reported alongside** — it models perceived contrast far better on dark
+  UI, but WCAG 3 is still a working draft, so gating on it means gating on a moving
+  target.
+
+Two categories are reported and never gated, each for a stated reason: disabled
+content (WCAG exempts inactive controls) and decorative lines. Getting that scoping
+wrong is not harmless — gating decoration at 3:1 produced 65 "failures" on the first
+run, which is precisely how a contrast gate gets switched off.
