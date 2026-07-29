@@ -30,7 +30,11 @@
 
 import { expect, test } from "vitest"
 
-import { buildVariablesCss } from "./buildCss.ts"
+import {
+  buildThemeCss,
+  buildVariablesCss,
+  THEME_BRIDGES,
+} from "./buildCss.ts"
 import { variants } from "./variants/index.ts"
 
 /**
@@ -124,11 +128,16 @@ test("the container-query scale stays off Tailwind's --container-*", () => {
   expect(css).not.toContain("--container-")
 })
 
-test("spacing, type size, and line height do not collide", () => {
+test("spacing, type size, and line height do not collide at the variables layer", () => {
   // Near misses worth stating, because all three look like they
   // should: Tailwind uses `--spacing` (singular) where we use
   // `--space-*`, `--text-*` where we use `--font-size-*`, and
   // `--leading-*` where we use `--line-height-*`.
+  //
+  // Our names stay ours in `variables.css`, which is what keeps a
+  // plain-CSS or Satori consumer reading `--font-size-md` rather
+  // than a Tailwind spelling. M3 then bridges them into Tailwind's
+  // namespaces **once, in `theme.css`** — see the next test.
   const css = buildVariablesCss(variants, "daylight")
 
   expect(css).toContain("--space-4:")
@@ -139,4 +148,83 @@ test("spacing, type size, and line height do not collide", () => {
 
   expect(css).toContain("--line-height-normal:")
   expect(css).not.toContain("--leading-normal:")
+})
+
+// ---------------------------------------------------------------
+// The bridge — M3's addition, and the one that changes what an
+// existing utility means
+// ---------------------------------------------------------------
+
+test("theme.css bridges every structural namespace a component needs", () => {
+  // Without this, a component writing `text-sm` gets Tailwind's
+  // 0.875rem instead of the variant's density-aware ramp — and
+  // silently, because the utility exists either way. M3's
+  // `tailwindCandidates.test.ts` in `@charcuterie/ui` catches the
+  // *missing* utility; only this catches the wrong one.
+  const themeCss = buildThemeCss()
+
+  expect(themeCss).toContain(
+    "--text-md: var(--font-size-md);",
+  )
+
+  expect(themeCss).toContain(
+    "--leading-normal: var(--line-height-normal);",
+  )
+
+  expect(themeCss).toContain(
+    "--shadow-low: var(--elevation-low);",
+  )
+
+  expect(themeCss).toContain(
+    "--ease-standard: var(--easing-standard);",
+  )
+
+  // Tailwind's spacing is a single multiplier, so this is the
+  // scale's step rather than a scale entry.
+  expect(themeCss).toContain("--spacing: 0.25rem;")
+})
+
+test("the bridge is exactly the declared set", () => {
+  // Same contract as `KNOWN_COLLISIONS` above, one layer up: every
+  // entry here redefines a Tailwind utility in every consumer, so
+  // adding one is a decision and it has to be written down. A
+  // namespace appearing in `theme.css` that is not in
+  // `THEME_BRIDGES` fails here.
+  const themeCss = buildThemeCss()
+
+  const published = new Set(
+    (themeCss.match(/^\s+(--[a-z0-9-]+):/gim) ?? []).map(
+      (line) => line.trim().replace(/:$/, ""),
+    ),
+  )
+
+  const bridgeNames = Object.keys(THEME_BRIDGES)
+
+  for (const name of published) {
+    if (name.startsWith("--color-")) {
+      continue
+    }
+
+    const bridge = bridgeNames.find(
+      (candidate) =>
+        name === candidate || name.startsWith(candidate),
+    )
+
+    expect(
+      bridge,
+      `theme.css publishes ${name}, which is not a declared bridge`,
+    ).toBeDefined()
+  }
+
+  // And the reverse: a declared bridge that emits nothing is a
+  // typo that would leave components unstyled.
+  for (const name of bridgeNames) {
+    expect(
+      [...published].some(
+        (candidate) =>
+          candidate === name || candidate.startsWith(name),
+      ),
+      `declared bridge ${name} emits nothing`,
+    ).toBe(true)
+  }
 })
