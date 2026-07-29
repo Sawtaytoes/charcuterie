@@ -65,8 +65,22 @@ export const screen = {
  * window should lay out like a small thing — which is the whole
  * reason the fleet's poster grids look wrong at intermediate
  * widths today.
+ *
+ * Emitted as `--cq-*`, **not** `--container-*`. Tailwind v4 owns
+ * `--container-*` for its thirteen-step `max-w-*` scale, using the
+ * same step names at different sizes — our `md` is 32rem against
+ * its 28rem — so declaring ours at `:root` silently turned
+ * `max-w-md` into `max-w-lg` in every consumer, with no import and
+ * no error. M1 caught it in mux-magic before anything shipped.
+ *
+ * `cq` is the only abbreviation in the token surface, against a
+ * house style that otherwise spells names out (`--line-height-*`,
+ * not `--lh-*`). It earns the exception by matching the CSS
+ * feature it exists for: `@container` queries are written with
+ * `cqw`/`cqi`/`cqmin` units, so `--cq-md` reads as that scale to
+ * anyone writing one.
  */
-export const container = {
+export const containerQuery = {
   xs: "16rem",
   sm: "24rem",
   md: "32rem",

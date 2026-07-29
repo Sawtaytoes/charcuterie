@@ -31,7 +31,7 @@ export type { ResolvedTokens } from "./resolveTokens.ts"
 export { resolveTokens } from "./resolveTokens.ts"
 
 export {
-  container,
+  containerQuery,
   densityControl,
   densityFontScale,
   layer,
