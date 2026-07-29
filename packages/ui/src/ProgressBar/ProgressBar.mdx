@@ -1,0 +1,48 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as ProgressBarStories from "./ProgressBar.stories";
+
+<Meta of={ProgressBarStories} />
+
+# ProgressBar
+
+Five repos hand-roll one and **only rip-deck's has `role="progressbar"`**. The other four
+are a `<div>` with a percentage width: invisible to assistive technology and to
+`getByRole("progressbar")`.
+
+This is the union — rip-deck's ARIA and its indeterminate sweep, plus threshold colours
+nobody has yet.
+
+<Canvas of={ProgressBarStories.Default} />
+
+## Props
+
+<Controls />
+
+## Three corrections to rip-deck's version
+
+1. **The role goes on the track, not the fill.** rip-deck puts `role="progressbar"` on the
+   filled element, so a 4% rip is a progressbar 4px wide as far as AT and a Playwright
+   bounding box are concerned.
+2. **The name comes from a real label**, wired with `aria-labelledby` — visible or
+   `VisuallyHidden` — rather than a hardcoded `aria-label` that cannot be translated.
+3. **`aria-valuenow` is omitted while indeterminate**, which is what says "unknown" rather
+   than "zero".
+
+## Indeterminate means "no measurable progress yet"
+
+Not zero, and not unknown-therefore-full. rip-deck's case is the AACS/BD+ preamble: ~25 s
+of a real Blu-ray emitting nothing, where a full bar reads as a finished rip and an empty
+one as a wedged drive. The sweep animates `inset-inline-start`, so it runs the other way in
+RTL for free, and its reduced-motion fallback hatches the whole track rather than parking a
+bar at one end.
+
+<Canvas of={ProgressBarStories.Indeterminate} />
+
+## Values arrive from a log parser
+
+`-1`, `101`, `NaN`, and `0 of 0` are all normal in this fleet, so clamping is a tested pure
+function (`progressValue.ts`) and `aria-valuenow` is clamped in the value's own units —
+never disagreeing with what is drawn.
+
+<Canvas of={ProgressBarStories.AllStates} />

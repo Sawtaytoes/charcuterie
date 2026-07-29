@@ -1,0 +1,43 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as LiveStatusIndicatorStories from "./LiveStatusIndicator.stories";
+
+<Meta of={LiveStatusIndicatorStories} />
+
+# LiveStatusIndicator
+
+Four repos, four implementations, and **it is the thing users read most** — a wall-mounted
+panel showing stale data under a green dot is worse than one showing nothing.
+
+<Canvas of={LiveStatusIndicatorStories.Default} />
+
+## Props
+
+<Controls />
+
+## The distinction all four repos lose
+
+`connecting` and `reconnecting` are different states and they are collapsed everywhere
+today. A user who has seen data wants "lost it, getting it back" (amber, moving), not the
+cold-start spinner they already sat through (blue), and not a dead link (red). That is why
+`connectionTransitions` is one of only two machines `@charcuterie/logic` ships rather than
+something each app defines.
+
+Wording and colour both come from exhaustive switches over that machine, so adding a fifth
+state stops this package compiling instead of rendering a grey dot.
+
+<Canvas of={LiveStatusIndicatorStories.AllVariants} />
+
+## Accessibility contract
+
+- `role="status"` + `aria-live="polite"`, so a transition is announced without interrupting
+  what the user is doing. `assertive` would cut off the sentence in progress, and the dot is
+  not going anywhere.
+- `aria-label` as well, because a `status` region takes no accessible name from its content
+  — that is what makes `getByRole("status", { name: "Connected" })` resolve.
+- Only `connecting` and `reconnecting` animate. A dot that pulses forever is the fleet's
+  current "is it alive?" problem in a new costume.
+- `data-status` is the stable handle for a Playwright assertion — it survives translation,
+  where the visible wording does not.
+
+<Canvas of={LiveStatusIndicatorStories.Interactive} />
