@@ -21,6 +21,11 @@
  * really a visual direction. Others are hazards. So the set is
  * pinned here rather than discovered later by a consumer whose
  * layout moved.
+ *
+ * M1 found exactly one hazard — our container-query scale sitting
+ * on Tailwind's `--container-*`, which owns `max-w-*` at different
+ * sizes. It is now emitted as `--cq-*`; see
+ * `docs/decisions/2026-07-29-container-query-scale-is-cq-not-container.md`.
  */
 
 import { expect, test } from "vitest"
@@ -51,14 +56,16 @@ const TAILWIND_NAMESPACES = [
 ]
 
 /**
- * Every collision, and whether it is deliberate.
+ * Every collision. All of them are now deliberate — each one
+ * carries a variant's visual character into Tailwind's own
+ * utilities, which is what makes a variant a visual direction
+ * rather than a palette.
  *
  * `--color-*` is not listed: that one is not a collision but the
  * entire mechanism — `theme.css` publishes it through `@theme`
  * on purpose.
  */
 const KNOWN_COLLISIONS = {
-  "--container-": "hazard",
   "--font-": "intended",
   "--font-weight-": "intended",
   "--radius-": "intended",
@@ -101,18 +108,20 @@ test("the set of Tailwind namespaces we override is exactly the known one", () =
   )
 })
 
-test("--container-* is still flagged as the hazard", () => {
-  // Ours is a five-step container-query scale; Tailwind's is a
-  // thirteen-step `max-w-*` scale using the same names at
-  // different sizes — our `md` is 32rem against Tailwind's 28rem.
-  // A consumer writing `max-w-md` silently gets Tailwind's
-  // `max-w-lg`.
+test("the container-query scale stays off Tailwind's --container-*", () => {
+  // The one hazard M1 found, now fixed rather than flagged. Ours
+  // is a five-step container-query scale; Tailwind's is a
+  // thirteen-step `max-w-*` scale using the same step names at
+  // different sizes — our `md` is 32rem against Tailwind's 28rem
+  // — so a consumer writing `max-w-md` silently got `max-w-lg`.
   //
   // Unlike radius and tracking, nothing about a *visual
-  // direction* argues for changing what `max-w-md` means. This
-  // stays pinned until the scale is renamed or deliberately
-  // adopted; see the M1 handoff.
-  expect(KNOWN_COLLISIONS["--container-"]).toBe("hazard")
+  // direction* argues for changing what `max-w-md` means, so the
+  // scale moved instead of Tailwind's meaning.
+  const css = buildVariablesCss(variants, "daylight")
+
+  expect(css).toContain("--cq-md:")
+  expect(css).not.toContain("--container-")
 })
 
 test("spacing, type size, and line height do not collide", () => {
