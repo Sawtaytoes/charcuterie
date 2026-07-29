@@ -1,0 +1,17 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "types": ["vite/client"],
+    "noEmit": true
+  },
+  // `.storybook` has its own tsconfig — TypeScript's wildcard
+  // includes skip dot-directories, so listing it here resolves to
+  // nothing and ESLint's project service then refuses to parse the
+  // config files. Same arrangement as `mux-magic/packages/web`.
+  "include": ["src", "*.ts"],
+  "exclude": ["storybook-static"]
+}
