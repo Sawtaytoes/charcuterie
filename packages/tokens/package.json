@@ -1,0 +1,34 @@
+{
+  "name": "@charcuterie/tokens",
+  "version": "0.0.0",
+  "description": "Design tokens for the Charcuterie component library. Zero dependencies, no React.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./epaper": "./src/epaper.ts",
+    "./theme.css": "./dist/theme.css",
+    "./variables.css": "./dist/variables.css",
+    "./*": "./src/*"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build:tokens": "node scripts/buildTokens.ts",
+    "check:contrast": "node scripts/checkContrast.ts",
+    "preview:themes": "node scripts/buildPreview.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Sawtaytoes/charcuterie.git",
+    "directory": "packages/tokens"
+  }
+}
