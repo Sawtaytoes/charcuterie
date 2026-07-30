@@ -104,6 +104,25 @@ export type SchemeColours = {
     ringOffset: string
   }
   elevation: Record<ElevationStep, string>
+  /**
+   * The modal wash — `::backdrop`, and nothing else.
+   *
+   * Its own role rather than a member of `surface`, for two
+   * reasons. It is the one colour here that is **deliberately
+   * translucent**, so it would break the "opaque 6-digit hex"
+   * rule the swatches are held to; and nothing is ever drawn *on*
+   * it, so enrolling it in the `content.* on surface.*` contrast
+   * matrix would be measuring a pair that cannot exist.
+   *
+   * A variant's own value, not a component's, because how hard a
+   * direction separates a dialog from the page is exactly the
+   * kind of thing a visual direction decides — `legible` dims
+   * harder than `daylight` on purpose.
+   *
+   * `transparent` is legal and is what ePaper uses: a panel with
+   * no opacity cannot dim, so it says so rather than faking it.
+   */
+  scrim: string
 }
 
 export type MotionTokens = {

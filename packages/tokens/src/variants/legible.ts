@@ -148,6 +148,10 @@ export const legible: Variant = {
         medium: "0 6px 18px rgb(0 0 0 / 0.60)",
         high: "0 18px 44px rgb(0 0 0 / 0.70)",
       },
+      // The heaviest of the four, on the same premise as
+      // everything else here: bad conditions. A wash you can see
+      // past is a wash that failed in sunlight.
+      scrim: "rgb(0 0 0 / 0.84)",
     },
 
     light: {
@@ -237,6 +241,7 @@ export const legible: Variant = {
         medium: "0 6px 18px rgb(11 11 9 / 0.14)",
         high: "0 18px 44px rgb(11 11 9 / 0.20)",
       },
+      scrim: "rgb(11 11 9 / 0.66)",
     },
   },
 

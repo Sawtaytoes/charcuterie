@@ -75,6 +75,21 @@ describe.each(variants)("$name", (variant) => {
   )
 
   test.each(SCHEMES)(
+    "%s dims behind a modal, and does it translucently",
+    (scheme) => {
+      // The scrim is the one colour in the set that must *not* be
+      // opaque, and an opaque one is a black rectangle where the
+      // page used to be — which looks like a rendering failure
+      // rather than a dialog. Deliberately checking for an alpha
+      // channel rather than for a specific value, so a direction
+      // stays free to dim as hard as its premise wants.
+      const { scrim } = variant.schemes[scheme]
+
+      expect(scrim).toMatch(/^rgb\([\d\s]+\/\s*0?\.\d+\)$/)
+    },
+  )
+
+  test.each(SCHEMES)(
     "%s uses opaque 6-digit hex throughout",
     (scheme) => {
       const colour = variant.schemes[scheme]

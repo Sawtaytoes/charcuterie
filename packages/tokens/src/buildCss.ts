@@ -71,6 +71,7 @@ export const buildColourProperties = (
         ),
     ),
   ),
+  declare("--color-scrim", colour.scrim),
   declare("--color-focus-ring", colour.focus.ring),
   declare(
     "--color-focus-ring-offset",
@@ -428,6 +429,8 @@ export const buildThemeCss = () =>
       "border-focus",
       "focus-ring",
       "focus-ring-offset",
+      // `bg-scrim`, for `Modal`'s `::backdrop` and nothing else.
+      "scrim",
     ].map(
       (name) => `  --color-${name}: var(--color-${name});`,
     ),

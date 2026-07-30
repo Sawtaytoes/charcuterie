@@ -149,6 +149,9 @@ export const layered: Variant = {
         medium: "0 8px 24px rgb(0 0 0 / 0.45)",
         high: "0 20px 56px rgb(0 0 0 / 0.55)",
       },
+      // Warm, matching the accent, and heavy — across a room the
+      // dialog has to win outright.
+      scrim: "rgb(19 17 24 / 0.72)",
     },
 
     light: {
@@ -238,6 +241,7 @@ export const layered: Variant = {
         medium: "0 8px 24px rgb(28 26 36 / 0.10)",
         high: "0 20px 56px rgb(28 26 36 / 0.16)",
       },
+      scrim: "rgb(28 26 36 / 0.52)",
     },
   },
 

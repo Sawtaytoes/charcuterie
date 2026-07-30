@@ -97,6 +97,20 @@ export const selectActiveIndex = <Value>(
  * group is in the tab order, and it is the active one. With
  * nothing active the first member takes the tab stop, so the
  * group is still reachable by keyboard.
+ *
+ * The `pendingValue` branch closes a **first-paint keyboard hole**
+ * that M4 found while building `Tabs`. Members register from an
+ * effect, so on the very first render `activeValue` is null *and*
+ * `registeredValues` is empty — every member scored `-1`, and a
+ * tab bar with zero tab stops is one nothing can Tab into. It
+ * lasted a frame in practice, but only because a re-render always
+ * followed; a group whose members never registered would have
+ * stayed unreachable with nothing to show for it.
+ *
+ * Scoped to the no-registrations case on purpose. Once members
+ * exist, a `pendingValue` naming one that never arrives must not
+ * take the tab stop away from the members that did — the first
+ * registered one keeps it.
  */
 export const selectTabIndex = <Value>(
   state: RovingFocusState<Value>,
@@ -104,6 +118,10 @@ export const selectTabIndex = <Value>(
 ) => {
   if (state.activeValue !== null) {
     return state.activeValue === value ? 0 : -1
+  }
+
+  if (state.registeredValues.length === 0) {
+    return state.pendingValue === value ? 0 : -1
   }
 
   return state.registeredValues[0] === value ? 0 : -1
