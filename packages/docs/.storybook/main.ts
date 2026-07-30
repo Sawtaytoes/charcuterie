@@ -4,15 +4,23 @@ import remarkGfm from "remark-gfm"
 import { mergeConfig } from "vite"
 
 const config: StorybookConfig = {
+  // **`.mdx` before `.stories.tsx`, deliberately.**
+  //
+  // An attached MDX file (`<Meta of={…} />`) is indexed where its
+  // specifier sits, not hoisted the way an `autodocs` entry is — so
+  // listing the stories first put every component's `Docs` entry
+  // *below* its stories in the sidebar, where nobody looks for it.
+  // Sorting cannot fix it either: the sidebar follows index order
+  // and the index follows this array.
   stories: [
-    "../src/**/*.stories.{ts,tsx}",
     "../src/**/*.mdx",
+    "../src/**/*.stories.{ts,tsx}",
     // Stories live next to their component, in `@charcuterie/ui` —
     // matching mux-magic, where `Component.tsx` / `.stories.tsx` /
     // `.mdx` / `.test.tsx` are siblings. This package is only the
     // host; nothing about the components lives here.
-    "../../ui/src/**/*.stories.tsx",
     "../../ui/src/**/*.mdx",
+    "../../ui/src/**/*.stories.tsx",
   ],
   addons: [
     {
