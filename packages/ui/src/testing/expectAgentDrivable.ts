@@ -47,6 +47,71 @@ const describeTarget = ({ name, role }: AgentTarget) =>
           : String(name)
       }`
 
+/**
+ * The composite widgets whose members are *supposed* to carry
+ * `tabindex="-1"`.
+ *
+ * Found by M4. `Tabs` is the first component here to use the
+ * roving-tabindex pattern, and this helper rejected it outright:
+ * "has a negative tabindex, so it can be clicked but never reached
+ * with Tab". That rule is right for a standalone button and wrong
+ * for a tab — a roving group's whole design is that exactly one
+ * member is in the tab order and the arrow keys reach the rest, so
+ * a tab list where every tab had `tabindex="0"` would be the bug.
+ *
+ * So the check is not skipped for these; it is **replaced by the
+ * roving rule itself**, which is a stronger assertion than the one
+ * it stands in for.
+ */
+const COMPOSITE_ROLES = new Set([
+  "grid",
+  "listbox",
+  "menu",
+  "menubar",
+  "radiogroup",
+  "tablist",
+  "toolbar",
+  "tree",
+  "treegrid",
+])
+
+const COMPOSITE_MEMBER_ROLES = new Set([
+  "gridcell",
+  "menuitem",
+  "menuitemcheckbox",
+  "menuitemradio",
+  "option",
+  "radio",
+  "tab",
+  "treeitem",
+])
+
+const getCompositeGroup = (element: Element) => {
+  if (
+    !COMPOSITE_MEMBER_ROLES.has(
+      element.getAttribute("role") ?? "",
+    )
+  ) {
+    return null
+  }
+
+  let current = element.parentElement
+
+  while (current) {
+    if (
+      COMPOSITE_ROLES.has(
+        current.getAttribute("role") ?? "",
+      )
+    ) {
+      return current
+    }
+
+    current = current.parentElement
+  }
+
+  return null
+}
+
 const getIsHiddenFromAgents = (element: Element) => {
   let current: Element | null = element
 
@@ -145,11 +210,44 @@ export const expectAgentDrivable = (
     !isDisabled &&
     element.tabIndex < 0
   ) {
-    throw new Error(
-      `Not agent-drivable: ${describeTarget(
-        target,
-      )} has a negative tabindex, so it can be clicked but never reached with Tab.`,
+    const group = getCompositeGroup(element)
+
+    if (!group) {
+      throw new Error(
+        `Not agent-drivable: ${describeTarget(
+          target,
+        )} has a negative tabindex, so it can be clicked but never reached with Tab.`,
+      )
+    }
+
+    // A roving group, so the question changes: not "is this
+    // element in the tab order" — it must not be — but "is the
+    // *group* reachable, exactly once". Zero tab stops strands the
+    // whole widget; several put every member back in the tab
+    // order, which is the pattern not being implemented at all.
+    const tabStops = Array.from(
+      group.querySelectorAll("[role]"),
+    ).filter(
+      (member) =>
+        COMPOSITE_MEMBER_ROLES.has(
+          member.getAttribute("role") ?? "",
+        ) &&
+        !member.hasAttribute("disabled") &&
+        member.getAttribute("aria-disabled") !== "true" &&
+        (member as HTMLElement).tabIndex >= 0,
     )
+
+    if (tabStops.length !== 1) {
+      throw new Error(
+        `Not agent-drivable: ${describeTarget(
+          target,
+        )} is inside a \`${group.getAttribute(
+          "role",
+        )}\` with ${
+          tabStops.length
+        } tab stops. A roving-tabindex group needs exactly one — Tab enters and leaves it once, and the arrow keys move within it.`,
+      )
+    }
   }
 
   return element

@@ -10,6 +10,13 @@ export default defineConfig({
       configDir: join(import.meta.dirname, ".storybook"),
     }),
   ],
+  // Pre-bundled, because discovering it mid-run makes Vite reload
+  // the page and every story in flight fails with "Failed to fetch
+  // dynamically imported module" — a real failure that looks
+  // nothing like its cause.
+  optimizeDeps: {
+    include: ["@floating-ui/react"],
+  },
   test: {
     name: "storybook",
     browser: {

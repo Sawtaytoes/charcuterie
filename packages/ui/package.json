@@ -45,7 +45,8 @@
   },
   "dependencies": {
     "@charcuterie/logic": "workspace:*",
-    "@charcuterie/tokens": "workspace:*"
+    "@charcuterie/tokens": "workspace:*",
+    "@floating-ui/react": "^0.27.20"
   },
   "peerDependencies": {
     "react": ">=19"

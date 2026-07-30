@@ -12,7 +12,7 @@
   ],
   "scripts": {
     "build": "yarn workspaces foreach --all --parallel --topological run build",
-    "build:storybook": "yarn workspace @charcuterie/docs build:storybook",
+    "build:storybook": "yarn build && yarn workspace @charcuterie/docs build:storybook",
     "check:contrast": "yarn workspace @charcuterie/tokens check:contrast",
     "lint": "yarn lint:biome-format && yarn lint:eslint-format",
     "lint:biome": "biome check",
@@ -21,7 +21,7 @@
     "lint:eslint-format": "eslint . --fix",
     "preview:themes": "yarn workspace @charcuterie/tokens preview:themes",
     "smoke:storybook": "yarn workspace @charcuterie/docs smoke:storybook",
-    "storybook": "yarn workspace @charcuterie/docs storybook",
+    "storybook": "yarn build && yarn workspace @charcuterie/docs storybook",
     "test": "vitest",
     "typecheck": "tsc --noEmit && yarn workspaces foreach --all --parallel run typecheck"
   },

@@ -66,7 +66,16 @@ that.
    widths, via `ContainerBoard`), `Interactive` (the complete keyboard path).
 4. Export from `src/index.ts` — the one sanctioned barrel. Components import each other
    directly, never through it.
-5. **If it declares `@container`, every `StoryCell` holding it needs `align="stretch"`.**
+5. **If it is an overlay, use the platform's top layer — never a portal.** `<dialog>` +
+   `showModal()`, or `popover="manual"`. Both stay where they are in the DOM, so
+   `canvas.getByRole(…)` still finds the panel; a portal moves it to `document.body`, out
+   of the element a test or an agent scoped its queries to
+   ([decision](../../docs/decisions/2026-07-30-overlays-use-the-top-layer-not-a-portal.md)).
+6. **If it is built on a registering kind, look at its first paint.** Members register
+   from effects, so before those run a `RovingFocus` has no active value and a
+   `VisibilityGroup` has no visible key. Two of M4's four bugs were exactly that, and the
+   isolated story runner saw neither — `yarn smoke:storybook` did.
+7. **If it declares `@container`, every `StoryCell` holding it needs `align="stretch"`.**
    `container-type: inline-size` forbids the element from being sized by its own
    contents, so a default (shrink-to-fit) cell collapses it to min-content and every
    line wraps after one word. Valid CSS, no error, nothing for axe to say — it only

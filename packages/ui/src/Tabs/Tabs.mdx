@@ -1,0 +1,104 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as TabsStories from "./Tabs.stories";
+
+<Meta of={TabsStories} />
+
+# Tabs
+
+**The state layer's falsification test.** Tabs is P0 for that reason and no other — the
+fifteen ad-hoc tab bars that used to justify it were in the withdrawn evidence. The plan
+was explicit: if this came out ugly, stop and reconsider the state layer before building
+fifteen more components.
+
+It did not come out ugly. The composition is two hooks and one decision.
+
+<Canvas of={TabsStories.Default} />
+
+## Props
+
+<Controls />
+
+## The composition
+
+```ts
+const panels = useVisibilityGroup({ visibleKey: initialKey })  // which panel shows
+const focus = useRovingFocus({ activeValue: initialKey })      // which tab is tabbable
+
+// `automatic` is this line. `manual` is its absence.
+if (activation === "automatic") panels.show(focus.activeValue)
+```
+
+That one line is the whole difference between the two ARIA activation modes, and it is
+only that small because **focus and selection are separate kinds**. In `manual`, focus
+lands on a tab whose panel is *not* showing — a state the original three-kind model could
+not represent at all. Modelled as a `SinglePicker`, as the three-kind model would have to,
+every arrow key would have chosen. The `Interactive` story asserts both halves against the
+same component.
+
+## What it does not use, and why that is the answer
+
+The plan expected `createLinkedIds` here too, alongside Visibility, VisibilityGroup, and
+RovingFocus. **It does not fit, and forcing it would have been wrong.**
+
+That kind exists for a *dynamic* trigger↔target pair — a `Popover` whose panel mounts and
+unmounts, where the multiset is what stops `aria-controls` pointing at a node React has
+already removed. A tab bar's pairing is static and known at render, so the ids are derived
+from one `useUniqueId` and cannot get out of step at all. Three of the four kinds, and a
+specific reason for the fourth.
+
+## Registration is membership
+
+A disabled tab joins the **panel** group — it still owns a panel and an id — and stays out
+of the **focus** group. That is all "disabled" means here: the arrow keys skip it because
+it is not a member, and nothing in `RovingFocus` has to know the word.
+
+`TabTrigger` is its own file for a reason that is not style: both registrations are
+effects, and an effect cannot run in a loop. Any member of a registering group ends up
+shaped like this.
+
+<Canvas of={TabsStories.AllVariants} />
+
+## `activeKey` is initial, not controlled
+
+Read once, on the first render. A parent that needs to push a value calls the hook's own
+setter; there is no controlled mode and no prop-sync effect, which is
+[the M2 decision](../../../docs/decisions/2026-07-29-logic-hooks-are-uncontrolled.md) and
+the thing that keeps the fleet's existing echo loops out of this library.
+
+## Focus is moved deliberately, and only then
+
+`RovingFocus` is state; something still has to call `.focus()`. It happens only while the
+tablist already contains the focused element — otherwise mounting a tab bar, or any parent
+re-render that moved `activeValue`, yanks the caret out of whatever the user was doing.
+
+<Canvas of={TabsStories.AllStates} />
+
+## What Tabs found in M3's own testing helper
+
+`expectAgentDrivable` rejected every tab outright:
+
+> Not agent-drivable: role "tab" named "Log" has a negative tabindex, so it can be clicked
+> but never reached with Tab.
+
+Correct for a standalone button, wrong for a tab. **A roving group's whole design is that
+exactly one member is in the tab order** and the arrow keys reach the rest; a tab list
+where every tab had `tabindex="0"` would be the bug.
+
+So the rejection was not skipped for composite widgets — it was **replaced by the roving
+rule itself**, which is the stronger assertion: inside a `tablist` / `listbox` / `menu` /
+`radiogroup` / `tree` / `grid` / `toolbar`, exactly one enabled member may be in the tab
+order. Zero strands the widget; several mean the pattern was never implemented.
+`AllStates` proves the failing half too, with a four-line stub standing in for the canvas —
+`AgentQueries` is structural precisely so that it can.
+
+<Canvas of={TabsStories.Responsive} />
+
+## A tab bar scrolls, it does not wrap
+
+A wrapped tablist puts tabs on two rows, which breaks the visual row and the mental model
+the arrow keys give — "right" stops meaning right. `ContainerBoard` appears here as a width
+harness rather than a container-query claim: `Tabs` declares no container, because nothing
+about it needs to *know* its width. It only has to survive being narrow.
+
+<Canvas of={TabsStories.Interactive} />
