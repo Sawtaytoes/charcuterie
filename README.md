@@ -16,7 +16,10 @@ out one line apart, so **the layer stands**
 ([verdict](docs/decisions/2026-07-30-state-layer-is-charcuterie-on-floating-ui.md)).
 
 Next is M5: the first consumer, **ripdeck**. Start from
-[the M4 handoff](docs/2026-07-30-m4-overlays-and-the-tabs-thesis-test.md).
+[the M4 handoff](docs/2026-07-30-m4-overlays-and-the-tabs-thesis-test.md), then
+[the Storybook review that followed it](docs/2026-07-30-m4-followup-storybook-review-before-m5.md)
+— which split stories from tests, and found three faults that a fully green gate set could
+not see.
 
 ## Packages
 
@@ -60,6 +63,11 @@ each story in isolation, so it is blind to anything about **order** — which is
 shipped with all twelve docs pages broken and every gate green
 ([why](packages/docs/README.md#yarn-smokestorybook--the-gate-that-clicks)).
 
+**Stories carry no assertions.** A story is a demo; the DOM tests are `Component.test.tsx`
+beside each component, mounting the composed story through `run()` in the same chromium
+([decision](docs/decisions/2026-07-30-stories-are-demos-tests-are-tests.md), superseding
+M3's). `yarn test` runs both, as the `storybook` and `ui-dom` projects.
+
 Yarn 4, `node-modules` linker, TypeScript 6, Vitest 4, Biome 2, ESLint 10 — matching
 `mux-magic`, the reference app for every convention here. Copy its conventions rather
 than inventing new ones.
@@ -77,7 +85,9 @@ need a chromium matching this repo's Playwright, which the agent sandbox now shi
 - Milestone handoffs, which supersede the plan where they disagree:
   [M1 tokens](docs/2026-07-29-m1-mux-magic-token-swap.md) ·
   [M2 logic](docs/2026-07-29-m2-logic-conformance.md) ·
-  [M3 components](docs/2026-07-29-m3-p0-components.md).
+  [M3 components](docs/2026-07-29-m3-p0-components.md) ·
+  [M4 overlays](docs/2026-07-30-m4-overlays-and-the-tabs-thesis-test.md) ·
+  [the M4 Storybook review](docs/2026-07-30-m4-followup-storybook-review-before-m5.md).
 - The plan and phasing:
   `agentic/docs/research/2026-07-29-charcuterie-component-library-plan.md`.
 - [`docs/previews/`](docs/previews/) — the archived M0 bake-off board, the M1 swap
