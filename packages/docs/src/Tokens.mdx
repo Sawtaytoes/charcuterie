@@ -39,6 +39,47 @@ The three losing directions are live alternates rather than deleted files. That 
 cost nothing to keep is the payoff for generating the bake-off board from token files
 instead of drawing it.
 
+## So when would you actually use `hairline`, `layered`, or `legible`?
+
+Short version: **most of the time you would not — you want `data-density`.** Each of the
+three was built for a viewing condition rather than a taste, and each one names the
+condition it is for. Flip the Variant toolbar against `Tokens/Specimen` to see them.
+
+| Direction | The condition it is for | Reach for it when | Do not |
+| --- | --- | --- | --- |
+| `hairline` | **Reading a lot of rows at desk distance.** Separation is a 1px border and a small surface step, never a shadow; motion is 120ms and flat, so the UI feels immediate. | A surface that is mostly a list — ripdeck's 16-bay tower, mux-magic's sequence log, a plex-channels queue — and `data-density="compact"` on `daylight` still feels loose. | Anything read from further than a desk. Hairlines stop existing at kiosk distance, and they are the *only* separation this direction has. |
+| `layered` | **Being looked at from across a room.** Separation is a real surface step plus a shadow, radii are 12–20px, motion is 200–320ms with overshoot, accent is warm. | The kiosk Pi and xander — a finger or a remote, two to three metres away. Pair it with `data-density="kiosk"`; it is the same bet at a different layer. | A dense list (it eats vertical space, so fewer rows fit) and anything ePaper — shadow-based separation collapses to nothing on a panel with no greys to spare. |
+| `legible` | **Bad conditions, or a person who needs the headroom.** Every content-on-surface pair targets WCAG AAA (7:1) instead of AA, intents are pushed until they differ at a glance, borders are drawn rather than implied, and the focus ring is 3px. | The garage tablet at 2am with a rip failing, a display in direct sun, or a user-facing "high contrast" preference. It is the honest thing to put behind that switch. | A long working session. Everything at 7:1 with saturated status colour is tiring, and when every state shouts, none of them does. |
+
+`legible` has a second, permanent job that has nothing to do with anyone choosing it:
+it is the **upper bound `contrast.test.ts` measures `daylight` against**. Deleting it
+would remove the benchmark, which is most of why the three losers were kept.
+
+**None of the three is the answer for ePaper.** That is
+`@charcuterie/tokens/epaper`, for the reason in the section above.
+
+### The trap: it is one axis, and the three attributes have to travel together
+
+`data-variant` is realistically an `<html>`-level choice. Setting it on a subtree
+*half*-applies the direction, because the generated selectors pair it with the other two
+axes — `[data-variant="hairline"][data-scheme="dark"]`, not a bare
+`[data-variant="hairline"]`. So a `<section data-variant="hairline">` inside a
+`daylight`/`dark` page picks up hairline's **radii** and keeps daylight's **colours and
+control heights**:
+
+```html
+<!-- half a theme: 7px radii, daylight's #1D2430 surface, daylight's 2.5rem controls -->
+<section data-variant="hairline">…</section>
+
+<!-- the whole direction: 7px radii, #15171A surface, 2.25rem controls -->
+<section data-variant="hairline" data-scheme="dark" data-density="comfortable">…</section>
+```
+
+Nothing errors either way, which is what makes it a trap. If you only want a denser
+list, `data-density="compact"` **is** per-surface and needs no companions — that is the
+axis to reach for, and it is what the `daylight` decision record already points at for
+ripdeck's bay list.
+
 ## Contrast is a test, not a guideline
 
 `packages/tokens/src/contrast.test.ts` walks every content-on-surface and intent pair

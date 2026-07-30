@@ -12,6 +12,11 @@
  *
  * Risk: eats vertical space, so a bay list fits fewer rows; and
  * shadow-based separation collapses to nothing on ePaper.
+ *
+ * Use it for: the kiosk Pi and xander, two or three metres away,
+ * driven by a finger or a remote — paired with
+ * `data-density="kiosk"`. Never for ePaper. Long form on
+ * `Tokens/Overview`.
  */
 
 import type { Variant } from "../types.ts"
