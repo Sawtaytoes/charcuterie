@@ -3,7 +3,7 @@ import {
   useStatus,
 } from "@charcuterie/logic"
 import type { Meta, StoryObj } from "@storybook/react"
-import { expect } from "storybook/test"
+import { intentArgType } from "../argTypes.storyHelpers.ts"
 import { Button } from "../Button/Button.tsx"
 import {
   ContainerBoard,
@@ -32,20 +32,29 @@ const meta = {
   title: "Components/Badge",
   component: Badge,
   parameters: { layout: "padded" },
+  argTypes: { intent: intentArgType },
+  // The component's own defaults, restated — Storybook does not
+  // seed `args` from docgen, so an unstated default shows in the
+  // props table with nothing selected in its control.
+  args: {
+    appearance: "soft",
+    intent: "neutral",
+    overflow: "truncate",
+    size: "md",
+  },
 } satisfies Meta<typeof Badge>
 
 export default meta
 
 type Story = StoryObj<typeof meta>
 
+/**
+ * A badge has no role by design — it is a word about something
+ * else, not a live region — so the handle an agent reads off the row
+ * is its text.
+ */
 export const Default: Story = {
   args: { children: "running", intent: "info" },
-  play: async ({ canvas }) => {
-    // A badge has no role by design — it is a word about something
-    // else, not a live region — so the drivable handle is its text,
-    // which is also what an agent reads off the row.
-    await expect(canvas.getByText("running")).toBeVisible()
-  },
 }
 
 export const AllVariants: Story = {
@@ -217,25 +226,4 @@ const AsyncStatusBadge = () => {
 export const Interactive: Story = {
   args: { children: "running" },
   render: () => <AsyncStatusBadge />,
-  play: async ({ canvas, userEvent }) => {
-    await expect(canvas.getByText("Idle")).toBeVisible()
-
-    await userEvent.click(
-      canvas.getByRole("button", { name: "Start" }),
-    )
-
-    await expect(canvas.getByText("Loading…")).toBeVisible()
-
-    await userEvent.click(
-      canvas.getByRole("button", { name: "Succeed" }),
-    )
-
-    await expect(canvas.getByText("Done")).toBeVisible()
-
-    await userEvent.click(
-      canvas.getByRole("button", { name: "Reset" }),
-    )
-
-    await expect(canvas.getByText("Idle")).toBeVisible()
-  },
 }

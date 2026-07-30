@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react"
-import { expect } from "storybook/test"
+
+import { controlSizeArgType } from "../argTypes.storyHelpers.ts"
 import { Button } from "../Button/Button.tsx"
 import {
   ContainerBoard,
@@ -7,30 +8,31 @@ import {
   StoryGrid,
   StorySection,
 } from "../board.storyHelpers.tsx"
-import { expectAgentDrivable } from "../testing/index.ts"
 import { Spinner } from "./Spinner.tsx"
 
 const meta = {
   title: "Components/Spinner",
   component: Spinner,
   parameters: { layout: "padded" },
+  argTypes: { size: controlSizeArgType },
+  args: {
+    isLabelVisible: false,
+    label: "Loading…",
+    size: "md",
+  },
 } satisfies Meta<typeof Spinner>
 
 export default meta
 
 type Story = StoryObj<typeof meta>
 
+/**
+ * The name comes from the *hidden* label, which is the whole reason
+ * this beats a rotating `<div>`: the state is announced even though
+ * nothing is printed.
+ */
 export const Default: Story = {
   args: {},
-  play: ({ canvas }) => {
-    // The name comes from the *hidden* label, which is the whole
-    // reason this beats a rotating `<div>`: the state is announced
-    // even though nothing is printed.
-    expectAgentDrivable(canvas, {
-      name: "Loading…",
-      role: "status",
-    })
-  },
 }
 
 export const AllVariants: Story = {
@@ -103,25 +105,14 @@ export const Responsive: Story = {
   ),
 }
 
+/**
+ * A named region with a visible label, and a ring that stays *out*
+ * of the accessibility tree — otherwise a screen reader reads the
+ * label twice, once as the region and once as an unnamed child.
+ */
 export const Interactive: Story = {
   args: {
     isLabelVisible: true,
     label: "Reading disc structure…",
-  },
-  play: async ({ canvas }) => {
-    const status = expectAgentDrivable(canvas, {
-      name: "Reading disc structure…",
-      role: "status",
-    })
-
-    // The ring itself is decoration and must stay out of the
-    // accessibility tree — otherwise a screen reader reads the
-    // label twice, once as the region and once as an unnamed child.
-    const ring = status.querySelector(
-      "[aria-hidden='true']",
-    )
-
-    await expect(ring).toBeInTheDocument()
-    await expect(ring).toHaveClass("charcuterie-spin")
   },
 }

@@ -9,6 +9,7 @@
     "smoke:storybook": "node scripts/smokeStorybook.ts",
     "storybook": "storybook dev -p 6006 --config-dir .storybook",
     "test:storybook": "vitest run --config vitest.storybook.config.ts",
+    "test:ui-dom": "vitest run --config vitest.ui.config.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

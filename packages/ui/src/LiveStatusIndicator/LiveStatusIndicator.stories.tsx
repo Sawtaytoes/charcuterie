@@ -3,7 +3,8 @@ import {
   useStatus,
 } from "@charcuterie/logic"
 import type { Meta, StoryObj } from "@storybook/react"
-import { expect } from "storybook/test"
+
+import { connectionStatusArgType } from "../argTypes.storyHelpers.ts"
 import { Button } from "../Button/Button.tsx"
 import {
   ContainerBoard,
@@ -13,7 +14,6 @@ import {
   StorySection,
 } from "../board.storyHelpers.tsx"
 import { Card } from "../Card/Card.tsx"
-import { expectAgentDrivable } from "../testing/index.ts"
 import { LiveStatusIndicator } from "./LiveStatusIndicator.tsx"
 
 const CONNECTION_STATUSES = [
@@ -27,27 +27,21 @@ const meta = {
   title: "Components/LiveStatusIndicator",
   component: LiveStatusIndicator,
   parameters: { layout: "padded" },
+  argTypes: { status: connectionStatusArgType },
+  args: { isLabelVisible: true, size: "md" },
 } satisfies Meta<typeof LiveStatusIndicator>
 
 export default meta
 
 type Story = StoryObj<typeof meta>
 
+/**
+ * A named live region, plus a `data-status` attribute — the stable
+ * handle for a Playwright assertion, because it survives translation
+ * where the visible wording does not.
+ */
 export const Default: Story = {
   args: { status: "connected" },
-  play: async ({ canvas }) => {
-    const indicator = expectAgentDrivable(canvas, {
-      name: "Connected",
-      role: "status",
-    })
-
-    // `data-status` is the stable handle for a Playwright assertion
-    // — it survives translation, where the visible wording does not.
-    await expect(indicator).toHaveAttribute(
-      "data-status",
-      "connected",
-    )
-  },
 }
 
 /**
@@ -202,34 +196,4 @@ const ConnectionLifecycle = () => {
 export const Interactive: Story = {
   args: { status: "connecting" },
   render: () => <ConnectionLifecycle />,
-  play: async ({ canvas, userEvent }) => {
-    const indicator = canvas.getByRole("status")
-
-    await expect(indicator).toHaveAttribute(
-      "data-status",
-      "connecting",
-    )
-
-    await userEvent.click(
-      canvas.getByRole("button", { name: "connected" }),
-    )
-
-    await expect(
-      canvas.getByText("Connected"),
-    ).toBeVisible()
-
-    await userEvent.click(
-      canvas.getByRole("button", { name: "reconnecting" }),
-    )
-
-    await expect(
-      canvas.getByText("Reconnecting…"),
-    ).toBeVisible()
-
-    // The one that matters: `reconnecting` is warning, not the
-    // `connecting` blue and not the `disconnected` red.
-    await expect(indicator).toHaveClass(
-      "text-intent-warning-content",
-    )
-  },
 }

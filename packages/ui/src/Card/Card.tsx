@@ -34,7 +34,17 @@ const SURFACE_CLASS: Record<CardSurface, string> = {
   sunken: "bg-surface-sunken",
 }
 
-const ELEVATION_CLASS: Record<ElevationStep, string> = {
+/**
+ * Exported only so the story can derive its `elevation` control from
+ * the same map the component indexes — `ElevationStep` comes from
+ * `@charcuterie/tokens`, which react-docgen will not follow, so the
+ * options have to be stated and this is the one statement of them
+ * that cannot drift.
+ */
+export const ELEVATION_CLASS: Record<
+  ElevationStep,
+  string
+> = {
   none: "shadow-none",
   low: "shadow-low",
   medium: "shadow-medium",

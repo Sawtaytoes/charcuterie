@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react"
-import { expect, fn } from "storybook/test"
 
+import { toStoryChoice } from "../argTypes.storyHelpers.ts"
 import { Badge } from "../Badge/Badge.tsx"
 import { Button } from "../Button/Button.tsx"
 import {
@@ -12,13 +12,25 @@ import {
 import { IconButton } from "../IconButton/IconButton.tsx"
 import { SettingsIcon } from "../icons.storyHelpers.tsx"
 import { ProgressBar } from "../ProgressBar/ProgressBar.tsx"
-import { expectAgentDrivable } from "../testing/index.ts"
-import { Card } from "./Card.tsx"
+import { Card, ELEVATION_CLASS } from "./Card.tsx"
 
 const meta = {
   title: "Components/Card",
   component: Card,
   parameters: { layout: "padded" },
+  argTypes: {
+    elevation: toStoryChoice(
+      Object.keys(
+        ELEVATION_CLASS,
+      ) as (keyof typeof ELEVATION_CLASS)[],
+    ),
+  },
+  args: {
+    elevation: "low",
+    headingLevel: 2,
+    padding: "md",
+    surface: "raised",
+  },
 } satisfies Meta<typeof Card>
 
 export default meta
@@ -33,15 +45,6 @@ export const Default: Story = {
       </p>
     ),
     heading: "Bay 3",
-  },
-  play: ({ canvas }) => {
-    // A heading turns the card into a landmark, and that is the
-    // whole a11y argument for this component: an agent driving a
-    // 16-bay tower can say *which* "Start" it means.
-    expectAgentDrivable(canvas, {
-      name: "Bay 3",
-      role: "region",
-    })
   },
 }
 
@@ -174,17 +177,22 @@ export const Responsive: Story = {
   ),
 }
 
+/**
+ * Two identical "Start rip" buttons on one page.
+ *
+ * Unscoped, `getByRole("button", { name: "Start rip" })` is
+ * ambiguous — which is exactly what `expectAgentDrivable` refuses.
+ * Scoping by region is the fix, and it only exists because the cards
+ * are named. That is the whole a11y argument for this component: an
+ * agent driving a 16-bay tower can say *which* "Start" it means.
+ */
 export const Interactive: Story = {
   args: { children: "Content" },
   render: () => (
     <div className="flex flex-col gap-3">
       {[3, 4].map((bay) => (
         <Card
-          actions={
-            <Button onClick={fn()} size="sm">
-              Start rip
-            </Button>
-          }
+          actions={<Button size="sm">Start rip</Button>}
           heading={`Bay ${bay}`}
           key={bay}
         >
@@ -196,27 +204,4 @@ export const Interactive: Story = {
       ))}
     </div>
   ),
-  play: async ({ canvas, userEvent }) => {
-    // Two identical "Start rip" buttons on the page. Unscoped,
-    // `getByRole("button", { name: "Start rip" })` is ambiguous —
-    // which is exactly what `expectAgentDrivable` refuses. Scoping
-    // by region is the fix, and it only exists because the cards are
-    // named.
-    const bayFour = expectAgentDrivable(canvas, {
-      name: "Bay 4",
-      role: "region",
-    })
-
-    const scoped = bayFour.querySelectorAll("button")
-
-    await expect(scoped).toHaveLength(1)
-
-    await userEvent.click(scoped[0] as HTMLElement)
-
-    await expect(
-      canvas.getByRole("progressbar", {
-        name: "Bay 4 progress",
-      }),
-    ).toHaveAttribute("aria-valuenow", "40")
-  },
 }
