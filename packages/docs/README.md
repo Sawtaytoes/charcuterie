@@ -5,14 +5,39 @@ The Storybook host. **Private** — the fleet reads it, nobody installs it.
 ```bash
 yarn storybook          # dev server on :6006
 yarn build:storybook    # → storybook-static/
-yarn vitest run --project storybook   # from the repo root: every story, every play, axe
+yarn vitest run --project storybook   # from the repo root: every story renders, axe
+yarn vitest run --project ui-dom      # from the repo root: @charcuterie/ui's DOM tests
 yarn smoke:storybook    # clicks through the built site — see below
 ```
 
+Two browser projects, because stories and tests were split apart
+([decision](../../docs/decisions/2026-07-30-stories-are-demos-tests-are-tests.md)).
+`storybook` proves every story still renders and passes axe; `ui-dom` runs
+`@charcuterie/ui`'s `*.test.tsx`, which mount those same stories and drive them.
+
+`ui-dom` cannot use `storybookTest()` — that plugin owns `test.include`, because its job is
+to turn the `stories` globs into the test list — so `vitest.ui.config.ts` assembles the
+same pieces by hand and `vitest.ui.setup.ts` applies the project annotations. Two of those
+pieces are load-bearing and easy to lose:
+
+- `define: { "import.meta.env.VITEST_STORYBOOK": '"false"' }` is what makes
+  `@storybook/addon-a11y` **throw** its violations. Without it axe still runs and still
+  files a report, and every test passes with the accessibility tree unchecked.
+- `initialGlobals` in `.storybook/preview.tsx`, not `globalTypes[…].defaultValue` — the
+  latter is deprecated *and* canvas-only, so a composed story rendered at
+  `data-density="undefined"` and every density-derived size silently fell back.
+
 ## Stories live in `@charcuterie/ui`, not here
 
-`.storybook/main.ts` globs `../../ui/src/**/*.stories.tsx` and `../../ui/src/**/*.mdx`, so a
-component's `Component.tsx` / `.stories.tsx` / `.mdx` stay siblings — matching mux-magic.
+`.storybook/main.ts` globs `../../ui/src/**/*.mdx` and `../../ui/src/**/*.stories.tsx`, so a
+component's `Component.tsx` / `.stories.tsx` / `.mdx` / `.test.tsx` stay siblings — matching
+mux-magic.
+
+**The `.mdx` glob comes first on purpose.** An attached MDX file is indexed where its
+specifier sits and is *not* hoisted the way an `autodocs` entry is, so listing the stories
+first put every component's `Docs` entry at the bottom of its sidebar group. The sidebar
+follows index order and the index follows that array, so no `storySort` can fix it after
+the fact.
 This package is the *host*: the three toolbars, the a11y gate, and the token stylesheet.
 
 That stylesheet, `src/styles/tokens.css`, also carries two lines M3 added and nothing else
@@ -118,6 +143,7 @@ which is what this workspace's Playwright wants:
 
 ```bash
 yarn vitest run --project storybook
+yarn vitest run --project ui-dom
 ```
 
 Corrected 2026-07-29 (M3). M1 and M2 both documented a

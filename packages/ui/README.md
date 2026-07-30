@@ -48,18 +48,35 @@ and fails on any candidate Tailwind cannot generate.
 
 ```bash
 yarn vitest run --project ui         # Node: class maps, status switches, clamping, boundaries
-yarn vitest run --project storybook  # chromium: every story, every play, axe at test: "error"
+yarn vitest run --project ui-dom     # chromium: Component.test.tsx — behaviour, keyboard, ARIA
+yarn vitest run --project storybook  # chromium: every story renders, axe at test: "error"
 ```
 
-The DOM half lives in story `play` functions rather than in `*.test.tsx`, on purpose —
-[decision](../../docs/decisions/2026-07-29-stories-are-the-dom-test-surface.md). Every
-component's play calls `expectAgentDrivable(canvas, { role, name })`, which is the same
-query an agent will write; `data-testid` appears nowhere in this package and a test enforces
-that.
+**Stories are demos and carry no assertions**
+([decision](../../docs/decisions/2026-07-30-stories-are-demos-tests-are-tests.md), which
+supersedes M3's). The DOM half lives in `Component.test.tsx` beside the component, and each
+test mounts the **composed story** through `run()` rather than re-assembling the component —
+so there is still only one rendering stack, and the subject of a test is the story a reader
+sees.
+
+Every component's test calls `expectAgentDrivable(canvas, { role, name })`, which is the
+same query an agent will write; `data-testid` appears nowhere in this package and a test
+enforces that.
+
+Axe runs once per mount, when `run()` resolves — i.e. before the test has clicked anything.
+A state you had to *drive* to reach (an open dialog, a shown popover) audits itself with
+`expectNoAxeViolations(canvasElement)`.
+
+Two rules about the docs panel are tests rather than conventions, because both fail
+invisibly: `storyControls.test.ts` (a prop typed from another package needs an explicit
+`argTypes` entry, or Storybook renders a `{}` textarea for it) and `mdxReferences.test.ts`
+(an `.mdx` may not reference a story that no longer exists — `of` resolves at runtime, so a
+rename breaks only the rendered page).
 
 ## Adding a component
 
-1. `src/<Name>/<Name>.tsx`, `.stories.tsx`, `.mdx` — siblings, matching mux-magic.
+1. `src/<Name>/<Name>.tsx`, `.stories.tsx`, `.mdx`, `.test.tsx` — siblings, matching
+   mux-magic. The story shows it; the test drives it. Neither does the other's job.
 2. Colours from `intentStyles.ts`, sizes from `controlStyles.ts`. No hex, no `*-slate-*`
    (a test checks).
 3. The five stories: `Default`, `AllVariants`, `AllStates`, `Responsive` (three container
