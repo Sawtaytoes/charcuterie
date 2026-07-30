@@ -12,6 +12,12 @@
  *
  * Risk: reads as austere, and at kiosk distance the hairlines may
  * disappear entirely.
+ *
+ * Use it for: a surface that is mostly rows, read at desk distance.
+ * Try `data-density="compact"` on `daylight` first — that is the
+ * per-surface axis, and this one is not. The long form, including
+ * why all three attributes have to travel together, is on
+ * `Tokens/Overview`.
  */
 
 import type { Variant } from "../types.ts"
