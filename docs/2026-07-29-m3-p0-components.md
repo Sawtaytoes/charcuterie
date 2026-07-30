@@ -161,6 +161,14 @@ behind the [`portal:` decision](decisions/2026-07-29-consumers-link-tokens-by-po
 lint rule that stops the worst of it (`pl-`/`mr-`/`text-left`) ships in
 `@charcuterie/eslint-config` and applies in the consumer's repo, not here.
 
+## Follow-up, same day
+
+The owner reviewed the served build and found three things these gates could not see —
+every docs page throwing `Illegal invocation`, every Markdown table rendering as literal
+pipes, and a card collapsed to one word per line by a shrink-to-fit story cell. Fixed,
+with a new `yarn smoke:storybook` gate that navigates rather than mounts:
+[M3 follow-up](2026-07-29-m3-followup-the-docs-site-was-broken.md).
+
 ## Next: M4
 
 Modal on native `<dialog>`, Popover, and **Tabs — the falsification point**. Tabs needs

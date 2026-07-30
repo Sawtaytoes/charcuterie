@@ -39,7 +39,14 @@ yarn typecheck
 yarn lint           # Biome (format + most rules), then ESLint (the rest)
 yarn storybook      # :6006
 yarn check:contrast # the WCAG 2.2 AA gate as a script, with numbers
+
+yarn build:storybook && yarn smoke:storybook  # clicks through every entry of the built site
 ```
+
+`smoke:storybook` is the one gate that navigates rather than mounts. `yarn test` renders
+each story in isolation, so it is blind to anything about **order** — which is how M3
+shipped with all twelve docs pages broken and every gate green
+([why](packages/docs/README.md#yarn-smokestorybook--the-gate-that-clicks)).
 
 Yarn 4, `node-modules` linker, TypeScript 6, Vitest 4, Biome 2, ESLint 10 — matching
 `mux-magic`, the reference app for every convention here. Copy its conventions rather
