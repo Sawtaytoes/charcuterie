@@ -114,14 +114,40 @@ export const AllStates: Story = {
   ),
 }
 
+/**
+ * A label longer than the space it is given, which is the case that
+ * shipped broken: `shrink-0` plus `whitespace-nowrap` and no cap let
+ * the pill paint straight across the next column.
+ *
+ * `truncate` keeps the row height fixed and paints an ellipsis —
+ * and because that ellipsis is painted rather than inserted, a
+ * triple-click still selects the whole string and a screen reader
+ * still reads it. Hovering a clipped pill shows the rest.
+ *
+ * `wrap` is the answer where hover does not exist. The kiosk is a
+ * touch context, so a pill whose full text matters wraps there
+ * rather than hiding half of itself behind an affordance nobody can
+ * reach.
+ */
 export const Responsive: Story = {
   args: {
     children: "quarantined — checksum mismatch on title 4",
+    intent: "warning",
   },
   render: (badgeProps) => (
-    <ContainerBoard>
-      <Badge {...badgeProps} intent="warning" />
-    </ContainerBoard>
+    <div className="flex flex-col gap-8">
+      <StorySection title="overflow: truncate (default) — one line, capped, hover for the rest">
+        <ContainerBoard>
+          <Badge {...badgeProps} />
+        </ContainerBoard>
+      </StorySection>
+
+      <StorySection title="overflow: wrap — the pill grows instead">
+        <ContainerBoard>
+          <Badge {...badgeProps} overflow="wrap" />
+        </ContainerBoard>
+      </StorySection>
+    </div>
   ),
 }
 
