@@ -104,6 +104,11 @@ export const epaperColours: Record<
       medium: "none",
       high: "none",
     },
+    // A panel with no opacity cannot dim the page behind a
+    // dialog, so it says so rather than faking one. The `Modal`
+    // still separates — border and the paper itself — because a
+    // scrim was never its only means.
+    scrim: "transparent",
   },
 
   mono: {
@@ -149,6 +154,11 @@ export const epaperColours: Record<
       medium: "none",
       high: "none",
     },
+    // A panel with no opacity cannot dim the page behind a
+    // dialog, so it says so rather than faking one. The `Modal`
+    // still separates — border and the paper itself — because a
+    // scrim was never its only means.
+    scrim: "transparent",
   },
 }
 

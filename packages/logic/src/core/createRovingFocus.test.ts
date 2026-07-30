@@ -92,6 +92,40 @@ test("an untouched group still has exactly one tab stop", () => {
   expect(selectTabIndex(state, "beta")).toBe(-1)
 })
 
+test("a group has a tab stop before anything has registered", () => {
+  // The first-paint keyboard hole M4 found. Members register from
+  // an effect, so on the very first render `activeValue` is null
+  // *and* nothing is registered — which scored every member `-1`
+  // and left a tab bar Tab could not enter. It lasted one frame
+  // only because a re-render always followed.
+  const focus = createRovingFocus({ activeValue: "beta" })
+
+  const state = focus.getState()
+
+  expect(state.activeValue).toBeNull()
+  expect(state.registeredValues).toEqual([])
+
+  expect(selectTabIndex(state, "beta")).toBe(0)
+  expect(selectTabIndex(state, "alpha")).toBe(-1)
+})
+
+test("a pending value that never arrives does not strand the group", () => {
+  // The other half, and why the branch above is scoped to the
+  // empty case: once members exist, a wanted value nobody
+  // registered must not take the tab stop away from the members
+  // that did.
+  const { focus } = withMembers("alpha", "beta")
+
+  focus.setActiveValue("never-mounts")
+
+  const state = focus.getState()
+
+  expect(state.pendingValue).toBe("never-mounts")
+
+  expect(selectTabIndex(state, "alpha")).toBe(0)
+  expect(selectTabIndex(state, "beta")).toBe(-1)
+})
+
 test("inserting a member above the active one does not move focus", () => {
   const focus = createRovingFocus()
 

@@ -144,6 +144,10 @@ export const hairline: Variant = {
         medium: "0 4px 12px rgb(0 0 0 / 0.45)",
         high: "0 12px 32px rgb(0 0 0 / 0.55)",
       },
+      // Heavier than `daylight`, because this direction has no
+      // shadow to separate the dialog with — the same reason its
+      // borders do the work everywhere else.
+      scrim: "rgb(8 9 10 / 0.74)",
     },
 
     light: {
@@ -235,6 +239,7 @@ export const hairline: Variant = {
         medium: "0 4px 12px rgb(20 18 14 / 0.08)",
         high: "0 12px 32px rgb(20 18 14 / 0.12)",
       },
+      scrim: "rgb(21 23 26 / 0.48)",
     },
   },
 
