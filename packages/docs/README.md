@@ -6,6 +6,7 @@ The Storybook host. **Private** — the fleet reads it, nobody installs it.
 yarn storybook          # dev server on :6006
 yarn build:storybook    # → storybook-static/
 yarn vitest run --project storybook   # from the repo root: every story, every play, axe
+yarn smoke:storybook    # clicks through the built site — see below
 ```
 
 ## Stories live in `@charcuterie/ui`, not here
@@ -49,6 +50,41 @@ not an inactive control. The exemption is only honest where the role is actually
 so the specimen now shows it on a genuinely `disabled` button.
 
 Opting a story out requires `a11y: { test: "todo" }` with a comment linking an issue.
+
+## `yarn smoke:storybook` — the gate that clicks
+
+`scripts/smokeStorybook.ts` serves `storybook-static/`, loads the manager **once**, and
+walks every entry in `index.json` over the addons channel — the same
+`setCurrentStory` the sidebar emits. Any `console.error`, page error, or Storybook error
+display fails the run.
+
+It exists because `--project storybook` structurally cannot see one class of bug.
+That run mounts each story in isolation, which is right for a component assertion and
+blind to anything about **order**. The bug it missed: Storybook's `enhanceContext`
+loader swaps `HTMLElement.prototype.focus` for an accessor, React Aria — inside
+Storybook's own lazily-loaded docs blocks — reads that property on the prototype at
+module scope, and the getter throws `Illegal invocation`. Cold-loading a docs page was
+fine; clicking to one after any story was broken, so in practice **all twelve docs
+pages were broken** while every gate stayed green.
+
+It also checks something no error would ever report: that a docs page never renders a
+`| --- |` delimiter row as literal text. MDX is CommonMark, and a GitHub-flavoured
+table is not — so `main.ts` passes `remark-gfm` to `@storybook/addon-docs`, and without
+it every table in every `.mdx` here renders as a paragraph of pipe characters with the
+source still perfectly correct. Three pages were doing that, `Tokens/Overview` included.
+
+Hence two rules for this package:
+
+- **The first import in `.storybook/preview.tsx` is load-bearing.**
+  `import "@storybook/addon-docs/blocks"` has no exports we use and looks like dead
+  code. Removing it re-breaks every docs page
+  ([decision](../../docs/decisions/2026-07-29-preload-docs-blocks-before-the-focus-patch.md)).
+- **One deliberate 404 is allowlisted by URL.** `MediaTile`'s error story points at a
+  poster that really is missing, because a mocked `onError` proves nothing about what
+  the browser does with a broken `<img>`. Scoped to that path, so a genuinely missing
+  chunk still fails.
+
+Run it against a dev server with `node scripts/smokeStorybook.ts --base=http://localhost:6006`.
 
 ## `TokenSpecimen` is throwaway
 
