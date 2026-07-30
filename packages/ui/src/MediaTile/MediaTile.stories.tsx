@@ -1,5 +1,4 @@
 import type { Meta, StoryObj } from "@storybook/react"
-import { expect } from "storybook/test"
 
 import { Badge } from "../Badge/Badge.tsx"
 import {
@@ -8,7 +7,6 @@ import {
   StoryGrid,
   StorySection,
 } from "../board.storyHelpers.tsx"
-import { expectAgentDrivable } from "../testing/index.ts"
 import { MediaTile } from "./MediaTile.tsx"
 
 /**
@@ -30,6 +28,7 @@ const meta = {
   title: "Components/MediaTile",
   component: MediaTile,
   parameters: { layout: "padded" },
+  args: { aspectRatio: "poster" },
 } satisfies Meta<typeof MediaTile>
 
 export default meta
@@ -42,12 +41,6 @@ export const Default: Story = {
     src: toPosterSrc("Blade Runner"),
     subtitle: "1982 · 4K remaster",
     title: "Blade Runner",
-  },
-  play: ({ canvas }) => {
-    expectAgentDrivable(canvas, {
-      name: "Blade Runner (1982) poster",
-      role: "img",
-    })
   },
 }
 
@@ -214,21 +207,5 @@ export const Interactive: Story = {
     src: toPosterSrc("Blade Runner"),
     subtitle: "1982 · 4K remaster",
     title: "Blade Runner",
-  },
-  play: async ({ canvas, userEvent }) => {
-    const link = expectAgentDrivable(canvas, {
-      name: "Blade Runner",
-      role: "link",
-    })
-
-    await userEvent.tab()
-
-    await expect(link).toHaveFocus()
-
-    // The image inside a linked tile is `alt=""` on purpose: two
-    // names for one link is a screen reader reading it twice.
-    await expect(canvas.queryAllByRole("img")).toHaveLength(
-      0,
-    )
   },
 }

@@ -14,6 +14,7 @@ export default defineConfig({
       "packages/eslint-config/vitest.config.ts",
       "packages/ui/vitest.config.ts",
       "packages/docs/vitest.storybook.config.ts",
+      "packages/docs/vitest.ui.config.ts",
     ],
   },
 })

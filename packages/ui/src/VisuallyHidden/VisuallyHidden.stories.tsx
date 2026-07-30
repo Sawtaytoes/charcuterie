@@ -1,5 +1,4 @@
 import type { Meta, StoryObj } from "@storybook/react"
-import { expect } from "storybook/test"
 
 import {
   StoryCell,
@@ -49,25 +48,11 @@ export const Default: Story = {
   ),
 }
 
+/**
+ * Present to a query, absent from the layout — the whole component.
+ * There is nothing to see here on purpose; the assertions are in
+ * `VisuallyHidden.test.tsx`.
+ */
 export const Interactive: Story = {
   args: { children: "Announced, never printed." },
-  play: async ({ canvas, canvasElement }) => {
-    // Present to a query, absent from the layout. `display: none`
-    // would fail the first assertion; a plain `<span>` would fail
-    // the second.
-    const hidden = canvas.getByText(
-      "Announced, never printed.",
-    )
-
-    await expect(hidden).toBeInTheDocument()
-
-    const { height, width } = hidden.getBoundingClientRect()
-
-    await expect(width).toBeLessThanOrEqual(1)
-    await expect(height).toBeLessThanOrEqual(1)
-
-    await expect(canvasElement.textContent).toContain(
-      "Announced, never printed.",
-    )
-  },
 }

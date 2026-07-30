@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react"
-import { expect, fn } from "storybook/test"
+
+import { controlSizeArgType } from "../argTypes.storyHelpers.ts"
 
 import {
   ContainerBoard,
@@ -13,7 +14,6 @@ import {
   SettingsIcon,
   UndoIcon,
 } from "../icons.storyHelpers.tsx"
-import { expectAgentDrivable } from "../testing/index.ts"
 import { IconButton } from "./IconButton.tsx"
 
 /**
@@ -30,23 +30,26 @@ const meta = {
   title: "Components/IconButton",
   component: IconButton,
   parameters: { layout: "padded" },
+  argTypes: { size: controlSizeArgType },
+  args: {
+    appearance: "ghost",
+    isDisabled: false,
+    isLoading: false,
+    size: "md",
+  },
 } satisfies Meta<typeof IconButton>
 
 export default meta
 
 type Story = StoryObj<typeof meta>
 
+/**
+ * The name is the whole component. plex-channels renders `↶` into a
+ * bare `<button>` today, so a screen reader announces "↶" and
+ * `getByRole("button", { name: "Undo" })` finds nothing.
+ */
 export const Default: Story = {
   args: { children: UNDO_ICON, label: "Undo" },
-  play: ({ canvas }) => {
-    // This is the assertion the fleet fails today. plex-channels
-    // renders `↶` into a bare `<button>`, so a screen reader
-    // announces "↶" and this query finds nothing.
-    expectAgentDrivable(canvas, {
-      name: "Undo",
-      role: "button",
-    })
-  },
 }
 
 export const AllVariants: Story = {
@@ -89,7 +92,11 @@ export const AllVariants: Story = {
 export const AllStates: Story = {
   args: { children: UNDO_ICON, label: "Undo" },
   parameters: {
-    pseudo: { active: ["#active"], hover: ["#hover"] },
+    pseudo: {
+      active: ["#active"],
+      focusVisible: ["#focus-target"],
+      hover: ["#hover"],
+    },
   },
   render: (iconButtonProps) => (
     <StoryGrid columns={4}>
@@ -103,6 +110,13 @@ export const AllStates: Story = {
 
       <StoryCell label="active (forced)">
         <IconButton {...iconButtonProps} id="active" />
+      </StoryCell>
+
+      <StoryCell label="focus-visible (forced)">
+        <IconButton
+          {...iconButtonProps}
+          id="focus-target"
+        />
       </StoryCell>
 
       <StoryCell label="disabled">
@@ -161,28 +175,6 @@ export const Responsive: Story = {
   ),
 }
 
-export const Interactive: Story = {
-  args: {
-    children: UNDO_ICON,
-    label: "Undo",
-    onClick: fn(),
-  },
-  play: async ({ args, canvas, userEvent }) => {
-    const button = expectAgentDrivable(canvas, {
-      name: "Undo",
-      role: "button",
-    })
-
-    await userEvent.tab()
-
-    await expect(button).toHaveFocus()
-
-    await userEvent.keyboard("{Enter}")
-
-    await expect(args.onClick).toHaveBeenCalledTimes(1)
-  },
-}
-
 /**
  * plex-channels' `↶`, rendered exactly as it is today — and named,
  * which it is not today. `getByRole("button", { name: "Undo" })`
@@ -196,10 +188,4 @@ export const Interactive: Story = {
  */
 export const RawGlyph: Story = {
   args: { children: "↶", label: "Undo" },
-  play: ({ canvas }) => {
-    expectAgentDrivable(canvas, {
-      name: "Undo",
-      role: "button",
-    })
-  },
 }

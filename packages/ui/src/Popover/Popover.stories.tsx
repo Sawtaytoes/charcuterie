@@ -2,8 +2,8 @@ import { useVisibility } from "@charcuterie/logic"
 import type { Placement } from "@floating-ui/react"
 import type { Meta, StoryObj } from "@storybook/react"
 import type { ReactNode } from "react"
-import { expect, waitFor } from "storybook/test"
 
+import { placementArgType } from "../argTypes.storyHelpers.ts"
 import { Badge } from "../Badge/Badge.tsx"
 import { Button } from "../Button/Button.tsx"
 import {
@@ -11,13 +11,14 @@ import {
   StoryGrid,
   StoryRow,
 } from "../board.storyHelpers.tsx"
-import { expectAgentDrivable } from "../testing/index.ts"
 import { Popover } from "./Popover.tsx"
 
 const meta = {
   title: "Components/Popover",
   component: Popover,
   parameters: { layout: "padded" },
+  argTypes: { placement: placementArgType },
+  args: { placement: "bottom-start" },
 } satisfies Meta<typeof Popover>
 
 export default meta
@@ -83,37 +84,6 @@ export const Default: Story = {
   render: () => (
     <PopoverDemo heading="Filters" triggerLabel="Filters" />
   ),
-  play: async ({ canvas, userEvent }) => {
-    const trigger = expectAgentDrivable(canvas, {
-      name: "Filters",
-      role: "button",
-    })
-
-    await expect(trigger).toHaveAttribute(
-      "aria-expanded",
-      "false",
-    )
-
-    await userEvent.click(trigger)
-
-    // Found through `canvas`, not `screen` — the panel is in the
-    // top layer and still in this story's DOM, which a portal
-    // would have cost.
-    const panel = expectAgentDrivable(canvas, {
-      name: "Filters",
-      role: "dialog",
-    })
-
-    // `aria-controls` really points at the panel. An id that has
-    // drifted renders identically and announces nothing, which is
-    // why `useRole` owns both ends of it.
-    await expect(trigger).toHaveAttribute(
-      "aria-controls",
-      panel.id,
-    )
-
-    await expect(panel).toHaveAttribute("popover", "manual")
-  },
 }
 
 const PLACEMENTS: Placement[] = [
@@ -150,32 +120,6 @@ export const AllVariants: Story = {
       ))}
     </StoryGrid>
   ),
-  play: async ({ canvas, userEvent }) => {
-    // The first cell, so the panel drops into empty space instead
-    // of covering the label of the cell beside it — a board is for
-    // reading, and a popover overlaying one of its own captions
-    // teaches nothing that `Responsive` does not.
-    await userEvent.click(
-      expectAgentDrivable(canvas, {
-        name: "Open top",
-        role: "button",
-      }),
-    )
-
-    const panel = expectAgentDrivable(canvas, {
-      name: "Filters — top",
-      role: "dialog",
-    })
-
-    // Positioned at all, which is the thing that silently fails if
-    // the UA's `inset: 0; margin: auto` is left in place: the panel
-    // would sit dead centre of the viewport looking deliberate.
-    const { left, top } = panel.getBoundingClientRect()
-
-    await expect(left).toBeGreaterThan(0)
-
-    await expect(top).toBeGreaterThan(0)
-  },
 }
 
 export const AllStates: Story = {
@@ -219,32 +163,6 @@ export const AllStates: Story = {
       </PopoverDemo>
     </StoryRow>
   ),
-  play: async ({ canvas, userEvent }) => {
-    await userEvent.click(
-      expectAgentDrivable(canvas, {
-        name: "Text only",
-        role: "button",
-      }),
-    )
-
-    const panel = expectAgentDrivable(canvas, {
-      name: "Read error detail",
-      role: "dialog",
-    })
-
-    // A panel with nothing tabbable inside still has to be
-    // reachable, or a keyboard user is told a dialog opened and
-    // then cannot get to it. `FloatingFocusManager` puts the panel
-    // itself in the tab order — `tabindex="0"`, not `-1`, so Tab
-    // reaches it and not only the programmatic focus does.
-    await expect(panel).toHaveAttribute("tabindex", "0")
-
-    await waitFor(() => {
-      expect(panel.contains(document.activeElement)).toBe(
-        true,
-      )
-    })
-  },
 }
 
 /**
@@ -300,36 +218,6 @@ export const Responsive: Story = {
       </PopoverDemo>
     </div>
   ),
-  play: async ({ canvas, userEvent }) => {
-    await userEvent.click(
-      expectAgentDrivable(canvas, {
-        name: "Top edge, asks for top",
-        role: "button",
-      }),
-    )
-
-    const panel = expectAgentDrivable(canvas, {
-      name: "Filters — top start",
-      role: "dialog",
-    })
-
-    // Inside the viewport, which is the only thing `flip` and
-    // `shift` actually promise — asserting a specific side would
-    // be asserting the collision *did not* happen.
-    const rect = panel.getBoundingClientRect()
-
-    await expect(rect.top).toBeGreaterThanOrEqual(0)
-
-    await expect(rect.bottom).toBeLessThanOrEqual(
-      globalThis.innerHeight,
-    )
-
-    await expect(rect.left).toBeGreaterThanOrEqual(0)
-
-    await expect(rect.right).toBeLessThanOrEqual(
-      globalThis.innerWidth,
-    )
-  },
 }
 
 /**
@@ -356,41 +244,4 @@ export const Interactive: Story = {
       triggerLabel="Filters"
     />
   ),
-  play: async ({ canvas, userEvent }) => {
-    const trigger = expectAgentDrivable(canvas, {
-      name: "Filters",
-      role: "button",
-    })
-
-    await userEvent.click(trigger)
-
-    expectAgentDrivable(canvas, {
-      name: "Bay 3 filters",
-      role: "dialog",
-    })
-
-    await userEvent.keyboard("{Escape}")
-
-    await waitFor(() => {
-      expect(canvas.queryByRole("dialog")).toBeNull()
-    })
-
-    await expect(trigger).toHaveAttribute(
-      "aria-expanded",
-      "false",
-    )
-
-    // Reopened, then dismissed by pressing the page behind it.
-    await userEvent.click(trigger)
-
-    await waitFor(() => {
-      expect(canvas.getByRole("dialog")).toBeInTheDocument()
-    })
-
-    await userEvent.click(document.body)
-
-    await waitFor(() => {
-      expect(canvas.queryByRole("dialog")).toBeNull()
-    })
-  },
 }

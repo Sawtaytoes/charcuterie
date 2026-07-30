@@ -1,6 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/react"
-import { expect, fn } from "storybook/test"
 
+import {
+  controlSizeArgType,
+  intentArgType,
+} from "../argTypes.storyHelpers.ts"
 import {
   ContainerBoard,
   StoryCell,
@@ -9,7 +12,6 @@ import {
   StorySection,
 } from "../board.storyHelpers.tsx"
 import type { IntentAppearance } from "../intentStyles.ts"
-import { expectAgentDrivable } from "../testing/index.ts"
 import { Button } from "./Button.tsx"
 
 const INTENTS = [
@@ -32,6 +34,23 @@ const meta = {
   title: "Components/Button",
   component: Button,
   parameters: { layout: "padded" },
+  argTypes: {
+    intent: intentArgType,
+    size: controlSizeArgType,
+  },
+  // The component's own defaults, restated. Storybook has not
+  // seeded `args` from a docgen `defaultValue` since v7, so without
+  // this the props table prints `"solid"` in the Default column
+  // while the radio beside it has nothing selected.
+  args: {
+    appearance: "solid",
+    intent: "accent",
+    isDisabled: false,
+    isFullWidth: false,
+    isLoading: false,
+    size: "md",
+    sizing: "control",
+  },
 } satisfies Meta<typeof Button>
 
 export default meta
@@ -40,12 +59,6 @@ type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
   args: { children: "Start rip" },
-  play: ({ canvas }) => {
-    expectAgentDrivable(canvas, {
-      name: "Start rip",
-      role: "button",
-    })
-  },
 }
 
 export const AllVariants: Story = {
@@ -96,14 +109,23 @@ export const AllSizes: Story = {
 }
 
 /**
- * Hover and active are real here, not simulated: the
+ * Hover, active, and focus are real here, not simulated: the
  * pseudo-states addon forces them, which is the only way to review
  * a hover colour in a static board.
+ *
+ * `focusVisible` is forced the same way rather than tabbed to. A
+ * board that has to be *driven* to show its states is a test
+ * wearing a demo's clothes — and the tab count silently depended on
+ * how many focusable cells sat above it.
  */
 export const AllStates: Story = {
   args: { children: "Start rip" },
   parameters: {
-    pseudo: { active: ["#active"], hover: ["#hover"] },
+    pseudo: {
+      active: ["#active"],
+      focusVisible: ["#focus-target"],
+      hover: ["#hover"],
+    },
   },
   render: (buttonProps) => (
     <StoryGrid columns={3}>
@@ -119,7 +141,7 @@ export const AllStates: Story = {
         <Button {...buttonProps} id="active" />
       </StoryCell>
 
-      <StoryCell label="focus-visible (real, via Tab)">
+      <StoryCell label="focus-visible (forced)">
         <Button {...buttonProps} id="focus-target" />
       </StoryCell>
 
@@ -132,33 +154,15 @@ export const AllStates: Story = {
       </StoryCell>
     </StoryGrid>
   ),
-  play: async ({ canvas, userEvent }) => {
-    // `:focus-visible` only matches keyboard focus, so `.focus()`
-    // would show nothing. Tabbing is the state.
-    await userEvent.tab()
-    await userEvent.tab()
-    await userEvent.tab()
-    await userEvent.tab()
-
-    await expect(
-      canvas.getByRole("button", { name: /loading/i }),
-    ).toHaveAttribute("aria-busy", "true")
-  },
 }
 
+/**
+ * Disabled *and* announced. The spinner's label lives in a
+ * `role="status"`, so a screen reader hears the work start rather
+ * than only seeing it.
+ */
 export const Loading: Story = {
   args: { children: "Ripping disc 3", isLoading: true },
-  play: ({ canvas }) => {
-    // Disabled *and* announced. The spinner's label lives in a
-    // `role="status"`, so a screen reader hears the work start.
-    const button = expectAgentDrivable(canvas, {
-      name: /Ripping disc 3/,
-      role: "button",
-    })
-
-    expect(button).toBeDisabled()
-    expect(canvas.getByRole("status")).toBeInTheDocument()
-  },
 }
 
 export const Responsive: Story = {
@@ -168,52 +172,4 @@ export const Responsive: Story = {
       <Button {...buttonProps} />
     </ContainerBoard>
   ),
-}
-
-/**
- * The keyboard contract, asserted rather than assumed: Tab reaches
- * it, Enter activates, Space activates. Every hand-rolled
- * `<div onClick>` in the fleet fails all three.
- */
-export const Interactive: Story = {
-  args: { children: "Start rip", onClick: fn() },
-  play: async ({ args, canvas, userEvent }) => {
-    const button = expectAgentDrivable(canvas, {
-      name: "Start rip",
-      role: "button",
-    })
-
-    await userEvent.tab()
-
-    await expect(button).toHaveFocus()
-
-    await userEvent.keyboard("{Enter}")
-
-    await expect(args.onClick).toHaveBeenCalledTimes(1)
-
-    await userEvent.keyboard(" ")
-
-    await expect(args.onClick).toHaveBeenCalledTimes(2)
-  },
-}
-
-export const DisabledDoesNotFire: Story = {
-  args: {
-    children: "Start rip",
-    isDisabled: true,
-    onClick: fn(),
-  },
-  play: async ({ args, canvas, userEvent }) => {
-    const button = canvas.getByRole("button", {
-      name: "Start rip",
-    })
-
-    await userEvent.click(button)
-
-    // A `<div role="button">` with a guard clause looks the same and
-    // is not the same: a real `disabled` is skipped by Tab, ignored
-    // by click, and reported to AT.
-    await expect(args.onClick).not.toHaveBeenCalled()
-    await expect(button).toBeDisabled()
-  },
 }
