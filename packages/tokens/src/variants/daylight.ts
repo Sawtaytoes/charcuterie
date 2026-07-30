@@ -139,6 +139,9 @@ export const daylight: Variant = {
         medium: "0 4px 14px rgb(19 24 34 / 0.10)",
         high: "0 16px 40px rgb(19 24 34 / 0.14)",
       },
+      // Restrained, like the rest of this direction. Enough to
+      // say "the page is not the thing you are looking at".
+      scrim: "rgb(19 24 34 / 0.44)",
     },
 
     dark: {
@@ -228,6 +231,7 @@ export const daylight: Variant = {
         medium: "0 4px 14px rgb(0 0 0 / 0.48)",
         high: "0 16px 40px rgb(0 0 0 / 0.58)",
       },
+      scrim: "rgb(6 9 16 / 0.66)",
     },
   },
 
