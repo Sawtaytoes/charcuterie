@@ -4,7 +4,7 @@
 **Date:** 2026-07-29
 **Type:** Testing
 **Supersedes:** —
-**Superseded by:** —
+**Superseded by:** [2026-07-30-stories-are-demos-tests-are-tests.md](2026-07-30-stories-are-demos-tests-are-tests.md)
 
 ## Decision
 
