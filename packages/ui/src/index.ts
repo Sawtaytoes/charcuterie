@@ -66,6 +66,13 @@ export { MediaTile } from "./MediaTile/MediaTile.tsx"
 export type { MediaStatus } from "./MediaTile/mediaStatus.ts"
 export { mediaTransitions } from "./MediaTile/mediaStatus.ts"
 export type {
+  ModalProps,
+  ModalSize,
+} from "./Modal/Modal.tsx"
+export { Modal } from "./Modal/Modal.tsx"
+export type { PopoverProps } from "./Popover/Popover.tsx"
+export { Popover } from "./Popover/Popover.tsx"
+export type {
   ProgressBarProps,
   ProgressBarSize,
 } from "./ProgressBar/ProgressBar.tsx"
@@ -90,6 +97,13 @@ export {
   getConnectionLabel,
   getIsConnectionBusy,
 } from "./statusIntent.ts"
+export type {
+  TabItem,
+  TabsActivation,
+  TabsOrientation,
+  TabsProps,
+} from "./Tabs/Tabs.tsx"
+export { Tabs } from "./Tabs/Tabs.tsx"
 export { toClassName } from "./toClassName.ts"
 export type { VisuallyHiddenProps } from "./VisuallyHidden/VisuallyHidden.tsx"
 export { VisuallyHidden } from "./VisuallyHidden/VisuallyHidden.tsx"

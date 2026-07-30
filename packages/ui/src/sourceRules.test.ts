@@ -243,7 +243,14 @@ test("the barrel is the only place components are re-exported", async () => {
   // M3's ten P0 components, plus `VisuallyHidden` — a Layer-0
   // primitive `Spinner`, `ProgressBar`, and `LiveStatusIndicator` all
   // need, so it shipped here rather than being stubbed three times.
-  expect(componentNames.length).toBe(11)
+  // M4 adds the three overlays: `Modal`, `Popover`, `Tabs`.
+  //
+  // `TabTrigger` is deliberately not in this count and not
+  // exported. It is `Tabs`' own member component — its own file
+  // only because both registrations are effects and an effect
+  // cannot run in a loop — and the `<Name>/<Name>.tsx` pattern
+  // this regex matches is what keeps it out.
+  expect(componentNames.length).toBe(14)
 
   for (const name of componentNames) {
     expect(barrel).toContain(`export { ${name} }`)

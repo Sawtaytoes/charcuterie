@@ -1,0 +1,113 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as ModalStories from "./Modal.stories";
+
+<Meta of={ModalStories} />
+
+# Modal
+
+Four repos, and **plex-channels and ripdeck arrived at native `<dialog>` independently**
+before this library existed. That is the design, not a shortcut: `showModal()` gives a
+focus trap, Escape, `::backdrop`, `inert` on everything behind it, and the top layer —
+from the platform, correctly, in every browser the fleet runs on.
+
+<Canvas of={ModalStories.Default} />
+
+## Props
+
+<Controls />
+
+## The one thing a component has to add
+
+A native `<dialog>` is a **self-owning** control: call `showModal()` and it decides it is
+open. That is the same conflict Radix has, and it gets the same answer as everywhere else
+here — `isVisible` is the truth, and an effect makes the element agree with it. Nothing
+reads `dialogElement.open` as state; it is read only to avoid calling a method that would
+throw.
+
+```tsx
+const { hide, isVisible, show } = useVisibility()
+
+<Button onClick={show}>Stop the rip</Button>
+
+<Modal heading="Stop the rip?" isVisible={isVisible} onClose={hide}>
+  …
+</Modal>
+```
+
+`onClose` is every route out — the close button, Escape, a backdrop press — so there is
+one place to wire and no way to end up with the element shut and the state still open.
+
+## No portal, and that is load-bearing
+
+The top layer is a **paint** concept. A `<dialog>` renders above everything while staying
+exactly where it is in the DOM, so it needs no portal — and that matters well past
+tidiness:
+
+> A portal moves the node to `document.body`, **out of whatever element a test or an agent
+> scoped its queries to.** `canvas.getByRole("dialog")` finds this modal. It would not find
+> a portalled one, and every story here would have to reach for `screen` and give up its
+> scoping.
+
+The same reasoning is why `Popover` uses `popover="manual"` rather than a portal.
+
+## `open:flex`, not `flex`
+
+A closed `<dialog>` is hidden by a UA rule, and any `display: flex` of ours beats it — so
+a modal laid out with a plain `flex` renders permanently, in the page flow, with no error
+anywhere. The layout is therefore behind Tailwind's `open:` variant, keyed on the `[open]`
+attribute the browser manages.
+
+<Canvas of={ModalStories.AllVariants} />
+
+## What a story cannot press
+
+`play`'s `userEvent` is `@testing-library/user-event`, which dispatches **untrusted**
+events, and a browser runs a default action only for trusted input. So a synthetic Escape
+does not make a native `<dialog>` fire `cancel` — it does nothing at all, and a story
+asserting "Escape did not close the non-dismissable dialog" would pass for the wrong
+reason forever.
+
+The stories dispatch the close request where the browser would raise it instead, which
+splits the contract honestly: keystroke → `cancel` is the platform's and is not ours to
+test; everything downstream of `cancel` is ours and is asserted. `AllStates` pairs it with
+a differential — the dialog that refuses the close request is then closed by its own
+button — because "still open" is also true of a dialog nothing can close at all.
+
+<Canvas of={ModalStories.AllStates} />
+
+## `isDismissable={false}` cancels, it does not ignore
+
+Escape is `preventDefault`ed rather than dropped. Letting the browser close a dialog the
+app said was not dismissable would leave `isVisible` true and the element shut — the exact
+desync this component exists to prevent.
+
+## Scroll behind it is locked, and the count is why
+
+`showModal()` makes the page `inert` and then lets you scroll it anyway. The lock is a
+counted module-level one rather than a hook, because nested dialogs are legal and a naive
+lock/unlock pair has the inner dialog's cleanup unlock the page while the outer is still
+open. The release is idempotent, because StrictMode runs an effect's cleanup twice.
+
+## `dvh`, and the scrim
+
+Every size clamps at `85dvh`; `full` takes the lot. `dvh` rather than `vh` because on a
+phone the two differ by the address bar, and a dialog whose footer is under it is a dialog
+with no buttons.
+
+`::backdrop` reads `--color-scrim`, which is a **variant** token: `legible` dims at 0.84
+and `daylight` at 0.66, because how hard a direction separates a dialog from the page is
+exactly the sort of thing a visual direction decides. ePaper's is `transparent` — a panel
+with no opacity cannot dim, so it says so instead of faking it. The `Responsive` story
+asserts the computed `::backdrop` colour is really there, since a `var()` that failed to
+inherit would just look like a design choice.
+
+<Canvas of={ModalStories.Responsive} />
+
+## A modal is not a container-query citizen
+
+It gets no `ContainerBoard`. Its size is measured against the viewport by definition — it
+is the thing covering the viewport — so boarding it at three container widths would be
+measuring something with no bearing on it.
+
+<Canvas of={ModalStories.Interactive} />
