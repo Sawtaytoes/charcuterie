@@ -10,9 +10,13 @@ place and every app inherits look, behaviour, and accessibility.
 > [the M2 handoff](docs/2026-07-29-m2-logic-conformance.md) lists which ones and the one
 > command that retrieves each.
 
-**M0–M3 have landed.** Next is M4: Modal on native `<dialog>`, Popover, and **Tabs**, which
-is the state layer's falsification point. Start from
-[the M3 handoff](docs/2026-07-29-m3-p0-components.md).
+**M0–M4 have landed.** M4 put the state layer through its falsification test — `Tabs`
+needed `VisibilityGroup` and `RovingFocus` at once, and the two ARIA activation modes came
+out one line apart, so **the layer stands**
+([verdict](docs/decisions/2026-07-30-state-layer-is-charcuterie-on-floating-ui.md)).
+
+Next is M5: the first consumer, **ripdeck**. Start from
+[the M4 handoff](docs/2026-07-30-m4-overlays-and-the-tabs-thesis-test.md).
 
 ## Packages
 
@@ -23,7 +27,7 @@ is the state layer's falsification point. Start from
 | [`@charcuterie/eslint-config`](packages/eslint-config/README.md) | **live** | The rules Biome cannot express. |
 | [`@charcuterie/docs`](packages/docs/README.md) | **live**, private | Storybook host. |
 | [`@charcuterie/logic`](packages/logic/README.md) | **live** | The five state kinds as framework-free cores, plus React 19 and Preact bindings and optional Jotai/signals store adapters. |
-| [`@charcuterie/ui`](packages/ui/README.md) | **live** | The P0 components — Spinner, Skeleton, Button, IconButton, Badge, ProgressBar, EmptyState, Card, LiveStatusIndicator, MediaTile, VisuallyHidden. Re-exports tokens at `@charcuterie/ui/tokens`. |
+| [`@charcuterie/ui`](packages/ui/README.md) | **live** | The P0 components — Spinner, Skeleton, Button, IconButton, Badge, ProgressBar, EmptyState, Card, LiveStatusIndicator, MediaTile, VisuallyHidden, and M4's overlays: Modal, Popover, Tabs. Re-exports tokens at `@charcuterie/ui/tokens`. |
 | `@charcuterie/rx` | M7 | Design doc + ADR only, deliberately not built. |
 
 Dependency direction is one-way: `tokens ← logic ← ui`. Forbidden forever:
@@ -42,6 +46,14 @@ yarn check:contrast # the WCAG 2.2 AA gate as a script, with numbers
 
 yarn build:storybook && yarn smoke:storybook  # clicks through every entry of the built site
 ```
+
+`storybook` and `build:storybook` both run `yarn build` first, and that is **load-bearing**:
+`packages/docs` imports `@charcuterie/tokens/theme.css` and `@charcuterie/logic` through
+their `exports`, so both resolve to `dist`. M4 lost an afternoon to a `dist` three commits
+old — a new token silently absent from the canvas, a `logic` fix with no effect, and a
+story passing against Chromium's default `::backdrop`
+([decision](docs/decisions/2026-07-30-storybook-reads-the-built-dist.md)). Freshness is
+now its own test.
 
 `smoke:storybook` is the one gate that navigates rather than mounts. `yarn test` renders
 each story in isolation, so it is blind to anything about **order** — which is how M3
