@@ -148,6 +148,68 @@ test("nothing queries a container it declares itself", () => {
   expect(offenders).toEqual([])
 })
 
+test("a container-query component is never storied in a shrink-to-fit cell", () => {
+  // The twin of the rule above, and the one the M3 screenshots
+  // actually caught: the component is right, the *story* is wrong.
+  //
+  // `container-type: inline-size` implies `contain: inline-size`,
+  // which forbids the element from being sized by its own contents.
+  // In a default `StoryCell` — `items-start`, so shrink-to-fit — the
+  // card has no width to shrink *to*, collapses to min-content, and
+  // every line of text wraps after one word. Valid CSS, no error, no
+  // axe violation, and it only shows up if somebody looks at a
+  // screenshot. `align="stretch"` hands it a definite inline size
+  // from the grid track.
+  //
+  // The container list is derived rather than hardcoded, so the
+  // component M4 adds with an `@container` on it joins this rule the
+  // moment it lands.
+  const containerComponents = componentFiles
+    .flatMap((one) => {
+      const match = /^([A-Z]\w+)\/\1\.tsx$/.exec(one.file)
+
+      return match?.[1] &&
+        stripComments(one.contents).includes("@container")
+        ? [match[1]]
+        : []
+    })
+    .sort()
+
+  // A canary on the derivation itself: if this ever comes back
+  // empty the rule silently passes forever.
+  expect(containerComponents).toEqual([
+    "Card",
+    "EmptyState",
+    "MediaTile",
+  ])
+
+  // `StoryCell`s are never nested, so the lazy match really does
+  // pair each opening tag with its own closing one.
+  const cellPattern =
+    /<StoryCell\b([^>]*)>([\s\S]*?)<\/StoryCell>/g
+
+  const offenders = componentFiles
+    .filter((one) => one.file.endsWith(".stories.tsx"))
+    .flatMap((one) =>
+      Array.from(
+        stripComments(one.contents).matchAll(cellPattern),
+      )
+        .filter(
+          ([, attributes, body]) =>
+            !attributes.includes('align="stretch"') &&
+            containerComponents.some((name) =>
+              body.includes(`<${name}`),
+            ),
+        )
+        .map(
+          ([, attributes]) =>
+            `${one.file}: <StoryCell${attributes}>`,
+        ),
+    )
+
+  expect(offenders).toEqual([])
+})
+
 test("the barrel is the only place components are re-exported", async () => {
   // One sanctioned barrel per package. A component importing a
   // sibling *through* `index.ts` turns every component into a

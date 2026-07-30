@@ -115,7 +115,18 @@ export const AllStates: Story = {
         </StoryRow>
       </StoryCell>
 
-      <StoryCell label="in a card header — the real placement">
+      {/*
+        `stretch`, because `Card` declares a container query. A
+        default `start` cell is shrink-to-fit, and
+        `container-type: inline-size` forbids the element from
+        being sized by its own contents — so the card collapses to
+        min-content and "16 bays · 4 ripping" wraps after every
+        word. `storyRules.test.ts` now fails on this.
+      */}
+      <StoryCell
+        align="stretch"
+        label="in a card header — the real placement"
+      >
         <Card
           actions={
             <LiveStatusIndicator
