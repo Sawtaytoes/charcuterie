@@ -1,5 +1,4 @@
 import type { Meta, StoryObj } from "@storybook/react"
-import { expect, fn } from "storybook/test"
 import { Button } from "../Button/Button.tsx"
 import {
   ContainerBoard,
@@ -14,33 +13,28 @@ import {
   PlayIcon,
   SearchIcon,
 } from "../icons.storyHelpers.tsx"
-import { expectAgentDrivable } from "../testing/index.ts"
 import { EmptyState } from "./EmptyState.tsx"
 
 const meta = {
   title: "Components/EmptyState",
   component: EmptyState,
   parameters: { layout: "padded" },
+  args: { headingLevel: 2, size: "md" },
 } satisfies Meta<typeof EmptyState>
 
 export default meta
 
 type Story = StoryObj<typeof meta>
 
+/**
+ * The heading is the handle. Eleven copies of "Nothing here" in a
+ * `<div>` are indistinguishable to an agent; a named heading is not.
+ */
 export const Default: Story = {
   args: {
     description:
       "Insert a disc and rip-deck will pick it up automatically.",
     heading: "No discs queued",
-  },
-  play: ({ canvas }) => {
-    // The heading is the handle. Eleven copies of "Nothing here" in
-    // a `<div>` are indistinguishable to an agent; a named heading
-    // is not.
-    expectAgentDrivable(canvas, {
-      name: "No discs queued",
-      role: "heading",
-    })
   },
 }
 
@@ -171,37 +165,19 @@ export const Responsive: Story = {
   ),
 }
 
+/**
+ * Two things an agent needs from an empty state: read *why* it is
+ * empty, and reach the way out. So the heading carries the reason
+ * and Tab lands on the action.
+ */
 export const Interactive: Story = {
   args: { heading: "No discs queued" },
   render: (emptyStateProps) => (
     <EmptyState
       {...emptyStateProps}
-      action={
-        <Button onClick={fn()} size="sm">
-          Scan drives
-        </Button>
-      }
+      action={<Button size="sm">Scan drives</Button>}
       description="Insert a disc and rip-deck will pick it up automatically."
       headingLevel={3}
     />
   ),
-  play: async ({ canvas, userEvent }) => {
-    // Two things an agent needs from an empty state: read why it is
-    // empty, and reach the way out. Tab must land on the action.
-    const heading = canvas.getByRole("heading", {
-      level: 3,
-      name: "No discs queued",
-    })
-
-    await expect(heading).toBeVisible()
-
-    const action = expectAgentDrivable(canvas, {
-      name: "Scan drives",
-      role: "button",
-    })
-
-    await userEvent.tab()
-
-    await expect(action).toHaveFocus()
-  },
 }

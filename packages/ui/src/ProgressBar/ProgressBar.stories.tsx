@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react"
 import { useState } from "react"
-import { expect } from "storybook/test"
+
+import { intentArgType } from "../argTypes.storyHelpers.ts"
 import { Button } from "../Button/Button.tsx"
 import {
   ContainerBoard,
@@ -9,7 +10,6 @@ import {
   StoryRow,
   StorySection,
 } from "../board.storyHelpers.tsx"
-import { expectAgentDrivable } from "../testing/index.ts"
 import { ProgressBar } from "./ProgressBar.tsx"
 import type { ProgressThreshold } from "./progressValue.ts"
 
@@ -23,29 +23,28 @@ const meta = {
   title: "Components/ProgressBar",
   component: ProgressBar,
   parameters: { layout: "padded" },
+  argTypes: { intent: intentArgType },
+  args: {
+    intent: "accent",
+    isIndeterminate: false,
+    isLabelVisible: false,
+    isValueShown: false,
+    max: 100,
+    size: "md",
+  },
 } satisfies Meta<typeof ProgressBar>
 
 export default meta
 
 type Story = StoryObj<typeof meta>
 
+/**
+ * The name comes from a real `aria-labelledby` even though the label
+ * is not printed, and the value sits on the *track* — so an agent's
+ * bounding box is the widget, not the filled 38%.
+ */
 export const Default: Story = {
   args: { label: "Ripping title 4 of 9", value: 38 },
-  play: async ({ canvas }) => {
-    const bar = expectAgentDrivable(canvas, {
-      name: "Ripping title 4 of 9",
-      role: "progressbar",
-    })
-
-    // The name comes from a real `aria-labelledby` even though the
-    // label is not printed, and the value is on the *track* — so an
-    // agent's bounding box is the widget, not the filled 38%.
-    await expect(bar).toHaveAttribute("aria-valuenow", "38")
-    await expect(bar).toHaveAttribute(
-      "aria-valuemax",
-      "100",
-    )
-  },
 }
 
 export const AllVariants: Story = {
@@ -154,23 +153,18 @@ export const AllStates: Story = {
   ),
 }
 
+/**
+ * "Unknown", not "zero" — so no `aria-valuenow` at all.
+ *
+ * rip-deck's AACS/BD+ preamble is ~25 s of a real Blu-ray emitting
+ * nothing: a full bar reads as a finished rip, an empty one as a
+ * wedged drive.
+ */
 export const Indeterminate: Story = {
   args: {
     isIndeterminate: true,
     isLabelVisible: true,
     label: "Working — no measurable progress yet",
-  },
-  play: async ({ canvas }) => {
-    const bar = expectAgentDrivable(canvas, {
-      name: "Working — no measurable progress yet",
-      role: "progressbar",
-    })
-
-    // "Unknown", not "zero". rip-deck's AACS/BD+ preamble is ~25 s
-    // of a real Blu-ray emitting nothing: a full bar reads as a
-    // finished rip, an empty one as a wedged drive.
-    await expect(bar).not.toHaveAttribute("aria-valuenow")
-    await expect(bar).toHaveAttribute("aria-busy", "true")
   },
 }
 
@@ -230,39 +224,9 @@ const SteppedProgressBar = () => {
 /**
  * A progressbar is not focusable and has no keyboard path — the
  * contract it owes an agent is that `aria-valuenow` tracks what is
- * drawn. So the play function drives it to completion and asserts
- * exactly that, including the threshold flip at 100%.
+ * drawn. Advance it to 100% and the threshold flips the fill green.
  */
 export const Interactive: Story = {
   args: { label: "Ripping title 4 of 9" },
   render: () => <SteppedProgressBar />,
-  play: async ({ canvas, userEvent }) => {
-    const bar = canvas.getByRole("progressbar")
-
-    await expect(bar).toHaveAttribute("aria-valuenow", "0")
-
-    const advance = canvas.getByRole("button", {
-      name: "Advance 25%",
-    })
-
-    await userEvent.click(advance)
-    await userEvent.click(advance)
-
-    await expect(bar).toHaveAttribute("aria-valuenow", "50")
-    await expect(canvas.getByText("50%")).toBeVisible()
-
-    await userEvent.click(advance)
-    await userEvent.click(advance)
-
-    await expect(bar).toHaveAttribute(
-      "aria-valuenow",
-      "100",
-    )
-
-    // The 100% threshold turns the fill green, which is the
-    // generalisation of rip-deck's `FILL_CLASS` keyed by rip state.
-    await expect(
-      bar.querySelector(".bg-intent-success-solid"),
-    ).toBeInTheDocument()
-  },
 }

@@ -1,5 +1,4 @@
 import type { Meta, StoryObj } from "@storybook/react"
-import { expect } from "storybook/test"
 
 import {
   ContainerBoard,
@@ -8,35 +7,27 @@ import {
   StorySection,
 } from "../board.storyHelpers.tsx"
 import { Card } from "../Card/Card.tsx"
-import { expectHiddenFromAgents } from "../testing/index.ts"
 import { Skeleton } from "./Skeleton.tsx"
 
 const meta = {
   title: "Components/Skeleton",
   component: Skeleton,
   parameters: { layout: "padded" },
+  args: { lineCount: 1, shape: "block" },
 } satisfies Meta<typeof Skeleton>
 
 export default meta
 
 type Story = StoryObj<typeof meta>
 
+/**
+ * The inverse of every other component's gate. A skeleton is
+ * decoration standing in for content that does not exist yet, so it
+ * is hidden from AT entirely — otherwise a screen reader reads three
+ * empty bars.
+ */
 export const Default: Story = {
   args: { blockSize: "1.5rem", inlineSize: "12rem" },
-  play: ({ canvasElement }) => {
-    const skeleton = canvasElement.querySelector(
-      "div[aria-hidden]",
-    )
-
-    if (!skeleton) {
-      throw new Error("Skeleton did not render")
-    }
-
-    // The inverse of every other component's gate. A skeleton is
-    // decoration standing in for content that does not exist yet;
-    // if AT can see it, a screen reader reads three empty bars.
-    expectHiddenFromAgents(skeleton)
-  },
 }
 
 export const AllVariants: Story = {
@@ -125,27 +116,15 @@ export const Responsive: Story = {
   ),
 }
 
+/**
+ * Nothing to drive, and that is the point: a skeleton contributes no
+ * roles at all, so an agent sweeping the page never finds a control
+ * it cannot act on.
+ */
 export const Interactive: Story = {
   args: {
     inlineSize: "12rem",
     lineCount: 3,
     shape: "text",
-  },
-  play: async ({ canvas, canvasElement }) => {
-    // Nothing to drive, and that is the assertion: a skeleton
-    // contributes no roles at all, so an agent sweeping the page
-    // never finds a control it cannot act on.
-    await expect(
-      canvas.queryAllByRole("status"),
-    ).toHaveLength(0)
-    await expect(
-      canvas.queryAllByRole("progressbar"),
-    ).toHaveLength(0)
-
-    const bars = canvasElement.querySelectorAll(
-      ".charcuterie-shimmer",
-    )
-
-    await expect(bars).toHaveLength(3)
   },
 }

@@ -101,4 +101,11 @@ the arrow keys give — "right" stops meaning right. `ContainerBoard` appears he
 harness rather than a container-query claim: `Tabs` declares no container, because nothing
 about it needs to *know* its width. It only has to survive being narrow.
 
-<Canvas of={TabsStories.Interactive} />
+## Manual activation is the falsification test
+
+`automatic` and `manual` differ only in whether moving focus also shows a panel — and that
+difference is *one line*, because focus and selection are separate kinds. Arrow through the
+bar below and the underline stays put until Enter: focus has moved to a tab whose panel is
+not showing, which is a state a three-kind model cannot represent at all.
+
+<Canvas of={TabsStories.Manual} />

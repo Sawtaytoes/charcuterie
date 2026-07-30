@@ -50,7 +50,6 @@ export const globalTypes = {
   density: {
     description:
       "Control sizing and type scale. Composes with scheme and variant.",
-    defaultValue: "comfortable",
     toolbar: {
       title: "Density",
       icon: "component",
@@ -68,7 +67,6 @@ export const globalTypes = {
   variant: {
     description:
       "Visual direction. `daylight` won M0; the other three survive as alternates.",
-    defaultValue: "daylight",
     toolbar: {
       title: "Variant",
       icon: "paintbrush",
@@ -84,6 +82,19 @@ export const globalTypes = {
 }
 
 const preview: Preview = {
+  /**
+   * Not `globalTypes[…].defaultValue`, which is deprecated *and*
+   * canvas-only: it seeds the toolbar and nothing else, so a
+   * `composeStories` render outside the canvas got
+   * `context.globals.density === undefined` and the decorator below
+   * wrote the literal string `"undefined"` onto `<html>`. Every
+   * density-derived size then silently fell back, in the one place
+   * — the DOM test suite — where sizes are asserted.
+   */
+  initialGlobals: {
+    density: "comfortable",
+    variant: "daylight",
+  },
   decorators: [
     writeHtmlAttribute("data-density", "density"),
     writeHtmlAttribute("data-variant", "variant"),
