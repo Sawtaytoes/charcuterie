@@ -66,3 +66,10 @@ that.
    widths, via `ContainerBoard`), `Interactive` (the complete keyboard path).
 4. Export from `src/index.ts` — the one sanctioned barrel. Components import each other
    directly, never through it.
+5. **If it declares `@container`, every `StoryCell` holding it needs `align="stretch"`.**
+   `container-type: inline-size` forbids the element from being sized by its own
+   contents, so a default (shrink-to-fit) cell collapses it to min-content and every
+   line wraps after one word. Valid CSS, no error, nothing for axe to say — it only
+   shows up in a screenshot, which is how it shipped in M3's `LiveStatusIndicator`
+   board. `sourceRules.test.ts` now derives the container-declaring components from
+   source and fails on this, so the component M4 adds joins the rule automatically.
