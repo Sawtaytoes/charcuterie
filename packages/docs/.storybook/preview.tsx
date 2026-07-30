@@ -1,6 +1,27 @@
 import { withThemeByDataAttribute } from "@storybook/addon-themes"
 import type { Decorator, Preview } from "@storybook/react"
 
+/**
+ * Load-bearing, and not a style import — see
+ * `docs/decisions/2026-07-29-preload-docs-blocks-before-the-focus-patch.md`.
+ *
+ * Storybook 10.5.5's `enhanceContext` loader replaces
+ * `HTMLElement.prototype.focus` with an accessor whose getter reads
+ * `this.ownerDocument`. React Aria — which Storybook's own docs
+ * blocks pull in — does `window.HTMLElement.prototype.focus` at
+ * module scope, so `this` is the *prototype*, `ownerDocument`
+ * throws `Illegal invocation`, and the docs page renders
+ * Storybook's "component failed to render" panel instead of the
+ * page.
+ *
+ * It only bites when the blocks chunk loads *after* a story has
+ * rendered — i.e. every docs page a human reaches by clicking,
+ * which is every docs page. Importing it here evaluates React
+ * Aria's setup at preview bootstrap, while `focus` is still a plain
+ * function.
+ */
+import "@storybook/addon-docs/blocks"
+
 import "../src/styles/tokens.css"
 
 /**

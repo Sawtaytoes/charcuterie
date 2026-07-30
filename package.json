@@ -20,6 +20,7 @@
     "lint:eslint": "eslint .",
     "lint:eslint-format": "eslint . --fix",
     "preview:themes": "yarn workspace @charcuterie/tokens preview:themes",
+    "smoke:storybook": "yarn workspace @charcuterie/docs smoke:storybook",
     "storybook": "yarn workspace @charcuterie/docs storybook",
     "test": "vitest",
     "typecheck": "tsc --noEmit && yarn workspaces foreach --all --parallel run typecheck"

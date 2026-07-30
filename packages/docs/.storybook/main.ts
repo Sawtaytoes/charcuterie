@@ -1,5 +1,6 @@
 import type { StorybookConfig } from "@storybook/react-vite"
 import tailwindcss from "@tailwindcss/vite"
+import remarkGfm from "remark-gfm"
 import { mergeConfig } from "vite"
 
 const config: StorybookConfig = {
@@ -14,7 +15,22 @@ const config: StorybookConfig = {
     "../../ui/src/**/*.mdx",
   ],
   addons: [
-    "@storybook/addon-docs",
+    {
+      name: "@storybook/addon-docs",
+      // MDX is CommonMark by default, and a GitHub-flavoured table
+      // is not CommonMark — so `| Attribute | Values |` rendered as
+      // a paragraph of literal pipe characters. It reads as a
+      // Markdown typo rather than a missing plugin, which is why
+      // `Tokens/Overview` shipped that way: the source is correct
+      // and every other block on the page renders.
+      options: {
+        mdxPluginOptions: {
+          mdxCompileOptions: {
+            remarkPlugins: [remarkGfm],
+          },
+        },
+      },
+    },
     "@storybook/addon-a11y",
     "@storybook/addon-themes",
     "@storybook/addon-vitest",
