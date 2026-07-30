@@ -17,6 +17,11 @@
  *
  * Risk: high-contrast UI is tiring over a long session, and
  * saturated status colours make everything look like an alert.
+ *
+ * Use it for: a display in direct sun, the garage tablet at 2am, or
+ * whatever sits behind a user-facing "high contrast" switch — and,
+ * unchosen, as the benchmark above. Long form on
+ * `Tokens/Overview`.
  */
 
 import type { Variant } from "../types.ts"
