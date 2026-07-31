@@ -1,0 +1,74 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as FieldStories from "./Field.stories";
+
+<Meta of={FieldStories} />
+
+# Field
+
+Sixteen files in the fleet spell a label, a control, and a hint, and no two spell the
+wiring the same way. mux-magic's `FieldLabel` renders a `<label>` with **no `htmlFor`** —
+which looks correct, reads correctly to a sighted user, and gives a screen reader an
+unnamed textbox.
+
+<Canvas of={FieldStories.Default} />
+
+## Props
+
+<Controls />
+
+## The control is a slot
+
+Cloned, not wrapped — the same contract as `Popover`'s trigger. An `<input>`, a
+`<textarea>`, a `Select`, or an app's own control all go in the same hole, and the `id`,
+`aria-describedby`, `aria-invalid` and `required` are injected onto whatever arrives.
+
+<Canvas of={FieldStories.AllVariants} />
+
+## `createLinkedIds` is *not* here, and that is the finding
+
+The plan expected `useLinkedIds` to do this wiring. It does not fit, for the same reason it
+did not fit `Tabs`: that kind exists for a **dynamic** pairing, where the registration
+multiset is what stops an `aria-describedby` naming a node React has already removed.
+
+A field renders its own description and its own error, so it knows *at render* which exist.
+The ids come from one `useUniqueId` and a conditional join, and they cannot get out of step
+at all.
+
+That leaves `createLinkedIds` with **no consumer in this package across twenty-five
+components**. It is the one state kind the component layer has never needed, and saying so
+is more useful than manufacturing a use for it.
+
+## One source of invalidity
+
+There is no `isInvalid` prop. `error` being present *is* the invalidity:
+
+| `error` | `aria-invalid` | `aria-describedby` |
+| --- | --- | --- |
+| absent | not set | description only, if any |
+| present | `"true"` | description then error |
+
+Two props for one fact is how a control ends up `aria-invalid="true"` with nothing saying
+why — which is what `RegexWithFlagsField` does in mux-magic today.
+
+<Canvas of={FieldStories.AllStates} />
+
+## The error is *described*, not announced
+
+No `role="alert"` and no live region, deliberately. An error bound through
+`aria-describedby` is read when the control takes focus — which is when the user can act on
+it. A live region on the same text announces it a second time, from nowhere, while the caret
+is somewhere else.
+
+A form that fails on submit should say so **once, at the top**, with the `Alert` this
+library already ships. Then the user tabs into the field and hears the specific reason.
+`ToastRegion` draws the same line for the same reason.
+
+## Order is behaviour
+
+`aria-describedby` is read in sequence, so description comes before error:
+
+> "Absolute paths only. That path is not writable."
+
+reads correctly; its reverse does not. Nothing enforces this but the order of one array in
+the component, which is why that array is not built from an object.

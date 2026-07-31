@@ -18,6 +18,15 @@ M3 ships the **P0 pure-presentation** set: `Spinner`, `Skeleton`, `Button`, `Ico
   is a composition that could not be expressed until
   [`Tabs` moved onto `SinglePicker`](../../docs/decisions/2026-07-30-tab-selection-is-a-single-picker.md).
 
+**M6a ships the nine P1 components**: `Select`, `Field`, `Accordion`, `LogViewer`, `Menu`,
+`Tooltip`, `SortableTableHeader`, `Toast` (with `ToastRegion`), and `FileDropZone`. Twenty
+five components in all. Four of them changed rules this package had already written down —
+a menu is [named by its trigger](../../docs/decisions/2026-07-31-a-menu-is-named-by-its-trigger.md),
+an accordion panel is [a `group` rather than a landmark](../../docs/decisions/2026-07-31-an-accordion-panel-is-a-group-not-a-landmark.md),
+[`Select` owns no state at all](../../docs/decisions/2026-07-31-select-is-uncontrolled-because-the-platform-owns-the-value.md),
+and [not every boolean is a state kind](../../docs/decisions/2026-07-31-not-every-boolean-is-a-state-kind.md).
+Full write-up: [M6a handoff](../../docs/2026-07-31-m6a-the-p1-components.md).
+
 ## Install and wire
 
 ```ts
