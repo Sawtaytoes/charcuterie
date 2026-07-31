@@ -7,7 +7,7 @@ name: Version Packages
 
 on:
   push:
-    branches: [v2]
+    branches: [master]
 
 concurrency: version-packages-${{ github.ref }}
 

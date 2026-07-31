@@ -1,21 +1,14 @@
 name: NPM Package Deploy
 
-# Triggered on push to the release branch rather than `workflow_run` after CI:
-# `workflow_run` only fires for workflows on the repo's DEFAULT branch, and the
-# default here is still `master` (v1) while the product line is `v2`. Publishing
-# is idempotent (a package publishes only when its version was bumped and no
-# `<pkg>-v<version>` tag exists yet), so a push that changed nothing is a no-op.
-# When `v2` is merged down to `master`, retarget this to `[master]`.
 on:
-  push:
-    branches: [v2]
-
-concurrency:
-  group: npm-package-deploy-${{ github.ref }}
-  cancel-in-progress: false
+  workflow_run:
+    workflows: ["CI"]
+    branches: [master]
+    types: [completed]
 
 jobs:
   publish:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
