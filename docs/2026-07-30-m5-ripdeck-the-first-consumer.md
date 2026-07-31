@@ -158,12 +158,15 @@ Yarn rejected the pair as conflicting.
 
 ## Screenshots
 
-In [`rip-deck/__screenshots__/`](../../rip-deck/__screenshots__/):
+Archived in [`docs/previews/`](previews/), beside M1's swap measurements and M3's boards —
+`rip-deck/__screenshots__/` is gitignored fleet-wide, so evidence anyone else has to read
+lives here:
 
-- `2026-07-30-m5-before-dashboard.png`, `2026-07-30-m5-before-hub-fault.png`
-- `2026-07-30-m5-after-hub-fault.png` — the same fixture, after
-- `2026-07-30-m5-after-log-modal.png` — `Modal` at `xl`, with the scrim and the focus ring
-- `2026-07-30-m5-after-light-mode.png` — **the interesting one**
+- `2026-07-30-m5-ripdeck-before-dashboard.png` · `…-before-hub-fault.png`
+- `2026-07-30-m5-ripdeck-after-hub-fault.png` — the same fixture, after
+- `2026-07-30-m5-ripdeck-after-log-modal.png` — `Modal` at `xl`, with the scrim and the
+  focus ring
+- `2026-07-30-m5-ripdeck-after-light-mode.png` — **the interesting one**
 
 ## Still open, and itemised
 
