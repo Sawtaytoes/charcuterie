@@ -5,8 +5,18 @@ that Playwright and an AI agent can actually drive.
 
 M3 ships the **P0 pure-presentation** set: `Spinner`, `Skeleton`, `Button`, `IconButton`,
 `Badge`, `ProgressBar`, `EmptyState`, `Card`, `LiveStatusIndicator`, `MediaTile` — plus
-`VisuallyHidden`, which the first three of those need. No overlays, no floating-ui, no
-`Tabs`: those are M4.
+`VisuallyHidden`, which the first three of those need. M4 adds the overlays: `Modal`,
+`Popover`, `Tabs`.
+
+**M5 adds two, and they came from the first consumer rather than from the plan** —
+[the rule](../../docs/decisions/2026-07-30-a-consumer-milestone-adds-components.md):
+
+- **`Alert`** — rip-deck spells this shape four times, two of them carrying a
+  byte-identical `TONE_CLASS` map of hardcoded hexes. It is the app's largest single
+  duplication and no P0 component is a banner.
+- **`SegmentedControl`** — `SinglePicker` + `RovingFocus` with the panels taken away, which
+  is a composition that could not be expressed until
+  [`Tabs` moved onto `SinglePicker`](../../docs/decisions/2026-07-30-tab-selection-is-a-single-picker.md).
 
 ## Install and wire
 

@@ -1,0 +1,70 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as AlertStories from "./Alert.stories";
+
+<Meta of={AlertStories} />
+
+# Alert
+
+**The component M5 found, rather than one the plan predicted.** rip-deck spells this shape
+four times — `TowerAlerts`, `UsbAlertBanner`, `LoadedDiscsBanner`, `VerdictBadge` — and two
+of those carry a byte-identical `TONE_CLASS` map of hardcoded hexes with no light mode.
+mux-magic spells the same idea a third way in `statusClassMap`.
+
+<Canvas of={AlertStories.Default} />
+
+## Props
+
+<Controls />
+
+<Canvas of={AlertStories.AllVariants} />
+
+## It is a block by default, and a landmark only when named
+
+`label` decides, and the evidence divides cleanly.
+
+The **banners** are one alert at the top of a page and want to be addressable —
+`getByRole("region", { name: "USB connection alert" })`. They pass a `label`.
+
+The **verdict** renders inside every bay card, and one of its two forms is the single
+sentence *"Part of the tower-wide problem above."* Nine landmarks sharing one name is axe's
+`landmark-unique`, so it passes none.
+
+A component that always took the landmark would fail its own a11y gate on a nine-bay tower.
+One that never took it leaves three `<section aria-label>` wrappers hand-rolled in the
+consumer — which is what rip-deck has today.
+
+<Canvas of={AlertStories.AllStates} />
+
+## The heading is not a heading element
+
+An alert's headline is a **sentence** — "Bay 7 is reading with errors; clean the disc and
+try again" — not a node in the document outline. Nine bays' worth of those as `<h3>`s
+builds a table of contents out of nine complaints, which is worse for a screen reader than
+no outline entry at all.
+
+`Card` and `EmptyState` take a real `headingLevel` precisely because their headings *are*
+short outline nodes. This one is styled text, and `label` is how it becomes findable.
+
+## It does not announce, and that is a component boundary
+
+No `role="alert"`, no `aria-live`. Two reasons, and the second is the load-bearing one:
+
+1. A live region takes **no accessible name from its content**
+   ([decision](../../../docs/decisions/2026-07-29-status-regions-carry-an-aria-label.md)),
+   so an announcing variant needs a name that duplicates the sentence it is announcing.
+2. `role="alert"` on a `<section>` **overrides the landmark**. It cannot be both a thing
+   you can scope queries to and a thing that interrupts you.
+
+A thing that interrupts you is a `Toast` (M6). This is a thing that is *on the page*.
+
+<Canvas of={AlertStories.Responsive} />
+
+## The evidence is a list
+
+`details` renders a `<ul>`, so a screen reader announces "list, 3 items" instead of running
+three measurements together into one sentence. The key is `${index}-${line}` rather than
+the line itself, because **evidence repeats**: two drives both reporting "3 read errors" is
+the normal case on a tower, not an edge one.
+
+<Canvas of={AlertStories.Interactive} />

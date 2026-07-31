@@ -93,8 +93,8 @@ test("the arrow keys skip a disabled tab", async () => {
 
   await expect(verdict).toBeDisabled()
 
-  // The disabled tab is out of the *focus* group and still in the
-  // *panel* group — it owns a panel and an id either way.
+  // The disabled tab is out of the *focus* group and still one of
+  // the *options* — it owns a panel and an id either way.
   // Registration is membership, so the arrow keys skip it with
   // nothing in `RovingFocus` knowing the word "disabled".
   const flags = expectAgentDrivable(canvas, {
@@ -197,8 +197,8 @@ test("the focus ring survives the scroll container", async () => {
 
 /**
  * The falsification point that M4 was built to run: `automatic` and
- * `manual` differ only in whether moving focus also shows a panel,
- * and that difference is one line because focus and selection are
+ * `manual` differ only in whether moving focus also *chooses*, and
+ * that difference is one line because focus and selection are
  * separate kinds.
  */
 test("manual activation moves focus without selecting", async () => {
