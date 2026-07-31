@@ -269,10 +269,16 @@ So the remaining shape of M6 is:
 
 xander is out of M6 entirely and is not a blocker for the 1.0.0 cut.
 
-### Carried in from M5b, still open
+### Carried in from M5b, resolved
 
-`packages/conformance` was not built in M5b and is still not built. It is not a blocker for
-any of M6b–M6e; it should be resolved before M6f, since 1.0.0 is a stability claim.
+`packages/conformance` was not built in M5b, and it is not going to be:
+[it is not a package](decisions/2026-07-31-conformance-is-not-a-package.md). Two of its
+three profiles are already gated by name — `@charcuterie/docs` **is** the React 19 +
+Tailwind v4 build, `packages/logic`'s five-adapter suite **is** the Preact one — the Satori
+profile has nothing to render because the ePaper-safe component subset was never built, and
+the 60 KB gz budget belongs to castkit. The one assertion underneath all three that no gate
+made is now in `sourceRules.test.ts`: **what each published entry point is allowed to reach
+at runtime**. Nothing blocks M6f.
 
 ### What M6b already knows
 
