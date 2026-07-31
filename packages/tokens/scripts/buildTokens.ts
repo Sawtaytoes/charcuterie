@@ -12,10 +12,14 @@ import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 
 import {
+  buildFirstPaintCss,
   buildThemeCss,
   buildVariablesCss,
 } from "../src/buildCss.ts"
-import { variants } from "../src/variants/index.ts"
+import {
+  variants,
+  variantsByName,
+} from "../src/variants/index.ts"
 
 /**
  * The M0 winner, picked 2026-07-29. See
@@ -27,6 +31,14 @@ import { variants } from "../src/variants/index.ts"
  * from real token files instead of drawing it.
  */
 const DEFAULT_VARIANT = "daylight"
+
+const defaultVariant = variantsByName.get(DEFAULT_VARIANT)
+
+if (!defaultVariant) {
+  throw new Error(
+    `DEFAULT_VARIANT "${DEFAULT_VARIANT}" is not in the variant table.`,
+  )
+}
 
 const distDirectory = join(
   dirname(dirname(fileURLToPath(import.meta.url))),
@@ -43,6 +55,10 @@ const artifacts = [
   {
     name: "theme.css",
     contents: buildThemeCss(),
+  },
+  {
+    name: "first-paint.css",
+    contents: buildFirstPaintCss(defaultVariant),
   },
   {
     name: "tokens.json",

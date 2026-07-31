@@ -22,10 +22,11 @@ import { join, resolve } from "node:path"
 import { expect, test } from "vitest"
 
 import {
+  buildFirstPaintCss,
   buildThemeCss,
   buildVariablesCss,
 } from "./buildCss.ts"
-import { variants } from "./variants/index.ts"
+import { daylight, variants } from "./variants/index.ts"
 
 const distDirectory = resolve(
   import.meta.dirname,
@@ -47,6 +48,11 @@ test.each([
     buildVariablesCss(variants, "daylight"),
   ],
   ["theme.css", buildThemeCss()],
+  // A stale one of these is worse than a stale stylesheet: it is
+  // meant to be COPIED into a consumer's HTML, so an out-of-date
+  // hex here does not fix itself on the next `yarn build` in the
+  // app — it is already pasted somewhere else.
+  ["first-paint.css", buildFirstPaintCss(daylight)],
 ])(
   "dist/%s is what the generator produces today",
   async (name, expected) => {
