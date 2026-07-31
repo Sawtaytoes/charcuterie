@@ -100,7 +100,16 @@ export const Toast = ({
     // transition to see — the single most common reason a CSS
     // enter-animation "does nothing".
     const frame = globalThis.requestAnimationFrame(() => {
-      transitionTo("visible")
+      // Guarded, because `is` and `transitionTo` are stable — this
+      // effect runs once, so the frame is *not* cancelled when the
+      // status changes underneath it. A dismiss during the enter
+      // frame moves the toast to `exiting`, and `exiting → visible`
+      // is a legal transition (it is how hover-to-pause works), so
+      // an unguarded write here brings a dismissed toast straight
+      // back and restarts its duration timer.
+      if (is("entering")) {
+        transitionTo("visible")
+      }
     })
 
     return () => {
