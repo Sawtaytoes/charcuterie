@@ -65,27 +65,53 @@ export const globalTypes = {
     },
   },
   /**
-   * The M5 bake-off axis. `system` is today's shipped state — the
-   * baseline every candidate has to beat, kept first so the
-   * comparison is always against what we actually have rather than
-   * against the previously-selected candidate.
+   * The M5 bake-off, as two independent axes rather than one list
+   * of pairings — liking a heading and disliking the body it came
+   * bundled with left nothing to click.
+   *
+   * `system` leads both lists: it is today's shipped state, and the
+   * comparison should always be against what we actually have
+   * rather than against the previously-selected candidate.
    */
-  font: {
+  bodyFont: {
     description:
-      "Type pairing under evaluation. Preview-only until one is chosen.",
+      "Body face under evaluation. Preview-only until one is chosen.",
     toolbar: {
-      title: "Font",
+      title: "Body",
+      icon: "paragraph",
+      dynamicTitle: true,
+      items: [
+        { value: "system", title: "System (today)" },
+        { value: "nunito", title: "Nunito" },
+        { value: "dm-sans", title: "DM Sans" },
+        { value: "figtree", title: "Figtree" },
+        { value: "rubik", title: "Rubik" },
+        { value: "outfit", title: "Outfit" },
+        { value: "nunito-sans", title: "Nunito Sans" },
+        { value: "quicksand", title: "Quicksand" },
+        { value: "inter", title: "Inter" },
+        { value: "source-sans-3", title: "Source Sans 3" },
+      ],
+    },
+  },
+  headingFont: {
+    description:
+      "Display face for headings. `system` means no display family — the body face, bolder.",
+    toolbar: {
+      title: "Heading",
       icon: "typography",
       dynamicTitle: true,
       items: [
         { value: "system", title: "System (today)" },
-        { value: "source-sans-3", title: "Source Sans 3" },
-        { value: "inter", title: "Inter" },
-        { value: "fraunces", title: "Fraunces + Inter" },
+        { value: "fraunces", title: "Fraunces" },
+        { value: "fraunces-soft", title: "Fraunces Soft" },
         {
           value: "bricolage",
-          title: "Bricolage + Public Sans",
+          title: "Bricolage Grotesque",
         },
+        { value: "baloo", title: "Baloo 2" },
+        { value: "inter", title: "Inter" },
+        { value: "source-sans-3", title: "Source Sans 3" },
       ],
     },
   },
@@ -117,13 +143,15 @@ const preview: Preview = {
    * — the DOM test suite — where sizes are asserted.
    */
   initialGlobals: {
+    bodyFont: "system",
     density: "comfortable",
-    font: "system",
+    headingFont: "system",
     variant: "daylight",
   },
   decorators: [
+    writeHtmlAttribute("data-body-font", "bodyFont"),
     writeHtmlAttribute("data-density", "density"),
-    writeHtmlAttribute("data-font", "font"),
+    writeHtmlAttribute("data-heading-font", "headingFont"),
     writeHtmlAttribute("data-variant", "variant"),
     withThemeByDataAttribute({
       attributeName: "data-scheme",
