@@ -18,12 +18,13 @@
  * `@charcuterie/ui/styles.css`. */
 @import "@charcuterie/ui/src/styles.css";
 
-/* The M5 font bake-off — self-hosted candidate faces plus the
- * `data-font` toolbar axis that swaps between them. Preview scope
- * only: no consumer imports this, and it deletes once a pairing is
- * chosen and promoted into `@charcuterie/tokens`. Sits with the
- * other `@import`s because CSS requires them to lead the file. */
-@import "./fontCandidates.css";
+/* The three shipped faces — Baloo 2, Outfit, Victor Mono — as
+ * `@font-face` rules pointing at woff2 inside the tokens package.
+ * A separate entry point from `theme.css` on purpose: a Satori
+ * consumer wants the woff2 and no CSS, and an app that already has
+ * these faces should not download them twice. This is the same
+ * single line every consumer adds. */
+@import "@charcuterie/tokens/fonts.css";
 
 /* Tailwind's automatic source detection starts from this file's own
  * package, so it never sees `packages/ui` — and every component
