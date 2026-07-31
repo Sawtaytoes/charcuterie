@@ -1,8 +1,14 @@
 # M6a — the nine P1 components
 
 **Branch:** `feat/m6-p1-components`
-**Gates:** lint, typecheck, build, **472 tests** (was 383), contrast clear on all four
-variants, `smoke:storybook` green on **105 entries** (was 93).
+**Gates**, re-run on the integrated result at merge time (this branch plus
+`feat/m6-conformance`, rebased onto `master`): lint, typecheck, build, contrast clear on all
+four variants x two schemes, **476 tests over 72 files** (26 files skipped; was 383),
+`smoke:storybook` green on **105 entries** (was 93).
+
+The branch-local figure was **472**. The difference is the four the entry-point gate and the
+enter-frame regression below add — and the run that found the latter, which is why the
+number is quoted from the integrated tree rather than from the branch.
 
 M6 as the plan scopes it is P1 breadth **plus** the rest of the fleet **plus** the 1.0.0
 cut. This is the first of those three. The consumer half is M6b–M6e and the cut is M6f; see
@@ -186,7 +192,7 @@ select's does.
 
 ---
 
-## Three failure modes worth carrying forward
+## Four failure modes worth carrying forward
 
 ### `biome check --write --unsafe` silently rebuilt the bug it was fixing
 
@@ -230,6 +236,27 @@ while `canvas.getByRole` cannot find it in the test that exists to prove agent-d
 **The most accessible file control is the one the role model has no name for**, and that is
 a hole in the platform rather than in the component.
 [Decision](decisions/2026-07-31-a-file-input-has-no-role.md).
+
+### The enter frame put a dismissed toast back — and the same test found it twice
+
+Found at merge, re-running the gates on the integrated tree: `dismissing runs the exit and
+then removes, once` failed in the full run and passed alone. That is the `mountStory`
+signature above, and it was not that — the canvases were being removed correctly.
+
+`useStatus` returns `core.is` and `core.transitionTo` straight off the machine, so **both
+are stable for the component's lifetime**, and the effect that schedules the enter frame
+lists only those two. It runs *once*: its `cancelAnimationFrame` cleanup can never fire on a
+status change. Dismiss before that frame lands and the toast is `exiting` when the frame
+calls `transitionTo("visible")` — which is **legal**, because hover-to-pause needs it. The
+toast comes back and restarts its five-second duration, and the test reads that as "it did
+not go away".
+
+The frame is now guarded by `is("entering")`. The lesson is the general one about stable
+callbacks: **a dependency array that is honest about a stable identity is also an effect
+that runs once**, so anything it schedules must re-check the state it is about to write,
+rather than trusting a cleanup that will not run. The regression test *holds* the frame
+instead of racing it — left to real timing this reproduces only under load, which is how it
+arrived: as one failure, once, in a suite that had been green.
 
 ---
 
