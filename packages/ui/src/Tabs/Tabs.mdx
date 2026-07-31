@@ -22,19 +22,33 @@ It did not come out ugly. The composition is two hooks and one decision.
 ## The composition
 
 ```ts
-const panels = useVisibilityGroup({ visibleKey: initialKey })  // which panel shows
-const focus = useRovingFocus({ activeValue: initialKey })      // which tab is tabbable
+const selection = useSinglePicker({ selectedValue: initialKey })  // which tab is chosen
+const focus = useRovingFocus({ activeValue: initialKey })         // which tab is tabbable
 
 // `automatic` is this line. `manual` is its absence.
-if (activation === "automatic") panels.show(focus.activeValue)
+if (activation === "automatic") selection.select(focus.activeValue)
 ```
 
 That one line is the whole difference between the two ARIA activation modes, and it is
 only that small because **focus and selection are separate kinds**. In `manual`, focus
-lands on a tab whose panel is *not* showing — a state the original three-kind model could
-not represent at all. Modelled as a `SinglePicker`, as the three-kind model would have to,
-every arrow key would have chosen. The `Interactive` story asserts both halves against the
-same component.
+lands on a tab that is *not* chosen — a state the original three-kind model could not
+represent at all, because it had one notion of "the current one" doing both jobs. The
+`Interactive` story asserts both halves against the same component.
+
+## Selection, not visibility
+
+M4 built this on `VisibilityGroup`, and the panels come out one-at-a-time either way: the
+two cores are the same shape, deliberately. What settled it is **what registers**. The
+thing that calls `register` here is the *tab*, not the panel, and the question a tab bar
+asks is *which one did you pick* — so the kind that answers it is `SinglePicker`, and the
+panel's `hidden` is derived from the answer rather than being the answer.
+
+That is not bookkeeping. Reading it the other way made `aria-selected` a report about a
+panel's visibility, so a tab bar with **no panels at all** — a segmented filter, a view
+switcher that swaps a route — had to model its choice as a group of visibilities it did not
+have. `SegmentedControl` is exactly that consumer, and it shares this core rather than
+hand-rolling a fourth one.
+[Decision](../../../docs/decisions/2026-07-30-tab-selection-is-a-single-picker.md).
 
 ## What it does not use, and why that is the answer
 
@@ -49,9 +63,10 @@ specific reason for the fourth.
 
 ## Registration is membership
 
-A disabled tab joins the **panel** group — it still owns a panel and an id — and stays out
-of the **focus** group. That is all "disabled" means here: the arrow keys skip it because
-it is not a member, and nothing in `RovingFocus` has to know the word.
+A disabled tab joins the **choice** — it is still one of the options, still owns a panel
+and an id — and stays out of the **focus** group. That is all "disabled" means here: the
+arrow keys skip it because it is not a member, and nothing in `RovingFocus` has to know the
+word.
 
 `TabTrigger` is its own file for a reason that is not style: both registrations are
 effects, and an effect cannot run in a loop. Any member of a registering group ends up
@@ -103,9 +118,9 @@ about it needs to *know* its width. It only has to survive being narrow.
 
 ## Manual activation is the falsification test
 
-`automatic` and `manual` differ only in whether moving focus also shows a panel — and that
+`automatic` and `manual` differ only in whether moving focus also *chooses* — and that
 difference is *one line*, because focus and selection are separate kinds. Arrow through the
-bar below and the underline stays put until Enter: focus has moved to a tab whose panel is
-not showing, which is a state a three-kind model cannot represent at all.
+bar below and the underline stays put until Enter: focus has moved to a tab that is not
+selected, which is a state a three-kind model cannot represent at all.
 
 <Canvas of={TabsStories.Manual} />

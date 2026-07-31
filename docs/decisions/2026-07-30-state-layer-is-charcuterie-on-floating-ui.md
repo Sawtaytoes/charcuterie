@@ -4,7 +4,10 @@
 **Date:** 2026-07-30
 **Type:** Architecture
 **Supersedes:** —
-**Superseded by:** —
+**Superseded by:** [Tab selection is a `SinglePicker`](2026-07-30-tab-selection-is-a-single-picker.md),
+on one point only — this record describes `Tabs` as `VisibilityGroup` + `RovingFocus`; it
+is `SinglePicker` + `RovingFocus`. The finding below (focus and selection are separate
+kinds, and that separation costs one line) stands unchanged.
 
 ## Decision
 
