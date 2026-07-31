@@ -24,7 +24,16 @@ the consumer rather than out of the plan
 `portal:` earned its keep by finding three packaging holes that all fail silently.
 **Start from [the M5 handoff](docs/2026-07-30-m5-ripdeck-the-first-consumer.md).**
 
-Next is M5b: the second consumer, **castkit**. Behind it:
+**M5b put it into a second one, [castkit](../castkit/).** Tokens and logic both reached it
+through seams built for it by name — `variables.css` for a consumer with no Tailwind,
+`createStoreFromSignals` for one with a 60 KB budget — and **the component layer did not
+reach it at all**, because `@charcuterie/ui` is React and slatecast is Preact. It also
+found that this repo's Spectra 6 palette was **invented**: five of six values were colours
+the hardware cannot render, measured against a white it cannot produce
+([decision](docs/decisions/2026-07-31-epaper-is-exempt-from-the-contrast-gate.md)).
+**Start from [the M5b handoff](docs/2026-07-31-m5b-castkit-the-second-consumer.md).**
+
+Next is M6. Behind it:
 [the M4 handoff](docs/2026-07-30-m4-overlays-and-the-tabs-thesis-test.md) and
 [the Storybook review that followed it](docs/2026-07-30-m4-followup-storybook-review-before-m5.md)
 — which split stories from tests, and found three faults that a fully green gate set could
@@ -97,7 +106,8 @@ need a chromium matching this repo's Playwright, which the agent sandbox now shi
   [M3 components](docs/2026-07-29-m3-p0-components.md) ·
   [M4 overlays](docs/2026-07-30-m4-overlays-and-the-tabs-thesis-test.md) ·
   [the M4 Storybook review](docs/2026-07-30-m4-followup-storybook-review-before-m5.md) ·
-  [M5 rip-deck](docs/2026-07-30-m5-ripdeck-the-first-consumer.md).
+  [M5 rip-deck](docs/2026-07-30-m5-ripdeck-the-first-consumer.md) ·
+  [M5b castkit](docs/2026-07-31-m5b-castkit-the-second-consumer.md).
 - The plan and phasing:
   `agentic/docs/research/2026-07-29-charcuterie-component-library-plan.md`.
 - [`docs/previews/`](docs/previews/) — the archived M0 bake-off board, the M1 swap
