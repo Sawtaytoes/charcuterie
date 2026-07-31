@@ -154,14 +154,15 @@ Everything below is byte-identical between it and charcuterie:
 
 ### What was left, and which one it was
 
-The fault was in **npm's per-package Trusted Publisher record** — confirmed above. There were
-two candidates, and re-adding the entry is what the successful 08:29 run followed, so
-**(1)** is the working explanation:
+The fault was in **npm's per-package Trusted Publisher record** — confirmed above. Of the two
+candidates it was **(1), case sensitivity**: the entry read `sawtaytoes/charcuterie` and
+GitHub's OIDC `repository` claim spells it `Sawtaytoes/charcuterie`. Re-adding it with the
+exact casing fixed it immediately, and that is the 08:29 run.
 
-1. **Case sensitivity.** npm's docs state *"All fields are case-sensitive."* GitHub's OIDC
-   `repository` claim spells the owner **`Sawtaytoes`**; the npm panel has been seen showing
-   **`sawtaytoes`**. Delete the entry and re-add it with the exact casing.
-2. **An upstream npm bug.** [npm/cli#8678](https://github.com/npm/cli/issues/8678) reports
+1. ✅ **Case sensitivity — this was it.** npm's docs state *"All fields are
+   case-sensitive."* GitHub's OIDC `repository` claim spells the owner **`Sawtaytoes`**; the
+   npm panel read **`sawtaytoes`**. Delete the entry and re-add it with the exact casing.
+2. **An upstream npm bug**, not needed. [npm/cli#8678](https://github.com/npm/cli/issues/8678) reports
    this exact signature — a **scoped** package that already exists, publishing a second
    version, `POST …/oidc/token/exchange/package/@scope%2fname` → 404
    *"OIDC token exchange error - package not found"*, while a plain `GET` of the same
