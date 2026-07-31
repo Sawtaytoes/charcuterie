@@ -171,7 +171,12 @@ The fallback, **not used and not wanted**, is a granular automation token as an 
 repository secret mapped to `NODE_AUTH_TOKEN` — the same mechanism used for the `0.1.0`
 bootstrap. Recorded only so a future reader knows it exists: provenance would survive (it
 comes from `id-token: write`, not from how the registry authenticates), but the "no token to
-manage" property would not, and the bootstrap token has already been revoked.
+manage" property would not.
+
+> **Open human step:** the **bootstrap automation token** — step 3 of *First-time setup* —
+> has no record here of being revoked, and OIDC has been publishing without it since
+> `tokens@0.2.0`. It is a live publish credential for the whole scope with nothing using it.
+> Revoke it at **npmjs.com → Access Tokens**. Nothing in this repo can do that or check it.
 
 ## Verifying
 
