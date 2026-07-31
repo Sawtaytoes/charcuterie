@@ -30,7 +30,7 @@ not see.
 | [`@charcuterie/eslint-config`](packages/eslint-config/README.md) | **live** | The rules Biome cannot express. |
 | [`@charcuterie/docs`](packages/docs/README.md) | **live**, private | Storybook host. |
 | [`@charcuterie/logic`](packages/logic/README.md) | **live** | The five state kinds as framework-free cores, plus React 19 and Preact bindings and optional Jotai/signals store adapters. |
-| [`@charcuterie/ui`](packages/ui/README.md) | **live** | The P0 components — Spinner, Skeleton, Button, IconButton, Badge, ProgressBar, EmptyState, Card, LiveStatusIndicator, MediaTile, VisuallyHidden, and M4's overlays: Modal, Popover, Tabs. Re-exports tokens at `@charcuterie/ui/tokens`. |
+| [`@charcuterie/ui`](packages/ui/README.md) | **live** | The P0 components — Spinner, Skeleton, Button, IconButton, Badge, ProgressBar, EmptyState, Card, LiveStatusIndicator, MediaTile, VisuallyHidden, M4's overlays (Modal, Popover, Tabs), and M5's two from the first consumer (Alert, SegmentedControl). Re-exports tokens at `@charcuterie/ui/tokens`. |
 | `@charcuterie/rx` | M7 | Design doc + ADR only, deliberately not built. |
 
 Dependency direction is one-way: `tokens ← logic ← ui`. Forbidden forever:
