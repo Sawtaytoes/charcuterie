@@ -74,11 +74,22 @@ and equal specificity goes to source order. The props-table rules therefore repe
 class **three** times. It is a race a future Storybook could win back by adding a
 repetition, which is what the gate below is for.
 
+> **Corrected 2026-07-31.** Those three rules no longer repeat at all — they are one class
+> plus `!important`, per
+> [`!important` is for Storybook's chrome only](2026-07-31-important-is-for-storybook-chrome-only.md).
+> The finding about emotion doubling its own class still holds; the response to it changed.
+
 **3. `!important` is not available in this repo, and it fails silently.**
 `biome check --write --unsafe` — which is what `yarn lint` runs — **deletes the `!important`
 and keeps the declaration**. The rule stays in the source looking correct while the built
 CSS has no priority on it. This cost a round of "the rule is right there and the output
 does not have it", and it is worth knowing before reaching for `!important` anywhere here.
+
+> **Corrected 2026-07-31 — "not available" was wrong.** The deletion is real, but it is
+> `lint/complexity/noImportantStyles` (recommended, unsafe fix) doing its job, and an
+> exact `biome-ignore` suppresses it. Kevin's call on where that is allowed, and the trap
+> that a *wrong* rule id fails identically and silently, are in
+> [`!important` is for Storybook's chrome only](2026-07-31-important-is-for-storybook-chrome-only.md).
 
 ## The gate
 
