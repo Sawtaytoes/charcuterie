@@ -1,7 +1,13 @@
 # 2026-07-30 — M5: the font bake-off
 
-**Status:** faces chosen 2026-07-30; promotion into `@charcuterie/tokens` not yet done,
-and blocked on one open question (below).
+**Status:** **Done 2026-07-30.** Faces chosen and promoted into `@charcuterie/tokens`;
+the bake-off scaffolding is deleted. Kept as the record of *how* the choice was made —
+the decisions themselves are
+[the shipped fonts](decisions/2026-07-30-the-shipped-fonts-are-baloo-outfit-victor-mono.md)
+and [the shipped mono](decisions/2026-07-30-the-shipped-mono-is-victor-mono.md).
+
+The Dank Mono question resolved to **option 2** below: the package ships OFL Victor Mono
+and apps override `--font-mono` with their own licensed copy.
 
 ## The picks
 
@@ -9,7 +15,7 @@ and blocked on one open question (below).
 | --- | --- | --- |
 | Heading | **Baloo 2** | `fontFamily.display` — new |
 | Body | **Outfit** | `fontFamily.sans` |
-| Mono | **Dank Mono** | `fontFamily.mono` |
+| Mono | **Dank Mono** → shipped as **Victor Mono** | `fontFamily.mono` |
 
 Two of the three are straightforward: Baloo 2 and Outfit are SIL OFL and can ship inside
 the package. **Dank Mono cannot**, and that is the open question — see
