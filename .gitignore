@@ -21,3 +21,11 @@ packages/tokens/preview
 # the same convention as the workspace-wide __screenshots__ rule.
 __screenshots__
 .vitest-attachments
+
+# Dank Mono is a paid font (Grazil Ltd) whose EULA permits use on the
+# owner's own sites but forbids copying and redistribution. This repo
+# is public, so the woff2 stay on the NAS and
+# `packages/docs/scripts/installDankMono.ts` fetches them per-checkout.
+# The `@font-face` rules that reference them are committed; the bytes
+# are not.
+packages/docs/public/fonts/DankMono-*.woff2

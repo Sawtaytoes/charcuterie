@@ -18,6 +18,13 @@
  * `@charcuterie/ui/styles.css`. */
 @import "@charcuterie/ui/src/styles.css";
 
+/* The M5 font bake-off — self-hosted candidate faces plus the
+ * `data-font` toolbar axis that swaps between them. Preview scope
+ * only: no consumer imports this, and it deletes once a pairing is
+ * chosen and promoted into `@charcuterie/tokens`. Sits with the
+ * other `@import`s because CSS requires them to lead the file. */
+@import "./fontCandidates.css";
+
 /* Tailwind's automatic source detection starts from this file's own
  * package, so it never sees `packages/ui` — and every component
  * would render unstyled with no error. `tailwindCandidates.test.ts`
