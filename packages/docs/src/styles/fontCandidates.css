@@ -1,129 +1,232 @@
-/* The M5 font bake-off, as a fourth toolbar axis.
+/* The M5 font bake-off, as two independent toolbar axes.
+ *
+ * Round one shipped fixed *pairings*, which turned out to be the
+ * wrong shape: liking a heading and disliking the body it came with
+ * left nothing to click. So heading and body are separate axes now —
+ * `data-heading-font` drives `--font-display`, `data-body-font`
+ * drives `--font-sans`, and any of the seven headings composes with
+ * any of the eleven bodies.
  *
  * Same mechanism as `data-density` / `data-variant` / `data-scheme`:
- * an `<html>` attribute that re-fonts the entire canvas with zero
- * re-render. That is deliberate — if picking a font needed a
- * `useFont()` anywhere, the token layer would have failed, and this
- * is the cheapest place to find that out.
+ * `<html>` attributes that re-font the entire canvas with zero
+ * re-render. If picking a font ever needed a `useFont()`, the token
+ * layer would have failed, and this is the cheapest place to find
+ * that out.
  *
- * Only the *body* family is a real token today (`--font-sans`, from
- * `buildVariantProperties`). `--font-display` does not exist in
- * `@charcuterie/tokens` yet — it is introduced here, at preview
- * scope only, precisely because whether headings deserve their own
- * family is the question this bake-off exists to answer. If a
- * pairing with a distinct display face wins, `--font-display` gets
- * promoted into `TypographyTokens` in the same change that records
- * the decision. If a single-family pairing wins, this file deletes
- * and nothing was built on a guess.
+ * `--font-display` still does not exist in `@charcuterie/tokens` —
+ * it is invented here, at preview scope, because "do headings
+ * deserve their own family" is a question the bake-off answers
+ * rather than assumes. Promotion happens in the change that records
+ * the decision.
  *
- * Every pairing is written twice, and both forms are load-bearing:
+ * Two selector forms per body, and both are load-bearing:
  *
- * - `html[data-font=…]` is the toolbar. It has to be the qualified
- *   form because on `<html>` it competes, on the same element, with
- *   the `[data-variant=…]` block that declares `--font-sans` — and
- *   (0,1,1) beats (0,1,0). No `!important` needed; if that ever
- *   stops being true the token layer moved and this file should
- *   follow rather than escalate.
- * - the bare `[data-font=…]` is the side-by-side specimen, where the
- *   attribute sits on a nested `<div>`. Specificity is irrelevant
- *   there — a custom property set on a closer ancestor wins by
- *   inheritance, whatever the selector weight — so the plain form is
- *   both sufficient and the honest one. */
+ * - `html[data-body-font=…]` is the toolbar. It must be the
+ *   qualified form because on `<html>` it competes, on the same
+ *   element, with the `[data-variant=…]` block that declares
+ *   `--font-sans` — and (0,1,1) beats (0,1,0).
+ * - the bare `[data-body-font=…]` is the side-by-side specimen,
+ *   where the attribute sits on a nested element. Specificity is
+ *   irrelevant there: a custom property set on a closer ancestor
+ *   wins by inheritance whatever the selector weight.
+ *
+ * Headings need only the bare form — nothing else in the cascade
+ * declares `--font-display`, so there is no contest to win. */
 
 @import "../../public/fonts/candidates.css";
 
 :root {
-  /* The baseline every candidate is judged against: today's
-   * headings are the body face at a heavier weight. */
+  /* The baseline: today's headings are the body face, bolder. */
   --font-display: var(--font-sans);
 }
 
-/* Redefining `--font-sans` on a nested block is not enough on its own,
- * and this rule is the difference between the specimen working and
- * the specimen lying.
+/* Redefining `--font-sans` on a nested block is not enough on its
+ * own, and this rule is the difference between the specimen working
+ * and the specimen lying.
  *
  * `font-family` is declared exactly once in the app, on `body`, as
- * `var(--font-sans)`. That `var()` resolves *at `body`* — so a
- * `<section>` further down that redeclares the custom property
- * changes nothing: what descends to it is the already-computed
- * family, not the variable. The toolbar path is unaffected (its
- * attribute is on `<html>`, above `body`, so `body` resolves the new
- * value), which is exactly why the bug is invisible there and shows
- * up only in the side-by-side view.
- *
- * Caught by `document.fonts.check()` reporting Public Sans as never
- * loaded — it is the one candidate that appears *only* as a body
- * face, so it was the only one whose absence was measurable. */
-[data-font] {
+ * `var(--font-sans)`. That `var()` resolves *at `body`* — so an
+ * element further down that redeclares the custom property changes
+ * nothing: what descends to it is the already-computed family, not
+ * the variable. The toolbar path is unaffected (its attribute is on
+ * `<html>`, above `body`), which is exactly why the bug was
+ * invisible there and showed up only in the side-by-side view. */
+[data-body-font] {
   font-family: var(--font-sans);
 }
 
-/* ── Source Sans 3 ────────────────────────────────────────────────
- * The fleet-consistency pick. image-viewer is locked to Source Sans
- * Pro (`2026-06-20-app-font-is-source-sans-pro-everywhere`); Source
- * Sans 3 is that face, one major version on. Choosing it makes the
- * design system agree with the one app that already had an opinion.
- * Adobe, US. */
-html[data-font="source-sans-3"],
-[data-font="source-sans-3"] {
-  --font-sans:
-    "Source Sans 3", ui-sans-serif, system-ui, sans-serif;
+/* ════════════════════════════════════════════════════════════════
+ * HEADINGS — `--font-display`
+ * ════════════════════════════════════════════════════════════════ */
+
+/* Adobe · US. The fleet-consistency pick: image-viewer is locked to
+ * Source Sans Pro and this is that face one major on. */
+[data-heading-font="source-sans-3"] {
   --font-display:
     "Source Sans 3", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, monospace;
 }
 
-/* ── Inter ────────────────────────────────────────────────────────
- * The screen-first neutral. Tall x-height and open apertures at
- * small sizes, which is what a 16-bay dense list is. The safe
- * answer, and the one that will look least "fancy".
- * Rasmus Andersson, Sweden. */
-html[data-font="inter"],
-[data-font="inter"] {
-  --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
+/* Rasmus Andersson · Sweden. The screen-first neutral. */
+[data-heading-font="inter"] {
   --font-display:
     Inter, ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, monospace;
 }
 
-/* ── Fraunces + Inter ─────────────────────────────────────────────
- * The fanciest candidate, and the only one that gives headings a
- * face of their own. Fraunces is a variable display serif with an
- * optical-size axis, so a large heading gets the display cut
- * automatically. Body stays on Inter — a serif body in a dense
- * media list would be a mistake, and this pairing is not proposing
- * one.
- * Undercase Type, US. */
-html[data-font="fraunces"],
-[data-font="fraunces"] {
-  --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
+/* Undercase Type · US. Variable display serif with an optical-size
+ * axis, so a large heading gets the display cut automatically. */
+[data-heading-font="fraunces"] {
   --font-display: Fraunces, ui-serif, Georgia, serif;
-  --font-mono: "JetBrains Mono", ui-monospace, monospace;
 }
 
-/* ── Bricolage Grotesque + Public Sans ────────────────────────────
- * Fancy without going serif. Bricolage is a deliberately slightly-
- * wonky grotesque with an optical-size axis; Public Sans underneath
- * it is plain and civic (it is literally the US government's
- * design-system face) so the character stays in the headings.
- * Mathieu Triay, UK / USWDS, US. */
-html[data-font="bricolage"],
-[data-font="bricolage"] {
-  --font-sans:
-    "Public Sans", ui-sans-serif, system-ui, sans-serif;
+/* The same face with its own roundness axes turned up, which is a
+ * more honest answer to "rounder" than swapping in a different
+ * family: `SOFT` blunts the terminals and `WONK` swaps in the
+ * cursive-influenced single-storey forms. Fraunces is one of the
+ * very few faces that ships this as a real axis, so the softening
+ * is drawn by the designer rather than faked by a stroke effect. */
+[data-heading-font="fraunces-soft"] {
+  --font-display: Fraunces, ui-serif, Georgia, serif;
+}
+
+/* Mathieu Triay · UK. Deliberately slightly-wonky grotesque. */
+[data-heading-font="bricolage"] {
   --font-display:
     "Bricolage Grotesque", ui-sans-serif, system-ui,
     sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, monospace;
 }
 
-/* Fraunces and Bricolage both carry an `opsz` axis, and a variable
- * font only honours it if something drives it. `auto` lets the
- * browser track the rendered size, which is the whole reason to
- * pick an optical-size face over a static display cut. */
-html[data-font="fraunces"],
-[data-font="fraunces"],
-html[data-font="bricolage"],
-[data-font="bricolage"] {
+/* Vernon Adams / Cyreal. Fully rounded terminals on heavy weights —
+ * the roundest thing here that still reads as a heading. Warm to
+ * the point of informal; the risk is that a failing rip announced
+ * in it reads as friendly rather than as urgent. */
+[data-heading-font="baloo"] {
+  --font-display:
+    "Baloo 2", ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Variable faces with an `opsz` axis only honour it if something
+ * drives it — `auto` tracks the rendered size, which is the whole
+ * reason to pick an optical-size face over a static display cut. */
+[data-heading-font="fraunces"],
+[data-heading-font="fraunces-soft"],
+[data-heading-font="bricolage"] {
   font-optical-sizing: auto;
+}
+
+/* `font-variation-settings` is deliberately scoped to the elements
+ * that use the display family rather than set on the container: it
+ * is a low-level override that would otherwise leak onto every
+ * descendant, including body copy in a different family. */
+[data-heading-font="fraunces-soft"] [data-display-face] {
+  font-variation-settings:
+    "SOFT" 100,
+    "WONK" 1;
+}
+
+/* ════════════════════════════════════════════════════════════════
+ * BODIES — `--font-sans`
+ *
+ * Ordered roundest-first within each group, because that is the
+ * axis being judged.
+ * ════════════════════════════════════════════════════════════════ */
+
+/* ── The round ones ──────────────────────────────────────────── */
+
+/* Andrew Paglinawan · Philippines. The roundest possible answer,
+ * and the upper bound rather than a real proposal: geometric
+ * circles, a low x-height and light strokes are precisely what a
+ * dense bay list does not want. Here so the others have something
+ * to be measured against. */
+html[data-body-font="quicksand"],
+[data-body-font="quicksand"] {
+  --font-sans:
+    Quicksand, ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Vernon Adams / Cyreal. Actual rounded terminals, and the roundest
+ * face here that is still a genuine UI workhorse — 200..1000
+ * weights and a big x-height, so it survives 13px. */
+html[data-body-font="nunito"],
+[data-body-font="nunito"] {
+  --font-sans: Nunito, ui-sans-serif, system-ui, sans-serif;
+}
+
+/* The same family without the rounded terminals. Its job is to
+ * isolate the variable: switching between this and `nunito` shows
+ * how much of "rounder" is the terminals rather than the humanist
+ * skeleton they sit on. */
+html[data-body-font="nunito-sans"],
+[data-body-font="nunito-sans"] {
+  --font-sans:
+    "Nunito Sans", ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Rodrigo Fuenzalida · Chile. Geometric with wide circular bowls —
+ * round via the skeleton rather than via the terminals. */
+html[data-body-font="outfit"],
+[data-body-font="outfit"] {
+  --font-sans: Outfit, ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Colophon Foundry · UK. Low-contrast geometric, very circular
+ * bowls, drawn tighter than Outfit — the round option that stays
+ * closest to a neutral UI face. */
+html[data-body-font="dm-sans"],
+[data-body-font="dm-sans"] {
+  --font-sans:
+    "DM Sans", ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Erik Kennedy · US. Friendly geometric-humanist, drawn for
+ * interfaces rather than adapted to them. */
+html[data-body-font="figtree"],
+[data-body-font="figtree"] {
+  --font-sans:
+    Figtree, ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Hubert & Fischer · Germany. Rounded *corners* rather than
+ * rounded terminals — the subtlest of the round options, and the
+ * one most likely to survive a 16-bay list at compact density. */
+html[data-body-font="rubik"],
+[data-body-font="rubik"] {
+  --font-sans: Rubik, ui-sans-serif, system-ui, sans-serif;
+}
+
+/* ── The reference bodies, carried over from round one ───────── */
+
+html[data-body-font="inter"],
+[data-body-font="inter"] {
+  --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+html[data-body-font="source-sans-3"],
+[data-body-font="source-sans-3"] {
+  --font-sans:
+    "Source Sans 3", ui-sans-serif, system-ui, sans-serif;
+}
+
+html[data-body-font="public-sans"],
+[data-body-font="public-sans"] {
+  --font-sans:
+    "Public Sans", ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Nunito Sans and DM Sans both carry `opsz`. */
+html[data-body-font="nunito-sans"],
+[data-body-font="nunito-sans"],
+html[data-body-font="dm-sans"],
+[data-body-font="dm-sans"] {
+  font-optical-sizing: auto;
+}
+
+/* The mono is not an axis. Every candidate is judged with the same
+ * one, because a tabular byte count changing family between blocks
+ * would be a second variable in a comparison that already has two.
+ *
+ * `system` is excluded because it is the *baseline* — a block
+ * claiming to show today's shipped state while quietly upgrading
+ * its monospace would be showing something that does not exist. */
+[data-body-font]:not([data-body-font="system"]) {
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
 }
