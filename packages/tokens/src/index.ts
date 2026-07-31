@@ -11,6 +11,8 @@
 export {
   buildColourProperties,
   buildDensityProperties,
+  buildFirstPaintCss,
+  buildFirstPaintRule,
   buildThemeCss,
   buildVariablesCss,
 } from "./buildCss.ts"
