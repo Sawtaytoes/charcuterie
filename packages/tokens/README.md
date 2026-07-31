@@ -14,7 +14,7 @@ the scripts:
 
 ```bash
 node scripts/checkContrast.ts   # the WCAG 2.2 AA gate — exits non-zero on failure
-node scripts/buildTokens.ts     # → dist/variables.css, dist/theme.css, dist/tokens.json
+node scripts/buildTokens.ts     # → dist/{variables,theme,first-paint}.css, dist/tokens.json
 node scripts/fetchFonts.ts      # re-download the three shipped faces → fonts/, src/fonts.css
 node scripts/buildPreview.ts    # → preview/index.html, the M0 bake-off board
 ```
@@ -104,6 +104,54 @@ in React ever observes the change.
 because it removes capabilities rather than restyling them: no hover, no opacity, no
 shadow, no transition, and a fixed six-colour (or two-colour) palette. Modelling it as
 `data-scheme="epaper"` would imply a `data-variant` still applies to it, which it cannot.
+
+## The first-paint rule ships from here — copy it, never `<link>` it
+
+Every app needs one line of CSS in its entry HTML that paints the canvas before any
+stylesheet has parsed, or a dark app opens with a full-page white flash. `dist/first-paint.css`
+is that line, generated for both schemes from the same token `variables.css` reads:
+
+```html
+<style>
+  html, body { background-color: var(--color-surface-base, #131822); color-scheme: dark; }
+</style>
+```
+
+**Paste it. Do not `<link>` it.** A stylesheet request is a network round-trip, and beating
+that round-trip is the rule's entire job — linking the file would reintroduce the flash it
+exists to prevent while looking like the tidier option. It is exported
+(`@charcuterie/tokens/first-paint.css`) so a build can read it and so "where did this
+snippet come from" has an answer.
+
+**The `var()` is the whole reason this ships from a package instead of a wiki page.** An
+inline `<style>` is **unlayered**, and unlayered author CSS beats every `@layer` regardless
+of specificity — Tailwind v4 emits utilities into `@layer utilities`. So the bare form,
+`background-color: #131822`, does not merely paint early: it **outranks `bg-surface-base` on
+`<body>` permanently**, and no `data-scheme` flip can reach the page background. Light mode
+then renders light cards on a dark canvas. Written as a *fallback*, the literal applies only
+while `--color-surface-base` is undefined — the one moment the rule was ever for.
+
+Three apps hand-copied the bare form and three apps got the bug.
+[The decision record](../../docs/decisions/2026-07-31-tokens-ships-the-first-paint-snippet.md)
+has the measurements.
+
+`color-scheme` needs no `var()`: `variables.css`'s `[data-scheme]` rule is unlayered too, so
+it wins on specificity rather than losing to this one.
+
+### Gate the copy in your app
+
+`buildFirstPaintRule` returns the rule alone — one line, no comment — so a consumer's drift
+test is one assertion, and it pins the `var()` as well as the hex:
+
+```ts
+import { buildFirstPaintRule, daylight } from "@charcuterie/tokens"
+
+expect(indexHtml).toContain(
+  buildFirstPaintRule(daylight, "dark"),
+)
+```
+
+That is the gate the three broken apps could not write, because each owned only its own copy.
 
 ## `colour` in TypeScript, `--color-*` in CSS
 
