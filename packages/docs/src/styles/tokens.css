@@ -32,3 +32,43 @@
     min-block-size: 100vh;
   }
 }
+
+/* A docs page is **Storybook's** document, and its prose chrome is
+ * Storybook's theme — dark text on white, readable, and not ours to
+ * restyle. The `<Canvas>` blocks inside it are a different thing:
+ * they are our canvas, and they were inheriting that hard white
+ * while the components inside them rendered in whatever
+ * `data-scheme` says.
+ *
+ * In the default dark scheme that means `--color-content-primary`
+ * (#EDF0F5) painted onto #FFFFFF — near-white on white. The story
+ * canvas was always right; only the docs preview was wrong, which is
+ * why it read as "dark mode is missing on Docs" rather than as a
+ * contrast bug.
+ *
+ * Scoped to the preview block so it follows the scheme in both
+ * directions. Setting Storybook's own `docs.theme` to dark instead
+ * would fix the default and break the mirror case — light components
+ * on a dark page — because a parameter cannot read a global.
+ *
+ * Two class names deep to beat the emotion class it overrides;
+ * outside `@layer` so it is not demoted below Tailwind's utilities. */
+.sbdocs.sbdocs-preview {
+  background-color: var(--color-surface-base);
+  border-color: var(--color-border-subtle);
+}
+
+/* The toolbar welded to the bottom of that block. Its own text
+ * colour is one of Storybook's greys, chosen against white — left on
+ * a dark surface it lands at about 2.4:1, so the colour has to move
+ * with the background or the rule above trades one contrast failure
+ * for another. */
+.sbdocs.sbdocs-preview-actions {
+  background-color: var(--color-surface-raised);
+  border-color: var(--color-border-subtle);
+}
+
+.sbdocs.sbdocs-preview-actions button,
+.sbdocs.sbdocs-preview-actions a {
+  color: var(--color-content-secondary);
+}

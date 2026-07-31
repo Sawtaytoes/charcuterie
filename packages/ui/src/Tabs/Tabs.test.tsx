@@ -135,14 +135,64 @@ test("a narrow tab bar scrolls rather than wrapping", async () => {
     narrow.clientWidth,
   )
 
+  // **And it clips what it cannot fit.** The line above says only
+  // that the content is wider than the box, which is equally true of
+  // a bar painting straight across the panel beside it — which is
+  // what this component actually did until 2026-07-30, in this exact
+  // story, with this exact assertion passing. Overflowing and
+  // scrolling are different things and the test has to say which.
+  await expect(
+    globalThis.getComputedStyle(narrow).overflowX,
+  ).not.toBe("visible")
+
   // One row, still. `clientHeight` growing past a single tab's
-  // height is what wrapping would look like.
+  // height is what wrapping would look like — and, now that this is
+  // a scroll container, what a *classic* scrollbar taking layout
+  // space would look like too. Both are caught here.
   const wide = expectAgentDrivable(canvas, {
     name: "Bay 3 at 34rem",
     role: "tablist",
   })
 
   await expect(narrow.clientHeight).toBe(wide.clientHeight)
+})
+
+test("the focus ring survives the scroll container", async () => {
+  const { canvas } = await mountStory(Responsive)
+
+  const narrow = expectAgentDrivable(canvas, {
+    name: "Bay 3 at 15rem",
+    role: "tablist",
+  })
+
+  // Tabbed to, not `.focus()`ed: the ring is a `:focus-visible`
+  // rule, so a programmatic focus leaves `outline-offset` at its
+  // `0px` initial value and *any* assertion about it passes. That is
+  // how the first version of this test passed against the bug it was
+  // written for.
+  await userEvent.tab()
+
+  const tab = document.activeElement as HTMLElement
+
+  await expect(narrow).toContainElement(tab)
+
+  // An `overflow` other than `visible` clips its descendants'
+  // outlines, and the focus ring *is* an outline. The tab fills the
+  // bar's content box, so a positive offset would put the whole ring
+  // in the clipped region — visible nowhere, on the one component in
+  // the library that scrolls. Drawing it inward is what keeps it on
+  // screen, and this is the assertion that fails if the shared
+  // `--focus-ring-offset` is ever restored here.
+  const { outlineOffset, outlineWidth } =
+    globalThis.getComputedStyle(tab)
+
+  await expect(
+    Number.parseFloat(outlineWidth),
+  ).toBeGreaterThan(0)
+
+  await expect(
+    Number.parseFloat(outlineOffset),
+  ).toBeLessThanOrEqual(0)
 })
 
 /**
