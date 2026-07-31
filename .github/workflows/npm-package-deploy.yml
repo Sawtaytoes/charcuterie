@@ -83,7 +83,13 @@ jobs:
             # was already assembled is exactly what we do not want at publish.
             staged="$(mktemp -d)"
             tar -xzf "$tarball" -C "$staged"
-            if ! ( cd "$staged/package" && npm publish --provenance --access public --ignore-scripts --loglevel verbose ); then
+            # On failure, dump npm's debug log. It records at verbose level even
+            # when the console does not, and it is the only place the OIDC
+            # token-exchange result appears — a trusted-publishing failure is
+            # otherwise indistinguishable from a missing package, because npm
+            # falls back to the placeholder `_authToken` and the PUT returns a
+            # bare 404. Grep it for `verbose oidc`.
+            if ! ( cd "$staged/package" && npm publish --provenance --access public --ignore-scripts ); then
               echo "::group::npm debug log"
               tail -n 300 "$(ls -t "${HOME}"/.npm/_logs/*-debug-0.log | head -1)" || true
               echo "::endgroup::"
