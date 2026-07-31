@@ -41,6 +41,7 @@
     "check:contrast": "node scripts/checkContrast.ts",
     "fetch:fonts": "node scripts/fetchFonts.ts",
     "prepack": "yarn build",
+    "preview:epaper": "node scripts/buildEpaperPreview.ts",
     "preview:themes": "node scripts/buildPreview.ts",
     "test": "vitest",
     "typecheck": "tsc --noEmit"
