@@ -30,7 +30,6 @@
       "types": "./dist/tokens.d.ts",
       "default": "./dist/tokens.js"
     },
-    "./tokens.css": "./node_modules/@charcuterie/tokens/dist/theme.css",
     "./src/*": "./src/*"
   },
   "files": [
@@ -49,7 +48,8 @@
     "@floating-ui/react": "^0.27.20"
   },
   "peerDependencies": {
-    "react": ">=19"
+    "react": ">=19",
+    "react-dom": ">=19"
   },
   "devDependencies": {
     "@storybook/react": "^10.3.6",

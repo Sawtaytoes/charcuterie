@@ -5,8 +5,18 @@ that Playwright and an AI agent can actually drive.
 
 M3 ships the **P0 pure-presentation** set: `Spinner`, `Skeleton`, `Button`, `IconButton`,
 `Badge`, `ProgressBar`, `EmptyState`, `Card`, `LiveStatusIndicator`, `MediaTile` — plus
-`VisuallyHidden`, which the first three of those need. No overlays, no floating-ui, no
-`Tabs`: those are M4.
+`VisuallyHidden`, which the first three of those need. M4 adds the overlays: `Modal`,
+`Popover`, `Tabs`.
+
+**M5 adds two, and they came from the first consumer rather than from the plan** —
+[the rule](../../docs/decisions/2026-07-30-a-consumer-milestone-adds-components.md):
+
+- **`Alert`** — rip-deck spells this shape four times, two of them carrying a
+  byte-identical `TONE_CLASS` map of hardcoded hexes. It is the app's largest single
+  duplication and no P0 component is a banner.
+- **`SegmentedControl`** — `SinglePicker` + `RovingFocus` with the panels taken away, which
+  is a composition that could not be expressed until
+  [`Tabs` moved onto `SinglePicker`](../../docs/decisions/2026-07-30-tab-selection-is-a-single-picker.md).
 
 ## Install and wire
 
@@ -26,8 +36,56 @@ That last line is not optional. Tailwind v4 scans **source text** for complete c
 strings, and it does not scan your dependencies by default — without it every component
 renders unstyled, with no error.
 
-Tokens are re-exported at `@charcuterie/ui/tokens`, so a React consumer never installs two
-package names. The testing gates are at `@charcuterie/ui/testing`.
+**Both package names, and the CSS line above is why.** The token *types and values* are
+re-exported at `@charcuterie/ui/tokens`, so your TypeScript only ever names one package —
+but the *stylesheet* is imported from `@charcuterie/tokens` directly. A `./tokens.css`
+export pointing inside this package resolved to nothing on the first real consumer, because
+a hoisting linker puts `@charcuterie/tokens` at the project root rather than in here, and a
+CSS `@import` that misses fails **silently**: no error, no utilities, an unstyled app.
+
+The testing gates are at `@charcuterie/ui/testing`.
+
+### While the packages are unpublished: three lines, and you need all three
+
+A consumer links by `portal:` until this publishes
+([decision](../../docs/decisions/2026-07-29-consumers-link-tokens-by-portal-until-publish.md)).
+M5 spent an hour on the second and third of these, so M5b and M6 do not have to:
+
+```jsonc
+// the app package
+"dependencies": {
+  "@charcuterie/tokens": "portal:../../../charcuterie/packages/tokens",
+  "@charcuterie/ui": "portal:../../../charcuterie/packages/ui"
+}
+
+// the PROJECT ROOT — `ui` declares its siblings as `workspace:*`, and that
+// descriptor cannot resolve outside charcuterie's own workspace. Bare keys, not
+// `@charcuterie/ui/@charcuterie/tokens`: the scoped form yields a different
+// locator string from the app's own dependency on the same directory, and Yarn
+// rejects the pair as conflicting.
+"resolutions": {
+  "@charcuterie/logic": "portal:../charcuterie/packages/logic",
+  "@charcuterie/tokens": "portal:../charcuterie/packages/tokens"
+}
+```
+
+```ts
+// vite.config.ts AND vitest.config.ts
+resolve: { dedupe: ["react", "react-dom"] }
+```
+
+**That last one is the expensive one.** A `portal:` is a symlink, and Node and Vite both
+resolve a symlinked module from its **real path** — so a component living in this package
+resolves *its own* `react` by walking up from here, landing on charcuterie's copy while
+your app renders with yours. Every component with a hook fails at once with:
+
+```
+TypeError: Cannot read properties of null (reading 'useRef')
+```
+
+which mentions neither symlinks nor React identity. Keep the line after publish: it costs
+nothing with one copy, and it is the difference between a working `yarn link` session and
+an hour of confusion.
 
 ## How a component is put together
 
@@ -90,8 +148,9 @@ rename breaks only the rendered page).
    ([decision](../../docs/decisions/2026-07-30-overlays-use-the-top-layer-not-a-portal.md)).
 6. **If it is built on a registering kind, look at its first paint.** Members register
    from effects, so before those run a `RovingFocus` has no active value and a
-   `VisibilityGroup` has no visible key. Two of M4's four bugs were exactly that, and the
-   isolated story runner saw neither — `yarn smoke:storybook` did.
+   `SinglePicker` / `VisibilityGroup` has no selected key — only a pending one. Two of M4's
+   four bugs were exactly that, and the isolated story runner saw neither —
+   `yarn smoke:storybook` did.
 7. **If it declares `@container`, every `StoryCell` holding it needs `align="stretch"`.**
    `container-type: inline-size` forbids the element from being sized by its own
    contents, so a default (shrink-to-fit) cell collapses it to min-content and every

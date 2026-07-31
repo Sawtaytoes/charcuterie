@@ -10,13 +10,22 @@ place and every app inherits look, behaviour, and accessibility.
 > [the M2 handoff](docs/2026-07-29-m2-logic-conformance.md) lists which ones and the one
 > command that retrieves each.
 
-**M0–M4 have landed.** M4 put the state layer through its falsification test — `Tabs`
-needed `VisibilityGroup` and `RovingFocus` at once, and the two ARIA activation modes came
-out one line apart, so **the layer stands**
-([verdict](docs/decisions/2026-07-30-state-layer-is-charcuterie-on-floating-ui.md)).
+**M0–M5 have landed.** M4 put the state layer through its falsification test — `Tabs`
+needs `SinglePicker` and `RovingFocus` at once, and the two ARIA activation modes come out
+one line apart, so **the layer stands**
+([verdict](docs/decisions/2026-07-30-state-layer-is-charcuterie-on-floating-ui.md), as
+[corrected in M5](docs/decisions/2026-07-30-tab-selection-is-a-single-picker.md)).
 
-Next is M5: the first consumer, **ripdeck**. Start from
-[the M4 handoff](docs/2026-07-30-m4-overlays-and-the-tabs-thesis-test.md), then
+**M5 put it into its first consumer, [Rip Deck](../rip-deck/).** `TONE_CLASS` is declared
+zero times; four unnamed progress bars became four named ones; light mode became reachable
+at all. The library **grew** in the process — `Alert` and `SegmentedControl` came out of
+the consumer rather than out of the plan
+([the rule](docs/decisions/2026-07-30-a-consumer-milestone-adds-components.md)) — and
+`portal:` earned its keep by finding three packaging holes that all fail silently.
+**Start from [the M5 handoff](docs/2026-07-30-m5-ripdeck-the-first-consumer.md).**
+
+Next is M5b: the second consumer, **castkit**. Behind it:
+[the M4 handoff](docs/2026-07-30-m4-overlays-and-the-tabs-thesis-test.md) and
 [the Storybook review that followed it](docs/2026-07-30-m4-followup-storybook-review-before-m5.md)
 — which split stories from tests, and found three faults that a fully green gate set could
 not see.
@@ -30,7 +39,7 @@ not see.
 | [`@charcuterie/eslint-config`](packages/eslint-config/README.md) | **live** | The rules Biome cannot express. |
 | [`@charcuterie/docs`](packages/docs/README.md) | **live**, private | Storybook host. |
 | [`@charcuterie/logic`](packages/logic/README.md) | **live** | The five state kinds as framework-free cores, plus React 19 and Preact bindings and optional Jotai/signals store adapters. |
-| [`@charcuterie/ui`](packages/ui/README.md) | **live** | The P0 components — Spinner, Skeleton, Button, IconButton, Badge, ProgressBar, EmptyState, Card, LiveStatusIndicator, MediaTile, VisuallyHidden, and M4's overlays: Modal, Popover, Tabs. Re-exports tokens at `@charcuterie/ui/tokens`. |
+| [`@charcuterie/ui`](packages/ui/README.md) | **live** | The P0 components — Spinner, Skeleton, Button, IconButton, Badge, ProgressBar, EmptyState, Card, LiveStatusIndicator, MediaTile, VisuallyHidden, M4's overlays (Modal, Popover, Tabs), and M5's two from the first consumer (Alert, SegmentedControl). Re-exports tokens at `@charcuterie/ui/tokens`. |
 | `@charcuterie/rx` | M7 | Design doc + ADR only, deliberately not built. |
 
 Dependency direction is one-way: `tokens ← logic ← ui`. Forbidden forever:
@@ -87,7 +96,8 @@ need a chromium matching this repo's Playwright, which the agent sandbox now shi
   [M2 logic](docs/2026-07-29-m2-logic-conformance.md) ·
   [M3 components](docs/2026-07-29-m3-p0-components.md) ·
   [M4 overlays](docs/2026-07-30-m4-overlays-and-the-tabs-thesis-test.md) ·
-  [the M4 Storybook review](docs/2026-07-30-m4-followup-storybook-review-before-m5.md).
+  [the M4 Storybook review](docs/2026-07-30-m4-followup-storybook-review-before-m5.md) ·
+  [M5 rip-deck](docs/2026-07-30-m5-ripdeck-the-first-consumer.md).
 - The plan and phasing:
   `agentic/docs/research/2026-07-29-charcuterie-component-library-plan.md`.
 - [`docs/previews/`](docs/previews/) — the archived M0 bake-off board, the M1 swap

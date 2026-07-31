@@ -12,12 +12,30 @@
  * should be able to reach one component without the barrel. Same
  * arrangement as `mux-magic/packages/tools`.
  *
- * Tokens are re-exported at `@charcuterie/ui/tokens` rather than
- * from here, so a React consumer never installs two package names
- * while Satori still gets `@charcuterie/tokens` with no React in
- * sight.
+ * The token **types and values** are re-exported at
+ * `@charcuterie/ui/tokens` rather than from here, so a React
+ * consumer's TypeScript never names a second package while Satori
+ * still gets `@charcuterie/tokens` with no React in sight.
+ *
+ * The token **stylesheet** is not, and M5 is why. There was a
+ * `"./tokens.css": "./node_modules/@charcuterie/tokens/dist/theme.css"`
+ * export here, and it resolved to nothing in the first real
+ * consumer: a hoisting linker puts `@charcuterie/tokens` at the
+ * *project* root, not inside this package, so that path exists only
+ * under a nesting one. A CSS `@import` fails silently in Tailwind —
+ * no error, no utilities, an unstyled app — which is exactly the
+ * class of failure `portal:` was chosen to catch
+ * ([decision](../../../docs/decisions/2026-07-29-consumers-link-tokens-by-portal-until-publish.md)).
+ * So a consumer installs both package names and imports
+ * `@charcuterie/tokens/theme.css` by its own name, which is what
+ * this package's README has always told it to do.
  */
 
+export type {
+  AlertProps,
+  AlertSize,
+} from "./Alert/Alert.tsx"
+export { Alert } from "./Alert/Alert.tsx"
 export type { BadgeProps } from "./Badge/Badge.tsx"
 export { Badge } from "./Badge/Badge.tsx"
 export type { ButtonProps } from "./Button/Button.tsx"
@@ -83,6 +101,11 @@ export {
   toProgressPercent,
   toProgressValue,
 } from "./ProgressBar/progressValue.ts"
+export type {
+  SegmentedControlProps,
+  SegmentedItem,
+} from "./SegmentedControl/SegmentedControl.tsx"
+export { SegmentedControl } from "./SegmentedControl/SegmentedControl.tsx"
 export type {
   SkeletonProps,
   SkeletonShape,
