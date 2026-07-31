@@ -136,9 +136,9 @@ const STATE_TABS: TabItem[] = [
 ]
 
 /**
- * A disabled tab is out of the *focus* group and still in the
- * *panel* group — it owns a panel and an id either way. Registration
- * is membership, so the arrow keys skip it with nothing in
+ * A disabled tab is out of the *focus* group and still one of the
+ * *options* — it owns a panel and an id either way. Registration is
+ * membership, so the arrow keys skip it with nothing in
  * `RovingFocus` knowing the word "disabled".
  */
 export const AllStates: Story = {
@@ -172,11 +172,11 @@ export const Responsive: Story = {
 /**
  * The falsification point, and the reason `Tabs` is P0.
  *
- * In `manual`, an arrow key moves focus to a tab whose panel is
- * *not* showing — a state a three-kind model cannot represent at
- * all. Modelled as a `SinglePicker`, every arrow key would have
- * chosen. Arrow through this one and watch the underline stay put
- * until Enter.
+ * In `manual`, an arrow key moves focus to a tab that is *not*
+ * chosen — a state a three-kind model cannot represent at all,
+ * because it had one notion of "the current one" doing both jobs.
+ * Arrow through this one and watch the underline stay put until
+ * Enter.
  */
 export const Manual: Story = {
   args: {

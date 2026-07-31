@@ -18,6 +18,11 @@
  * sight.
  */
 
+export type {
+  AlertProps,
+  AlertSize,
+} from "./Alert/Alert.tsx"
+export { Alert } from "./Alert/Alert.tsx"
 export type { BadgeProps } from "./Badge/Badge.tsx"
 export { Badge } from "./Badge/Badge.tsx"
 export type { ButtonProps } from "./Button/Button.tsx"
@@ -83,6 +88,11 @@ export {
   toProgressPercent,
   toProgressValue,
 } from "./ProgressBar/progressValue.ts"
+export type {
+  SegmentedControlProps,
+  SegmentedItem,
+} from "./SegmentedControl/SegmentedControl.tsx"
+export { SegmentedControl } from "./SegmentedControl/SegmentedControl.tsx"
 export type {
   SkeletonProps,
   SkeletonShape,

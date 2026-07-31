@@ -178,6 +178,7 @@ test("a container-query component is never storied in a shrink-to-fit cell", () 
   // A canary on the derivation itself: if this ever comes back
   // empty the rule silently passes forever.
   expect(containerComponents).toEqual([
+    "Alert",
     "Card",
     "EmptyState",
     "MediaTile",
@@ -245,12 +246,16 @@ test("the barrel is the only place components are re-exported", async () => {
   // need, so it shipped here rather than being stubbed three times.
   // M4 adds the three overlays: `Modal`, `Popover`, `Tabs`.
   //
-  // `TabTrigger` is deliberately not in this count and not
-  // exported. It is `Tabs`' own member component — its own file
-  // only because both registrations are effects and an effect
-  // cannot run in a loop — and the `<Name>/<Name>.tsx` pattern
-  // this regex matches is what keeps it out.
-  expect(componentNames.length).toBe(14)
+  // M5 adds the two the first consumer proved were shared rather
+  // than app-specific: `Alert` (rip-deck spells it four times, twice
+  // with a byte-identical `TONE_CLASS`) and `SegmentedControl`.
+  //
+  // `TabTrigger` and `SegmentedOption` are deliberately not in this
+  // count and not exported. Each is its own component's member —
+  // its own file only because both registrations are effects and an
+  // effect cannot run in a loop — and the `<Name>/<Name>.tsx`
+  // pattern this regex matches is what keeps them out.
+  expect(componentNames.length).toBe(16)
 
   for (const name of componentNames) {
     expect(barrel).toContain(`export { ${name} }`)

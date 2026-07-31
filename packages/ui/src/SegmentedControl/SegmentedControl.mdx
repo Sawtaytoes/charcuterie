@@ -1,0 +1,71 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as SegmentedControlStories from "./SegmentedControl.stories";
+
+<Meta of={SegmentedControlStories} />
+
+# SegmentedControl
+
+One choice out of a handful, all of them on screen at once.
+
+This is `Tabs`' composition — `SinglePicker` + `RovingFocus` — **with the panels taken
+away**, and it is here because taking the panels away used to be impossible. Under M4's
+model a tab bar's selection *was* a group of visibilities, so a control that chooses
+something without revealing anything had nothing to reuse and hand-rolled its own state.
+rip-deck's `ColumnPicker` is that hand-roll
+([decision](../../../docs/decisions/2026-07-30-tab-selection-is-a-single-picker.md)).
+
+<Canvas of={SegmentedControlStories.Default} />
+
+## Props
+
+<Controls />
+
+## `radiogroup`, not a row of pressed buttons
+
+rip-deck's version is five `<button aria-pressed>` inside a `<fieldset>` — the **toolbar of
+independent toggles** pattern. Nothing in it says the five are mutually exclusive, so a
+screen reader announces *"auto, pressed"* with no "1 of 5" and no clue that pressing
+another one un-presses this one.
+
+A single choice from a named set is a radio group, and ARIA has a pattern for it: a
+`radiogroup` with an accessible name, `role="radio"` children carrying `aria-checked`, and
+a roving tabindex so Tab enters and leaves the group once.
+
+<Canvas of={SegmentedControlStories.AllVariants} />
+
+## Selection follows focus, and here that is correct
+
+`Tabs` has two activation modes because a tab panel can cost a network request. A radio
+group has one: APG says the arrow keys both move focus **and** check, and there is nothing
+behind an option here to be expensive. So there is no `activation` prop — a `manual`
+segmented control would be a control the arrow keys appear to do nothing in.
+
+The two kinds are still separate underneath, which is what makes Space trivial rather than
+a special case: it checks whatever focus is on, whether or not focus moved there by arrow.
+`select` is idempotent, so it is one command and not a second code path.
+
+<Canvas of={SegmentedControlStories.AllStates} />
+
+## Registration is membership
+
+A disabled option is out of the **focus** group and still one of the **options** — it can
+even be the one a consumer names as the initial `selectedValue`, which is what a saved
+preference pointing at a layout the window no longer fits looks like.
+
+`SegmentedOption` is its own file for the same reason `TabTrigger` is: both registrations
+are effects, and an effect cannot run in a loop.
+
+<Canvas of={SegmentedControlStories.Responsive} />
+
+## `selectedValue` is initial, not controlled
+
+Read once, on the first render. There is no controlled mode and no prop-sync effect, which
+is [the M2 decision](../../../docs/decisions/2026-07-29-logic-hooks-are-uncontrolled.md).
+
+The first paint reads `pendingValue` as well as `selectedValue`, and that fallback is
+load-bearing: members register from an effect, so `selectedValue` is still `null` when the
+group first paints. Reading only the former renders a group with nothing checked that
+corrects itself a frame later — a flash on a desktop, a visible blank on a kiosk Pi.
+
+<Canvas of={SegmentedControlStories.Interactive} />
