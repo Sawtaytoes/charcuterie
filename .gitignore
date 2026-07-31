@@ -21,3 +21,8 @@ packages/tokens/preview
 # the same convention as the workspace-wide __screenshots__ rule.
 __screenshots__
 .vitest-attachments
+
+# Hand-rolled agent worktrees (see agentic/docs/runbooks/subagent-pr-workflow.md).
+# Scratch checkouts, never deliverables — kept inside the repo so they stay out
+# of the sibling-repo listing the owner browses from a tablet.
+.claude/worktrees/
