@@ -1,8 +1,8 @@
 import {
   selectTabIndex,
   useRovingFocus,
+  useSinglePicker,
   useUniqueId,
-  useVisibilityGroup,
 } from "@charcuterie/logic"
 import type { ReactNode } from "react"
 import { useCallback, useEffect, useRef } from "react"
@@ -65,20 +65,39 @@ const ORIENTATION_KEYS: Record<
  * Kept at P0 as the **state layer's falsification test**, not on
  * duplication grounds — the fifteen ad-hoc tab bars that used to
  * justify it were in the withdrawn evidence. What it has to prove
- * is that `VisibilityGroup` and `RovingFocus` compose: one says
- * which panel is shown, the other says which tab is tabbable, and
- * a tab bar needs both at once *and* needs them to disagree on
- * purpose while a user arrows around in `manual` mode.
+ * is that two kinds compose: one says which tab is **chosen**, the
+ * other says which tab is **tabbable**, and a tab bar needs both
+ * at once *and* needs them to disagree on purpose while a user
+ * arrows around in `manual` mode.
  *
  * The composition is two hooks and one decision:
  *
  * ```ts
- * const panels = useVisibilityGroup({ visibleKey: initialKey })
+ * const selection = useSinglePicker({ selectedValue: initialKey })
  * const focus = useRovingFocus({ activeValue: initialKey })
  *
  * // `automatic` is this line, and `manual` is its absence.
- * if (activation === "automatic") panels.show(focus.activeValue)
+ * if (activation === "automatic") selection.select(focus.activeValue)
  * ```
+ *
+ * ### Selection, not visibility — and the difference is not cosmetic
+ *
+ * M4 built this on `VisibilityGroup`, and the panels do end up
+ * one-at-a-time either way, because the two cores are the same
+ * shape. But the thing that **registers** here is the tab, not the
+ * panel, and what a tab bar is asking is *which one did you pick*.
+ * `SinglePicker` is the kind that answers that; the panel's
+ * `hidden` is derived from the answer.
+ *
+ * Reading it the other way round cost something concrete: it made
+ * `aria-selected` a report about a *panel's* visibility, so a
+ * consumer wanting a tab bar with no panels at all — a segmented
+ * filter, a view switcher that swaps a route — had to model its
+ * choice as a group of visibilities it did not have. `Alert`'s
+ * sibling `SegmentedControl` is exactly that consumer, and it now
+ * shares this component's core rather than hand-rolling a fourth
+ * one.
+ * [Decision](../../../../docs/decisions/2026-07-30-tab-selection-is-a-single-picker.md).
  *
  * ### What it does not use, and why that is the right answer
  *
@@ -120,61 +139,60 @@ export const Tabs = ({
     tabs.find((one) => !one.isDisabled)?.key ??
     null
 
-  const panels = useVisibilityGroup<string>({
+  const selection = useSinglePicker<string>({
     onChange,
-    visibleKey: initialKey,
+    selectedValue: initialKey,
   })
 
   const focus = useRovingFocus<string>({
     activeValue: initialKey,
   })
 
-  const { show } = panels
+  const { select } = selection
 
   const { activeValue, setActiveValue } = focus
 
   /**
-   * Visible **or** pending, and the fallback is load-bearing.
+   * Selected **or** pending, and the fallback is load-bearing.
    *
    * Members register from an effect, so on the first paint
-   * `visibleKey` is still null and the intent lives in
-   * `pendingKey` — a tab bar reading only the former renders with
+   * `selectedValue` is still null and the intent lives in
+   * `pendingValue` — a tab bar reading only the former renders with
    * no tab selected and no panel shown, then corrects itself a
    * frame later. It is a flash on a fast machine and a visible
    * blank on a kiosk Pi.
    *
-   * The core distinguishes the two on purpose (`selectIsKeyPending`
-   * exists so a `Modal` can decide whether to render children at
-   * all), which is why this belongs here rather than in the
-   * selector — unlike `RovingFocus`, where the equivalent
-   * first-paint hole was in `selectTabIndex` itself and got fixed
-   * there.
+   * The core distinguishes the two on purpose, which is why this
+   * belongs here rather than in the selector — unlike
+   * `RovingFocus`, where the equivalent first-paint hole was in
+   * `selectTabIndex` itself and got fixed there.
    */
-  const shownKey = panels.visibleKey ?? panels.pendingKey
+  const shownKey =
+    selection.selectedValue ?? selection.pendingValue
 
   const selectTab = useCallback(
     (key: string) => {
       // Both, because a pointer press moves focus *and* chooses.
-      // Only showing would leave `automatic`'s effect below to
+      // Only selecting would leave `automatic`'s effect below to
       // put the old panel straight back.
       setActiveValue(key)
 
-      show(key)
+      select(key)
     },
-    [setActiveValue, show],
+    [select, setActiveValue],
   )
 
   useEffect(() => {
     // Automatic activation, and the only behaviour that differs
-    // between the two modes. `show` is idempotent, so this is a
+    // between the two modes. `select` is idempotent, so this is a
     // no-op on every render where focus did not actually move.
     if (
       activation === "automatic" &&
       activeValue !== null
     ) {
-      show(activeValue)
+      select(activeValue)
     }
-  }, [activation, activeValue, show])
+  }, [activation, activeValue, select])
 
   useEffect(() => {
     const tablist = tablistRef.current
@@ -266,7 +284,7 @@ export const Tabs = ({
           ) {
             keyEvent.preventDefault()
 
-            show(activeValue)
+            select(activeValue)
           }
         }}
         ref={tablistRef}
@@ -281,7 +299,7 @@ export const Tabs = ({
             panelId={`${baseId}-panel-${index}`}
             registerFocus={focus.register}
             orientation={orientation}
-            registerPanel={panels.register}
+            registerSelection={selection.register}
             tab={tab}
             // The roving-tabindex rule read from the core rather
             // than restated here: exactly one member is in the tab

@@ -417,6 +417,7 @@ __metadata:
     vitest: "npm:^4.1.8"
   peerDependencies:
     react: ">=19"
+    react-dom: ">=19"
   languageName: unknown
   linkType: soft
 

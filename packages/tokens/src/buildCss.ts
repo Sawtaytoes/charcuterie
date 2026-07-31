@@ -201,6 +201,28 @@ export const buildVariablesCss = (
     ":root {",
     ...buildStructuralProperties(),
     "}",
+    // The CSS `color-scheme` PROPERTY, which is a different thing
+    // from our `data-scheme` attribute and is what the *browser*
+    // reads. Without it a dark page keeps light scrollbars, light
+    // native form controls, and a light default canvas — visible
+    // the moment any surface is scrollable, and invisible to a
+    // contrast gate because none of it is our colour.
+    //
+    // Variant-independent on purpose: `daylight` and `legible` do
+    // not disagree about what "dark" means to a scrollbar. Emitted
+    // once, before the variant blocks, so a variant could still
+    // override it if one ever needed to.
+    //
+    // rip-deck hand-wrote `:root { color-scheme: dark }` and so did
+    // every other app in the fleet — which is also why none of them
+    // could switch scheme at runtime without a second edit.
+    "",
+    ...SCHEMES.flatMap((scheme) => [
+      `[data-scheme="${scheme}"] {`,
+      `  color-scheme: ${scheme};`,
+      "}",
+      "",
+    ]).slice(0, -1),
   ]
 
   for (const variant of variants) {
