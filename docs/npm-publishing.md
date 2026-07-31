@@ -17,16 +17,20 @@ Charcuterie publishes **five** packages to npm under the `@charcuterie` scope:
 Two workflows, mirroring the mux-magic pattern:
 
 - **[.github/workflows/version-packages.yml](../.github/workflows/version-packages.yml)** —
-  on every push to `v2`, [changesets/action](https://github.com/changesets/action) rolls
+  on every push to `master`, [changesets/action](https://github.com/changesets/action) rolls
   all pending changesets into a **"Version Packages" PR** that bumps versions and writes
   each package's `CHANGELOG.md`. It **never publishes**.
 - **[.github/workflows/npm-package-deploy.yml](../.github/workflows/npm-package-deploy.yml)** —
-  on push to `v2`, publishes each package **only when its version was bumped** —
-  concretely, when no `<pkg>-v<version>` git tag exists yet (`tokens-v0.1.0`,
-  `ui-v0.1.0`, …). On a successful publish it pushes that tag, so later runs skip cleanly.
-  (It triggers on push rather than `workflow_run` after CI because `workflow_run` only
-  fires for workflows on the repo's default branch, which is still `master`/v1. When `v2`
-  merges down to `master`, retarget this and the other workflows to `master`.)
+  on a **successful CI run on `master`** (`workflow_run`, so a red build never publishes),
+  publishes each package **only when its version was bumped** — concretely, when no
+  `<pkg>-v<version>` git tag exists yet (`tokens-v0.1.0`, `ui-v0.1.0`, …). On a successful
+  publish it pushes that tag, so later runs skip cleanly. It also takes
+  `workflow_dispatch`, which is how a half-failed release is retried.
+
+`master` is the release branch: CI, Version Packages, the deploy's `workflow_run` filter and
+Changesets' `baseBranch` all name it. (The `workflow_run` trigger only fires for workflows
+that exist on the repo's **default** branch — which is why this was a plain push trigger
+while the work lived on `v2`, and why it could move back once `v2` merged down.)
 
 There is **no auto-bump of the source**. Bumping happens by **merging the Version Packages
 PR**; CI never edits `package.json`. It only pushes the lightweight `<pkg>-v<version>` tags.
@@ -70,10 +74,35 @@ OIDC. The bootstrap:
 3. Merge the Version Packages PR. CI runs, then **NPM Package Deploy** publishes each bumped
    package with provenance and pushes its `<pkg>-v<version>` tag.
 
+Only bump what changed. A changeset naming a package whose files are untouched publishes a
+version whose diff is empty — check with
+`git diff origin/master...HEAD -- packages/<pkg>` before writing one.
+
 If you change a package but no version was bumped, nothing publishes — the existing tag makes
 the deploy skip.
 
 ## Troubleshooting
+
+### The `404` is **resolved**, and it was npm's record — read this before the rest
+
+Kept because the diagnosis below is the reusable part, and because the outcome is the
+evidence for it. On **2026-07-31** the same commit `4fe1054` failed and then succeeded with
+**no change to this repo**:
+
+| Run | At | Trigger | Result |
+| --- | --- | --- | --- |
+| `30616284132` | 08:26 UTC | `workflow_run` | **failure** — `404 Not Found - PUT …/@charcuterie%2ftokens` |
+| `30616478862` | 08:29 UTC | `workflow_dispatch` | **success** — `tokens@0.2.0` and `ui@0.1.1`, both with a signed provenance statement |
+
+Three minutes, one identical `headSha`, no commit, no workflow edit, no repository secret.
+That is as clean a proof as this failure admits that the fault was **server-side, in npm's
+per-package Trusted Publisher record**, exactly where the ruled-out table below said it had
+to be — and that the fix is the one in *What is left*: **delete the Trusted Publisher entry
+and re-add it**, with the owner spelled `Sawtaytoes` and **Environment blank**.
+
+So: **no `NPM_TOKEN` secret was ever needed, and none exists.** Steady-state publishing is
+OIDC with provenance. If the 404 returns, re-read the entry in npm's UI first and re-run the
+deploy by `workflow_dispatch` — publishing is idempotent.
 
 ### `404 Not Found - PUT` on a package that plainly exists
 
@@ -123,27 +152,47 @@ Everything below is byte-identical between it and charcuterie:
 | `repository.url` | npm warned it had normalized `https://…` → `git+https://…`, and the docs require an exact match, so all six manifests were canonicalised. The warning went away; **the exchange 404 did not.** |
 | GitHub-side config | No repository secret is needed or wanted — an empty *Settings → Secrets and variables → Actions* page is the correct state for trusted publishing. `id-token: write` is granted, the workflow is at `.github/workflows/npm-package-deploy.yml`, and the runner is GitHub-hosted. |
 
-### What is left
+### What was left, and which one it was
 
-The fault is in **npm's per-package Trusted Publisher record**, and there are two candidates:
+The fault was in **npm's per-package Trusted Publisher record** — confirmed above. Of the two
+candidates it was **(1), case sensitivity**: the entry read `sawtaytoes/charcuterie` and
+GitHub's OIDC `repository` claim spells it `Sawtaytoes/charcuterie`. Re-adding it with the
+exact casing fixed it immediately, and that is the 08:29 run.
 
-1. **Case sensitivity.** npm's docs state *"All fields are case-sensitive."* GitHub's OIDC
-   `repository` claim spells the owner **`Sawtaytoes`**; the npm panel has been seen showing
-   **`sawtaytoes`**. Delete the entry and re-add it with the exact casing.
-2. **An upstream npm bug.** [npm/cli#8678](https://github.com/npm/cli/issues/8678) reports
+1. ✅ **Case sensitivity — this was it.** npm's docs state *"All fields are
+   case-sensitive."* GitHub's OIDC `repository` claim spells the owner **`Sawtaytoes`**; the
+   npm panel read **`sawtaytoes`**. Delete the entry and re-add it with the exact casing.
+2. **An upstream npm bug**, not needed. [npm/cli#8678](https://github.com/npm/cli/issues/8678) reports
    this exact signature — a **scoped** package that already exists, publishing a second
    version, `POST …/oidc/token/exchange/package/@scope%2fname` → 404
    *"OIDC token exchange error - package not found"*, while a plain `GET` of the same
    package succeeds. No workaround is documented there.
 
-If neither resolves it, the unblock is a **granular automation token** as an `NPM_TOKEN`
+The fallback, **not used and not wanted**, is a granular automation token as an `NPM_TOKEN`
 repository secret mapped to `NODE_AUTH_TOKEN` — the same mechanism used for the `0.1.0`
-bootstrap. **Provenance survives** (it comes from `id-token: write`, not from how the
-registry authenticates); what is lost is the "no token to manage" property, so revert to
-OIDC once npm resolves it.
+bootstrap. Recorded only so a future reader knows it exists: provenance would survive (it
+comes from `id-token: write`, not from how the registry authenticates), but the "no token to
+manage" property would not.
+
+> **Open human step:** the **bootstrap automation token** — step 3 of *First-time setup* —
+> has no record here of being revoked, and OIDC has been publishing without it since
+> `tokens@0.2.0`. It is a live publish credential for the whole scope with nothing using it.
+> Revoke it at **npmjs.com → Access Tokens**. Nothing in this repo can do that or check it.
 
 ## Verifying
 
-- `yarn info @charcuterie/ui` (etc.) shows the latest version after publish completes.
+Do not report a release off a green workflow. The workflow is green when `npm publish`
+exited 0; what a consumer installs is what the registry says.
+
+- The registry itself, which needs no npm cache and no auth:
+  `curl -s https://registry.npmjs.org/@charcuterie%2Fui | jq -r '."dist-tags".latest'`
+  (`yarn info @charcuterie/ui` does the same when the local npm cache is healthy).
+- Provenance, per version:
+  `curl -s https://registry.npmjs.org/@charcuterie%2Fui/0.2.0 | jq '.dist.attestations'` —
+  a `provenance.predicateType` of `https://slsa.dev/provenance/v1` means the attestation is
+  on the registry, not merely in the publish log. (`npm view @charcuterie/ui@0.2.0
+  dist.attestations` is the same read.) The publish log's
+  `Provenance statement published to transparency log: https://search.sigstore.dev/?logIndex=…`
+  is the same fact from the other side.
 - New tags appear: `git ls-remote --tags origin '*-v*'`.
 - Each package page on npmjs.com shows a **Provenance** panel (from the second release on).

@@ -1,0 +1,78 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as FileDropZoneStories from "./FileDropZone.stories";
+
+<Meta of={FileDropZoneStories} />
+
+# FileDropZone
+
+The one drag target in the fleet is gallery-downloader's, and it **gets the hard part
+right** — credit where it is due, and the fix is reproduced here.
+
+<Canvas of={FileDropZoneStories.Default} />
+
+## Props
+
+<Controls />
+
+## Dragging is pointer-only, so the zone is a label around an input
+
+There is **no keyboard gesture for drag-and-drop.** WCAG 2.5.7 (AA since 2.2) requires a
+single-pointer alternative for any dragging movement, and the honest one has existed since
+1995: a real `<input type="file">`.
+
+So this component is a `<label>` wrapping a visually-hidden input:
+
+- the whole zone is the label's click target
+- Tab reaches the input; Space and Enter open the picker
+- the drop handlers are an **enhancement** on a control that already works without them
+
+That ordering is the entire design. Building the drop zone first and bolting on an "or
+browse" link is how the fleet's version ended up with an `alert()` as its error channel and
+no keyboard path at all.
+
+`sr-only` rather than `display: none` — the clip-rect technique keeps the element focusable,
+which is the whole point of it being there.
+
+<Canvas of={FileDropZoneStories.AllVariants} />
+
+## The `dragDepth` counter, kept
+
+`dragenter` and `dragleave` fire once per **element** the pointer crosses, not once per
+zone. A plain boolean turns the highlight off halfway across the zone and it strobes:
+
+```js
+let dragDepth = 0
+
+function handlePageDragEnter() { dragDepth++;  if (dragDepth === 1) …on()  }
+function handlePageDragLeave() { dragDepth--;  if (dragDepth === 0) …off() }
+```
+
+That is gallery-downloader's, and it is correct. It lives in a ref here rather than in state,
+because nothing renders from the depth itself — only from whether it is above zero — and a
+re-render per crossed child during a drag is exactly the jank this avoids.
+
+## `dragover` must be prevented, and the reason is a footgun
+
+A browser's default for `dragover` is **reject the drop**. Not preventing it means `drop`
+never fires — nothing errors, the cursor shows a "no entry" sign, and the zone looks like it
+has a broken handler when it in fact has no handler running at all.
+
+## It reports text as well as files
+
+Dragging a **link** gives you `text/plain` and an empty `files` list. A zone that only reads
+`.files` silently ignores the single most common thing a user drags into a downloader — and
+gallery-downloader's page is built entirely around `dataTransfer.getData("text")`, never
+looking at `.files` at all.
+
+`onDropText` is here rather than being someone's follow-up for exactly that reason: the one
+consumer this component has wants the text path, not the file path.
+
+<Canvas of={FileDropZoneStories.AllStates} />
+
+## The input is cleared after every pick
+
+A file input keeps its value, so choosing the *same* file twice is not a change and the
+handler never runs. It reads as "it ignored me", and it is the oldest bug in this control.
+
+<Canvas of={FileDropZoneStories.Interactive} />

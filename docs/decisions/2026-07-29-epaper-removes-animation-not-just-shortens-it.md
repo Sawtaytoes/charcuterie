@@ -5,7 +5,8 @@
 **Type:** Architecture / Bug postmortem
 **Supersedes:** —
 **Superseded by:** —
-**Related:** [ePaper is a profile, not a scheme](2026-07-29-epaper-is-a-profile-not-a-scheme.md)
+**Related:** [ePaper is a profile, not a scheme](2026-07-29-epaper-is-a-profile-not-a-scheme.md) ·
+[`packages/conformance` is not a package](2026-07-31-conformance-is-not-a-package.md)
 
 ## Decision
 
@@ -71,6 +72,14 @@ the screen path is exercised constantly, the panel path is not.
   reduced-motion global so it is checked rather than assumed.
 - **M5b** — the `packages/conformance` Satori profile should assert **no animation
   properties survive** into an ePaper render, not just that it builds.
+
+  *Resolved 2026-07-31, elsewhere:* there is no package and no Satori render to inspect —
+  the ePaper profile emits **zero** CSS by design, being resolved literals for a consumer
+  that cannot evaluate `var()`. The assertion lives as `epaper.test.ts`'s *"there is no
+  motion at all"* (six `0ms` durations, four `linear` easings), and the CSS half of rule 2
+  is gated under `prefers-reduced-motion` in `buildCss.test.ts` and
+  `tailwindCandidates.test.ts`. See
+  [`packages/conformance` is not a package](2026-07-31-conformance-is-not-a-package.md).
 - `@media print` is a genuine future consumer of this profile. Print shares nearly the
   whole constraint set (no hover, no animation, no shadow, restricted colour), so a print
   block emitted *from* the ePaper tokens is close to free. It is **not** how ePaper itself

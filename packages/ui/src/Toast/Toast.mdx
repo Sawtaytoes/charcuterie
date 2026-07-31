@@ -1,0 +1,84 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as ToastStories from "./Toast.stories";
+
+<Meta of={ToastStories} />
+
+# Toast
+
+The plan demoted this from P0 with the note *"its duplication evidence was almost entirely
+those two"*, and the M6 survey confirmed it: **the React fleet has no toast at all.**
+mux-magic's only hit is a comment about an undo-toast "rendered elsewhere"; the real ones
+are in plex-channels' and darius-learns' vanilla JavaScript.
+
+It ships anyway, on Kevin's call, and one thing here is genuinely new — the plan wrote a
+machine down and M2 never built it:
+
+> | Toast lifecycle | entering → visible → exiting → removed |
+
+<Canvas of={ToastStories.Default} />
+
+## Props
+
+<Controls />
+
+## Why a `Status`, when a boolean and a timeout would do
+
+Because a boolean cannot express **why** the node is still mounted. A toast that is leaving
+is still painted, still occupies its slot, and must not be announced again — and
+`isVisible === false` says none of that.
+
+| Transition | Legal | Why |
+| --- | --- | --- |
+| `entering → visible` | yes | after one frame, so the enter animation has something to animate *from* |
+| `visible → exiting` | yes | the duration elapsed, or the user dismissed |
+| `visible → removed` | **no** | skipping the exit is the flicker every hand-rolled stack has |
+| `exiting → visible` | yes | hovering a toast that is sliding away has to bring it back |
+| `removed → anything` | **no** | terminal, so `onDismiss` fires exactly once |
+
+The last row is not hypothetical. Hover-to-pause plus a dismiss button means two independent
+timers can be in flight, and the hand-rolled version reconciles them with a `clearTimeout`
+and a ref. Here the second one **throws**.
+
+<Canvas of={ToastStories.AllVariants} />
+
+## One region, and it is polite
+
+Not two. The usual arrangement — a polite region and an assertive one, so a danger toast
+interrupts — was rejected because **the interrupting case does not belong in a toast at
+all.** A message that must be heard *now* is one the user has to be able to go back and
+read, and a toast is gone in five seconds. If it matters that much it is an `Alert` on the
+page, which this library already ships and which stays put.
+
+`Field` draws the same line for its error text. This library announces **once**, in the
+place the user can act on it.
+
+`role="status"` is `aria-live="polite"` *plus `aria-atomic="true"`* by default, and atomic is
+wrong here — it re-reads the entire stack every time one arrives. `aria-atomic="false"` sits
+beside it for exactly that reason.
+
+<Canvas of={ToastStories.AllStates} />
+
+## The stack does not own the toasts
+
+`toasts` comes in and `onDismiss` goes out. There is no `toast()` function, no imperative
+queue, and no context provider — an app already has a store (mux-magic has Jotai, rip-deck
+has its own), and a component library that ships a second one is asking every consumer to
+keep two lists of the same notifications in sync.
+
+The lifecycle *inside* one toast is state a store cannot see, which is why `Toast` owns that
+and nothing more.
+
+## `title` is a string
+
+Not a `ReactNode`. It is what the region announces and what names each toast's own dismiss
+button — a stack of three all offering "Dismiss" is three matches for one query, which
+`expectAgentDrivable` treats as a failure.
+
+## `pointer-events-none` on the container
+
+A fixed overlay across the bottom of the viewport swallows every click in that band,
+including on the app behind it, and it does so invisibly. The container passes clicks through
+and each toast takes them back.
+
+<Canvas of={ToastStories.Interactive} />

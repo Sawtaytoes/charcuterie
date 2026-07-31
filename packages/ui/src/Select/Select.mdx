@@ -1,0 +1,74 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as SelectStories from "./Select.stories";
+
+<Meta of={SelectStories} />
+
+# Select
+
+Eighteen sites in the fleet, and they split cleanly in two: **twelve native `<select>`s**
+that differ only in their Tailwind classes, and **six hand-rolled `role="listbox"`
+controls**. This component is the first twelve. The other six are a different pattern —
+see below.
+
+<Canvas of={SelectStories.Default} />
+
+## Props
+
+<Controls />
+
+## There is no state kind here, and that is the finding
+
+Every other interactive component in this package owns its state through
+`@charcuterie/logic`. This one owns **none**, because the platform already does — a
+`<select>` holds the chosen option in the DOM, and putting a `useSinglePicker` beside it
+would create the exact conflict the state layer exists to prevent:
+
+> Two things believing they hold `value`.
+
+That is the Radix argument from `Popover`, pointed at ourselves. So `value` seeds
+`defaultValue` and changes are reported outward.
+
+The consequence worth knowing: **`Select` is uncontrolled and `Tabs` is not**, and a reader
+should be able to tell why without asking. A tab bar's selection has no DOM representation,
+so something has to hold it. A select's does.
+
+<Canvas of={SelectStories.AllVariants} />
+
+## Native, and what that rules out
+
+| Native gives you | A hand-rolled listbox rebuilds |
+| --- | --- |
+| Type-ahead | a keystroke buffer and a timer |
+| Home / End / PageUp / PageDown | four more key handlers |
+| The mobile wheel picker | nothing that feels native |
+| Form submission and `:invalid` | a hidden input |
+| Autofill | — |
+
+What it cannot do is render a rich option — an icon, two lines, a badge — or filter.
+mux-magic has six controls that need one of those (`CommandPicker`, `PathPicker`,
+`LinkPicker`, `EnumPicker`, `AssFieldPicker`, `RenameTargetPicker`), and **every one of them
+is a `Combobox`**: a text input that filters a listbox. Different pattern, different ARIA
+contract, P2 in the plan.
+
+Building a bare `Listbox` here that none of the six could adopt would have shipped a
+component with no caller — the mistake this milestone was explicitly checking for.
+
+## The placeholder is a disabled option
+
+Not an empty-valued one. An enabled `<option value="">` looks identical, is selectable, and
+silently posts `""`. Disabled, it reads as a prompt and can never be submitted.
+
+<Canvas of={SelectStories.AllStates} />
+
+## `appearance-none` takes the arrow away
+
+Removing the UA's own chevron and forgetting to put one back leaves a control that looks
+exactly like a text input. The replacement is `aria-hidden` decoration in the same grid
+cell, with `pe-9` reserving room for it.
+
+## Naming, once
+
+Either `label` (which becomes `aria-label`) **or** a surrounding `Field` — never both. Two
+naming mechanisms firing at once means the accessible name is whichever won, which is not a
+thing a reader can predict.
