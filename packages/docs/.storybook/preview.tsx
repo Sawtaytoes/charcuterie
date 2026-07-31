@@ -64,6 +64,31 @@ export const globalTypes = {
       ],
     },
   },
+  /**
+   * The M5 bake-off axis. `system` is today's shipped state — the
+   * baseline every candidate has to beat, kept first so the
+   * comparison is always against what we actually have rather than
+   * against the previously-selected candidate.
+   */
+  font: {
+    description:
+      "Type pairing under evaluation. Preview-only until one is chosen.",
+    toolbar: {
+      title: "Font",
+      icon: "typography",
+      dynamicTitle: true,
+      items: [
+        { value: "system", title: "System (today)" },
+        { value: "source-sans-3", title: "Source Sans 3" },
+        { value: "inter", title: "Inter" },
+        { value: "fraunces", title: "Fraunces + Inter" },
+        {
+          value: "bricolage",
+          title: "Bricolage + Public Sans",
+        },
+      ],
+    },
+  },
   variant: {
     description:
       "Visual direction. `daylight` won M0; the other three survive as alternates.",
@@ -93,10 +118,12 @@ const preview: Preview = {
    */
   initialGlobals: {
     density: "comfortable",
+    font: "system",
     variant: "daylight",
   },
   decorators: [
     writeHtmlAttribute("data-density", "density"),
+    writeHtmlAttribute("data-font", "font"),
     writeHtmlAttribute("data-variant", "variant"),
     withThemeByDataAttribute({
       attributeName: "data-scheme",
