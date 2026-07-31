@@ -1,0 +1,83 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as AccordionStories from "./Accordion.stories";
+
+<Meta of={AccordionStories} />
+
+# Accordion
+
+Eleven sites in the fleet. The plan called it "nearly free once `Tabs` exists" — it is, the
+exclusive mode is `VisibilityGroup` and nothing else — but the saving is not why it ships.
+
+<Canvas of={AccordionStories.Default} />
+
+## Props
+
+<Controls />
+
+## The two-owners bug, live, in the app this milestone migrates
+
+mux-magic's `JobStepsDisclosure` is built on `<details>`, and `<details>` **owns `open`**. It
+also wants the state in a Jotai atom so a job can be expanded from elsewhere. Reconciling
+the two takes three separate mechanisms:
+
+```tsx
+const detailsRef = useRef<HTMLDetailsElement>(null)
+const skipNextToggleRef = useRef(isOpen)
+
+useEffect(() => {
+  if (detailsRef.current) detailsRef.current.open = isOpen
+}, [isOpen])
+
+const handleToggle = (event) => {
+  if (skipNextToggleRef.current) {
+    skipNextToggleRef.current = false
+    return          // ← swallow the toggle our own write just fired
+  }
+  setStepsOpen(…)
+}
+```
+
+A ref to reach past React, an effect to push state into the DOM, and a guard to stop the
+DOM's echo coming back. Every one of the three exists only because **two things hold one
+fact** — the Radix argument from `Popover`, aimed at the platform this time.
+
+So this is a `<button aria-expanded>` and a `role="region"`, with `VisibilityGroup` holding
+the state alone.
+
+## Why not `<details name="…">`
+
+The platform *does* now ship an exclusive accordion, and it was still rejected:
+
+| | `<details name>` | This |
+| --- | --- | --- |
+| Who owns `open` | the DOM | `VisibilityGroup` |
+| Disabled section | **impossible** — a `<summary>` cannot be disabled | not registered, so not a member |
+| Driven from elsewhere | ref + effect + echo guard | pass `expandedKeys` |
+| Panel keeps scroll/subscriptions | yes | yes (`hidden`, not unmounted) |
+
+The second row is the one that settles it: four of the eleven sites have a section that is
+unreachable until a job produces it.
+
+<Canvas of={AccordionStories.AllVariants} />
+
+## Two kinds, one component
+
+`isMultiple` picks between `VisibilityGroup` and `MultiplePicker`. Hooks cannot be
+conditional, so **both are created and one is consulted** — two empty stores and no DOM.
+
+The alternative is reimplementing exclusivity on top of `MultiplePicker` by deselecting the
+others, which is precisely the logic `VisibilityGroup` exists to own once.
+
+## Registration is membership
+
+A disabled section never registers, so nothing can expand it — including a consumer passing
+its key in `expandedKeys`. `AllStates` does exactly that, on purpose.
+
+<Canvas of={AccordionStories.AllStates} />
+
+## The heading level is the caller's
+
+An accordion inside a `Card` that already has an `<h2>` needs `headingLevel={3}`. Getting it
+wrong is a document-outline break that **no gate in this repo can see** — it depends
+entirely on the page the accordion lands on, so it is a prop rather than a constant.

@@ -250,12 +250,23 @@ test("the barrel is the only place components are re-exported", async () => {
   // than app-specific: `Alert` (rip-deck spells it four times, twice
   // with a byte-identical `TONE_CLASS`) and `SegmentedControl`.
   //
-  // `TabTrigger` and `SegmentedOption` are deliberately not in this
-  // count and not exported. Each is its own component's member —
-  // its own file only because both registrations are effects and an
-  // effect cannot run in a loop — and the `<Name>/<Name>.tsx`
-  // pattern this regex matches is what keeps them out.
-  expect(componentNames.length).toBe(16)
+  // M6 adds the nine P1 components: `Accordion`, `Field`,
+  // `FileDropZone`, `LogViewer`, `Menu`, `Select`,
+  // `SortableTableHeader`, `Toast`, and `Tooltip`.
+  //
+  // `TabTrigger`, `SegmentedOption`, `AccordionSection`, and
+  // `MenuAction` are deliberately not in this count and not
+  // exported. Each is its own component's member — its own file only
+  // because both registrations are effects and an effect cannot run
+  // in a loop — and the `<Name>/<Name>.tsx` pattern this regex
+  // matches is what keeps them out.
+  //
+  // `ToastRegion` is the one exception worth naming: it *is*
+  // exported, and it lives in `Toast/` rather than owning a
+  // directory because a region with no toasts in it is not a thing
+  // anybody renders. It is therefore outside this count by the same
+  // rule, and the barrel assertion below does not reach it.
+  expect(componentNames.length).toBe(25)
 
   for (const name of componentNames) {
     expect(barrel).toContain(`export { ${name} }`)

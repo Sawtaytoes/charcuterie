@@ -1,0 +1,69 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as TooltipStories from "./Tooltip.stories";
+
+<Meta of={TooltipStories} />
+
+# Tooltip
+
+Replaces mux-magic's `FieldTooltip` — 130 lines of hand-rolled positioning, including a
+`computePosition` that reimplements `flip` and `shift` against `window.innerHeight`.
+
+<Canvas of={TooltipStories.Default} />
+
+## Props
+
+<Controls />
+
+## Three defects, all of which render perfectly
+
+1. **Nothing references the tip.** It sets `role="tooltip"` and no `aria-describedby`
+   anywhere, so the control it belongs to never mentions it. `role="tooltip"` is **not** a
+   live region and does nothing on its own — the tip is a floating node nobody is pointed
+   at.
+2. **Pointer only.** `onPointerEnter`/`onPointerLeave` with no `onFocus`/`onBlur`, so a
+   keyboard user cannot open it at all. WCAG 2.1.1.
+3. **No dismiss.** Escape does nothing, which WCAG 1.4.13 requires of any content shown on
+   hover.
+
+All three come from the same place: **the ARIA is written by hand beside the behaviour
+instead of falling out of it.** Here `useRole` writes `aria-describedby` on the trigger and
+`role` + `id` on the tip from one source, `useFocus` is what makes it keyboard-openable, and
+`useDismiss` is Escape.
+
+<Canvas of={TooltipStories.AllVariants} />
+
+## A tooltip adds; it is never the name
+
+| | may be the only place the text exists | why |
+| --- | --- | --- |
+| `aria-label` | **yes** | it *is* the name |
+| `Field` `description` | **yes** | bound with `aria-describedby`, read on focus |
+| `Badge`'s `title` | no | repeats text already in `textContent` |
+| `Tooltip` | **no** | absent on touch, absent when nothing hovers |
+
+An `IconButton` under a tooltip still carries its own `aria-label`. `AllVariants` proves the
+button stays findable by the same query whether or not the tip is open.
+
+## No `popover` and no focus manager
+
+Unlike `Popover`, which is in the top layer and traps nothing. Focus never enters a tooltip
+— moving it there is what makes one inescapable — so there is no `FloatingFocusManager` and
+no `popover="manual"`.
+
+The trade is real and worth stating: a tooltip is therefore **not** in the top layer and can
+be clipped by an `overflow: hidden` ancestor. `strategy: "fixed"` keeps that to ancestors
+which actually clip fixed descendants.
+
+<Canvas of={TooltipStories.AllStates} />
+
+## Touch has no hover, and this does not pretend otherwise
+
+There is no long-press fallback. A tooltip is supplementary by construction, so on the kiosk
+it simply never appears — and anything a touch user *must* read belongs in a `Field`'s
+`description` instead.
+
+Building a long-press would make the tip load-bearing on exactly the surface where it is
+least reliable.
+
+<Canvas of={TooltipStories.Interactive} />
