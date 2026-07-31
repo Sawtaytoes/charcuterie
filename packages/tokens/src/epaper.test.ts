@@ -8,20 +8,39 @@
 import { describe, expect, test } from "vitest"
 
 import { INTENT_NAMES } from "./contrastAudit.ts"
-import type { EpaperPalette } from "./epaper.ts"
-import { epaperColours, epaperMotion } from "./epaper.ts"
+import type {
+  EpaperFixedInkPanel,
+  EpaperPalette,
+  EpaperPanelId,
+} from "./epaper.ts"
+import {
+  epaperColours,
+  epaperMotion,
+  epaperPanels,
+  getIsReachableBlend,
+  listReachableBlendPairs,
+  monoBlends,
+  spectra6Blends,
+} from "./epaper.ts"
 
 const PALETTES: EpaperPalette[] = ["spectra6", "mono"]
 
 /**
- * What each panel's quantizer maps 1:1. Anything else dithers.
+ * What each panel's quantizer maps 1:1 — the six inks a single
+ * *pixel* can be, which is not the same thing as what the panel can
+ * show. Blends are held to a separate bar further down.
  *
  * Per palette, because a Spectra 6 panel's "white" is `#D0D2D2` —
  * the 0.5 blend of Pimoroni's vivid and device-real palettes, which
  * is what the fleet renders at — while the 1-bit pHAT's really is
- * `#FFFFFF`. This test passed for a whole milestone against a set
- * of hexes nobody had measured; the values now come from
- * `castkit/packages/core/src/panels/palette.ts`.
+ * `#FFFFFF`.
+ *
+ * **These literals are the point of this file.** The source used to
+ * hold them too, and both copies were invented, so the test passed
+ * for a whole milestone against six hexes nobody had measured.
+ * `epaper.ts` now *derives* its inks from Pimoroni's two palettes;
+ * keeping the expected values written out here by hand is what
+ * makes this an independent check rather than a restatement.
  */
 const RENDERABLE_HEXES: Record<
   EpaperPalette,
@@ -36,6 +55,18 @@ const RENDERABLE_HEXES: Record<
     "#1DAD23",
   ]),
   mono: new Set(["#000000", "#FFFFFF"]),
+}
+
+const getFixedInkPanel = (panelId: EpaperPalette) => {
+  const panel = epaperPanels[panelId]
+
+  // Narrowing, not an assertion about the fleet — the
+  // correspondence itself is gated in its own test below.
+  if (panel.family !== "fixedInk") {
+    throw new Error(`${panelId} is not a fixed-ink panel`)
+  }
+
+  return panel satisfies EpaperFixedInkPanel
 }
 
 const listSwatches = (palette: EpaperPalette) => {
@@ -54,9 +85,24 @@ const listSwatches = (palette: EpaperPalette) => {
 }
 
 describe.each(PALETTES)("%s", (palette) => {
-  test("uses only colours the panel can render", () => {
-    // Anything else dithers, and dithering a 1px border is how
-    // you get a smeared grey line instead of a line.
+  test("derives its inks, and they are the measured ones", () => {
+    // The source computes these from Pimoroni's vivid and emitted
+    // palettes at the fleet's 0.5 saturation. If that arithmetic
+    // ever drifts, this is what catches it — the literals here
+    // were typed from `castkit`'s palette by hand.
+    expect(
+      new Set(
+        Object.values(getFixedInkPanel(palette).inks),
+      ),
+    ).toEqual(RENDERABLE_HEXES[palette])
+  })
+
+  test("keeps role colours on the six inks, never a blend", () => {
+    // The blend tier is for **fills**. Every role listed here is
+    // or can be small geometry — a border, a focus ring, text —
+    // and a checkerboard at that scale is the smeared grey line
+    // the restriction exists to prevent. This is the gate that
+    // stops the wider palette leaking into the narrow places.
     for (const swatch of listSwatches(palette)) {
       expect(RENDERABLE_HEXES[palette]).toContain(swatch)
     }
@@ -119,6 +165,125 @@ test("yellow never carries text", () => {
   expect(warning.solid).toBe("#E8DF24")
   expect(warning.content).toBe("#000000")
   expect(warning.onSolid).toBe("#000000")
+})
+
+describe("the blend tier", () => {
+  test("spectra6 ships every reachable pair and only those", () => {
+    // 15 ink pairs exist; 13 are reachable. Deriving the list and
+    // comparing it to the hand-written keys is what keeps the two
+    // honest — the keys are greppable, the values are computed,
+    // and neither is allowed to invent a colour.
+    expect(
+      listReachableBlendPairs(
+        getFixedInkPanel("spectra6").inks,
+      ).map(([inkA, inkB]) => `${inkA}+${inkB}`),
+    ).toEqual([
+      "black+white",
+      "black+red",
+      "black+blue",
+      "black+green",
+      "white+yellow",
+      "white+red",
+      "white+blue",
+      "white+green",
+      "yellow+red",
+      "yellow+green",
+      "red+blue",
+      "red+green",
+      "blue+green",
+    ])
+
+    expect(Object.keys(spectra6Blends)).toHaveLength(13)
+  })
+
+  test("blackYellow and yellowBlue are absent, not wrong", () => {
+    // Both are unreachable: a third ink sits between them, so the
+    // authored midpoint quantizes to a different pair entirely.
+    // Shipping them would ship a token that renders as something
+    // else, which is worse than not shipping it.
+    const { inks } = getFixedInkPanel("spectra6")
+
+    expect(
+      getIsReachableBlend({
+        inks,
+        inkNames: ["black", "yellow"],
+      }),
+    ).toBe(false)
+
+    expect(
+      getIsReachableBlend({
+        inks,
+        inkNames: ["yellow", "blue"],
+      }),
+    ).toBe(false)
+
+    expect(spectra6Blends).not.toHaveProperty("blackYellow")
+
+    expect(spectra6Blends).not.toHaveProperty("yellowBlue")
+  })
+
+  test("every blend is the midpoint of its two inks", () => {
+    // Authoring the encoded midpoint is *how* the checkerboard is
+    // reached — error diffusion splits it 50/50 between the two
+    // nearest inks. Measured through castkit's real
+    // `ditherToPanel`: 50.0% / 50.0%, every pair.
+    expect(spectra6Blends.yellowRed).toBe("#DB8225")
+    expect(spectra6Blends.blueGreen).toBe("#1E6669")
+    expect(spectra6Blends.whiteYellow).toBe("#DCD97B")
+    expect(monoBlends.blackWhite).toBe("#808080")
+  })
+
+  test("no blend is reachable twice under another name", () => {
+    expect(
+      new Set(Object.values(spectra6Blends)).size,
+    ).toBe(Object.keys(spectra6Blends).length)
+  })
+
+  test("blends widen spectra6 from six colours to nineteen", () => {
+    // The headline number, and the reason any of this changed:
+    // six is what one *pixel* can be, not what the panel can show.
+    const panel = getFixedInkPanel("spectra6")
+
+    expect(
+      Object.keys(panel.inks).length +
+        Object.keys(panel.blends).length,
+    ).toBe(19)
+  })
+})
+
+describe("panel families", () => {
+  test("every fixed-ink panel has role colours, and only those do", () => {
+    // The gate that keeps a continuous-tone panel out of a
+    // six-hex set. `epaperColours` may only be keyed by panels
+    // whose colour constraint is actually a palette.
+    const fixedInkPanelIds = (
+      Object.keys(epaperPanels) as EpaperPanelId[]
+    ).filter(
+      (panelId) =>
+        epaperPanels[panelId].family === "fixedInk",
+    )
+
+    expect(Object.keys(epaperColours).sort()).toEqual(
+      fixedInkPanelIds.sort(),
+    )
+  })
+
+  test("gallery3 is continuous tone, so it has no palette to get wrong", () => {
+    // Not in the fleet, and the only facts recorded about it are
+    // sourced ones. A six-hex entry would have been fabricated,
+    // which is exactly the failure this profile already had once.
+    const gallery3 = epaperPanels.gallery3
+
+    expect(gallery3.family).toBe("continuousTone")
+    expect(gallery3).not.toHaveProperty("inks")
+    expect(gallery3).not.toHaveProperty("blends")
+    expect(gallery3.isInFleet).toBe(false)
+  })
+
+  test("both fleet panels say they are in the fleet", () => {
+    expect(epaperPanels.spectra6.isInFleet).toBe(true)
+    expect(epaperPanels.mono.isInFleet).toBe(true)
+  })
 })
 
 test("there is no motion at all", () => {
