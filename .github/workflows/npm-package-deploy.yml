@@ -76,9 +76,14 @@ jobs:
             # deps into real ranges (npm pack leaves them verbatim), so the
             # tarball stays — only the thing handed to `npm publish` changes.
             # An npm tarball always has a single top-level `package/`.
+            # `--ignore-scripts` because every package has `prepack: yarn build`,
+            # which yarn already ran while packing — the built `dist` is in the
+            # tarball. Re-running it here fails anyway (`tsconfig.build.json` is
+            # a repo file, not a published one), and re-building a tarball that
+            # was already assembled is exactly what we do not want at publish.
             staged="$(mktemp -d)"
             tar -xzf "$tarball" -C "$staged"
-            ( cd "$staged/package" && npm publish --provenance --access public )
+            ( cd "$staged/package" && npm publish --provenance --access public --ignore-scripts )
 
             git tag "$tag"
             git push origin "$tag"
