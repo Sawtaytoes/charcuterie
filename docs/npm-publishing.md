@@ -66,12 +66,51 @@ OIDC. The bootstrap:
 
 1. Make your change and add a changeset: `yarn changeset` (pick the packages + bump level).
    Commit the generated `.changeset/*.md` with your change.
-2. Merge to `v2`. The **Version Packages** PR appears.
+2. Merge to `master`. The **Version Packages** PR appears.
 3. Merge the Version Packages PR. CI runs, then **NPM Package Deploy** publishes each bumped
    package with provenance and pushes its `<pkg>-v<version>` tag.
 
 If you change a package but no version was bumped, nothing publishes — the existing tag makes
 the deploy skip.
+
+## Troubleshooting
+
+### `404 Not Found - PUT` on a package that plainly exists
+
+**This is an authentication failure, not a missing package.** npm returns 404 rather than
+403 so it does not leak which packages exist. Seeing it means the OIDC trusted-publishing
+exchange failed and npm fell back to the credential in `.npmrc` — which, in Actions, is
+`setup-node`'s placeholder `_authToken` (`XXXXX-XXXXX-XXXXX-XXXXX`, visible in the step env
+of *every* run, including successful ones). That placeholder is normal and is **not** the
+bug; mux-magic publishes over OIDC with it present.
+
+The console output alone cannot distinguish this from any other 404. The deploy therefore
+dumps npm's **debug log** on failure — it records at verbose level regardless of console
+loglevel, and is the only place the exchange result appears. Grep the failed run for
+`verbose oidc`:
+
+```
+npm http fetch GET  …/idtoken?…&audience=npm%3Aregistry.npmjs.org   200   ← GitHub side OK
+npm http fetch POST 404 …/-/npm/v1/oidc/token/exchange/package/@charcuterie%2ftokens
+npm verbose oidc Failed token exchange request with body message:
+    OIDC token exchange error - package not found
+```
+
+A **200 on the `idtoken` GET and a 404 on the `exchange` POST** localises the fault
+precisely: the workflow, its `id-token: write` permission, the audience, and the package
+name are all correct, and npm's registry is refusing to mint a publish token. That is a
+**server-side trusted-publisher mismatch**, fixable only in npm's UI — nothing in this repo
+will change it. Re-check the package's **Settings → Trusted Publisher** against the exact
+values in *First-time setup* above, including the owner's capitalisation
+(`Sawtaytoes`, as GitHub's OIDC `repository` claim spells it), and that **Environment is
+blank** — the job declares no `environment:`, so a value there can never match. Deleting
+and re-adding the entry is the reliable fix. Then re-run **NPM Package Deploy** via
+`workflow_dispatch`; publishing is idempotent, so a re-run is always safe.
+
+Things that are *not* the cause, each ruled out by experiment on 2026-07-31: the
+placeholder `_authToken`; the publish CWD (npm takes package identity from the spec, not
+the directory); tarball-vs-directory spec; and the npm version (11.16.0, well past the
+11.5.1 OIDC minimum).
 
 ## Verifying
 
