@@ -1,0 +1,580 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ePaper flat-fill palette — 6 inks, 19 colours</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 2.5rem clamp(1rem, 4vw, 3rem) 5rem;
+    background: #F4F5F6;
+    color: #14181D;
+    font: 15px/1.55 ui-sans-serif, system-ui, sans-serif;
+  }
+  h1 { font-size: 1.9rem; margin: 0 0 .4rem; letter-spacing: -.02em; }
+  h2 {
+    font-size: 1.15rem;
+    margin: 3rem 0 .35rem;
+    padding-block-end: .5rem;
+    border-block-end: 1px solid #D4D8DC;
+  }
+  p.lede { margin: 0 0 .25rem; max-inline-size: 74ch; color: #3C444D; }
+  p.note { margin: .5rem 0 0; max-inline-size: 74ch; color: #5A636D; font-size: .875rem; }
+  code { font-family: ui-monospace, monospace; font-size: .84em; background: #E4E7EA; padding: .1em .35em; border-radius: 3px; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(184px, 1fr));
+    gap: 1rem;
+    margin-block-start: 1.25rem;
+  }
+  .card {
+    background: #FFF;
+    border: 1px solid #D9DDE1;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .card--ink { border-color: #14181D; }
+  .card__swatches { display: grid; grid-template-columns: 1fr 1fr; block-size: 96px; }
+  .swatch { position: relative; }
+  .swatch--zoom { border-inline-start: 1px solid #FFF; }
+  .swatch__tag {
+    position: absolute;
+    inset-block-end: 4px;
+    inset-inline-start: 5px;
+    font-size: 9px;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    background: rgba(255,255,255,.86);
+    color: #14181D;
+    padding: 1px 4px;
+    border-radius: 3px;
+  }
+  .card__name { margin: .6rem .75rem .35rem; font-size: .95rem; font-family: ui-monospace, monospace; }
+  .card__facts {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: .1rem .5rem;
+    margin: 0 .75rem .75rem;
+    font-size: .78rem;
+    color: #4A525B;
+  }
+  .card__facts dt { color: #8B939B; }
+  .card__facts dd { margin: 0; display: flex; align-items: center; gap: .3rem; }
+  .dot { inline-size: 10px; block-size: 10px; border-radius: 50%; border: 1px solid #0002; }
+  table { border-collapse: collapse; margin-block-start: 1rem; font-size: .84rem; }
+  th, td { text-align: start; padding: .4rem .8rem .4rem 0; border-block-end: 1px solid #E2E5E8; vertical-align: top; }
+  th { color: #8B939B; font-weight: 600; }
+  td.reason { max-inline-size: 52ch; color: #4A525B; }
+  .primitives { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; margin-block-start: 1.25rem; }
+  .primitives__panel { padding: 1rem 1.15rem 1.4rem; border: 1px solid #D9DDE1; border-radius: 8px; }
+  .primitives__label { margin: 0 0 .8rem; font-size: .8rem; color: #3C444D; }
+  .fill { block-size: 92px; border-radius: 4px; }
+  .hairline { block-size: 1px; }
+  .hairline--zoom { block-size: 8px; }
+  .primitives__caption { margin: .25rem 0 1.1rem; font-size: .72rem; color: #6C757E; }
+  .tiny { font-size: 11px; margin: 0 0 .5rem; font-weight: 600; }
+  .tiny__note { font-weight: 400; opacity: .55; }
+  .panelfam { margin-block-start: 1rem; }
+</style>
+</head>
+<body>
+
+<h1>ePaper flat-fill palette — six inks, nineteen colours</h1>
+<p class="lede">
+  <strong>Six is what one <em>pixel</em> can be, not what the panel can show.</strong>
+  Every swatch below is read out of <code>packages/tokens/src/epaper.ts</code>. The
+  checkerboards are drawn at the panel&rsquo;s real 1px cell, and again at &times;8 so the
+  structure is visible; a blend is authored as one flat hex and the panel-side quantizer
+  produces the pattern &mdash; measured 50.0% / 50.0% through castkit&rsquo;s real
+  <code>ditherToPanel</code>, for every pair here.
+</p>
+
+<h2>The six inks &mdash; what a pixel can be</h2>
+<p class="note">
+  Authored is the value the quantizer maps 1:1. Emitted is the muted tone the physical
+  ink produces, which is what the eye receives and what the contrast number is measured
+  against.
+</p>
+<div class="grid">
+    <article class="card card--ink">
+      <div class="card__swatches">
+        <div class="swatch swatch--true" style="background:#000000">
+          <span class="swatch__tag">authored</span>
+        </div>
+        <div class="swatch swatch--zoom" style="background:#000000">
+          <span class="swatch__tag">emitted</span>
+        </div>
+      </div>
+      <h3 class="card__name">black</h3>
+      <dl class="card__facts">
+        <dt>author</dt><dd><code>#000000</code></dd>
+        <dt>emitted</dt><dd><code>#000000</code></dd>
+        <dt>black on it</dt>
+        <dd>&mdash;</dd>
+      </dl>
+    </article>
+    <article class="card card--ink">
+      <div class="card__swatches">
+        <div class="swatch swatch--true" style="background:#D0D2D2">
+          <span class="swatch__tag">authored</span>
+        </div>
+        <div class="swatch swatch--zoom" style="background:#A1A4A5">
+          <span class="swatch__tag">emitted</span>
+        </div>
+      </div>
+      <h3 class="card__name">white</h3>
+      <dl class="card__facts">
+        <dt>author</dt><dd><code>#D0D2D2</code></dd>
+        <dt>emitted</dt><dd><code>#A1A4A5</code></dd>
+        <dt>black on it</dt>
+        <dd>8.37</dd>
+      </dl>
+    </article>
+    <article class="card card--ink">
+      <div class="card__swatches">
+        <div class="swatch swatch--true" style="background:#E8DF24">
+          <span class="swatch__tag">authored</span>
+        </div>
+        <div class="swatch swatch--zoom" style="background:#D0BE47">
+          <span class="swatch__tag">emitted</span>
+        </div>
+      </div>
+      <h3 class="card__name">yellow</h3>
+      <dl class="card__facts">
+        <dt>author</dt><dd><code>#E8DF24</code></dd>
+        <dt>emitted</dt><dd><code>#D0BE47</code></dd>
+        <dt>black on it</dt>
+        <dd>11.14</dd>
+      </dl>
+    </article>
+    <article class="card card--ink">
+      <div class="card__swatches">
+        <div class="swatch swatch--true" style="background:#CE2426">
+          <span class="swatch__tag">authored</span>
+        </div>
+        <div class="swatch swatch--zoom" style="background:#9C484B">
+          <span class="swatch__tag">emitted</span>
+        </div>
+      </div>
+      <h3 class="card__name">red</h3>
+      <dl class="card__facts">
+        <dt>author</dt><dd><code>#CE2426</code></dd>
+        <dt>emitted</dt><dd><code>#9C484B</code></dd>
+        <dt>black on it</dt>
+        <dd>3.44</dd>
+      </dl>
+    </article>
+    <article class="card card--ink">
+      <div class="card__swatches">
+        <div class="swatch swatch--true" style="background:#1F1EAF">
+          <span class="swatch__tag">authored</span>
+        </div>
+        <div class="swatch swatch--zoom" style="background:#3D3B5E">
+          <span class="swatch__tag">emitted</span>
+        </div>
+      </div>
+      <h3 class="card__name">blue</h3>
+      <dl class="card__facts">
+        <dt>author</dt><dd><code>#1F1EAF</code></dd>
+        <dt>emitted</dt><dd><code>#3D3B5E</code></dd>
+        <dt>black on it</dt>
+        <dd>1.99</dd>
+      </dl>
+    </article>
+    <article class="card card--ink">
+      <div class="card__swatches">
+        <div class="swatch swatch--true" style="background:#1DAD23">
+          <span class="swatch__tag">authored</span>
+        </div>
+        <div class="swatch swatch--zoom" style="background:#3A5B46">
+          <span class="swatch__tag">emitted</span>
+        </div>
+      </div>
+      <h3 class="card__name">green</h3>
+      <dl class="card__facts">
+        <dt>author</dt><dd><code>#1DAD23</code></dd>
+        <dt>emitted</dt><dd><code>#3A5B46</code></dd>
+        <dt>black on it</dt>
+        <dd>2.76</dd>
+      </dl>
+    </article>
+</div>
+
+<h2>The thirteen blends &mdash; what a <em>fill</em> can be</h2>
+<p class="note">
+  Fills and large areas only. Keys name the ink pair rather than the colour, because
+  &ldquo;perceived&rdquo; is a computation &mdash; a linear-light mix of the two emitted
+  inks &mdash; and not a photograph of a panel.
+</p>
+<div class="grid">
+    <article class="card">
+      <div class="card__swatches">
+        <div class="swatch swatch--true" style="background-color:#D0D2D2;background-image:linear-gradient(45deg,#000000 25%,transparent 25%,transparent 75%,#000000 75%),linear-gradient(45deg,#000000 25%,transparent 25%,transparent 75%,#000000 75%);background-size:2px 2px;background-position:0 0,1px 1px">
+          <span class="swatch__tag">on the panel</span>
+        </div>
+        <div class="swatch swatch--zoom" style="background-color:#D0D2D2;background-image:linear-gradient(45deg,#000000 25%,transparent 25%,transparent 75%,#000000 75%),linear-gradient(45deg,#000000 25%,transparent 25%,transparent 75%,#000000 75%);background-size:16px 16px;background-position:0 0,8px 8px">
+          <span class="swatch__tag">×8</span>
+        </div>
+      </div>
+      <h3 class="card__name">blackWhite</h3>
+      <dl class="card__facts">
+        <dt>author</dt><dd><code>#686969</code></dd>
+        <dt>inks</dt><dd>black + white</dd>
+        <dt>perceived</dt>
+        <dd>
+          <span class="dot" style="background:#757778"></span>
+          <code>#757778</code>
+        </dd>
+        <dt>black on it</dt><dd>4.67</dd>
+      </dl>
+    </article>
+    <article class="card">
+      <div class="card__swatches">
+        <div class="swatch swatch--true" style="background-color:#CE2426;background-image:linear-gradient(45deg,#000000 25%,transparent 25%,transparent 75%,#000000 75%),linear-gradient(45deg,#000000 25%,transparent 25%,transparent 75%,#000000 75%);background-size:2px 2px;background-position:0 0,1px 1px">
+          <span class="swatch__tag">on the panel</span>
+        </div>
+        <div class="swatch swatch--zoom" style="background-color:#CE2426;background-image:linear-gradient(45deg,#000000 25%,transparent 25%,transparent 75%,#000000 75%),linear-gradient(45deg,#000000 25%,transparent 25%,transparent 75%,#000000 75%);background-size:16px 16px;background-position:0 0,8px 8px">
+          <span class="swatch__tag">×8</span>
+        </div>
+      </div>
+      <h3 class="card__name">blackRed</h3>
+      <dl class="card__facts">
+        <dt>author</dt><dd><code>#671213</code></dd>
+        <dt>inks</dt><dd>black + red</dd>
+        <dt>perceived</dt>
+        <dd>
+          <span class="dot" style="background:#713235"></span>
+          <code>#713235</code>
+        </dd>
+        <dt>black on it</dt><dd>2.21</dd>
+      </dl>
+    </article>
+    <article class="card">
+      <div class="card__swatches">
+        <div class="swatch swatch--true" style="background-color:#1F1EAF;background-image:linear-gradient(45deg,#000000 25%,transparent 25%,transparent 75%,#000000 75%),linear-gradient(45deg,#000000 25%,transparent 25%,transparent 75%,#000000 75%);background-size:2px 2px;background-position:0 0,1px 1px">
+          <span class="swatch__tag">on the panel</span>
+        </div>
+        <div class="swatch swatch--zoom" style="background-color:#1F1EAF;background-image:linear-gradient(45deg,#000000 25%,transparent 25%,transparent 75%,#000000 75%),linear-gradient(45deg,#000000 25%,transparent 25%,transparent 75%,#000000 75%);background-size:16px 16px;background-position:0 0,8px 8px">
+          <span class="swatch__tag">×8</span>
+        </div>
+      </div>
+      <h3 class="card__name">blackBlue</h3>
+      <dl class="card__facts">
+        <dt>author</dt><dd><code>#100F58</code></dd>
+        <dt>inks</dt><dd>black + blue</dd>
+        <dt>perceived</dt>
+        <dd>
+          <span class="dot" style="background:#2A2943"></span>
+          <code>#2A2943</code>
+        </dd>
+        <dt>black on it</dt><dd>1.50</dd>
+      </dl>
+    </article>
+    <article class="card">
+      <div class="card__swatches">
+        <div class="swatch swatch--true" style="background-color:#1DAD23;background-image:linear-gradient(45deg,#000000 25%,transparent 25%,transparent 75%,#000000 75%),linear-gradient(45deg,#000000 25%,transparent 25%,transparent 75%,#000000 75%);background-size:2px 2px;background-position:0 0,1px 1px">
+          <span class="swatch__tag">on the panel</span>
+        </div>
+        <div class="swatch swatch--zoom" style="background-color:#1DAD23;background-image:linear-gradient(45deg,#000000 25%,transparent 25%,transparent 75%,#000000 75%),linear-gradient(45deg,#000000 25%,transparent 25%,transparent 75%,#000000 75%);background-size:16px 16px;background-position:0 0,8px 8px">
+          <span class="swatch__tag">×8</span>
+        </div>
+      </div>
+      <h3 class="card__name">blackGreen</h3>
+      <dl class="card__facts">
+        <dt>author</dt><dd><code>#0F5712</code></dd>
+        <dt>inks</dt><dd>black + green</dd>
+        <dt>perceived</dt>
+        <dd>
+          <span class="dot" style="background:#284131"></span>
+          <code>#284131</code>
+        </dd>
+        <dt>black on it</dt><dd>1.89</dd>
+      </dl>
+    </article>
+    <article class="card">
+      <div class="card__swatches">
+        <div class="swatch swatch--true" style="background-color:#E8DF24;background-image:linear-gradient(45deg,#D0D2D2 25%,transparent 25%,transparent 75%,#D0D2D2 75%),linear-gradient(45deg,#D0D2D2 25%,transparent 25%,transparent 75%,#D0D2D2 75%);background-size:2px 2px;background-position:0 0,1px 1px">
+          <span class="swatch__tag">on the panel</span>
+        </div>
+        <div class="swatch swatch--zoom" style="background-color:#E8DF24;background-image:linear-gradient(45deg,#D0D2D2 25%,transparent 25%,transparent 75%,#D0D2D2 75%),linear-gradient(45deg,#D0D2D2 25%,transparent 25%,transparent 75%,#D0D2D2 75%);background-size:16px 16px;background-position:0 0,8px 8px">
+          <span class="swatch__tag">×8</span>
+        </div>
+      </div>
+      <h3 class="card__name">whiteYellow</h3>
+      <dl class="card__facts">
+        <dt>author</dt><dd><code>#DCD97B</code></dd>
+        <dt>inks</dt><dd>white + yellow</dd>
+        <dt>perceived</dt>
+        <dd>
+          <span class="dot" style="background:#BAB281"></span>
+          <code>#BAB281</code>
+        </dd>
+        <dt>black on it</dt><dd>9.77</dd>
+      </dl>
+    </article>
+    <article class="card">
+      <div class="card__swatches">
+        <div class="swatch swatch--true" style="background-color:#CE2426;background-image:linear-gradient(45deg,#D0D2D2 25%,transparent 25%,transparent 75%,#D0D2D2 75%),linear-gradient(45deg,#D0D2D2 25%,transparent 25%,transparent 75%,#D0D2D2 75%);background-size:2px 2px;background-position:0 0,1px 1px">
+          <span class="swatch__tag">on the panel</span>
+        </div>
+        <div class="swatch swatch--zoom" style="background-color:#CE2426;background-image:linear-gradient(45deg,#D0D2D2 25%,transparent 25%,transparent 75%,#D0D2D2 75%),linear-gradient(45deg,#D0D2D2 25%,transparent 25%,transparent 75%,#D0D2D2 75%);background-size:16px 16px;background-position:0 0,8px 8px">
+          <span class="swatch__tag">×8</span>
+        </div>
+      </div>
+      <h3 class="card__name">whiteRed</h3>
+      <dl class="card__facts">
+        <dt>author</dt><dd><code>#CF7B7C</code></dd>
+        <dt>inks</dt><dd>white + red</dd>
+        <dt>perceived</dt>
+        <dd>
+          <span class="dot" style="background:#9F8182"></span>
+          <code>#9F8182</code>
+        </dd>
+        <dt>black on it</dt><dd>5.94</dd>
+      </dl>
+    </article>
+    <article class="card">
+      <div class="card__swatches">
+        <div class="swatch swatch--true" style="background-color:#1F1EAF;background-image:linear-gradient(45deg,#D0D2D2 25%,transparent 25%,transparent 75%,#D0D2D2 75%),linear-gradient(45deg,#D0D2D2 25%,transparent 25%,transparent 75%,#D0D2D2 75%);background-size:2px 2px;background-position:0 0,1px 1px">
+          <span class="swatch__tag">on the panel</span>
+        </div>
+        <div class="swatch swatch--zoom" style="background-color:#1F1EAF;background-image:linear-gradient(45deg,#D0D2D2 25%,transparent 25%,transparent 75%,#D0D2D2 75%),linear-gradient(45deg,#D0D2D2 25%,transparent 25%,transparent 75%,#D0D2D2 75%);background-size:16px 16px;background-position:0 0,8px 8px">
+          <span class="swatch__tag">×8</span>
+        </div>
+      </div>
+      <h3 class="card__name">whiteBlue</h3>
+      <dl class="card__facts">
+        <dt>author</dt><dd><code>#7878C1</code></dd>
+        <dt>inks</dt><dd>white + blue</dd>
+        <dt>perceived</dt>
+        <dd>
+          <span class="dot" style="background:#7C7E87"></span>
+          <code>#7C7E87</code>
+        </dd>
+        <dt>black on it</dt><dd>5.19</dd>
+      </dl>
+    </article>
+    <article class="card">
+      <div class="card__swatches">
+        <div class="swatch swatch--true" style="background-color:#1DAD23;background-image:linear-gradient(45deg,#D0D2D2 25%,transparent 25%,transparent 75%,#D0D2D2 75%),linear-gradient(45deg,#D0D2D2 25%,transparent 25%,transparent 75%,#D0D2D2 75%);background-size:2px 2px;background-position:0 0,1px 1px">
+          <span class="swatch__tag">on the panel</span>
+        </div>
+        <div class="swatch swatch--zoom" style="background-color:#1DAD23;background-image:linear-gradient(45deg,#D0D2D2 25%,transparent 25%,transparent 75%,#D0D2D2 75%),linear-gradient(45deg,#D0D2D2 25%,transparent 25%,transparent 75%,#D0D2D2 75%);background-size:16px 16px;background-position:0 0,8px 8px">
+          <span class="swatch__tag">×8</span>
+        </div>
+      </div>
+      <h3 class="card__name">whiteGreen</h3>
+      <dl class="card__facts">
+        <dt>author</dt><dd><code>#77C07B</code></dd>
+        <dt>inks</dt><dd>white + green</dd>
+        <dt>perceived</dt>
+        <dd>
+          <span class="dot" style="background:#7B8681"></span>
+          <code>#7B8681</code>
+        </dd>
+        <dt>black on it</dt><dd>5.57</dd>
+      </dl>
+    </article>
+    <article class="card">
+      <div class="card__swatches">
+        <div class="swatch swatch--true" style="background-color:#CE2426;background-image:linear-gradient(45deg,#E8DF24 25%,transparent 25%,transparent 75%,#E8DF24 75%),linear-gradient(45deg,#E8DF24 25%,transparent 25%,transparent 75%,#E8DF24 75%);background-size:2px 2px;background-position:0 0,1px 1px">
+          <span class="swatch__tag">on the panel</span>
+        </div>
+        <div class="swatch swatch--zoom" style="background-color:#CE2426;background-image:linear-gradient(45deg,#E8DF24 25%,transparent 25%,transparent 75%,#E8DF24 75%),linear-gradient(45deg,#E8DF24 25%,transparent 25%,transparent 75%,#E8DF24 75%);background-size:16px 16px;background-position:0 0,8px 8px">
+          <span class="swatch__tag">×8</span>
+        </div>
+      </div>
+      <h3 class="card__name">yellowRed</h3>
+      <dl class="card__facts">
+        <dt>author</dt><dd><code>#DB8225</code></dd>
+        <dt>inks</dt><dd>yellow + red</dd>
+        <dt>perceived</dt>
+        <dd>
+          <span class="dot" style="background:#B89349"></span>
+          <code>#B89349</code>
+        </dd>
+        <dt>black on it</dt><dd>7.31</dd>
+      </dl>
+    </article>
+    <article class="card">
+      <div class="card__swatches">
+        <div class="swatch swatch--true" style="background-color:#1DAD23;background-image:linear-gradient(45deg,#E8DF24 25%,transparent 25%,transparent 75%,#E8DF24 75%),linear-gradient(45deg,#E8DF24 25%,transparent 25%,transparent 75%,#E8DF24 75%);background-size:2px 2px;background-position:0 0,1px 1px">
+          <span class="swatch__tag">on the panel</span>
+        </div>
+        <div class="swatch swatch--zoom" style="background-color:#1DAD23;background-image:linear-gradient(45deg,#E8DF24 25%,transparent 25%,transparent 75%,#E8DF24 75%),linear-gradient(45deg,#E8DF24 25%,transparent 25%,transparent 75%,#E8DF24 75%);background-size:16px 16px;background-position:0 0,8px 8px">
+          <span class="swatch__tag">×8</span>
+        </div>
+      </div>
+      <h3 class="card__name">yellowGreen</h3>
+      <dl class="card__facts">
+        <dt>author</dt><dd><code>#83C624</code></dd>
+        <dt>inks</dt><dd>yellow + green</dd>
+        <dt>perceived</dt>
+        <dd>
+          <span class="dot" style="background:#9D9747"></span>
+          <code>#9D9747</code>
+        </dd>
+        <dt>black on it</dt><dd>6.95</dd>
+      </dl>
+    </article>
+    <article class="card">
+      <div class="card__swatches">
+        <div class="swatch swatch--true" style="background-color:#1F1EAF;background-image:linear-gradient(45deg,#CE2426 25%,transparent 25%,transparent 75%,#CE2426 75%),linear-gradient(45deg,#CE2426 25%,transparent 25%,transparent 75%,#CE2426 75%);background-size:2px 2px;background-position:0 0,1px 1px">
+          <span class="swatch__tag">on the panel</span>
+        </div>
+        <div class="swatch swatch--zoom" style="background-color:#1F1EAF;background-image:linear-gradient(45deg,#CE2426 25%,transparent 25%,transparent 75%,#CE2426 75%),linear-gradient(45deg,#CE2426 25%,transparent 25%,transparent 75%,#CE2426 75%);background-size:16px 16px;background-position:0 0,8px 8px">
+          <span class="swatch__tag">×8</span>
+        </div>
+      </div>
+      <h3 class="card__name">redBlue</h3>
+      <dl class="card__facts">
+        <dt>author</dt><dd><code>#77216B</code></dd>
+        <dt>inks</dt><dd>red + blue</dd>
+        <dt>perceived</dt>
+        <dd>
+          <span class="dot" style="background:#794255"></span>
+          <code>#794255</code>
+        </dd>
+        <dt>black on it</dt><dd>2.72</dd>
+      </dl>
+    </article>
+    <article class="card">
+      <div class="card__swatches">
+        <div class="swatch swatch--true" style="background-color:#1DAD23;background-image:linear-gradient(45deg,#CE2426 25%,transparent 25%,transparent 75%,#CE2426 75%),linear-gradient(45deg,#CE2426 25%,transparent 25%,transparent 75%,#CE2426 75%);background-size:2px 2px;background-position:0 0,1px 1px">
+          <span class="swatch__tag">on the panel</span>
+        </div>
+        <div class="swatch swatch--zoom" style="background-color:#1DAD23;background-image:linear-gradient(45deg,#CE2426 25%,transparent 25%,transparent 75%,#CE2426 75%),linear-gradient(45deg,#CE2426 25%,transparent 25%,transparent 75%,#CE2426 75%);background-size:16px 16px;background-position:0 0,8px 8px">
+          <span class="swatch__tag">×8</span>
+        </div>
+      </div>
+      <h3 class="card__name">redGreen</h3>
+      <dl class="card__facts">
+        <dt>author</dt><dd><code>#766925</code></dd>
+        <dt>inks</dt><dd>red + green</dd>
+        <dt>perceived</dt>
+        <dd>
+          <span class="dot" style="background:#785249"></span>
+          <code>#785249</code>
+        </dd>
+        <dt>black on it</dt><dd>3.10</dd>
+      </dl>
+    </article>
+    <article class="card">
+      <div class="card__swatches">
+        <div class="swatch swatch--true" style="background-color:#1DAD23;background-image:linear-gradient(45deg,#1F1EAF 25%,transparent 25%,transparent 75%,#1F1EAF 75%),linear-gradient(45deg,#1F1EAF 25%,transparent 25%,transparent 75%,#1F1EAF 75%);background-size:2px 2px;background-position:0 0,1px 1px">
+          <span class="swatch__tag">on the panel</span>
+        </div>
+        <div class="swatch swatch--zoom" style="background-color:#1DAD23;background-image:linear-gradient(45deg,#1F1EAF 25%,transparent 25%,transparent 75%,#1F1EAF 75%),linear-gradient(45deg,#1F1EAF 25%,transparent 25%,transparent 75%,#1F1EAF 75%);background-size:16px 16px;background-position:0 0,8px 8px">
+          <span class="swatch__tag">×8</span>
+        </div>
+      </div>
+      <h3 class="card__name">blueGreen</h3>
+      <dl class="card__facts">
+        <dt>author</dt><dd><code>#1E6669</code></dd>
+        <dt>inks</dt><dd>blue + green</dd>
+        <dt>perceived</dt>
+        <dd>
+          <span class="dot" style="background:#3C4D53"></span>
+          <code>#3C4D53</code>
+        </dd>
+        <dt>black on it</dt><dd>2.38</dd>
+      </dl>
+    </article>
+</div>
+
+<h2>The two that do not survive</h2>
+<table>
+  <thead><tr><th>pair</th><th>authored midpoint</th><th>what the panel puts up instead</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><code>black + yellow</code></td>
+      <td><code>#747012</code></td>
+      <td class="reason">green and red both sit closer to the midpoint than either parent does, so the panel puts up a red/green checkerboard instead — which is <code>redGreen</code>, a blend that already exists.</td>
+    </tr>
+    <tr>
+      <td><code>yellow + blue</code></td>
+      <td><code>#847F6A</code></td>
+      <td class="reason">the midpoint is chroma 26, exactly the neutral guard, so castkit dithers it against black and white only. Nudging the chroma past the guard does not help: green and red are still nearer than yellow or blue, and the result becomes a three-ink mush.</td>
+    </tr>
+  </tbody>
+</table>
+<p class="note">
+  Both are absent from <code>spectra6Blends</code> rather than present and wrong. A token
+  that silently renders as a different pair is worse than one that does not exist.
+</p>
+
+<h2>Why the six-ink rule still holds for small geometry</h2>
+<p class="note">
+  &ldquo;While more complex algorithms like Rotated Bayer or Error Diffusion are excellent
+  for photographic gradients, <strong>they often struggle with small-scale graphical
+  primitives</strong> &hellip; introduced noticeable geometric artifacts that distracted
+  from the clean lines of the UI elements.&rdquo; &mdash; <em>Beyond 6 Colors</em>. A 1px
+  rule made of a 1px checkerboard is half a line; small text made of one is a smear.
+</p>
+
+  <div class="primitives">
+    <div class="primitives__panel" style="background:#D0D2D2">
+      <p class="primitives__label">
+        A large fill in <code>yellowRed</code> &mdash; what blends are for. The 1px
+        checkerboard has room to average, and the eye receives the mix.
+      </p>
+      <div class="fill" style="background-color:#CE2426;background-image:linear-gradient(45deg,#E8DF24 25%,transparent 25%,transparent 75%,#E8DF24 75%),linear-gradient(45deg,#E8DF24 25%,transparent 25%,transparent 75%,#E8DF24 75%);background-size:2px 2px;background-position:0 0,1px 1px"></div>
+    </div>
+    <div class="primitives__panel" style="background:#D0D2D2">
+      <p class="primitives__label">
+        The <em>same</em> colour as a 1px rule and as 11px text &mdash; what it is
+        <strong>not</strong> for. One row of pixels leaves the dither nowhere to go.
+      </p>
+      <div class="hairline" style="background-image:repeating-linear-gradient(90deg,#E8DF24 0 1px,#CE2426 1px 2px)"></div>
+      <p class="primitives__caption">&uarr; the 1px rule: a dotted line, not a line</p>
+      <div class="hairline hairline--zoom" style="background-image:repeating-linear-gradient(90deg,#E8DF24 0 8px,#CE2426 8px 16px)"></div>
+      <p class="primitives__caption">&uarr; the same rule at &times;8</p>
+      <p class="tiny" style="background-color:#CE2426;background-image:linear-gradient(45deg,#E8DF24 25%,transparent 25%,transparent 75%,#E8DF24 75%),linear-gradient(45deg,#E8DF24 25%,transparent 25%,transparent 75%,#E8DF24 75%);background-size:2px 2px;background-position:0 0,1px 1px;-webkit-background-clip:text;background-clip:text;color:transparent">Rip 1.2.5 — bay 14 — 41%</p>
+      <p class="tiny" style="color:#000000">Rip 1.2.5 — bay 14 — 41% <span class="tiny__note">(the same line in a single ink)</span></p>
+    </div>
+  </div>
+
+<h2>The mono panel</h2>
+<p class="note">
+  The Inky pHAT is 1-bit and pure &mdash; two inks, one blend, which is a grey it has no
+  ink for.
+</p>
+<div class="grid">
+    <article class="card">
+      <div class="card__swatches">
+        <div class="swatch swatch--true" style="background-color:#FFFFFF;background-image:linear-gradient(45deg,#000000 25%,transparent 25%,transparent 75%,#000000 75%),linear-gradient(45deg,#000000 25%,transparent 25%,transparent 75%,#000000 75%);background-size:2px 2px;background-position:0 0,1px 1px">
+          <span class="swatch__tag">on the panel</span>
+        </div>
+        <div class="swatch swatch--zoom" style="background-color:#FFFFFF;background-image:linear-gradient(45deg,#000000 25%,transparent 25%,transparent 75%,#000000 75%),linear-gradient(45deg,#000000 25%,transparent 25%,transparent 75%,#000000 75%);background-size:16px 16px;background-position:0 0,8px 8px">
+          <span class="swatch__tag">×8</span>
+        </div>
+      </div>
+      <h3 class="card__name">blackWhite</h3>
+      <dl class="card__facts">
+        <dt>author</dt><dd><code>#808080</code></dd>
+        <dt>inks</dt><dd>black + white</dd>
+        <dt>perceived</dt>
+        <dd>
+          <span class="dot" style="background:#BCBCBC"></span>
+          <code>#BCBCBC</code>
+        </dd>
+        <dt>black on it</dt><dd>11.06</dd>
+      </dl>
+    </article>
+</div>
+
+<h2>Panel families</h2>
+<table class="panelfam">
+  <thead><tr><th>panel</th><th>family</th><th>colour constraint</th><th>in the fleet</th></tr></thead>
+  <tbody>
+    <tr><td><code>spectra6</code></td><td>fixedInk</td><td>6 inks, 13 blends</td><td>yes &mdash; 7.3&Prime; E6 + 2 &times; 13.3&Prime; E673</td></tr>
+    <tr><td><code>mono</code></td><td>fixedInk</td><td>2 inks, 1 blend</td><td>yes &mdash; Inky pHAT</td></tr>
+    <tr><td><code>gallery3</code></td><td>continuousTone</td><td class="reason">none &mdash; roughly 50,000 colours natively (4-particle ACeP). No fixed ink set, so no palette to get wrong. It carries no <code>inks</code> and no <code>blends</code>, and the type makes forcing it through a six-hex set unrepresentable.</td><td>no &mdash; shopping list only</td></tr>
+  </tbody>
+</table>
+
+</body>
+</html>
