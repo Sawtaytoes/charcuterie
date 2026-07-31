@@ -24,9 +24,17 @@ has failed, and this toolbar is where it shows up first.
 
 It is a separate export, `@charcuterie/tokens/epaper`, because it *removes*
 capabilities rather than restyling them: no hover, no opacity, no shadow, no
-transition, and a fixed six-colour palette the panel can physically render.
+transition, and colour restricted to a set small enough to hold a sharp edge.
 Modelling it as `data-scheme="epaper"` would imply a `data-variant` still applies to
 it, which it cannot.
+
+**Six is what one *pixel* can be, not what the panel can show.** The restriction is a
+UI rule, not a hardware ceiling: photographs get the full dithered gamut, flat fills get
+**19** colours on Spectra 6 (six inks plus thirteen two-ink checkerboards in
+`spectra6Blends`), and only borders, small text and icons are held to the six — because
+that is the scale at which dithering visibly mangles geometry. `epaperPanels` is keyed by
+panel and discriminated on `family`, so a continuous-tone panel such as Gallery 3 has no
+`inks` field to fill in wrongly.
 
 ## Defaults
 
