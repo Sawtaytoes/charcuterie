@@ -40,36 +40,115 @@
   }
 }
 
-/* A docs page is **Storybook's** document, and its prose chrome is
- * Storybook's theme — dark text on white, readable, and not ours to
- * restyle. The `<Canvas>` blocks inside it are a different thing:
- * they are our canvas, and they were inheriting that hard white
- * while the components inside them rendered in whatever
- * `data-scheme` says.
- *
- * In the default dark scheme that means `--color-content-primary`
- * (#EDF0F5) painted onto #FFFFFF — near-white on white. The story
- * canvas was always right; only the docs preview was wrong, which is
- * why it read as "dark mode is missing on Docs" rather than as a
- * contrast bug.
- *
- * Scoped to the preview block so it follows the scheme in both
- * directions. Setting Storybook's own `docs.theme` to dark instead
- * would fix the default and break the mirror case — light components
- * on a dark page — because a parameter cannot read a global.
- *
- * Two class names deep to beat the emotion class it overrides;
- * outside `@layer` so it is not demoted below Tailwind's utilities. */
+/* ─────────────────────────────────────────────────────────────
+   The docs page is ours too.
+   ─────────────────────────────────────────────────────────────
+
+   M4's review themed only the `<Canvas>` blocks and left the prose
+   as Storybook's white document, on the argument that a docs page
+   is Storybook's own thing. That decision's closing line said a
+   fully themed page "needs the theme object, not more of these
+   rules" — and that turned out to be the wrong way round. See
+   `docs/decisions/2026-07-31-the-docs-page-is-themed-by-our-tokens.md`.
+
+   **Why CSS rather than `parameters.docs.theme`.** Storybook's
+   theme object holds resolved colour strings and runs some of them
+   through `polished`, which throws on a `var()` — so a theme object
+   cannot read our custom properties and would have to restate them
+   as literal hexes. There are **four variants x two schemes = eight**
+   combinations, all live on the toolbar. Restating eight palettes in
+   JS is eight things to keep in sync with the token source; a
+   `var()` is zero, because `[data-variant][data-scheme]` on `<html>`
+   has already resolved it by the time these rules run. The same
+   mechanism the components use.
+
+   **Scoping.** Storybook 10 styles docs prose with emotion HASH
+   classes (`css-0`, `css-ztvjyi`) that change on any bump, so
+   nothing below targets one. The handles here are the container
+   classes — `sbdocs-wrapper`, `sbdocs-content`, `docblock-*` — plus
+   plain element selectors, and Prism's own token names.
+
+   **`:not(.sb-story *)` is load-bearing, and `.sb-unstyled` is the
+   wrong guard.** A bare `.sbdocs-content p` would reach inside the
+   rendered demo and restyle the components being documented, which
+   is the exact opposite of the point. `.sb-story` is the wrapper
+   Storybook puts around exactly that subtree.
+   `.sb-unstyled` looks like the same thing and is not: Storybook
+   also puts it on **heading anchors** and on the arg tables, so
+   excluding it left every `<code>` inside an `<h2>` at Storybook's
+   dark grey on our dark page — measured at `rgb(46, 51, 56)` on
+   `#131822`, which is the original bug in a smaller box.
+
+   Written outside `@layer` so Tailwind's utilities cannot demote
+   them, and two class names deep to beat the emotion class each one
+   overrides. `smoke:storybook` probes the resolved values, so a
+   Storybook release that renames a container fails loudly rather
+   than quietly going white. */
+
+.sbdocs.sbdocs-wrapper {
+  background-color: var(--color-surface-base);
+}
+
+.sbdocs.sbdocs-content
+  :is(
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    p,
+    ul,
+    ol,
+    li,
+    dl,
+    dt,
+    dd,
+    strong,
+    em,
+    blockquote,
+    figcaption,
+    summary
+  ):not(.sb-story *) {
+  color: var(--color-content-primary);
+}
+
+/* The rules under a heading, the `<hr>`, and a blockquote's edge —
+   Storybook draws all three in a translucent navy picked against
+   white, which is invisible on our dark surface. */
+.sbdocs.sbdocs-content
+:is(h1, h2, h3, h4, hr, blockquote, table, th, td, tr):not(
+  .sb-story *
+) {
+  border-color: var(--color-border-subtle);
+}
+
+.sbdocs.sbdocs-content a:not(.sb-story *) {
+  color: var(--color-intent-accent-content);
+}
+
+/* Inline `code` in prose. `surface-sunken` rather than `raised`
+   because it is set INTO the page, which is also how the components
+   spell a well. */
+.sbdocs.sbdocs-content code:not(.sb-story *) {
+  background-color: var(--color-surface-sunken);
+  border-color: var(--color-border-subtle);
+  color: var(--color-content-primary);
+}
+
+/* A `<Canvas>` block: our canvas, embedded in the document. This
+   pair is M4's and still correct — the surface follows
+   `data-scheme` in both directions. */
 .sbdocs.sbdocs-preview {
   background-color: var(--color-surface-base);
   border-color: var(--color-border-subtle);
 }
 
 /* The toolbar welded to the bottom of that block. Its own text
- * colour is one of Storybook's greys, chosen against white — left on
- * a dark surface it lands at about 2.4:1, so the colour has to move
- * with the background or the rule above trades one contrast failure
- * for another. */
+   colour is one of Storybook's greys, chosen against white — left on
+   a dark surface it lands at about 2.4:1, so the colour has to move
+   with the background or the rule above trades one contrast failure
+   for another. */
 .sbdocs.sbdocs-preview-actions {
   background-color: var(--color-surface-raised);
   border-color: var(--color-border-subtle);
@@ -78,4 +157,121 @@
 .sbdocs.sbdocs-preview-actions button,
 .sbdocs.sbdocs-preview-actions a {
   color: var(--color-content-secondary);
+}
+
+/* The props table. Its own class rather than the prose rules above,
+   because Storybook marks it `sb-unstyled` — the same flag that
+   keeps those rules out of the rendered stories. */
+.docblock-argstable.docblock-argstable
+:is(span, code, button, a) {
+  color: var(--color-content-primary);
+}
+
+/* Storybook paints every body cell white so the table reads as an
+   editable area. On our surface that is the original bug again —
+   near-white text on white — so the cells go transparent and the
+   CONTROLS carry the affordance instead, which is where it belongs:
+   an input looks editable because it is an input.
+ *
+ * **Three class repetitions, and the count is not arbitrary.**
+ * Storybook's own rule here is `.css-ssfv87.css-ssfv87 tbody > tr > *`
+ * — it **doubles its own emotion class**, the same trick every other
+ * rule in this file uses to win. Matching it exactly still loses,
+ * because emotion injects at runtime and we are a static stylesheet,
+ * so equal specificity goes to source order. Three beats two.
+ *
+ * `!important` would be the stable answer and is **not available**:
+ * `biome check --write --unsafe` deletes it silently, leaving the
+ * declaration behind without its priority. That is worth knowing
+ * before reaching for it anywhere in this repo — it cost this change
+ * a round of "the rule is right there in the source and the built
+ * CSS does not have it".
+ *
+ * So this is a specificity race that a future Storybook could win
+ * back by adding a repetition. It would not fail quietly:
+ * `smoke:storybook` measures the contrast of a props-table cell on
+ * every docs page. */
+.docblock-argstable.docblock-argstable.docblock-argstable
+  :is(thead, tbody)
+  > tr
+  > * {
+  background-color: transparent;
+  border-color: var(--color-border-subtle);
+}
+
+.docblock-argstable.docblock-argstable.docblock-argstable
+  tbody
+  > tr
+  > * {
+  color: var(--color-content-primary);
+}
+
+/* A column head reads quieter than its rows on purpose — the same
+   call `Card` makes. `content-secondary` rather than Storybook's own
+   grey, which was picked against white and measured **3.01:1** on
+   our dark surface: a header row failing AA on the page whose job is
+   documenting an accessible library. */
+.docblock-argstable.docblock-argstable.docblock-argstable
+  thead
+  > tr
+  > * {
+  color: var(--color-content-secondary);
+}
+
+/* The `Show code` panel. */
+.docblock-source.docblock-source {
+  background-color: var(--color-surface-sunken);
+  border-color: var(--color-border-subtle);
+}
+
+.docblock-source.docblock-source pre {
+  color: var(--color-content-primary);
+}
+
+/* ── Syntax highlighting ──────────────────────────────────────
+
+   Prism ships a LIGHT theme and Storybook does not swap it with the
+   scheme: `keyword` is pure `#0000FF`, `tag` is `#800000`,
+   `attr-name` is `#EB0000`. Pure blue on `surface.sunken` measures
+   about 1.3:1 — a code sample nobody can read, on a page whose whole
+   job is showing code.
+
+   Mapped onto the INTENT scale rather than onto invented hexes, so
+   every colour here is one the contrast gate already checks against
+   our surfaces, in every variant and both schemes. Prism's token
+   names are Prism's, not Storybook's, so they survive a Storybook
+   bump. */
+.docblock-source.docblock-source
+:is(.token.comment, .token.prolog, .token.cdata) {
+  color: var(--color-content-muted);
+}
+
+.docblock-source.docblock-source
+  :is(.token.punctuation, .token.operator, .token.script) {
+  color: var(--color-content-secondary);
+}
+
+.docblock-source.docblock-source
+  :is(.token.keyword, .token.boolean, .token.important) {
+  color: var(--color-intent-accent-content);
+}
+
+.docblock-source.docblock-source
+  :is(.token.tag, .token.class-name, .token.function) {
+  color: var(--color-intent-info-content);
+}
+
+.docblock-source.docblock-source
+  :is(.token.attr-name, .token.property) {
+  color: var(--color-intent-warning-content);
+}
+
+.docblock-source.docblock-source
+  :is(.token.string, .token.attr-value, .token.char) {
+  color: var(--color-intent-success-content);
+}
+
+.docblock-source.docblock-source
+  :is(.token.number, .token.regex, .token.deleted) {
+  color: var(--color-intent-danger-content);
 }

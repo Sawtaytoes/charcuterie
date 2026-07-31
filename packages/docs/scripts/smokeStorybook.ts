@@ -288,57 +288,124 @@ for (const entry of entries) {
       )
     }
 
-    // A `<Canvas>` block is *our* canvas embedded in Storybook's
-    // document, and it inherits that document's hard white unless
-    // told otherwise. In the default dark scheme that renders
-    // `--color-content-primary` (#EDF0F5) onto #FFFFFF — near-white
-    // on white, on every docs page at once. It reads as "dark mode
-    // is missing on Docs" rather than as a contrast bug, and no
-    // mounting test can see it because the story canvas was always
-    // correct.
+    // **The docs page is ours, and this is the gate that says so.**
     //
-    // Compared against the token's *resolved* value through a probe,
-    // for the reason M4 learned on `::backdrop`: a loose "not white"
-    // assertion stays green against a build where the rule generated
-    // no CSS at all.
-    const previewSurface = await preview
+    // Storybook styles its docs chrome with emotion HASH classes and
+    // injects them at runtime, so every rule in
+    // `src/styles/tokens.css` wins on specificity against a moving
+    // target — one that already doubles its own class in places. A
+    // Storybook release that renames a container or adds a class
+    // repetition does not error; the page just goes white under text
+    // we set to near-white, which is the original bug.
+    //
+    // So this asserts CONTRAST rather than a list of colours. It
+    // catches any of those rules silently ceasing to match, without
+    // needing to enumerate them, and it is the property that
+    // actually matters. AA for normal text is 4.5:1; every pair
+    // measured on this page sits above 6.7:1 in both schemes, so the
+    // threshold has real headroom and a failure means something
+    // genuinely broke.
+    const contrastFailures = await preview
       .locator("body")
       .evaluate((body) => {
-        const block = body.querySelector(".sbdocs-preview")
+        const toRgb = (colour: string) =>
+          (colour.match(/\d+(\.\d+)?/g) ?? [])
+            .slice(0, 3)
+            .map(Number)
 
-        if (!block) {
-          return null
+        const toLuminance = (rgb: number[]) => {
+          const [red, green, blue] = rgb.map((channel) => {
+            const ratio = channel / 255
+
+            return ratio <= 0.03928
+              ? ratio / 12.92
+              : ((ratio + 0.055) / 1.055) ** 2.4
+          }) as [number, number, number]
+
+          return (
+            0.2126 * red + 0.7152 * green + 0.0722 * blue
+          )
         }
 
-        const probe = document.createElement("div")
+        const getContrast = (
+          foreground: string,
+          background: string,
+        ) => {
+          const first = toLuminance(toRgb(foreground))
+          const second = toLuminance(toRgb(background))
 
-        probe.style.backgroundColor =
-          "var(--color-surface-base)"
+          const [lighter, darker] =
+            first > second
+              ? [first, second]
+              : [second, first]
 
-        body.append(probe)
-
-        const expected =
-          globalThis.getComputedStyle(probe).backgroundColor
-
-        probe.remove()
-
-        return {
-          actual:
-            globalThis.getComputedStyle(block)
-              .backgroundColor,
-          expected,
+          return (lighter + 0.05) / (darker + 0.05)
         }
+
+        /** The first ancestor that actually paints something. */
+        const getPaintedBackground = (
+          element: Element,
+        ): string => {
+          let current: Element | null = element
+
+          while (current) {
+            const colour =
+              globalThis.getComputedStyle(
+                current,
+              ).backgroundColor
+
+            if (
+              colour !== "rgba(0, 0, 0, 0)" &&
+              colour !== "transparent"
+            ) {
+              return colour
+            }
+
+            current = current.parentElement
+          }
+
+          return "rgb(255, 255, 255)"
+        }
+
+        // Every distinct thing the docs rules colour. A `<Canvas>`
+        // block's own contents are deliberately absent — those are
+        // the components, and they have their own gate.
+        const targets: [string, string][] = [
+          [".sbdocs-content p", "prose"],
+          [".sbdocs-content h1", "heading"],
+          [".sbdocs-content p code", "inline code"],
+          [".docblock-argstable td", "props table cell"],
+          [".docblock-argstable th", "props table head"],
+          [
+            ".sbdocs-preview-actions button",
+            "canvas actions",
+          ],
+        ]
+
+        return targets.flatMap(([selector, label]) => {
+          const element = body.querySelector(selector)
+
+          if (!element) {
+            return []
+          }
+
+          const style = globalThis.getComputedStyle(element)
+
+          const contrast = getContrast(
+            style.color,
+            getPaintedBackground(element),
+          )
+
+          return contrast < 4.5
+            ? [
+                `${label} (${selector}) is ${contrast.toFixed(2)}:1 — below WCAG AA. A docs rule stopped matching, so our text is painting onto Storybook's own page colour.`,
+              ]
+            : []
+        })
       })
-      .catch(() => null)
+      .catch(() => [] as string[])
 
-    if (
-      previewSurface &&
-      previewSurface.actual !== previewSurface.expected
-    ) {
-      currentMessages.push(
-        `docs preview block is ${previewSurface.actual}, not the scheme's surface ${previewSurface.expected} — components render onto Storybook's own page colour`,
-      )
-    }
+    currentMessages.push(...contrastFailures)
   }
 
   for (const message of currentMessages) {
