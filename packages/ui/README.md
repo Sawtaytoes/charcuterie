@@ -36,8 +36,14 @@ That last line is not optional. Tailwind v4 scans **source text** for complete c
 strings, and it does not scan your dependencies by default — without it every component
 renders unstyled, with no error.
 
-Tokens are re-exported at `@charcuterie/ui/tokens`, so a React consumer never installs two
-package names. The testing gates are at `@charcuterie/ui/testing`.
+**Both package names, and the CSS line above is why.** The token *types and values* are
+re-exported at `@charcuterie/ui/tokens`, so your TypeScript only ever names one package —
+but the *stylesheet* is imported from `@charcuterie/tokens` directly. A `./tokens.css`
+export pointing inside this package resolved to nothing on the first real consumer, because
+a hoisting linker puts `@charcuterie/tokens` at the project root rather than in here, and a
+CSS `@import` that misses fails **silently**: no error, no utilities, an unstyled app.
+
+The testing gates are at `@charcuterie/ui/testing`.
 
 ## How a component is put together
 

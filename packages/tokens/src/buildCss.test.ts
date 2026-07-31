@@ -75,20 +75,22 @@ test("the winner's dark surface is emitted verbatim", () => {
 // ---------------------------------------------------------------
 
 test("scheme and density are emitted separately from variant", () => {
-  // One `:root` of structural values, then per variant: one
-  // variant block, two schemes, three densities. Emitting the
-  // axes as separate rule sets is what keeps this linear instead
-  // of a 24-way combinatorial explosion.
+  // One `:root` of structural values, then the two `color-scheme`
+  // blocks — variant-independent, because `daylight` and `legible`
+  // do not disagree about what "dark" means to a scrollbar — then
+  // per variant: one variant block, two schemes, three densities.
+  // Emitting the axes as separate rule sets is what keeps this
+  // linear instead of a 24-way combinatorial explosion.
   //
   // `@media` is excluded rather than folded into the number — it
-  // is the reduced-motion block, which is a fifth thing and has
+  // is the reduced-motion block, which is its own thing and has
   // its own test.
   const selectorCount = (
     variablesCss.match(/^(?!@)\S.*\{$/gm) ?? []
   ).length
 
   expect(selectorCount).toBe(
-    1 + variants.length * (1 + 2 + 3),
+    1 + 2 + variants.length * (1 + 2 + 3),
   )
 })
 
@@ -158,6 +160,23 @@ test("the dark variant keys off data-scheme, not a media query", () => {
 
 test("theme.css pulls in the runtime substrate", () => {
   expect(themeCss).toContain('@import "./variables.css";')
+})
+
+test("a scheme also sets the CSS color-scheme property", () => {
+  // The attribute is ours; `color-scheme` is what the *browser*
+  // reads for scrollbars, native form controls, and the default
+  // canvas. A dark page without it keeps light scrollbars — which
+  // no contrast gate can see, because none of it is our colour.
+  //
+  // M5 found this: rip-deck hand-wrote `:root { color-scheme: dark }`
+  // and swapping the palette out would have dropped it silently.
+  expect(variablesCss).toContain(
+    '[data-scheme="light"] {\n  color-scheme: light;\n}',
+  )
+
+  expect(variablesCss).toContain(
+    '[data-scheme="dark"] {\n  color-scheme: dark;\n}',
+  )
 })
 
 // ---------------------------------------------------------------
