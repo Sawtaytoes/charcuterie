@@ -1,20 +1,44 @@
 /**
- * The three rules about this package's source that no compiler and no
- * axe run can see.
+ * The rules about this package's source — and about the shape of the
+ * workspace around it — that no compiler and no axe run can see.
  *
- * All three come straight from the plan's verification list, and each
- * one is a thing the fleet does today that the library exists to
- * stop.
+ * They come straight from the plan's verification list, and each one
+ * is a thing the fleet does today that the library exists to stop.
+ *
+ * The last two reach past `@charcuterie/ui` into its siblings on
+ * purpose. `ui` sits at the top of the dependency graph, so it is the
+ * one package whose tests can see all three at once — which is why
+ * the plan's cross-package assertions live here rather than in a
+ * `packages/conformance` of their own
+ * ([decision](../../../docs/decisions/2026-07-31-conformance-is-not-a-package.md)).
  */
 
 import { readdir, readFile } from "node:fs/promises"
-import { join, relative, resolve } from "node:path"
+import { dirname, join, relative, resolve } from "node:path"
 
 import { expect, test } from "vitest"
 
 const sourceDirectory = resolve(import.meta.dirname)
 
 const packageDirectory = resolve(sourceDirectory, "..")
+
+const packagesDirectory = resolve(packageDirectory, "..")
+
+type PackageManifest = {
+  dependencies?: Record<string, string>
+  exports?: Record<string, string | { source?: string }>
+  peerDependencies?: Record<string, string>
+}
+
+const readManifest = async (
+  name: string,
+): Promise<PackageManifest> =>
+  JSON.parse(
+    await readFile(
+      join(packagesDirectory, name, "package.json"),
+      "utf8",
+    ),
+  ) as PackageManifest
 
 const getSourceFiles = async (
   directory: string,
@@ -278,37 +302,193 @@ test("dependency direction is tokens ← logic ← ui", async () => {
   // depend on both; `logic` may depend on `tokens`; `tokens` depends
   // on nothing, which is what lets `castkit/packages/views` read a
   // colour without a React tree.
-  const readPackage = async (name: string) =>
-    JSON.parse(
-      await readFile(
-        join(packageDirectory, "..", name, "package.json"),
-        "utf8",
-      ),
-    ) as {
-      dependencies?: Record<string, string>
-      peerDependencies?: Record<string, string>
-    }
-
-  const getCharcuterieDependencies = (manifest: {
-    dependencies?: Record<string, string>
-    peerDependencies?: Record<string, string>
-  }) =>
+  const getCharcuterieDependencies = (
+    manifest: PackageManifest,
+  ) =>
     Object.keys({
       ...manifest.dependencies,
       ...manifest.peerDependencies,
     }).filter((name) => name.startsWith("@charcuterie/"))
 
   expect(
-    getCharcuterieDependencies(await readPackage("tokens")),
+    getCharcuterieDependencies(
+      await readManifest("tokens"),
+    ),
   ).toEqual([])
 
   expect(
-    getCharcuterieDependencies(await readPackage("logic")),
+    getCharcuterieDependencies(await readManifest("logic")),
   ).toEqual([])
 
   expect(
     getCharcuterieDependencies(
-      await readPackage("ui"),
+      await readManifest("ui"),
     ).sort(),
   ).toEqual(["@charcuterie/logic", "@charcuterie/tokens"])
 })
+
+/**
+ * What every published entry point is allowed to reach at runtime.
+ *
+ * This is what survives of the plan's `@charcuterie/conformance`
+ * package — "builds React19+TWv4 / Preact / Satori profiles" — once
+ * the three profiles are checked against what the library actually
+ * became. Two of them are already built and gated by name (`docs` is
+ * the React 19 + Tailwind v4 build; `logic`'s five-adapter suite is
+ * the Preact one), and the third has no components to render because
+ * the ePaper-safe subset was never built. What no gate covered is the
+ * claim each of those profiles actually rests on: **which runtime a
+ * consumer is forced to install by importing a given entry point.**
+ * That is the assertion below.
+ *
+ * Each of these numbers is load-bearing somewhere:
+ *
+ * - `tokens` reaches **nothing**. `castkit/packages/views` renders
+ *   through Satori and must read a colour without a React tree.
+ * - `logic/core` reaches **nothing**, and `logic/preact` never
+ *   reaches `react` — `preact/compat` is most of `slatecast`'s 60 KB
+ *   gz budget, and an accidental `react` import there is a bundle
+ *   blow-up that typechecks.
+ * - `ui/testing` reaches **nothing**, which is the promise
+ *   `expectAgentDrivable.ts` makes in prose: it ships for consumers
+ *   to hold *their* components to, and a published package must not
+ *   drag a test framework into an app's dependency graph.
+ *
+ * A type-only import counts. It is erased from the bundle but not
+ * from the `.d.ts`, so a consumer still needs the package installed
+ * for their own typecheck to pass.
+ */
+const ENTRY_POINT_RUNTIMES: Record<
+  string,
+  Record<string, string[]>
+> = {
+  logic: {
+    ".": ["react"],
+    "./core": [],
+    "./jotai": ["jotai"],
+    "./preact": ["preact", "preact/hooks"],
+    "./signals": ["@preact/signals-core"],
+  },
+  tokens: {
+    ".": [],
+    "./epaper": [],
+  },
+  ui: {
+    ".": [
+      "@charcuterie/logic",
+      "@charcuterie/tokens",
+      "@floating-ui/react",
+      "react",
+    ],
+    "./testing": [],
+    "./tokens": ["@charcuterie/tokens"],
+  },
+}
+
+/**
+ * Every bare specifier reachable from `entryFile`, following relative
+ * imports and stopping at package boundaries.
+ *
+ * Every relative import in this workspace carries its extension, so
+ * "resolution" is a `join` — no `.js`/`index` guessing, and a typo
+ * fails loudly as a missing file rather than silently pruning the
+ * graph.
+ */
+const collectRuntimeImports = async (entryFile: string) => {
+  const visited = new Set<string>()
+
+  const bareSpecifiers = new Set<string>()
+
+  const visit = async (file: string) => {
+    if (visited.has(file)) {
+      return
+    }
+
+    visited.add(file)
+
+    // Template literals go too. `createStatus`'s error message
+    // spells `from "${current}"`, which is prose about a state
+    // machine and not an import of a package called `${current}`.
+    const contents = stripComments(
+      await readFile(file, "utf8"),
+    ).replace(/`(?:[^`\\]|\\.)*`/g, "")
+
+    const specifiers = [
+      ...contents.matchAll(/\bfrom\s+"([^"]+)"/g),
+      ...contents.matchAll(/\bimport\s+"([^"]+)"/g),
+    ].map(([, specifier]) => specifier as string)
+
+    for (const specifier of specifiers) {
+      if (!specifier.startsWith(".")) {
+        bareSpecifiers.add(specifier)
+
+        continue
+      }
+
+      if (/\.css$/.test(specifier)) {
+        continue
+      }
+
+      await visit(resolve(dirname(file), specifier))
+    }
+  }
+
+  await visit(entryFile)
+
+  return [...bareSpecifiers].sort()
+}
+
+test.each(Object.keys(ENTRY_POINT_RUNTIMES))(
+  "every @charcuterie/%s entry point reaches only its own runtime",
+  async (packageName) => {
+    const manifest = await readManifest(packageName)
+
+    const entryPoints = Object.entries(
+      manifest.exports ?? {},
+    ).flatMap(([name, target]) =>
+      typeof target === "object" && target.source
+        ? [[name, target.source] as const]
+        : [],
+    )
+
+    // The table is exhaustive, so a new entry point cannot land
+    // without somebody deciding what it is allowed to pull in.
+    expect(
+      entryPoints.map(([name]) => name).sort(),
+    ).toEqual(
+      Object.keys(
+        ENTRY_POINT_RUNTIMES[packageName] ?? {},
+      ).sort(),
+    )
+
+    const declared = Object.keys({
+      ...manifest.dependencies,
+      ...manifest.peerDependencies,
+    })
+
+    for (const [name, source] of entryPoints) {
+      const reached = await collectRuntimeImports(
+        join(packagesDirectory, packageName, source),
+      )
+
+      expect({
+        entryPoint: `${packageName}${name.slice(1)}`,
+        reached,
+      }).toEqual({
+        entryPoint: `${packageName}${name.slice(1)}`,
+        reached: ENTRY_POINT_RUNTIMES[packageName]?.[name],
+      })
+
+      // And nothing reached is a phantom dependency —
+      // `preact/hooks` is declared as `preact`, which is the unit an
+      // install actually has.
+      for (const specifier of reached) {
+        const packageOfSpecifier = specifier.startsWith("@")
+          ? specifier.split("/").slice(0, 2).join("/")
+          : specifier.split("/")[0]
+
+        expect(declared).toContain(packageOfSpecifier)
+      }
+    }
+  },
+)
