@@ -4,7 +4,10 @@
 **Date:** 2026-07-30
 **Type:** Docs / tooling
 **Supersedes:** —
-**Superseded by:** —
+**Superseded by:** [The whole docs page is themed by our tokens](2026-07-31-the-docs-page-is-themed-by-our-tokens.md).
+The split described below is gone — the prose is ours too now. Its "not
+`parameters.docs.theme`" finding stands and is *why* the replacement is CSS; its closing
+line, that a fully themed page "needs the theme object", is the part that was wrong.
 
 ## Decision
 
