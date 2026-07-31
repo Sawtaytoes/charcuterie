@@ -107,10 +107,40 @@ blank** — the job declares no `environment:`, so a value there can never match
 and re-adding the entry is the reliable fix. Then re-run **NPM Package Deploy** via
 `workflow_dispatch`; publishing is idempotent, so a re-run is always safe.
 
-Things that are *not* the cause, each ruled out by experiment on 2026-07-31: the
-placeholder `_authToken`; the publish CWD (npm takes package identity from the spec, not
-the directory); tarball-vs-directory spec; and the npm version (11.16.0, well past the
-11.5.1 OIDC minimum).
+### What is *not* the cause
+
+Each of these was ruled out by experiment on 2026-07-31, most of them costing a run. The
+control throughout is **`@mux-magic/tools`**, which publishes over OIDC successfully — a
+scoped package, already published, publishing a *second* version, from the same account.
+Everything below is byte-identical between it and charcuterie:
+
+| Ruled out | How |
+| --- | --- |
+| The placeholder `_authToken` | mux-magic's real `tools@1.3.0` publish has the same `NODE_AUTH_TOKEN: XXXXX-XXXXX-XXXXX-XXXXX` in its step env, no repo secret, and no `.npmrc`. ([actions/setup-node#1551](https://github.com/actions/setup-node/issues/1551) describes a *different* failure — there npm never reaches the exchange; our log shows the POST being made.) |
+| The publish CWD | npm takes package identity from the publish spec, not the directory. Publishing from the repo root and from `packages/<pkg>` fail identically. |
+| Tarball vs directory spec | Both fail. The unpack-then-publish-directory form is kept only because it matches the working control. |
+| npm / Node version | **11.16.0 / v24.18.0 in both** the working mux-magic publish and the failing one. Pinning npm cannot help. |
+| `repository.url` | npm warned it had normalized `https://…` → `git+https://…`, and the docs require an exact match, so all six manifests were canonicalised. The warning went away; **the exchange 404 did not.** |
+| GitHub-side config | No repository secret is needed or wanted — an empty *Settings → Secrets and variables → Actions* page is the correct state for trusted publishing. `id-token: write` is granted, the workflow is at `.github/workflows/npm-package-deploy.yml`, and the runner is GitHub-hosted. |
+
+### What is left
+
+The fault is in **npm's per-package Trusted Publisher record**, and there are two candidates:
+
+1. **Case sensitivity.** npm's docs state *"All fields are case-sensitive."* GitHub's OIDC
+   `repository` claim spells the owner **`Sawtaytoes`**; the npm panel has been seen showing
+   **`sawtaytoes`**. Delete the entry and re-add it with the exact casing.
+2. **An upstream npm bug.** [npm/cli#8678](https://github.com/npm/cli/issues/8678) reports
+   this exact signature — a **scoped** package that already exists, publishing a second
+   version, `POST …/oidc/token/exchange/package/@scope%2fname` → 404
+   *"OIDC token exchange error - package not found"*, while a plain `GET` of the same
+   package succeeds. No workaround is documented there.
+
+If neither resolves it, the unblock is a **granular automation token** as an `NPM_TOKEN`
+repository secret mapped to `NODE_AUTH_TOKEN` — the same mechanism used for the `0.1.0`
+bootstrap. **Provenance survives** (it comes from `id-token: write`, not from how the
+registry authenticates); what is lost is the "no token to manage" property, so revert to
+OIDC once npm resolves it.
 
 ## Verifying
 
