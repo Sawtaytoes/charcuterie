@@ -83,7 +83,12 @@ jobs:
             # was already assembled is exactly what we do not want at publish.
             staged="$(mktemp -d)"
             tar -xzf "$tarball" -C "$staged"
-            ( cd "$staged/package" && npm publish --provenance --access public --ignore-scripts )
+            if ! ( cd "$staged/package" && npm publish --provenance --access public --ignore-scripts --loglevel verbose ); then
+              echo "::group::npm debug log"
+              tail -n 300 "$(ls -t "${HOME}"/.npm/_logs/*-debug-0.log | head -1)" || true
+              echo "::endgroup::"
+              exit 1
+            fi
 
             git tag "$tag"
             git push origin "$tag"
