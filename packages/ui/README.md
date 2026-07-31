@@ -45,6 +45,48 @@ CSS `@import` that misses fails **silently**: no error, no utilities, an unstyle
 
 The testing gates are at `@charcuterie/ui/testing`.
 
+### While the packages are unpublished: three lines, and you need all three
+
+A consumer links by `portal:` until this publishes
+([decision](../../docs/decisions/2026-07-29-consumers-link-tokens-by-portal-until-publish.md)).
+M5 spent an hour on the second and third of these, so M5b and M6 do not have to:
+
+```jsonc
+// the app package
+"dependencies": {
+  "@charcuterie/tokens": "portal:../../../charcuterie/packages/tokens",
+  "@charcuterie/ui": "portal:../../../charcuterie/packages/ui"
+}
+
+// the PROJECT ROOT — `ui` declares its siblings as `workspace:*`, and that
+// descriptor cannot resolve outside charcuterie's own workspace. Bare keys, not
+// `@charcuterie/ui/@charcuterie/tokens`: the scoped form yields a different
+// locator string from the app's own dependency on the same directory, and Yarn
+// rejects the pair as conflicting.
+"resolutions": {
+  "@charcuterie/logic": "portal:../charcuterie/packages/logic",
+  "@charcuterie/tokens": "portal:../charcuterie/packages/tokens"
+}
+```
+
+```ts
+// vite.config.ts AND vitest.config.ts
+resolve: { dedupe: ["react", "react-dom"] }
+```
+
+**That last one is the expensive one.** A `portal:` is a symlink, and Node and Vite both
+resolve a symlinked module from its **real path** — so a component living in this package
+resolves *its own* `react` by walking up from here, landing on charcuterie's copy while
+your app renders with yours. Every component with a hook fails at once with:
+
+```
+TypeError: Cannot read properties of null (reading 'useRef')
+```
+
+which mentions neither symlinks nor React identity. Keep the line after publish: it costs
+nothing with one copy, and it is the difference between a working `yarn link` session and
+an hour of confusion.
+
 ## How a component is put together
 
 | Layer | Where it comes from |
