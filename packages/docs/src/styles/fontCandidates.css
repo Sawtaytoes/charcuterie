@@ -1,0 +1,109 @@
+/* The M5 font bake-off, as a fourth toolbar axis.
+ *
+ * Same mechanism as `data-density` / `data-variant` / `data-scheme`:
+ * an `<html>` attribute that re-fonts the entire canvas with zero
+ * re-render. That is deliberate — if picking a font needed a
+ * `useFont()` anywhere, the token layer would have failed, and this
+ * is the cheapest place to find that out.
+ *
+ * Only the *body* family is a real token today (`--font-sans`, from
+ * `buildVariantProperties`). `--font-display` does not exist in
+ * `@charcuterie/tokens` yet — it is introduced here, at preview
+ * scope only, precisely because whether headings deserve their own
+ * family is the question this bake-off exists to answer. If a
+ * pairing with a distinct display face wins, `--font-display` gets
+ * promoted into `TypographyTokens` in the same change that records
+ * the decision. If a single-family pairing wins, this file deletes
+ * and nothing was built on a guess.
+ *
+ * Every pairing is written twice, and both forms are load-bearing:
+ *
+ * - `html[data-font=…]` is the toolbar. It has to be the qualified
+ *   form because on `<html>` it competes, on the same element, with
+ *   the `[data-variant=…]` block that declares `--font-sans` — and
+ *   (0,1,1) beats (0,1,0). No `!important` needed; if that ever
+ *   stops being true the token layer moved and this file should
+ *   follow rather than escalate.
+ * - the bare `[data-font=…]` is the side-by-side specimen, where the
+ *   attribute sits on a nested `<div>`. Specificity is irrelevant
+ *   there — a custom property set on a closer ancestor wins by
+ *   inheritance, whatever the selector weight — so the plain form is
+ *   both sufficient and the honest one. */
+
+@import "../../public/fonts/candidates.css";
+
+:root {
+  /* The baseline every candidate is judged against: today's
+   * headings are the body face at a heavier weight. */
+  --font-display: var(--font-sans);
+}
+
+/* ── Source Sans 3 ────────────────────────────────────────────────
+ * The fleet-consistency pick. image-viewer is locked to Source Sans
+ * Pro (`2026-06-20-app-font-is-source-sans-pro-everywhere`); Source
+ * Sans 3 is that face, one major version on. Choosing it makes the
+ * design system agree with the one app that already had an opinion.
+ * Adobe, US. */
+html[data-font="source-sans-3"],
+[data-font="source-sans-3"] {
+  --font-sans:
+    "Source Sans 3", ui-sans-serif, system-ui, sans-serif;
+  --font-display:
+    "Source Sans 3", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+
+/* ── Inter ────────────────────────────────────────────────────────
+ * The screen-first neutral. Tall x-height and open apertures at
+ * small sizes, which is what a 16-bay dense list is. The safe
+ * answer, and the one that will look least "fancy".
+ * Rasmus Andersson, Sweden. */
+html[data-font="inter"],
+[data-font="inter"] {
+  --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
+  --font-display:
+    Inter, ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+
+/* ── Fraunces + Inter ─────────────────────────────────────────────
+ * The fanciest candidate, and the only one that gives headings a
+ * face of their own. Fraunces is a variable display serif with an
+ * optical-size axis, so a large heading gets the display cut
+ * automatically. Body stays on Inter — a serif body in a dense
+ * media list would be a mistake, and this pairing is not proposing
+ * one.
+ * Undercase Type, US. */
+html[data-font="fraunces"],
+[data-font="fraunces"] {
+  --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
+  --font-display: Fraunces, ui-serif, Georgia, serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+
+/* ── Bricolage Grotesque + Public Sans ────────────────────────────
+ * Fancy without going serif. Bricolage is a deliberately slightly-
+ * wonky grotesque with an optical-size axis; Public Sans underneath
+ * it is plain and civic (it is literally the US government's
+ * design-system face) so the character stays in the headings.
+ * Mathieu Triay, UK / USWDS, US. */
+html[data-font="bricolage"],
+[data-font="bricolage"] {
+  --font-sans:
+    "Public Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display:
+    "Bricolage Grotesque", ui-sans-serif, system-ui,
+    sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+
+/* Fraunces and Bricolage both carry an `opsz` axis, and a variable
+ * font only honours it if something drives it. `auto` lets the
+ * browser track the rendered size, which is the whole reason to
+ * pick an optical-size face over a static display cut. */
+html[data-font="fraunces"],
+[data-font="fraunces"],
+html[data-font="bricolage"],
+[data-font="bricolage"] {
+  font-optical-sizing: auto;
+}
