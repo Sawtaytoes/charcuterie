@@ -1,6 +1,9 @@
 name: CI
 
-on: ["pull_request", "push"]
+on:
+  push:
+    branches: [v2]
+  pull_request:
 
 jobs:
   lint:
@@ -31,7 +34,9 @@ jobs:
       - uses: actions/setup-node@v6
         with: { node-version: 24 }
       - run: corepack enable && yarn install --immutable
-      - run: yarn playwright install chromium --with-deps
+      # playwright lives in the docs/logic workspaces, not the root — run its
+      # installer from a workspace that has it; browsers land in the shared cache.
+      - run: yarn workspace @charcuterie/docs exec playwright install chromium --with-deps
       # Browser-mode projects (logic, docs) resolve components from dist.
       - run: yarn build
       # `yarn test` is bare `vitest` for local watch mode; CI needs run-once.
