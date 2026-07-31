@@ -36,8 +36,8 @@ export type TabTriggerProps = {
   panelId: string
   /** `RovingFocus.register` — membership of the arrow-key group. */
   registerFocus: (value: string) => () => void
-  /** `VisibilityGroup.register` — membership of the panel group. */
-  registerPanel: (key: string) => () => void
+  /** `SinglePicker.register` — membership of the choice. */
+  registerSelection: (value: string) => () => void
   tab: TabItem
   tabIndex: number
   trackElement: (
@@ -53,11 +53,12 @@ export type TabTriggerProps = {
  * it is worth seeing on its own.
  *
  * The two registrations are separate on purpose. A disabled tab
- * joins the *panel* group — it still owns a panel and an id — and
- * stays out of the *focus* group, so the arrow keys skip it
- * without any command in `RovingFocus` having to know what
- * "disabled" means. Registration is membership; that is the whole
- * mechanism.
+ * joins the *choice* — it is still one of the options, still owns
+ * a panel and an id, and can still be the one selected when a
+ * consumer says so — and stays out of the *focus* group, so the
+ * arrow keys skip it without any command in `RovingFocus` having
+ * to know what "disabled" means. Registration is membership; that
+ * is the whole mechanism.
  */
 export const TabTrigger = ({
   id,
@@ -66,7 +67,7 @@ export const TabTrigger = ({
   orientation,
   panelId,
   registerFocus,
-  registerPanel,
+  registerSelection,
   tab,
   tabIndex,
   trackElement,
@@ -75,7 +76,10 @@ export const TabTrigger = ({
 
   const edge = ORIENTATION_EDGE_CLASS[orientation]
 
-  useEffect(() => registerPanel(key), [key, registerPanel])
+  useEffect(
+    () => registerSelection(key),
+    [key, registerSelection],
+  )
 
   useEffect(() => {
     if (isDisabled) {

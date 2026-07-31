@@ -17,6 +17,7 @@ const meta = {
       "sm",
       "md",
       "lg",
+      "xl",
       "full",
     ] as const),
   },
@@ -102,7 +103,7 @@ export const Default: Story = {
   ),
 }
 
-const SIZES: ModalSize[] = ["sm", "md", "lg", "full"]
+const SIZES: ModalSize[] = ["sm", "md", "lg", "xl", "full"]
 
 export const AllVariants: Story = {
   args: {

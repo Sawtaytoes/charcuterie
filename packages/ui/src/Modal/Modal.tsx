@@ -9,7 +9,7 @@ import { Button } from "../Button/Button.tsx"
 import { toClassName } from "../toClassName.ts"
 import { lockScrollBehind } from "./lockScrollBehind.ts"
 
-export type ModalSize = "full" | "lg" | "md" | "sm"
+export type ModalSize = "full" | "lg" | "md" | "sm" | "xl"
 
 export type ModalProps = Omit<
   ComponentPropsWithRef<"dialog">,
@@ -44,6 +44,13 @@ const SIZE_CLASS: Record<ModalSize, string> = {
   sm: "max-h-[85dvh] w-full max-w-sm",
   md: "max-h-[85dvh] w-full max-w-md",
   lg: "max-h-[85dvh] w-full max-w-2xl",
+  // M5 added this, because the scale jumped from 42rem straight to
+  // the whole viewport and rip-deck's capture tail lands in the
+  // gap: a MakeMKV robot log is fixed-width `MSG:5072,0,1,"…"`
+  // lines that wrap badly at 42rem, and a full-screen dialog over a
+  // nine-bay dashboard hides the thing being diagnosed. 56rem is
+  // what that app's hand-rolled `<dialog>` used before the swap.
+  xl: "max-h-[85dvh] w-full max-w-4xl",
   full: "h-[100dvh] max-h-[100dvh] w-full max-w-full rounded-none",
 }
 
