@@ -1,11 +1,11 @@
-/* The M5 font bake-off, as two independent toolbar axes.
+/* The M5 font bake-off, as three independent toolbar axes.
  *
  * Round one shipped fixed *pairings*, which turned out to be the
  * wrong shape: liking a heading and disliking the body it came with
- * left nothing to click. So heading and body are separate axes now —
+ * left nothing to click. So the axes are separate —
  * `data-heading-font` drives `--font-display`, `data-body-font`
- * drives `--font-sans`, and any of the seven headings composes with
- * any of the eleven bodies.
+ * drives `--font-sans`, `data-mono-font` drives `--font-mono` — and
+ * every combination is reachable.
  *
  * Same mechanism as `data-density` / `data-variant` / `data-scheme`:
  * `<html>` attributes that re-font the entire canvas with zero
@@ -13,13 +13,14 @@
  * layer would have failed, and this is the cheapest place to find
  * that out.
  *
- * `--font-display` still does not exist in `@charcuterie/tokens` —
- * it is invented here, at preview scope, because "do headings
- * deserve their own family" is a question the bake-off answers
- * rather than assumes. Promotion happens in the change that records
- * the decision.
+ * **Chosen 2026-07-30:** Baloo 2 headings, Outfit body, Dank Mono for
+ * code. Those are the toolbar defaults now, but nothing here has been
+ * promoted into `@charcuterie/tokens` yet — `--font-display` is still
+ * invented at preview scope, and the mono has an unresolved
+ * distribution problem (see `dankMono.css`). This file deletes when
+ * the promotion lands.
  *
- * Two selector forms per body, and both are load-bearing:
+ * Two selector forms per body and mono, and both are load-bearing:
  *
  * - `html[data-body-font=…]` is the toolbar. It must be the
  *   qualified form because on `<html>` it competes, on the same
@@ -34,10 +35,42 @@
  * declares `--font-display`, so there is no contest to win. */
 
 @import "../../public/fonts/candidates.css";
+@import "./dankMono.css";
 
 :root {
   /* The baseline: today's headings are the body face, bolder. */
   --font-display: var(--font-sans);
+}
+
+/* `system` is an explicit *reset*, not the absence of an override.
+ *
+ * It used to be modelled as "don't set the attribute and inherit",
+ * which worked only for as long as the toolbar defaults were also
+ * `system`. The moment the defaults became the owner's picks, every
+ * row labelled "System" started inheriting Baloo/Outfit/Dank Mono
+ * from `<html>` and showing the winner under the baseline's name —
+ * a specimen that lies about the one thing it exists to compare
+ * against.
+ *
+ * These stacks are copied from `defaultTypography` in
+ * `@charcuterie/tokens`. If that file changes, this must follow;
+ * the whole point is that these rows show what actually ships. */
+html[data-body-font="system"],
+[data-body-font="system"] {
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+[data-heading-font="system"] {
+  --font-display: var(--font-sans);
+}
+
+html[data-mono-font="system"],
+[data-mono-font="system"] {
+  --font-mono:
+    ui-monospace, SFMono-Regular, "SF Mono", Menlo,
+    Consolas, "Liberation Mono", monospace;
 }
 
 /* Redefining `--font-sans` on a nested block is not enough on its
@@ -220,13 +253,57 @@ html[data-body-font="dm-sans"],
   font-optical-sizing: auto;
 }
 
-/* The mono is not an axis. Every candidate is judged with the same
- * one, because a tabular byte count changing family between blocks
- * would be a second variable in a comparison that already has two.
+/* ════════════════════════════════════════════════════════════════
+ * MONO — `--font-mono`
  *
- * `system` is excluded because it is the *baseline* — a block
- * claiming to show today's shipped state while quietly upgrading
- * its monospace would be showing something that does not exist. */
-[data-body-font]:not([data-body-font="system"]) {
+ * Promoted to a third axis once the owner named a specific face.
+ * It stays out of the two specimen lists, though: a tabular byte
+ * count changing family between body blocks would be a second
+ * variable in a comparison that already has two. Mono is compared
+ * in its own list, and everywhere else it follows the toolbar.
+ * ════════════════════════════════════════════════════════════════ */
+
+/* Grazil Ltd · UK. Paid, and the owner's editor font. Ligatures plus
+ * a genuinely cursive italic, which is the thing the free monos
+ * mostly do not have. Falls through to Victor Mono when the woff2
+ * are absent — see `dankMono.css` for why they may be. */
+html[data-mono-font="dank-mono"],
+[data-mono-font="dank-mono"] {
+  --font-mono:
+    "Dank Mono", "Victor Mono", ui-monospace, monospace;
+}
+
+/* Rune Bjørnerås · Norway. SIL OFL. Cursive italics and ligatures —
+ * the closest open-licence analogue to Dank Mono, and the one that
+ * could actually ship inside a public package. */
+html[data-mono-font="victor-mono"],
+[data-mono-font="victor-mono"] {
+  --font-mono: "Victor Mono", ui-monospace, monospace;
+}
+
+/* Nikita Prokopov on Mozilla's Fira Mono. SIL OFL. The largest
+ * ligature set here, no cursive. */
+html[data-mono-font="fira-code"],
+[data-mono-font="fira-code"] {
+  --font-mono: "Fira Code", ui-monospace, monospace;
+}
+
+/* JetBrains · Czech Republic. SIL OFL. Round one's mono — and worth
+ * a look before switching away, because it has ligatures too. */
+html[data-mono-font="jetbrains-mono"],
+[data-mono-font="jetbrains-mono"] {
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+
+/* Ligatures are the point of this axis, so they are turned on
+ * explicitly rather than left to the browser default.
+ *
+ * `calt` is on by default in most engines, but "most" is not a
+ * guarantee worth resting a comparison on — and a face judged
+ * without its ligatures is being judged as a different font. The
+ * `system` baseline is excluded so it keeps showing what actually
+ * ships today. */
+[data-mono-font]:not([data-mono-font="system"]) {
+  font-feature-settings: "calt" 1;
+  font-variant-ligatures: contextual;
 }
