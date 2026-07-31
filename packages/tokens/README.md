@@ -17,6 +17,7 @@ node scripts/checkContrast.ts   # the WCAG 2.2 AA gate — exits non-zero on fai
 node scripts/buildTokens.ts     # → dist/{variables,theme,first-paint}.css, dist/tokens.json
 node scripts/fetchFonts.ts      # re-download the three shipped faces → fonts/, src/fonts.css
 node scripts/buildPreview.ts    # → preview/index.html, the M0 bake-off board
+node scripts/buildEpaperPreview.ts  # → preview/epaper-palette.html, the ePaper board
 ```
 
 That is deliberate and worth keeping: the M0 bake-off shipped before this workspace
@@ -102,8 +103,51 @@ in React ever observes the change.
 
 **ePaper is not a fourth axis.** It is a separate export (`@charcuterie/tokens/epaper`)
 because it removes capabilities rather than restyling them: no hover, no opacity, no
-shadow, no transition, and a fixed six-colour (or two-colour) palette. Modelling it as
-`data-scheme="epaper"` would imply a `data-variant` still applies to it, which it cannot.
+shadow, no transition, and colour restricted to a set small enough to hold a sharp edge.
+Modelling it as `data-scheme="epaper"` would imply a `data-variant` still applies to it,
+which it cannot.
+
+### Six is what one *pixel* can be, not what the panel can show
+
+The profile used to claim its palette was "six colours the panel can physically render."
+That is **false**, and it is why the restriction read as arbitrary. A Spectra 6 panel
+sets each pixel to one of six inks; a *region* of pixels renders far more, because the
+driver dithers — which is exactly what the fleet's photo path has always relied on.
+
+The real rule is keyed to **what is being drawn**
+([decision](../../docs/decisions/2026-07-31-epaper-restricts-colour-by-what-is-drawn-not-by-the-panel.md)):
+
+| what | what it may use | count on Spectra 6 |
+| --- | --- | --- |
+| photographs | the full dithered gamut — not this profile's business | near-continuous |
+| flat fills, large areas | `inks` **+ `blends`** | **19** |
+| borders, small text, icons | `inks` only | 6 |
+
+```ts
+import { epaperPanels, spectra6Blends } from "@charcuterie/tokens/epaper"
+
+// a large fill — the panel-side quantizer turns this one flat hex
+// into a 50/50 yellow-red checkerboard
+const fill = spectra6Blends.yellowRed // #DB8225
+
+// a 1px rule — six inks only, or it becomes a dotted line
+const rule = epaperPanels.spectra6.family === "fixedInk"
+  ? epaperPanels.spectra6.inks.black
+  : undefined
+```
+
+Two of the fifteen ink pairs are **absent rather than present-and-wrong**: `blackYellow`
+and `yellowBlue` quantize to a different pair entirely, so there is no hex that reaches
+them.
+
+`epaperPanels` is keyed by panel and discriminated on `family`. `fixedInk` panels carry
+`inks` / `emittedInks` / `blends`; `continuousTone` panels — E Ink Gallery 3's ~50,000
+colour ACeP, **not in the fleet** — carry none of them, because there is no palette to
+enumerate and therefore none to invent.
+
+`node scripts/buildEpaperPreview.ts` draws the whole thing, checkerboards and all, from
+`src/epaper.ts`. The committed board is
+[`docs/previews/2026-07-31-m6g-epaper-palette.html`](../../docs/previews/2026-07-31-m6g-epaper-palette.html).
 
 ## The first-paint rule ships from here — copy it, never `<link>` it
 

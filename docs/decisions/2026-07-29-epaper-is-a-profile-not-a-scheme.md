@@ -4,7 +4,14 @@
 **Date:** 2026-07-29
 **Type:** Architecture
 **Supersedes:** —
-**Superseded by:** —
+**Superseded by:** the palette claim only —
+[2026-07-31-epaper-restricts-colour-by-what-is-drawn-not-by-the-panel.md](2026-07-31-epaper-restricts-colour-by-what-is-drawn-not-by-the-panel.md).
+The holding below — that ePaper is a profile and not a `data-scheme` value — **stands**.
+What that record retires is the sentence in *Why* reading *"the hardware renders six
+colours and dithers everything else"*: six is what one **pixel** can be, not what the
+panel can show. The conclusion drawn from it, that a dithered 1px border is a smeared
+grey line, survives — it is now the rule for small primitives specifically, and it now
+has a source.
 
 ## Decision
 
