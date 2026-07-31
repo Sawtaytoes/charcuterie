@@ -287,6 +287,58 @@ for (const entry of entries) {
         "markdown table rendered as literal pipes — is `remark-gfm` still wired into `@storybook/addon-docs`?",
       )
     }
+
+    // A `<Canvas>` block is *our* canvas embedded in Storybook's
+    // document, and it inherits that document's hard white unless
+    // told otherwise. In the default dark scheme that renders
+    // `--color-content-primary` (#EDF0F5) onto #FFFFFF — near-white
+    // on white, on every docs page at once. It reads as "dark mode
+    // is missing on Docs" rather than as a contrast bug, and no
+    // mounting test can see it because the story canvas was always
+    // correct.
+    //
+    // Compared against the token's *resolved* value through a probe,
+    // for the reason M4 learned on `::backdrop`: a loose "not white"
+    // assertion stays green against a build where the rule generated
+    // no CSS at all.
+    const previewSurface = await preview
+      .locator("body")
+      .evaluate((body) => {
+        const block = body.querySelector(".sbdocs-preview")
+
+        if (!block) {
+          return null
+        }
+
+        const probe = document.createElement("div")
+
+        probe.style.backgroundColor =
+          "var(--color-surface-base)"
+
+        body.append(probe)
+
+        const expected =
+          globalThis.getComputedStyle(probe).backgroundColor
+
+        probe.remove()
+
+        return {
+          actual:
+            globalThis.getComputedStyle(block)
+              .backgroundColor,
+          expected,
+        }
+      })
+      .catch(() => null)
+
+    if (
+      previewSurface &&
+      previewSurface.actual !== previewSurface.expected
+    ) {
+      currentMessages.push(
+        `docs preview block is ${previewSurface.actual}, not the scheme's surface ${previewSurface.expected} — components render onto Storybook's own page colour`,
+      )
+    }
   }
 
   for (const message of currentMessages) {

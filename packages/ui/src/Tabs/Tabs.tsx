@@ -204,9 +204,36 @@ export const Tabs = ({
         aria-orientation={orientation}
         className={toClassName(
           "flex gap-1 border-border-subtle",
+          // A tab bar **scrolls**; it does not wrap and it does not
+          // paint outside its container. Without an `overflow`, a
+          // bar narrower than its tabs simply spilled across
+          // whatever sat beside it — visible in the `Responsive`
+          // board since M4, and invisible to a test asserting only
+          // that `scrollWidth > clientWidth`, which is true of a
+          // *spilling* bar too.
+          //
+          // The scrollbar is hidden rather than thin: a classic
+          // scrollbar takes layout space inside the scroll
+          // container, so the narrow bar would grow ~15px taller
+          // than the wide one and the underline would stop lining
+          // up across a board. Keyboard users never need it —
+          // `RovingFocus` calls `.focus()`, and the browser scrolls
+          // a focused tab into view.
+          "[scrollbar-width:none]",
+          // An `overflow` other than `visible` clips its
+          // descendants' **outlines**, and this component's focus
+          // ring is an outline sitting 2px *outside* the tab. The
+          // tab fills the bar's content box, so the ring would be
+          // clipped away on exactly the axis that now scrolls.
+          // Re-pointing the shared token inward keeps one ring
+          // definition — `FOCUS_RING_CLASS` already reads this
+          // variable — rather than appending a competing
+          // `outline-offset` utility and letting Tailwind's
+          // ordering decide the winner.
+          "[--focus-ring-offset:calc(var(--focus-ring-width)*-1)]",
           orientation === "horizontal"
-            ? "flex-row border-b"
-            : "flex-col items-stretch border-e",
+            ? "flex-row overflow-x-auto border-b"
+            : "flex-col items-stretch overflow-y-auto border-e",
         )}
         onKeyDown={(keyEvent) => {
           const commands: Record<string, () => void> = {
