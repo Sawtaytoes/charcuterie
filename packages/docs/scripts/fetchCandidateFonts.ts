@@ -38,18 +38,51 @@ const BROWSER_USER_AGENT =
  * ones.
  */
 const FAMILIES = [
+  // ── Heading candidates ──────────────────────────────────────
+  // Undercase Type (US). The display serif — `opsz` drives the
+  // optical size, so headings get the display cut for free, and
+  // `SOFT` is a genuine roundness axis rather than a weight trick.
+  "Fraunces:opsz,wght,SOFT,WONK@9..144,100..900,0..100,0..1",
+  // Mathieu Triay (UK). The expressive grotesque.
+  "Bricolage+Grotesque:opsz,wght@12..96,200..800",
+  // Vernon Adams / Cyreal. Rounded terminals on a *display* serif-
+  // adjacent face — the roundest thing that still reads as a
+  // heading rather than as a children's book.
+  "Baloo+2:wght@400..800",
+
+  // ── Body candidates: the round ones ─────────────────────────
+  // Vernon Adams / Cyreal. Actual rounded terminals — the roundest
+  // face here that is still a real UI workhorse.
+  "Nunito:wght@200..1000",
+  // The same family's non-rounded sibling, as the control: it
+  // isolates how much of "rounder" is the terminals versus the
+  // humanist skeleton underneath them.
+  "Nunito+Sans:opsz,wght@6..12,200..1000",
+  // Colophon Foundry (UK). Geometric, low contrast, very circular
+  // bowls. Round via the skeleton rather than via the terminals.
+  "DM+Sans:opsz,wght@9..40,100..1000",
+  // Erik Kennedy (US). Friendly geometric-humanist, drawn for UI.
+  "Figtree:wght@300..900",
+  // Hubert & Fischer (Germany). Slightly rounded *corners* — the
+  // subtlest of the round options, and the safest at 13px.
+  "Rubik:wght@300..900",
+  // Rodrigo Fuenzalida (Chile). Geometric and wide-bowled.
+  "Outfit:wght@100..900",
+  // Andrew Paglinawan (Philippines). The roundest possible answer,
+  // and included as the upper bound rather than as a real
+  // proposal — low x-height and light strokes are the opposite of
+  // what a dense bay list wants.
+  "Quicksand:wght@300..700",
+
+  // ── Reference bodies, carried over from round one ────────────
   // Rasmus Andersson (Sweden). The screen-first neutral.
   "Inter:wght@100..900",
   // Adobe (US). What image-viewer already runs, one major on.
   "Source+Sans+3:wght@200..900",
-  // Undercase Type (US). The display serif — opsz drives the
-  // optical size, so headings get the display cut for free.
-  "Fraunces:opsz,wght@9..144,100..900",
-  // Mathieu Triay (UK). The expressive grotesque.
-  "Bricolage+Grotesque:opsz,wght@12..96,200..800",
   // US Web Design System (US government, public domain).
   "Public+Sans:wght@100..900",
-  // JetBrains (Czech Republic). The mono for all four pairings.
+
+  // JetBrains (Czech Republic). The mono throughout.
   "JetBrains+Mono:wght@100..800",
 ]
 
