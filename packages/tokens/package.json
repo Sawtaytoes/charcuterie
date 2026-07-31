@@ -1,6 +1,6 @@
 {
   "name": "@charcuterie/tokens",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Design tokens for the Charcuterie component library. Zero dependencies, no React.",
   "license": "MIT",
   "type": "module",
