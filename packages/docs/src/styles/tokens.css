@@ -174,37 +174,40 @@
    CONTROLS carry the affordance instead, which is where it belongs:
    an input looks editable because it is an input.
  *
- * **Three class repetitions, and the count is not arbitrary.**
- * Storybook's own rule here is `.css-ssfv87.css-ssfv87 tbody > tr > *`
- * — it **doubles its own emotion class**, the same trick every other
- * rule in this file uses to win. Matching it exactly still loses,
- * because emotion injects at runtime and we are a static stylesheet,
- * so equal specificity goes to source order. Three beats two.
+ * **The three rules below are the only `!important` in the repo, and
+ * the exception is narrow: this file overrides Storybook's own docs
+ * chrome, which nothing else here does.** Inside `@charcuterie/ui`
+ * the answer is always a more specific selector — see
+ * `docs/decisions/2026-07-31-important-is-for-storybook-chrome-only.md`.
  *
- * `!important` would be the stable answer and is **not available**:
- * `biome check --write --unsafe` deletes it silently, leaving the
- * declaration behind without its priority. That is worth knowing
- * before reaching for it anywhere in this repo — it cost this change
- * a round of "the rule is right there in the source and the built
- * CSS does not have it".
+ * Why here and not another repetition. Storybook's own rule is
+ * `.css-ssfv87.css-ssfv87 tbody > tr > *` — it **doubles its own
+ * emotion class**, the trick every other rule in this file uses to
+ * win. Matching it exactly loses, because emotion injects at runtime
+ * and we are a static stylesheet, so equal specificity goes to source
+ * order. Three repetitions beat two and shipped for a while, but that
+ * is a race a Storybook bump wins back by adding a fourth. Priority
+ * does not have a next round.
  *
- * So this is a specificity race that a future Storybook could win
- * back by adding a repetition. It would not fail quietly:
- * `smoke:storybook` measures the contrast of a props-table cell on
- * every docs page. */
-.docblock-argstable.docblock-argstable.docblock-argstable
-  :is(thead, tbody)
-  > tr
-  > * {
-  background-color: transparent;
+ * The `biome-ignore` is load-bearing, and the rule id has to be
+ * exact. `lint/complexity/noImportantStyles` is recommended with an
+ * **unsafe fix**, so `yarn lint` — `biome check --write --unsafe` —
+ * deletes the `!important` and leaves the declaration, which reads
+ * correct in the source while the built CSS has no priority on it. A
+ * wrong id in the comment suppresses nothing and fails the same
+ * silent way.
+ *
+ * Either failure is caught rather than shipped: `smoke:storybook`
+ * measures the contrast of a props-table cell on every docs page. */
+.docblock-argstable :is(thead, tbody) > tr > * {
+  /* biome-ignore lint/complexity/noImportantStyles: beats Storybook's runtime-injected emotion rule, which specificity alone cannot do stably */
+  background-color: transparent !important;
   border-color: var(--color-border-subtle);
 }
 
-.docblock-argstable.docblock-argstable.docblock-argstable
-  tbody
-  > tr
-  > * {
-  color: var(--color-content-primary);
+.docblock-argstable tbody > tr > * {
+  /* biome-ignore lint/complexity/noImportantStyles: beats Storybook's runtime-injected emotion rule, which specificity alone cannot do stably */
+  color: var(--color-content-primary) !important;
 }
 
 /* A column head reads quieter than its rows on purpose — the same
@@ -212,11 +215,9 @@
    grey, which was picked against white and measured **3.01:1** on
    our dark surface: a header row failing AA on the page whose job is
    documenting an accessible library. */
-.docblock-argstable.docblock-argstable.docblock-argstable
-  thead
-  > tr
-  > * {
-  color: var(--color-content-secondary);
+.docblock-argstable thead > tr > * {
+  /* biome-ignore lint/complexity/noImportantStyles: beats Storybook's runtime-injected emotion rule, which specificity alone cannot do stably */
+  color: var(--color-content-secondary) !important;
 }
 
 /* The `Show code` panel. */
