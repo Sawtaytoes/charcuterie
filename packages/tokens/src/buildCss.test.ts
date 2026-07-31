@@ -10,6 +10,7 @@ import { expect, test } from "vitest"
 import {
   buildColourProperties,
   buildDensityProperties,
+  buildFirstPaintRule,
   buildThemeCss,
   buildVariablesCss,
 } from "./buildCss.ts"
@@ -68,6 +69,79 @@ test("the winner's dark surface is emitted verbatim", () => {
       daylight.schemes.dark.surface.base
     };`,
   )
+})
+
+// ---------------------------------------------------------------
+// The first-paint snippet
+// ---------------------------------------------------------------
+
+test("the anti-flash literal is a var() FALLBACK, never bare", () => {
+  // The whole reason this snippet ships from here. An inline
+  // `<style>` is unlayered, unlayered CSS beats every `@layer`, and
+  // Tailwind's utilities live in `@layer utilities` — so a bare
+  // literal outranks `bg-surface-base` on `<body>` and pins the
+  // canvas for good. Three apps hand-copied the bare form and three
+  // apps got the bug; this assertion is the one that could not be
+  // written in any of them.
+  const darkRule = buildFirstPaintRule(daylight, "dark")
+
+  expect(darkRule).toContain(
+    `var(--color-surface-base, ${
+      daylight.schemes.dark.surface.base
+    })`,
+  )
+
+  // Belt and braces: EVERY background declaration in the rule
+  // reads a custom property, not just the one above. A future edit
+  // that "simplifies" the fallback away — or adds a second
+  // declaration beside it — fails here rather than in a screenshot
+  // somebody happens to take in light mode.
+  const backgrounds =
+    darkRule.match(/background(?:-color)?\s*:[^;}]+/g) ?? []
+
+  expect(backgrounds).not.toHaveLength(0)
+
+  for (const declaration of backgrounds) {
+    expect(declaration).toContain("var(--color-")
+  }
+})
+
+test("the snippet paints the scheme it is asked for", () => {
+  for (const scheme of ["light", "dark"] as const) {
+    const rule = buildFirstPaintRule(daylight, scheme)
+
+    // `color-scheme` is the CSS property the browser reads for
+    // scrollbars and native controls, and it needs no `var()`:
+    // `variables.css`'s `[data-scheme]` rule is unlayered too, so
+    // it wins on specificity instead of losing to this one.
+    expect(rule).toContain(`color-scheme: ${scheme};`)
+
+    expect(rule).toContain(
+      daylight.schemes[scheme].surface.base,
+    )
+
+    // The other scheme's base must not be in there — the failure
+    // this catches is a copy that pins dark's hex on a light app.
+    expect(rule).not.toContain(
+      daylight.schemes[scheme === "dark" ? "light" : "dark"]
+        .surface.base,
+    )
+  }
+})
+
+test("the snippet is one bare rule a consumer can assert on", () => {
+  // Consumers gate drift with
+  // `expect(indexHtml).toContain(buildFirstPaintRule(daylight, "dark"))`,
+  // which only works if this returns the rule and nothing else — no
+  // comment, no leading indent, no trailing newline. The paste-me
+  // header lives in `scripts/buildTokens.ts`, on the artifact.
+  const rule = buildFirstPaintRule(daylight, "dark")
+
+  expect(rule).toBe(rule.trim())
+
+  expect(rule).not.toContain("\n")
+
+  expect(rule).not.toContain("/*")
 })
 
 // ---------------------------------------------------------------
