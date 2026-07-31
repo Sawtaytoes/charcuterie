@@ -61,15 +61,24 @@ jobs:
             echo "→ publishing ${name}@${version}"
             tarball="$(mktemp -d)/${pkg}.tgz"
             yarn workspace "$name" pack -o "$tarball"
-            # Publish from the package directory, NOT the repo root. npm resolves
-            # the OIDC trusted-publishing exchange from the package.json in its
-            # CWD — not from the tarball it is handed. At the root that is
-            # `charcuterie` (private, 0.0.0, no trusted publisher), so the
-            # exchange yields no token, npm silently falls back to setup-node's
-            # placeholder `_authToken`, and the PUT returns **404** — npm's mask
-            # for an auth failure on a package that does exist. The tarball is
-            # right either way; only the CWD decides who npm authenticates as.
-            ( cd "$dir" && npm publish "$tarball" --provenance --access public )
+
+            # Unpack yarn's tarball and publish the resulting DIRECTORY.
+            #
+            # Handed a `.tgz` path, npm does not run its OIDC trusted-publishing
+            # exchange — it goes straight to the configured credentials, which in
+            # Actions is setup-node's placeholder `_authToken`
+            # (XXXXX-XXXXX-XXXXX-XXXXX), so the PUT comes back **404**: npm's mask
+            # for an auth failure on a package that does exist. Publishing a
+            # directory is what mux-magic does, and it is the only difference
+            # between its working OIDC publish and this one.
+            #
+            # yarn's pack is still what rewrites @charcuterie/ui's `workspace:*`
+            # deps into real ranges (npm pack leaves them verbatim), so the
+            # tarball stays — only the thing handed to `npm publish` changes.
+            # An npm tarball always has a single top-level `package/`.
+            staged="$(mktemp -d)"
+            tar -xzf "$tarball" -C "$staged"
+            ( cd "$staged/package" && npm publish --provenance --access public )
 
             git tag "$tag"
             git push origin "$tag"
