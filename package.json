@@ -23,10 +23,12 @@
     "smoke:storybook": "yarn workspace @charcuterie/docs smoke:storybook",
     "storybook": "yarn build && yarn workspace @charcuterie/docs storybook",
     "test": "vitest",
+    "version-packages": "changeset version",
     "typecheck": "tsc --noEmit && yarn workspaces foreach --all --parallel run typecheck"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.15",
+    "@changesets/cli": "^2.31.1",
     "@charcuterie/biome-config": "workspace:*",
     "@charcuterie/eslint-config": "workspace:*",
     "@types/node": "^25.6.2",
