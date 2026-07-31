@@ -1,0 +1,67 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as SortableTableHeaderStories from "./SortableTableHeader.stories";
+
+<Meta of={SortableTableHeaderStories} />
+
+# SortableTableHeader
+
+**The header cell, and nothing else.** No `DataTable`, no rows, no comparator — the plan is
+explicit about that, and the reason is that sorting *data* is app logic that differs per
+column type, while announcing *that* a column is sorted is markup every table gets wrong the
+same way.
+
+<Canvas of={SortableTableHeaderStories.Default} />
+
+## Props
+
+<Controls />
+
+## `aria-sort` does not exist anywhere in the fleet
+
+Not in mux-magic, not in rip-deck, not in castkit. mux-magic's `FileExplorerModal` — the one
+sortable table there is — renders the state as a character:
+
+```tsx
+{sortDirection === "asc" ? "▲" : "▼"}
+```
+
+A screen reader announces that as "black up-pointing triangle", if the font has it at all —
+and this sandbox's headless Chromium does not, so the same glyph measures **blank** in a
+screenshot. Sighted users see a direction; everyone else gets nothing.
+
+No automated check anywhere reports it. **axe has no rule for a missing `aria-sort`**,
+because a table with none is a table that is simply not sorted as far as the accessibility
+tree knows.
+
+This is therefore the one component in M6 whose payoff is not duplication — there is a
+single site — but a class of failure invisible to every gate the fleet has.
+
+## `none` is not the same as absent
+
+| `aria-sort` | means |
+| --- | --- |
+| absent | this column **cannot** be sorted |
+| `"none"` | sortable, not currently sorted |
+| `"ascending"` / `"descending"` | this is the sorted column |
+
+A table that omits the attribute on its unsorted columns tells a screen-reader user the other
+four cannot be sorted at all. Exactly one column ever holds a direction.
+
+<Canvas of={SortableTableHeaderStories.AllVariants} />
+
+## The cell announces, the button acts
+
+`aria-sort` belongs on the `<th>`; the click target is a `<button>` inside it. Putting the
+role on the button instead is the common mistake and it breaks the grid semantics — a `<th>`
+that *is* a button is no longer a column header to anything reading the table structure.
+
+## The name stays the column's name
+
+It is tempting to append the state — "Title, sorted ascending" — and that duplicates what
+`aria-sort` already says, so the column is announced twice **and**
+`getByRole("columnheader", { name: "Title" })` stops matching the moment somebody sorts it.
+
+<Canvas of={SortableTableHeaderStories.AllStates} />
+
+<Canvas of={SortableTableHeaderStories.Interactive} />

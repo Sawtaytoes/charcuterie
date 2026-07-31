@@ -15,7 +15,7 @@ becomes a version range the moment the pending Version Packages PR ships the ePa
 | --- | --- |
 | Inventory `inkcast` and `panelcast` first | ✅ **Neither is a third surface.** Both are castkit. See below. |
 | slatecast stays under 60 KB gz | ✅ **19.7 KB gz**, up from 13.7. 33% of budget. |
-| `packages/conformance` builds all profiles in CI | ❌ **Not done, and the package does not exist.** `@charcuterie/logic` has a `src/conformance/` adapter suite from M2, which is a different thing — it proves the hooks behave identically on core/React/Preact, not that every *token profile* builds. Carried forward. |
+| `packages/conformance` builds all profiles in CI | ❌ **Not done, and the package does not exist.** `@charcuterie/logic` has a `src/conformance/` adapter suite from M2, which is a different thing — it proves the hooks behave identically on core/React/Preact, not that every *token profile* builds. Carried forward. **Resolved in M6:** [it is not a package](decisions/2026-07-31-conformance-is-not-a-package.md) — every assertion it was to make now lives in a gate that already runs. |
 
 Two the plan did not ask for:
 
