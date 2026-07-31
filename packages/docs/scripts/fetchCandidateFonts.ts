@@ -82,8 +82,21 @@ const FAMILIES = [
   // US Web Design System (US government, public domain).
   "Public+Sans:wght@100..900",
 
-  // JetBrains (Czech Republic). The mono throughout.
-  "JetBrains+Mono:wght@100..800",
+  // ── Mono candidates ─────────────────────────────────────────
+  // Dank Mono is the owner's pick but cannot live here: it is paid,
+  // and its EULA forbids redistribution from a public repo. See
+  // `installDankMono.ts`. These three are the licensable fallbacks,
+  // and all of them ship contextual-alternate ligatures.
+  //
+  // Rune Bjørnerås (Norway). Cursive italics plus ligatures — the
+  // closest open-licence analogue to Dank Mono's defining trick.
+  "Victor+Mono:ital,wght@0,100..700;1,100..700",
+  // Nikita Prokopov (Fira Code) on Mozilla's Fira Mono. The largest
+  // ligature set of the three, no cursive.
+  "Fira+Code:wght@300..700",
+  // JetBrains (Czech Republic). Round one's mono — already has
+  // ligatures, which is worth knowing before switching for them.
+  "JetBrains+Mono:ital,wght@0,100..800;1,100..800",
 ]
 
 const HERE = dirname(fileURLToPath(import.meta.url))

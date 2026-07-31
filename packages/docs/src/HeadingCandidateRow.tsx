@@ -24,7 +24,7 @@ export const HeadingCandidateRow = ({
   candidate: Candidate
 }) => (
   <section
-    data-heading-font={candidate.id ?? undefined}
+    data-heading-font={candidate.id ?? "system"}
     className="border-border-subtle border-t pt-5"
   >
     <header className="mb-3 flex flex-wrap items-baseline gap-x-3">
