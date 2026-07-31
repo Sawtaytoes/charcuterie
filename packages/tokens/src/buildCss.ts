@@ -109,6 +109,10 @@ const buildVariantProperties = (variant: Variant) => [
     ([step, value]) => declare(`--easing-${step}`, value),
   ),
   declare(
+    "--font-display",
+    variant.typography.fontFamily.display,
+  ),
+  declare(
     "--font-sans",
     variant.typography.fontFamily.sans,
   ),
@@ -334,6 +338,29 @@ export const THEME_BRIDGES = {
   "--shadow-": "--elevation-",
   "--ease-": "--easing-",
   "--spacing": "--space-1",
+  /**
+   * The one entry that is *not* a redefinition.
+   *
+   * Every other bridge above takes a name Tailwind already ships
+   * and repoints it at ours, changing what an existing utility
+   * means. `--font-display` is a name Tailwind has never heard of,
+   * so publishing it **adds** `font-display` rather than
+   * redefining anything — the self-mapping is the honest way to
+   * say "same name, both sides".
+   *
+   * It is listed here anyway because this map is also the
+   * gate: `tailwindCollisions.test.ts` fails on anything
+   * `theme.css` publishes that is not declared, in either
+   * direction. Adding a utility to every consumer is exactly as
+   * much of a decision as changing one, and the test is right not
+   * to distinguish.
+   *
+   * Note the sibling names are safe. Tailwind resolves
+   * `--font-weight-*` before `--font-*` — see `TAILWIND_NAMESPACES`
+   * in the test — so this neither shadows `font-sans` nor collides
+   * with `font-bold`.
+   */
+  "--font-display": "--font-display",
 } as const
 
 const FONT_SIZE_STEPS = [
@@ -367,6 +394,23 @@ const EASING_STEPS = [
 ] as const
 
 const buildThemeBridges = () => [
+  /**
+   * `font-display`, the utility.
+   *
+   * `--font-sans` and `--font-mono` need no entry here: Tailwind
+   * ships both names in its own default theme, so `font-sans`
+   * already reads `var(--font-sans)` and our `[data-variant]` block
+   * shadows the value. The utility exists; we only change what it
+   * resolves to.
+   *
+   * `--font-display` is a name Tailwind has never heard of, so
+   * without this line the variable would exist and the utility
+   * would not — `class="font-display"` would silently generate
+   * nothing, which is precisely the failure mode `distFreshness`
+   * was written about. Publishing it is what makes the new token
+   * reachable the same way every other one is.
+   */
+  "  --font-display: var(--font-display);",
   ...FONT_SIZE_STEPS.map(
     (step) => `  --text-${step}: var(--font-size-${step});`,
   ),

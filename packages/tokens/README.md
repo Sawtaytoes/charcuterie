@@ -15,11 +15,35 @@ the scripts:
 ```bash
 node scripts/checkContrast.ts   # the WCAG 2.2 AA gate — exits non-zero on failure
 node scripts/buildTokens.ts     # → dist/variables.css, dist/theme.css, dist/tokens.json
+node scripts/fetchFonts.ts      # re-download the three shipped faces → fonts/, src/fonts.css
 node scripts/buildPreview.ts    # → preview/index.html, the M0 bake-off board
 ```
 
 That is deliberate and worth keeping: the M0 bake-off shipped before this workspace
 existed, and a token change should stay one command away from a rebuilt board.
+
+`fetchFonts.ts` is the exception that needs a network, and it is the only script here
+that writes a tracked binary. It clears `fonts/` before refetching, because Google's
+filenames carry a content hash and an overwrite would leave the old ones orphaned in the
+package forever.
+
+## The fonts
+
+Three faces, self-hosted, latin subsets only — Baloo 2 (`--font-display`), Outfit
+(`--font-sans`) and Victor Mono (`--font-mono`), all SIL OFL. Consumers add one line:
+
+```css
+@import "@charcuterie/tokens/fonts.css";
+```
+
+A separate entry point from `theme.css` on purpose: importing tokens should not force a
+font download. A Satori consumer wants the woff2 alone and can reach them at
+`@charcuterie/tokens/fonts/<name>.woff2`.
+
+**The mono is Victor Mono, not Dank Mono.** That is a licensing constraint rather than a
+preference, and overriding it per-app is a supported one-liner —
+[the decision](../../docs/decisions/2026-07-30-the-shipped-mono-is-victor-mono.md) has
+the snippet.
 
 Through Yarn, from anywhere in the repo:
 
