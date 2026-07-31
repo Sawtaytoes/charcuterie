@@ -1,6 +1,6 @@
 {
   "name": "@charcuterie/ui",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "The Charcuterie components. Tokens for look, @charcuterie/logic for state, ARIA that agents can actually drive.",
   "license": "MIT",
   "type": "module",

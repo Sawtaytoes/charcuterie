@@ -1,0 +1,65 @@
+name: NPM Package Deploy
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    branches: [v2]
+    types: [completed]
+
+jobs:
+  publish:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write # OIDC trusted publishing + provenance; no npm token secret.
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          registry-url: "https://registry.npmjs.org"
+          package-manager-cache: false # never cache in release builds
+      - run: corepack enable
+      - run: yarn install --immutable
+      # dist is generated, not committed — build the whole graph topologically
+      # so every package's dist and its siblings' dist exist before publish.
+      - run: yarn build
+
+      # Publish each public package only when its version was bumped this push —
+      # i.e. when no `<pkg>-v<version>` tag exists yet. Bumping is done by merging
+      # the Version Packages PR; CI never edits package.json. On a real publish we
+      # push the lightweight tag so later runs skip cleanly (idempotent). Order is
+      # topological: tokens and logic before ui, which depends on both.
+      #
+      # `yarn pack` (not `npm pack`) builds the tarball because only yarn rewrites
+      # the `workspace:*` deps — @charcuterie/ui's dependency on logic + tokens —
+      # into real version ranges. npm publishes that tarball, which is what carries
+      # OIDC trusted publishing + provenance. Verified: npm pack leaves
+      # `workspace:*` verbatim; yarn pack rewrites it to the sibling's version.
+      - name: Publish bumped packages
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          for pkg in tokens logic ui eslint-config biome-config; do
+            dir="packages/$pkg"
+            name="$(node -p "require('./$dir/package.json').name")"
+            version="$(node -p "require('./$dir/package.json').version")"
+            tag="${pkg}-v${version}"
+
+            if git ls-remote --exit-code --tags origin "refs/tags/${tag}" >/dev/null 2>&1; then
+              echo "· ${name}@${version} already released (${tag}) — skipping."
+              continue
+            fi
+
+            echo "→ publishing ${name}@${version}"
+            tarball="$(mktemp -d)/${pkg}.tgz"
+            yarn workspace "$name" pack -o "$tarball"
+            npm publish "$tarball" --provenance --access public
+
+            git tag "$tag"
+            git push origin "$tag"
+            echo "✓ published and tagged ${tag}"
+          done

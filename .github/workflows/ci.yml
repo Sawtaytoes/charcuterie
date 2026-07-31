@@ -1,0 +1,38 @@
+name: CI
+
+on: ["pull_request", "push"]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with: { node-version: 24 }
+      - run: corepack enable && yarn install --immutable
+      - run: yarn lint:biome
+      - run: yarn lint:eslint
+
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with: { node-version: 24 }
+      - run: corepack enable && yarn install --immutable
+      # Storybook and the docs typecheck read the built dist, so build first.
+      - run: yarn build
+      - run: yarn typecheck
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with: { node-version: 24 }
+      - run: corepack enable && yarn install --immutable
+      - run: yarn playwright install chromium --with-deps
+      # Browser-mode projects (logic, docs) resolve components from dist.
+      - run: yarn build
+      # `yarn test` is bare `vitest` for local watch mode; CI needs run-once.
+      - run: yarn vitest run
