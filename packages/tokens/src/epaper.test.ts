@@ -13,15 +13,30 @@ import { epaperColours, epaperMotion } from "./epaper.ts"
 
 const PALETTES: EpaperPalette[] = ["spectra6", "mono"]
 
-/** What an E Ink Spectra 6 panel can physically render. */
-const SPECTRA_6_HEXES = new Set([
-  "#000000",
-  "#FFFFFF",
-  "#D02F2A",
-  "#E8C11C",
-  "#2B4C9B",
-  "#2E7D46",
-])
+/**
+ * What each panel's quantizer maps 1:1. Anything else dithers.
+ *
+ * Per palette, because a Spectra 6 panel's "white" is `#D0D2D2` —
+ * the 0.5 blend of Pimoroni's vivid and device-real palettes, which
+ * is what the fleet renders at — while the 1-bit pHAT's really is
+ * `#FFFFFF`. This test passed for a whole milestone against a set
+ * of hexes nobody had measured; the values now come from
+ * `castkit/packages/core/src/panels/palette.ts`.
+ */
+const RENDERABLE_HEXES: Record<
+  EpaperPalette,
+  Set<string>
+> = {
+  spectra6: new Set([
+    "#000000",
+    "#D0D2D2",
+    "#CE2426",
+    "#E8DF24",
+    "#1F1EAF",
+    "#1DAD23",
+  ]),
+  mono: new Set(["#000000", "#FFFFFF"]),
+}
 
 const listSwatches = (palette: EpaperPalette) => {
   const colour = epaperColours[palette]
@@ -43,7 +58,7 @@ describe.each(PALETTES)("%s", (palette) => {
     // Anything else dithers, and dithering a 1px border is how
     // you get a smeared grey line instead of a line.
     for (const swatch of listSwatches(palette)) {
-      expect(SPECTRA_6_HEXES).toContain(swatch)
+      expect(RENDERABLE_HEXES[palette]).toContain(swatch)
     }
   })
 
@@ -95,12 +110,13 @@ test("spectra6 keeps intents distinguishable", () => {
 })
 
 test("yellow never carries text", () => {
-  // Yellow on white is unreadable at any size, so warning says
-  // its piece in black and uses yellow only as a fill it can put
-  // black on top of.
+  // Yellow on paper measures 1.33 against the emitted ink, so
+  // warning says its piece in black and uses yellow only as a fill
+  // it can put black on top of — 11.14, the best pair the panel
+  // has.
   const warning = epaperColours.spectra6.intent.warning
 
-  expect(warning.solid).toBe("#E8C11C")
+  expect(warning.solid).toBe("#E8DF24")
   expect(warning.content).toBe("#000000")
   expect(warning.onSolid).toBe("#000000")
 })
@@ -125,18 +141,26 @@ test("there is no motion at all", () => {
   ])
 })
 
-test("primary content clears AA against the paper", () => {
-  // Black on white, so this is 21:1 — but asserting it here is
-  // what catches somebody "improving" secondary content to grey
-  // on a panel that has no grey.
-  const { content, surface } = epaperColours.spectra6
+test.each(PALETTES)(
+  "%s carries every content role in black on the paper",
+  (palette) => {
+    // Black on the paper is the one pair that clears AA on both
+    // panels — 8.37 against Spectra 6's emitted ink, 21 on the
+    // 1-bit pHAT. Asserting it is what catches somebody
+    // "improving" secondary content to grey on a panel that has
+    // no grey.
+    const { content, surface } = epaperColours[palette]
 
-  for (const role of [
-    "primary",
-    "secondary",
-    "muted",
-  ] as const) {
-    expect(content[role]).toBe("#000000")
-    expect(surface.base).toBe("#FFFFFF")
-  }
-})
+    for (const role of [
+      "primary",
+      "secondary",
+      "muted",
+    ] as const) {
+      expect(content[role]).toBe("#000000")
+    }
+
+    expect(surface.base).toBe(
+      palette === "mono" ? "#FFFFFF" : "#D0D2D2",
+    )
+  },
+)
