@@ -23,6 +23,7 @@
       "default": "./dist/epaper.js"
     },
     "./theme.css": "./dist/theme.css",
+    "./first-paint.css": "./dist/first-paint.css",
     "./fonts.css": "./dist/fonts.css",
     "./fonts/*": "./dist/fonts/*",
     "./variables.css": "./dist/variables.css",
