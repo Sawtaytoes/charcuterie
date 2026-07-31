@@ -117,6 +117,68 @@ test("dismissing runs the exit and then removes, once", async () => {
   })
 })
 
+/**
+ * The enter frame is scheduled once and never cancelled — `is` and
+ * `transitionTo` are stable, so the effect that schedules it does not
+ * re-run when the status changes. Dismissing before that frame lands
+ * is therefore a real race, and it lost: `exiting → visible` is legal
+ * (hover-to-pause needs it), so the frame put the dismissed toast
+ * back and restarted its five-second duration.
+ *
+ * Holding the frame is what makes that deterministic. Left to real
+ * timing it reproduces only under load, which is how it first
+ * appeared — as a different test failing, once, in a full run.
+ */
+test("a dismiss during the enter frame is not undone by it", async () => {
+  const heldFrames: FrameRequestCallback[] = []
+
+  const realRequestAnimationFrame =
+    globalThis.requestAnimationFrame
+
+  globalThis.requestAnimationFrame = ((
+    callback: FrameRequestCallback,
+  ) => {
+    heldFrames.push(callback)
+
+    return 0
+  }) as typeof globalThis.requestAnimationFrame
+
+  const { canvas } = await mountStory(Interactive)
+
+  try {
+    await userEvent.click(
+      expectAgentDrivable(canvas, {
+        name: "Finish a rip",
+        role: "button",
+      }),
+    )
+
+    const dismiss = await waitFor(() =>
+      expectAgentDrivable(canvas, {
+        name: "Dismiss Rip 1 finished",
+        role: "button",
+      }),
+    )
+
+    await userEvent.click(dismiss)
+
+    for (const frame of heldFrames.splice(0)) {
+      frame(globalThis.performance.now())
+    }
+  } finally {
+    globalThis.requestAnimationFrame =
+      realRequestAnimationFrame
+  }
+
+  await waitFor(() => {
+    expect(
+      canvas.queryAllByRole("button", {
+        name: "Dismiss Rip 1 finished",
+      }),
+    ).toHaveLength(0)
+  })
+})
+
 test("a pinned toast stays put", async () => {
   const { canvas } = await mountStory(Default)
 
