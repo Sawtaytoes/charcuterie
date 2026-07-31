@@ -27,6 +27,7 @@ import { Button, Card } from "@charcuterie/ui"
 ```css
 @import "tailwindcss";
 @import "@charcuterie/tokens/theme.css"; /* colours, type ramp, radii, motion */
+@import "@charcuterie/tokens/fonts.css"; /* Baloo 2, Outfit, Victor Mono */
 @import "@charcuterie/ui/styles.css";    /* the four looping affordances */
 
 @source "../node_modules/@charcuterie/ui/dist";

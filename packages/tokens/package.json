@@ -23,18 +23,22 @@
       "default": "./dist/epaper.js"
     },
     "./theme.css": "./dist/theme.css",
+    "./fonts.css": "./dist/fonts.css",
+    "./fonts/*": "./dist/fonts/*",
     "./variables.css": "./dist/variables.css",
     "./tokens.json": "./dist/tokens.json",
     "./src/*": "./src/*"
   },
   "files": [
     "dist",
+    "fonts",
     "src"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.build.json && node scripts/buildTokens.ts",
+    "build": "tsc -p tsconfig.build.json && node scripts/buildTokens.ts && node scripts/copyFonts.ts",
     "build:tokens": "node scripts/buildTokens.ts",
     "check:contrast": "node scripts/checkContrast.ts",
+    "fetch:fonts": "node scripts/fetchFonts.ts",
     "prepack": "yarn build",
     "preview:themes": "node scripts/buildPreview.ts",
     "test": "vitest",

@@ -156,6 +156,16 @@ export type MotionTokens = {
 
 export type TypographyTokens = {
   fontFamily: {
+    /**
+     * Headings, and only headings. Separate from `sans` because
+     * M5 settled that they get their own face — a display cut at
+     * 24px is doing a different job from body copy at 13px, and
+     * one family covering both means neither is right.
+     *
+     * A variant may point this at `sans` to opt out; nothing
+     * requires the two to differ.
+     */
+    display: string
     sans: string
     mono: string
   }
