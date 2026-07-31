@@ -1,0 +1,51 @@
+/* Dank Mono — the owner's editor mono, and his pick for the fleet.
+ *
+ * Hand-written rather than generated, because this is the one family
+ * `fetchCandidateFonts.ts` cannot fetch: Dank Mono is a paid font
+ * from Grazil Ltd, not a Google Font.
+ *
+ * **The rules are committed; the bytes are not.** The EULA is
+ * permissive about use — "any number of devices, websites, or any
+ * other media, as long as they are solely responsible for said media"
+ * covers every app in this fleet — but the licensee "may not make a
+ * copy of the font, with the exception of personal archival purposes
+ * only" and agrees "not to … re-distribute" it. This repo is public,
+ * so committing the woff2 would publish them to anyone who clones.
+ * `scripts/installDankMono.ts` copies them off the NAS instead.
+ *
+ * That means these `src` URLs 404 on any checkout that has not run
+ * the install script, which is deliberate and safe: `font-display:
+ * swap` plus the fallback stack in `fontCandidates.css` drops
+ * silently to Victor Mono, and Storybook still runs.
+ *
+ * The family is named `Dank Mono` rather than the vendor sheet's
+ * `dm` — `dmvendor.css` inlines every weight as base64 under a
+ * two-letter name, which is both enormous and unguessable from a
+ * token stack. */
+
+@font-face {
+  font-family: "Dank Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/DankMono-Regular.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Dank Mono";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/DankMono-Bold.woff2") format("woff2");
+}
+
+/* The cursive italic is the reason to want this face over a free
+ * ligature mono, so it is wired up even though almost nothing in the
+ * fleet sets `font-style: italic` on monospace text yet. */
+@font-face {
+  font-family: "Dank Mono";
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/DankMono-Italic.woff2") format("woff2");
+}

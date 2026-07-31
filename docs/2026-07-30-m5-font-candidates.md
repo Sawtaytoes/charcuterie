@@ -1,11 +1,19 @@
 # 2026-07-30 — M5: the font bake-off
 
-**Status:** open — awaiting the owner's pick. Nothing is wired into
-`@charcuterie/tokens` yet, and nothing should be until the faces are chosen.
+**Status:** faces chosen 2026-07-30; promotion into `@charcuterie/tokens` not yet done,
+and blocked on one open question (below).
 
-**Settled so far (2026-07-30):** headings get their own display face, with a plainer
-body under it. Round one's body candidates read as too boring, so round two adds seven
-**rounder** sans options and splits heading and body into independent axes.
+## The picks
+
+| Axis | Face | Token |
+| --- | --- | --- |
+| Heading | **Baloo 2** | `fontFamily.display` — new |
+| Body | **Outfit** | `fontFamily.sans` |
+| Mono | **Dank Mono** | `fontFamily.mono` |
+
+Two of the three are straightforward: Baloo 2 and Outfit are SIL OFL and can ship inside
+the package. **Dank Mono cannot**, and that is the open question — see
+[The Dank Mono problem](#the-dank-mono-problem).
 
 ## The gap
 
@@ -114,15 +122,67 @@ tabular byte count fails on the surface the fleet actually has.
    `HeadingCandidateRow`, `BodyCandidateBlock`, `fontCandidates.ts`, both toolbar axes
    and the non-winning woff2 all delete.
 
+## The Dank Mono problem
+
+Dank Mono is a **paid** font from Grazil Ltd, and the owner holds a personal licence
+(`/mnt/Bunnies/Kevin/Apps/Fonts/Development/DankMono/`, including the `Web-PS/` woff2
+build). The EULA is generous about *use*:
+
+> The licensee may install and use the font on any number of devices, websites, or use
+> the font on any other media, as long as they are solely responsible for said media.
+
+That covers every app in this fleet. The blocker is the next part:
+
+> The licensee may not make a copy of the font, with the exception of personal archival
+> purposes only […] The licensee agrees not to modify, edit, alter, reverse engineer,
+> re-license, re-distribute, create derivatives of, or sell the font.
+
+`Sawtaytoes/charcuterie` is a **public** GitHub repository. Committing the woff2 would
+publish them to anyone who clones — redistribution regardless of intent. Note the
+licence question is not "may we use it" (we may) but "may we ship it in a public design
+system" (we may not).
+
+**Current handling:** the woff2 are gitignored and copied off the NAS by
+`packages/docs/scripts/installDankMono.ts`; the `@font-face` rules in
+`packages/docs/src/styles/dankMono.css` are committed and 404 harmlessly without them,
+falling through to Victor Mono. That is fine for a preview. It is not a shipping story.
+
+**Options, roughly in order of how much they cost:**
+
+1. **Buy the commercial licence.** Still would not permit redistributing the file in a
+   public repo — the restriction on copying is separate from the personal/commercial
+   split — so this does not actually solve it.
+2. **Keep the package OFL and let each app opt in.** `fontFamily.mono` ships Victor Mono;
+   the private consumer repos that want Dank Mono override `--font-mono` and load their
+   own copy from a private path. Charcuterie stays clean, the owner still gets his font
+   where it matters.
+3. **Make charcuterie private.** Solves it outright, at the cost of the repo being public.
+4. **Ship Victor Mono and stop there.** Cursive italics and ligatures both; the closest
+   open analogue.
+
+Option 2 is the recommendation: it is the only one that gets Dank Mono onto the owner's
+screens without putting a paid font in a public repo.
+
+## Mono runners-up
+
+| Face | Licence | Notes |
+| --- | --- | --- |
+| **Victor Mono** | OFL | Cursive italics *and* ligatures — the closest free analogue. Narrower and sharper than Dank Mono. |
+| **Fira Code** | OFL | Largest ligature set; italic is an obliqued roman, not cursive. |
+| **JetBrains Mono** | OFL | Round one's mono. Already had ligatures — worth knowing if ligatures were the whole ask. Most legible of the four at kiosk distance. |
+
+Verified in-browser: all four ligate (`=>` → `⇒`, `!=` → `≠`, `->` → `→`, `|>` → `▷`) and
+all four stop when `calt` is disabled.
+
 ## Open questions for the owner
 
-- **Do headings get their own face?** ~~The real fork.~~ **Settled 2026-07-30:** the
-  owner wants a display face for headings with a plainer body under it, so
-  `--font-display` is being promoted. Which display face is still open.
-- **How round is too round for the body?** The open question now. `nunito` and
-  `quicksand` bracket it; `nunito-sans` is the control that isolates the terminals.
-- **Does fleet consistency with image-viewer matter?** If yes, Source Sans 3 wins the
-  body by default and the round candidates are decoration.
+- **How should Dank Mono be distributed?** The one blocking question — see above.
+  Recommendation is option 2: ship Victor Mono in the package, override per-app.
+- ~~Do headings get their own face?~~ **Settled:** yes — Baloo 2.
+- ~~How round is too round for the body?~~ **Settled:** Outfit.
+- ~~Does fleet consistency with image-viewer matter?~~ **Settled:** no — Source Sans 3
+  lost the body to Outfit. image-viewer stays on Source Sans Pro; the two are now
+  allowed to differ.
 - **ePaper.** The profile removes animation, and it will punish a fine-stroked display
   face too — but there is no ePaper story on this page yet, because `data-profile` is
   orthogonal to the font axis and the bake-off is already four axes deep. Worth a check

@@ -28,7 +28,7 @@ export const BodyCandidateBlock = ({
   candidate: Candidate
 }) => (
   <section
-    data-body-font={candidate.id ?? undefined}
+    data-body-font={candidate.id ?? "system"}
     className="border-border-subtle border-t pt-5"
   >
     <header className="mb-2 flex flex-wrap items-baseline gap-x-3">

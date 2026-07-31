@@ -25,8 +25,8 @@ import "@storybook/addon-docs/blocks"
 import "../src/styles/tokens.css"
 
 /**
- * All three axes are `<html>` data attributes, and the toolbars
- * write them directly.
+ * Every axis is an `<html>` data attribute, and the toolbars write
+ * them directly.
  *
  * That is not a Storybook convenience — it is the production
  * mechanism, exercised. Nothing in React observes these
@@ -65,13 +65,14 @@ export const globalTypes = {
     },
   },
   /**
-   * The M5 bake-off, as two independent axes rather than one list
+   * The M5 bake-off, as three independent axes rather than one list
    * of pairings — liking a heading and disliking the body it came
-   * bundled with left nothing to click.
+   * bundled with left nothing to click. Mono joined them once the
+   * owner named a specific face rather than accepting the default.
    *
-   * `system` leads both lists: it is today's shipped state, and the
-   * comparison should always be against what we actually have
-   * rather than against the previously-selected candidate.
+   * Each list is ordered pick-first, with `system` kept as an
+   * explicit entry: the thing being replaced should stay one click
+   * away, not disappear because it lost.
    */
   bodyFont: {
     description:
@@ -81,12 +82,12 @@ export const globalTypes = {
       icon: "paragraph",
       dynamicTitle: true,
       items: [
+        { value: "outfit", title: "Outfit" },
         { value: "system", title: "System (today)" },
         { value: "nunito", title: "Nunito" },
         { value: "dm-sans", title: "DM Sans" },
         { value: "figtree", title: "Figtree" },
         { value: "rubik", title: "Rubik" },
-        { value: "outfit", title: "Outfit" },
         { value: "nunito-sans", title: "Nunito Sans" },
         { value: "quicksand", title: "Quicksand" },
         { value: "inter", title: "Inter" },
@@ -102,6 +103,7 @@ export const globalTypes = {
       icon: "typography",
       dynamicTitle: true,
       items: [
+        { value: "baloo", title: "Baloo 2" },
         { value: "system", title: "System (today)" },
         { value: "fraunces", title: "Fraunces" },
         { value: "fraunces-soft", title: "Fraunces Soft" },
@@ -109,9 +111,27 @@ export const globalTypes = {
           value: "bricolage",
           title: "Bricolage Grotesque",
         },
-        { value: "baloo", title: "Baloo 2" },
         { value: "inter", title: "Inter" },
         { value: "source-sans-3", title: "Source Sans 3" },
+      ],
+    },
+  },
+  monoFont: {
+    description:
+      "Monospace face. Dank Mono is paid and gitignored — see `dankMono.css`.",
+    toolbar: {
+      title: "Mono",
+      icon: "browser",
+      dynamicTitle: true,
+      items: [
+        { value: "dank-mono", title: "Dank Mono" },
+        { value: "victor-mono", title: "Victor Mono" },
+        { value: "fira-code", title: "Fira Code" },
+        {
+          value: "jetbrains-mono",
+          title: "JetBrains Mono",
+        },
+        { value: "system", title: "System (today)" },
       ],
     },
   },
@@ -141,17 +161,25 @@ const preview: Preview = {
    * wrote the literal string `"undefined"` onto `<html>`. Every
    * density-derived size then silently fell back, in the one place
    * — the DOM test suite — where sizes are asserted.
+   *
+   * The three font axes default to the owner's picks rather than to
+   * `system`, as of 2026-07-30: Baloo 2 headings, Outfit body, Dank
+   * Mono for code. That makes every story in the canvas a preview of
+   * the intended end state instead of a preview of the thing being
+   * replaced.
    */
   initialGlobals: {
-    bodyFont: "system",
+    bodyFont: "outfit",
     density: "comfortable",
-    headingFont: "system",
+    headingFont: "baloo",
+    monoFont: "dank-mono",
     variant: "daylight",
   },
   decorators: [
     writeHtmlAttribute("data-body-font", "bodyFont"),
     writeHtmlAttribute("data-density", "density"),
     writeHtmlAttribute("data-heading-font", "headingFont"),
+    writeHtmlAttribute("data-mono-font", "monoFont"),
     writeHtmlAttribute("data-variant", "variant"),
     withThemeByDataAttribute({
       attributeName: "data-scheme",

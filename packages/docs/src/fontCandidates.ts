@@ -9,9 +9,15 @@
 
 export type Candidate = {
   /**
-   * The `data-heading-font` / `data-body-font` value. `null` is the
-   * baseline — the *absence* of an override, so a block carrying it
-   * inherits whatever the toolbar says rather than pinning anything.
+   * The `data-heading-font` / `data-body-font` / `data-mono-font`
+   * value. `null` means the baseline, and renders as an explicit
+   * `"system"` rather than as a missing attribute.
+   *
+   * That distinction is load-bearing. Modelling the baseline as
+   * "omit the attribute and inherit" worked only while the toolbar
+   * defaults were themselves `system`; once they became the owner's
+   * picks, every row labelled "System" inherited the winner from
+   * `<html>` and showed it under the baseline's name.
    */
   readonly id: string | null
   readonly name: string
@@ -62,6 +68,47 @@ export const HEADINGS: readonly Candidate[] = [
     name: "Source Sans 3",
     foundry: "Adobe · US",
     note: "As above, but the face image-viewer already runs.",
+  },
+]
+
+/**
+ * Monospace. Became an axis once the owner named a specific face
+ * rather than accepting the house default.
+ *
+ * Dank Mono is the pick and the others are the licensable fallback
+ * plan, not rival proposals — see `dankMono.css` for why a paid font
+ * cannot simply be committed to a public design system.
+ */
+export const MONOS: readonly Candidate[] = [
+  {
+    id: "dank-mono",
+    name: "Dank Mono",
+    foundry: "Grazil Ltd · UK · paid",
+    note: "The owner's editor font, and the pick. Ligatures plus a genuinely cursive italic — the thing the free monos mostly lack. The catch is distribution, not licensing: the EULA covers using it across the whole fleet, but forbids redistributing it, and this repo is public. Rendering here only because the woff2 were copied off the NAS by a script and gitignored.",
+  },
+  {
+    id: "victor-mono",
+    name: "Victor Mono",
+    foundry: "Rune Bjørnerås · Norway · OFL",
+    note: "The closest open-licence analogue: cursive italics and ligatures both. Narrower and sharper than Dank Mono, and the only candidate here that could actually ship inside a public package while keeping the cursive.",
+  },
+  {
+    id: "fira-code",
+    name: "Fira Code",
+    foundry: "Nikita Prokopov / Mozilla · OFL",
+    note: "The largest ligature set of the four, and the most widely recognised. No cursive italic — its italic is an obliqued roman.",
+  },
+  {
+    id: "jetbrains-mono",
+    name: "JetBrains Mono",
+    foundry: "JetBrains · Czech Republic · OFL",
+    note: "Round one's mono, here because it is worth knowing it already has ligatures — if ligatures were the whole ask, this was always going to satisfy it. Tall x-height makes it the most legible of the four at kiosk distance.",
+  },
+  {
+    id: null,
+    name: "System",
+    foundry: "—",
+    note: "Today's baseline: ui-monospace, no ligatures, different on every machine.",
   },
 ]
 

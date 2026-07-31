@@ -1,6 +1,11 @@
 import { BodyCandidateBlock } from "./BodyCandidateBlock.tsx"
-import { BODIES, HEADINGS } from "./fontCandidates.ts"
+import {
+  BODIES,
+  HEADINGS,
+  MONOS,
+} from "./fontCandidates.ts"
 import { HeadingCandidateRow } from "./HeadingCandidateRow.tsx"
+import { MonoCandidateRow } from "./MonoCandidateRow.tsx"
 
 /**
  * The M5 font bake-off: two axes, compared one at a time.
@@ -71,9 +76,32 @@ export const FontSpecimen = () => (
       Ordered roundest-workhorse first. Headings in each
       block follow the toolbar's Heading face.
     </p>
-    <div className="flex flex-col gap-6">
+    <div className="mb-12 flex flex-col gap-6">
       {BODIES.map((candidate) => (
         <BodyCandidateBlock
+          key={candidate.name}
+          candidate={candidate}
+        />
+      ))}
+    </div>
+
+    <h3
+      data-display-face
+      className="text-content-primary mt-2 mb-1 text-xl font-bold"
+      style={{ fontFamily: "var(--font-display)" }}
+    >
+      Monospace
+    </h3>
+    <p className="text-content-secondary mb-6 max-w-prose text-sm">
+      Dank Mono first, because it is the pick; the three
+      under it are the licensable fallback plan rather than
+      rival proposals. All four have ligatures — they differ
+      in how many, how loud, and whether the italic is
+      genuinely cursive or just an obliqued roman.
+    </p>
+    <div className="flex flex-col gap-6">
+      {MONOS.map((candidate) => (
+        <MonoCandidateRow
           key={candidate.name}
           candidate={candidate}
         />
