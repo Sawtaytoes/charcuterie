@@ -41,3 +41,62 @@ jobs:
       - run: yarn build
       # `yarn test` is bare `vitest` for local watch mode; CI needs run-once.
       - run: yarn vitest run
+
+  # **Its own job, and on every PR — not appended to `test`, not path-gated.**
+  #
+  # `storybook build` writes `index.json` and `iframe.html` even when it FAILS
+  # partway. A broken build is byte-indistinguishable from a working one; the
+  # ONLY signal is the exit code. That is exactly how mux-magic's Storybook sat
+  # broken on two branches (nine MDX files importing `@storybook/blocks`,
+  # removed in Storybook 9) while still producing a plausible-looking static
+  # site and an entry count someone then reported as fact. A `run:` step
+  # propagates that exit code, which is the whole point of this job.
+  #
+  # Separate from `test` so a Storybook break reads as its own red check
+  # instead of being buried at the end of the browser-mode vitest run, and so
+  # it runs in parallel rather than lengthening the critical path. Not
+  # path-filtered: nearly every change here touches tokens or components, a
+  # filter that skips the gate is precisely how the mux-magic outcome happens,
+  # and a skipped required check wedges the PR anyway. It is cheap — the build
+  # is seconds and the smoke run about ninety.
+  #
+  # Note this DOES widen the release gate: NPM Package Deploy triggers on
+  # `workflow_run` for CI, whose conclusion is success only when every job
+  # passes, so a Storybook that cannot build now blocks a publish. That is
+  # deliberate — stories are the DOM test surface here, and a component that
+  # will not render should not ship. The rare browser flake is recoverable
+  # without an empty commit: NPM Package Deploy is idempotent and has a
+  # `workflow_dispatch` re-run for exactly this.
+  storybook:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with: { node-version: 24 }
+      - run: corepack enable && yarn install --immutable
+      # The smoke run drives the built site with playwright, which lives in the
+      # docs workspace rather than the root — same install as the `test` job.
+      - run: yarn workspace @charcuterie/docs exec playwright install chromium --with-deps
+      # `build:storybook` runs `yarn build` first: Storybook reads the built dist.
+      - run: yarn build:storybook
+
+      # The sibling false-green to a partial build is a build that SUCCEEDS with
+      # an empty index — a `stories:` glob in `.storybook/main.ts` that stopped
+      # matching after a move. The smoke run cannot catch that: with no entries
+      # its loop never executes and it reports "0 entries rendered clean" as a
+      # pass. So assert a floor first. This is a floor, not a count — it is here
+      # to catch a whole glob (the `../../ui/src/**` one is most of the index)
+      # dropping out, not to be bumped every time a story is added.
+      - name: Assert the Storybook index is not empty
+        run: |
+          set -euo pipefail
+          count="$(node -p "Object.keys(require('./packages/docs/storybook-static/index.json').entries).length")"
+          echo "Storybook indexed ${count} entries."
+          if [ "$count" -lt 100 ]; then
+            echo "::error::Storybook indexed ${count} entries (floor is 100) — a stories glob in packages/docs/.storybook/main.ts probably stopped matching."
+            exit 1
+          fi
+
+      # Clicks through every entry over the addons channel in ONE page load, so
+      # the module-ordering defects a per-story mount cannot see still fail here.
+      - run: yarn smoke:storybook
