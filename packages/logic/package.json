@@ -86,7 +86,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/Sawtaytoes/charcuterie.git",
+    "url": "git+https://github.com/Sawtaytoes/charcuterie.git",
     "directory": "packages/logic"
   }
 }
