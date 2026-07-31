@@ -5,10 +5,14 @@ on:
     workflows: ["CI"]
     branches: [master]
     types: [completed]
+  # Publishing is idempotent (a package publishes only when no `<pkg>-v<version>`
+  # tag exists yet), so a manual re-run is safe and is how a half-failed release
+  # is retried without an empty commit.
+  workflow_dispatch:
 
 jobs:
   publish:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -57,7 +61,15 @@ jobs:
             echo "→ publishing ${name}@${version}"
             tarball="$(mktemp -d)/${pkg}.tgz"
             yarn workspace "$name" pack -o "$tarball"
-            npm publish "$tarball" --provenance --access public
+            # Publish from the package directory, NOT the repo root. npm resolves
+            # the OIDC trusted-publishing exchange from the package.json in its
+            # CWD — not from the tarball it is handed. At the root that is
+            # `charcuterie` (private, 0.0.0, no trusted publisher), so the
+            # exchange yields no token, npm silently falls back to setup-node's
+            # placeholder `_authToken`, and the PUT returns **404** — npm's mask
+            # for an auth failure on a package that does exist. The tarball is
+            # right either way; only the CWD decides who npm authenticates as.
+            ( cd "$dir" && npm publish "$tarball" --provenance --access public )
 
             git tag "$tag"
             git push origin "$tag"
