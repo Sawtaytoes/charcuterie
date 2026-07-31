@@ -21,9 +21,12 @@ Two workflows, mirroring the mux-magic pattern:
   all pending changesets into a **"Version Packages" PR** that bumps versions and writes
   each package's `CHANGELOG.md`. It **never publishes**.
 - **[.github/workflows/npm-package-deploy.yml](../.github/workflows/npm-package-deploy.yml)** —
-  after CI succeeds on `v2`, publishes each package **only when its version was bumped** —
+  on push to `v2`, publishes each package **only when its version was bumped** —
   concretely, when no `<pkg>-v<version>` git tag exists yet (`tokens-v0.1.0`,
   `ui-v0.1.0`, …). On a successful publish it pushes that tag, so later runs skip cleanly.
+  (It triggers on push rather than `workflow_run` after CI because `workflow_run` only
+  fires for workflows on the repo's default branch, which is still `master`/v1. When `v2`
+  merges down to `master`, retarget this and the other workflows to `master`.)
 
 There is **no auto-bump of the source**. Bumping happens by **merging the Version Packages
 PR**; CI never edits `package.json`. It only pushes the lightweight `<pkg>-v<version>` tags.
