@@ -38,6 +38,26 @@
   --font-display: var(--font-sans);
 }
 
+/* Redefining `--font-sans` on a nested block is not enough on its own,
+ * and this rule is the difference between the specimen working and
+ * the specimen lying.
+ *
+ * `font-family` is declared exactly once in the app, on `body`, as
+ * `var(--font-sans)`. That `var()` resolves *at `body`* — so a
+ * `<section>` further down that redeclares the custom property
+ * changes nothing: what descends to it is the already-computed
+ * family, not the variable. The toolbar path is unaffected (its
+ * attribute is on `<html>`, above `body`, so `body` resolves the new
+ * value), which is exactly why the bug is invisible there and shows
+ * up only in the side-by-side view.
+ *
+ * Caught by `document.fonts.check()` reporting Public Sans as never
+ * loaded — it is the one candidate that appears *only* as a body
+ * face, so it was the only one whose absence was measurable. */
+[data-font] {
+  font-family: var(--font-sans);
+}
+
 /* ── Source Sans 3 ────────────────────────────────────────────────
  * The fleet-consistency pick. image-viewer is locked to Source Sans
  * Pro (`2026-06-20-app-font-is-source-sans-pro-everywhere`); Source
