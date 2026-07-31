@@ -1,0 +1,103 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as MenuStories from "./Menu.stories";
+
+<Meta of={MenuStories} />
+
+# Menu
+
+A menu is **not** a listbox, and mux-magic's `TypePicker` is the fleet's one attempt at
+telling them apart — it renders `role="menu"` over items that set a value, which is a
+listbox wearing the wrong role.
+
+<Canvas of={MenuStories.Default} />
+
+## Props
+
+<Controls />
+
+## `menuitem` versus `option`
+
+| | `menuitem` | `option` |
+| --- | --- | --- |
+| What it is | an **action** — Retry, Skip, Eject | a **value** you are choosing |
+| Announced as | "menu, 3 items" | "listbox, selected, 2 of 4" |
+| Leaves state behind | no | yes |
+| Lives in | this component | `Select` |
+
+The last row is why it matters to an agent driving the app: after choosing an `option` it
+needs to know what the control now holds. After invoking a `menuitem` there is nothing to
+read back. Getting the role wrong is invisible in a browser and invisible to axe.
+
+## A `[popover]` that was never shown is `display: none`
+
+The panel calls `showPopover()` from its ref callback, like `Popover` does — plus an
+`isConnected` guard and an effect that `Popover` does not need.
+
+`FloatingFocusManager` renders a pair of focus guards around its child, so React commits this
+subtree in an order where the ref can fire while the node is still **detached**.
+`showPopover()` on a disconnected element throws `InvalidStateError`, which surfaces as an
+unhandled rejection rather than a failing assertion — and if it is simply swallowed, the menu
+renders, typechecks, and is invisible to `getByRole` and to a user alike.
+
+The effect is the backstop, because effects run after the tree is connected. Both are
+idempotent: `:popover-open` is the same question.
+
+## There is no `label` prop, and that corrects a lesson
+
+`Spinner` (M3), `Popover` and `Modal` (M4) all take a **required** name, because a
+`role="status"` and a `role="dialog"` take none from their content. The obvious move here was
+a `label` prop doing the same job — it was written that way first, and then measured as
+doing **nothing**.
+
+`useRole(context, { role: "menu" })` puts `aria-labelledby` on the panel pointing at the
+trigger, and `aria-labelledby` beats `aria-label`. The menu was already named "Bay 3", from
+the button, and the prop was silently discarded. That is also the APG menu-button pattern.
+
+So the rule the other three teach is narrower than it looked:
+
+> An overlay with **no trigger relationship** needs its own name.
+
+A menu has one, so the requirement moves to the trigger — which `Button` and `IconButton`
+already enforce.
+
+## One kind, and that is the other half of the `Tabs` argument
+
+`Tabs` needed **two** state kinds because a tab is chosen *and* focused, and in `manual`
+activation those two disagree on purpose. A menu needs **one** — `RovingFocus` — because a
+menu item is never selected, only invoked.
+
+Two components, opposite conclusions, same model. That is the composition claim being paid
+off rather than asserted.
+
+<Canvas of={MenuStories.AllVariants} />
+
+## Focus moves in, once
+
+A menu is one of the few patterns where focus must jump on open, or the keyboard user who
+pressed Enter is still on the trigger with a menu they cannot reach.
+
+It happens in the panel's own effect rather than through `FloatingFocusManager`'s
+`initialFocus`, because the element to focus is whichever one `RovingFocus` says is active —
+and that is not known until the items have registered. `initialFocus={-1}` turns the
+manager's own aim off, so there is one owner for the caret.
+
+`modal={false}`, so Tab **leaves** the menu and lands on the next control in the page, which
+is what closes it. A trapped menu is a dialog.
+
+<Canvas of={MenuStories.AllStates} />
+
+## Registration is membership
+
+A disabled item never registers with the roving group, so the arrow keys skip it with
+nothing in `RovingFocus` knowing what "disabled" means. It stays in the DOM and stays
+announced — "not right now", rather than "does not exist".
+
+## No type-ahead, deliberately
+
+The APG lists type-ahead as **optional** for a menu and **required** for a listbox, and none
+of the fleet's menus are long enough to need it — the largest has six items. Adding it means
+a keystroke buffer and a timer in a component that has neither, for a menu you can cross in
+three arrow presses.
+
+<Canvas of={MenuStories.Interactive} />

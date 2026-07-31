@@ -1,0 +1,88 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as LogViewerStories from "./LogViewer.stories";
+
+<Meta of={LogViewerStories} />
+
+# LogViewer
+
+Three repos render a scrolling log pane — mux-magic's `JobLogsDisclosure` and `StepLogs`,
+rip-deck's `LogModal` — and between them they have four defects this component exists not to
+have.
+
+<Canvas of={LogViewerStories.Default} />
+
+## Props
+
+<Controls />
+
+## 1. The auto-scroll that follows nothing
+
+```tsx
+useEffect(() => {
+  const pane = paneRef.current
+  if (pane) pane.scrollTop = pane.scrollHeight
+}, [])          // ← empty deps
+```
+
+That is mux-magic's, and it runs **once**, on mount, when the pane is empty and
+`scrollHeight` *is* `clientHeight`. Every line after it arrives below the fold.
+
+It reads as correct, it is the shape everyone writes, and the log simply never follows.
+
+## 2. Following that cannot be escaped
+
+The naive fix — scroll to the bottom on every render — is worse: a user scrolling back to
+read the line that mentioned an error is yanked to the end twice a second.
+
+Following has to be **pinned to the user's own position**. It turns off the moment they
+scroll away and back on when they return to the bottom, and there is a **Jump to latest**
+button for when they do not want to scroll all that way.
+
+The pin test allows a few pixels of slack, because a fractional device pixel ratio means
+`scrollTop + clientHeight` never lands exactly on `scrollHeight`. An equality test here
+un-pins the pane on a 125% display and on nothing else.
+
+<Canvas of={LogViewerStories.Interactive} />
+
+## 3. `data-log-id`
+
+mux-magic's pane carries one. It is a `data-testid` under a different name — a handle only
+the test suite can see — and `sourceRules.test.ts` bans the **practice**, not the spelling.
+The pane here is found by its `label`, which is the query Playwright makes.
+
+## 4. Announcing an hour of build output
+
+`role="log"` is the correct role and `aria-live` is **off** unless asked for. A live log
+emitting a line every 300 ms is a screen reader that cannot be interrupted and a user who
+cannot read anything else on the page.
+
+The accessible answer for a long-running job is a `LiveStatusIndicator` announcing *state*
+and a log that is there to be read when wanted. `isAnnounced` exists for the short case: a
+five-line result panel where the lines **are** the outcome.
+
+<Canvas of={LogViewerStories.AllVariants} />
+
+## Not every boolean is a state kind
+
+`isFollowing` is `useState`, not `useVisibility`, and this is the first component in the
+library to say so out loud.
+
+The kinds in `@charcuterie/logic` earn their keep when state is **registered** (members join
+a group), **composed** (focus and selection disagreeing), or **shared** (a trigger and a
+panel at opposite ends of a tree). None of that is true here: one component reads one
+boolean it wrote itself.
+
+Reaching for `useVisibility` because it is also a boolean would make `isVisible` mean "is
+following", which is how a state layer stops meaning anything.
+
+## `maxLines`, not virtualization
+
+The plan floated an optional `@tanstack/react-virtual` peer. Dropping the oldest lines is
+what actually bounds the DOM, costs no dependency, and is what every one of these panes
+wanted anyway — nobody scrolls back through an hour of sector reads.
+
+Virtualization stays unbuilt until a consumer produces a log where 500 lines is not enough,
+which is the same rule that kept a bare `Listbox` out of `Select`.
+
+<Canvas of={LogViewerStories.AllStates} />
