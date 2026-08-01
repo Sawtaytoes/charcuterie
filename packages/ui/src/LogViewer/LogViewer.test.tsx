@@ -7,8 +7,13 @@ import { mountStory } from "../mountStory.testHelpers.ts"
 import { expectAgentDrivable } from "../testing/index.ts"
 import * as stories from "./LogViewer.stories.tsx"
 
-const { AllStates, AllVariants, Default, Interactive } =
-  composeStories(stories)
+const {
+  AllStates,
+  AllVariants,
+  Default,
+  InsideDisclosure,
+  Interactive,
+} = composeStories(stories)
 
 test("the pane is named, and is a log", async () => {
   const { canvas, canvasElement } =
@@ -53,6 +58,64 @@ test("a full pane is scrolled to the bottom", async () => {
   )
 
   // And the behaviour: it is actually at the end.
+  await waitFor(() => {
+    expect(
+      pane.scrollHeight -
+        pane.scrollTop -
+        pane.clientHeight,
+    ).toBeLessThan(4)
+  })
+})
+
+/**
+ * The same defect, rebuilt out of two components that are each
+ * individually right — and the reason `LogViewer` watches its own box
+ * rather than trusting one mount measurement.
+ *
+ * `AccordionSection` renders `hidden` rather than unmounting, because
+ * the fleet's panels hold log panes and an unmounted panel loses its
+ * scroll position and its subscription. A `hidden` subtree has no
+ * layout box, so the mount effect reads `scrollHeight 0` and writes
+ * `scrollTop = 0` — and the effect's dependencies, `isFollowing` and
+ * the lines, are both unchanged by the reveal. Measured in mux-magic
+ * on a 60-line pane:
+ *
+ * ```
+ * while collapsed : scrollTop 0   scrollHeight 0     clientHeight 0
+ * after expanding : scrollTop 0   scrollHeight 976   clientHeight 254
+ * ```
+ *
+ * mux-magic worked around it downstream, in `DisclosedLogViewer`, by
+ * not mounting the pane until the section had been opened once. This
+ * test is that workaround becoming deletable.
+ */
+test("a pane revealed by a disclosure follows the tail", async () => {
+  const { canvas } = await mountStory(InsideDisclosure)
+
+  // `hidden: true` because that is the whole precondition: the pane
+  // is in the accessibility tree's shadow, and in the layout tree not
+  // at all.
+  const pane = canvas.getByRole("log", {
+    hidden: true,
+    name: "Bay 9 rip log",
+  })
+
+  // Not a rhetorical assertion. If a future `AccordionSection`
+  // unmounts its panel instead, or stops using `hidden`, this test
+  // silently stops testing anything — so it fails here instead.
+  await expect(pane.scrollHeight).toBe(0)
+
+  expectAgentDrivable(canvas, {
+    name: "Bay 9 output",
+    role: "button",
+  }).click()
+
+  await waitFor(() => {
+    expect(pane.scrollHeight).toBeGreaterThan(
+      pane.clientHeight,
+    )
+  })
+
   await waitFor(() => {
     expect(
       pane.scrollHeight -
