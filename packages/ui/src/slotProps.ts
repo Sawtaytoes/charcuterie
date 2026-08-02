@@ -1,3 +1,5 @@
+import type { InputHTMLAttributes } from "react"
+
 /**
  * The props a **cloning ancestor** injects into the control below it.
  *
@@ -34,23 +36,46 @@
  * writes, it is greppable, and an open `Record<string, unknown>`
  * would forward a caller's typo onto a DOM node just as silently as
  * the bug it replaces.
+ *
+ * The five keys, and who writes them:
+ *
+ * | Key | Written by |
+ * | --- | --- |
+ * | `aria-describedby` | `Field` (its description and its error) **and** `Tooltip` (its tip) — the one key that is a list, and the reason `mergeSlotProps` exists |
+ * | `aria-invalid` | `Field`, derived from `error` being present |
+ * | `aria-required` | `Field`, from `isRequired` — the announced constraint, for a composite control the browser does not validate |
+ * | `id` | `Field`, so its `<label htmlFor>` has something to point at. A caller may also pass one directly, which is how a consumer pins a stable id for a deep link or an autofill hint |
+ * | `required` | `Field`, from `isRequired` — the constraint the browser validates |
+ *
+ * ### Why these are `Pick`ed and not written out
+ *
+ * Three of the five are booleans whose names cannot start with `is`
+ * or `has`, because they are not our names — they are the DOM's, and
+ * they are spread onto a DOM node verbatim. The house rule has
+ * [no carve-out](../../../docs/decisions/2026-07-29-is-has-rule-has-no-external-api-carve-out.md)
+ * for that: a *type property* is a shape we own, an object literal
+ * key is someone else's contract, and no `eslint-disable` is
+ * available because unused disable directives are themselves an
+ * error.
+ *
+ * So this type does not declare a shape. It **selects** one out of
+ * React's own `InputHTMLAttributes`, which is the honest description
+ * of what it is: five keys of the props React already types for an
+ * `<input>`, forwarded unchanged. The same reasoning as the
+ * `Record<string, boolean>` in `createReactAdapter` — we are not
+ * describing React's shape, we are naming the keys of it we touch —
+ * and it has the side benefit that `aria-invalid` gets React's real
+ * type (`"grammar"` and `"spelling"` are legal values) rather than
+ * the `boolean` a hand-written version would have narrowed it to.
  */
-export type SlotProps = {
-  /**
-   * A **space-separated list of ids**, which is why this module
-   * exists at all — see `mergeSlotProps`.
-   */
-  "aria-describedby"?: string
-  "aria-invalid"?: boolean
-  "aria-required"?: boolean
-  /**
-   * Set by an ancestor `Field` so its `<label htmlFor>` has something
-   * to point at. A caller may also pass one directly, which is how a
-   * consumer pins a stable id for a deep link or an autofill hint.
-   */
-  id?: string
-  required?: boolean
-}
+export type SlotProps = Pick<
+  InputHTMLAttributes<HTMLElement>,
+  | "aria-describedby"
+  | "aria-invalid"
+  | "aria-required"
+  | "id"
+  | "required"
+>
 
 /**
  * Merge what arrived from above with what this component writes

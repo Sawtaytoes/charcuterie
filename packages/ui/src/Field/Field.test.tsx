@@ -158,7 +158,10 @@ test("a slot forwards what an outer slot gave it", async () => {
     role: "textbox",
   })
 
-  await expect(inner).toHaveAttribute("aria-invalid", "true")
+  await expect(inner).toHaveAttribute(
+    "aria-invalid",
+    "true",
+  )
 
   await expectNoAxeViolations(canvasElement)
 })
@@ -186,9 +189,7 @@ test("a tip is described alongside the field's own text, not instead of it", asy
   // tip is missing, and the reason this is testable without a
   // pointer at all.
   await waitFor(() => {
-    expect(
-      canvas.getByRole("tooltip"),
-    ).toHaveTextContent(
+    expect(canvas.getByRole("tooltip")).toHaveTextContent(
       "A JavaScript regular expression.",
     )
   })

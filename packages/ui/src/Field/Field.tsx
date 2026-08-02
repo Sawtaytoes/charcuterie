@@ -149,7 +149,8 @@ export const Field = ({
       // `aria-invalid` is derived from the error's presence, never
       // passed. A control marked invalid with no described reason is
       // a screen reader saying "invalid" and stopping.
-      "aria-invalid": error === undefined ? undefined : true,
+      "aria-invalid":
+        error === undefined ? undefined : true,
       // Both, and they are not redundant: `required` is the
       // constraint the browser validates and `aria-required` is the
       // one it announces on a control the browser does not validate

@@ -140,8 +140,6 @@ export type {
   SkeletonShape,
 } from "./Skeleton/Skeleton.tsx"
 export { Skeleton } from "./Skeleton/Skeleton.tsx"
-export type { SlotProps } from "./slotProps.ts"
-export { mergeSlotProps } from "./slotProps.ts"
 export type {
   SortableTableHeaderProps,
   SortDirection,
@@ -149,6 +147,8 @@ export type {
 export { SortableTableHeader } from "./SortableTableHeader/SortableTableHeader.tsx"
 export type { SpinnerProps } from "./Spinner/Spinner.tsx"
 export { Spinner } from "./Spinner/Spinner.tsx"
+export type { SlotProps } from "./slotProps.ts"
+export { mergeSlotProps } from "./slotProps.ts"
 export {
   getAsyncIntent,
   getAsyncLabel,
