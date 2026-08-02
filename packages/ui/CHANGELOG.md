@@ -1,5 +1,40 @@
 # @charcuterie/ui
 
+## 1.0.1
+
+### Patch Changes
+
+- 8f78d5b: `SelectProps.options` accepts a `readonly` array.
+
+  A consumer's options table is usually a constant, and TypeScript will not hand a `readonly`
+  array to a mutable parameter — an `as const` options list failed with `TS4104` and had to be
+  copied at every call site. `Select` only ever `.map`s over the list, so the mutable parameter
+  was asking for a permission it never uses.
+
+- 8f78d5b: A slot's `ref` composes with the one already there, instead of replacing it.
+
+  `Menu` and `Tooltip` could not share a trigger. Both clone onto it and both hand it a
+  floating-ui `refs.setReference` — an anchor, not an attribute — and every merge in the
+  library was last-write-wins, so the inner clone's ref replaced the outer one's. The menu was
+  left with no reference element and floating-ui parked its panel at `left: 0; top: 0`, in the
+  corner of the viewport. Nothing threw, the ARIA was intact and axe was clean; it read as a
+  CSS bug.
+
+  A `ref` is a subscription and an `on*` is a listener, and neither survives being replaced. So
+  both are merged now, at both levels where a slot writes them:
+
+  - **`useClonedChild`** merges with the element **you** wrote, so
+    `<Menu trigger={<Button ref={buttonRef} onClick={toggle} />} />` keeps your ref _and_ your
+    handler — previously it silently discarded both. React and Preact bindings alike.
+  - **`mergeSlotProps`** merges the `ref` and chains the handlers between two nested slots,
+    alongside the five attributes it already settled.
+
+  Values are unaffected: a slot is still the later writer and still wins, which is what makes
+  `Field`'s `id` work.
+
+- Updated dependencies [8f78d5b]
+  - @charcuterie/logic@1.0.1
+
 ## 1.0.0
 
 ### Major Changes
