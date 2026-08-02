@@ -7,8 +7,12 @@ import { mountStory } from "../mountStory.testHelpers.ts"
 import { expectAgentDrivable } from "../testing/index.ts"
 import * as stories from "./Menu.stories.tsx"
 
-const { AllStates, AllVariants, Interactive } =
-  composeStories(stories)
+const {
+  AllStates,
+  AllVariants,
+  Interactive,
+  SharedTrigger,
+} = composeStories(stories)
 
 test("the menu is named, and its items are menuitems", async () => {
   const { canvas, canvasElement } =
@@ -199,4 +203,111 @@ test("the menu is not portalled out of its canvas", async () => {
   await expect(canvasElement).toContainElement(menu)
 
   await expectNoAxeViolations(canvasElement)
+})
+
+/**
+ * **One trigger, two slots** — the defect image-viewer reported, and
+ * the one shape `mergeSlotProps` did not cover when it shipped in
+ * 1.0.0.
+ *
+ * `Menu` and `Tooltip` both clone onto the button and both hand it a
+ * floating-ui `refs.setReference`. That is not an attribute, so
+ * last-write-wins destroyed one of them: the inner `Tooltip` wrote
+ * its own and the `Menu` was left with **no reference element at
+ * all**. Nothing threw, nothing was unnamed, axe was clean, and the
+ * panel rendered at `left: 0; top: 0` — a positioning bug that reads
+ * as CSS.
+ *
+ * So the assertion is geometric, and it is the only kind that can
+ * see this: the panel is where the trigger is. Nothing in `Menu`
+ * writes that number — floating-ui computes it from the reference
+ * element, and a dropped ref means no reference element.
+ */
+const expectAnchoredTrigger = (trigger: HTMLElement) => {
+  const triggerRect = trigger.getBoundingClientRect()
+
+  // The precondition, stated rather than assumed. An unanchored
+  // panel lands at the viewport origin, so a trigger that also sits
+  // at the origin makes every assertion below pass for the wrong
+  // reason. The story's padding is what keeps them apart, and this
+  // is where its removal fails.
+  expect(triggerRect.left).toBeGreaterThan(32)
+
+  expect(triggerRect.top).toBeGreaterThan(32)
+
+  return triggerRect
+}
+
+test("a menu sharing its trigger with a tooltip is still anchored to it", async () => {
+  const { canvas, canvasElement } =
+    await mountStory(SharedTrigger)
+
+  const trigger = expectAgentDrivable(canvas, {
+    name: "Bay 5",
+    role: "button",
+  })
+
+  const triggerRect = expectAnchoredTrigger(trigger)
+
+  await userEvent.click(trigger)
+
+  const menu = await waitFor(() =>
+    expectAgentDrivable(canvas, { role: "menu" }),
+  )
+
+  // `bottom-start` with `offset(4)`: flush with the trigger's
+  // inline start, four pixels below it. Before the fix this read
+  // `left 0, top 0` — and it read that *forever*, so waiting for it
+  // costs a timeout rather than hiding a failure. The wait is for
+  // floating-ui's first position, which lands a frame after the
+  // panel does.
+  await waitFor(() => {
+    const menuRect = menu.getBoundingClientRect()
+
+    expect(Math.round(menuRect.left)).toBe(
+      Math.round(triggerRect.left),
+    )
+
+    expect(Math.round(menuRect.top)).toBe(
+      Math.round(triggerRect.bottom) + 4,
+    )
+  })
+
+  await expectNoAxeViolations(canvasElement)
+})
+
+/**
+ * The other ref, in the same composition — because a fix that
+ * reversed the priority instead of merging would leave *this* one
+ * pointing at nothing and the test above would still pass.
+ */
+test("the tooltip sharing that trigger is anchored to it too", async () => {
+  const { canvas } = await mountStory(SharedTrigger)
+
+  const trigger = expectAgentDrivable(canvas, {
+    name: "Bay 5",
+    role: "button",
+  })
+
+  const triggerRect = expectAnchoredTrigger(trigger)
+
+  trigger.focus()
+
+  const tip = await waitFor(() =>
+    expectAgentDrivable(canvas, { role: "tooltip" }),
+  )
+
+  // The **main axis** only: `top` with `offset(6)`. The cross axis
+  // is not asserted because `shift({ padding: 8 })` legitimately
+  // moves it — a 229px tip over a 71px button cannot be centred
+  // this close to the edge — and an assertion that has to allow for
+  // that is one an unanchored tip at the viewport origin would also
+  // satisfy. This one it cannot: unanchored reads `bottom 24`.
+  await waitFor(() => {
+    const tipRect = tip.getBoundingClientRect()
+
+    expect(Math.round(tipRect.bottom)).toBe(
+      Math.round(triggerRect.top) - 6,
+    )
+  })
 })
