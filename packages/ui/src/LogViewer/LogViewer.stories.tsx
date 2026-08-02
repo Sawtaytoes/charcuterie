@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react"
 
+import { Accordion } from "../Accordion/Accordion.tsx"
 import {
   StoryCell,
   StoryGrid,
@@ -132,4 +133,37 @@ export const AllStates: Story = {
  */
 export const Interactive: Story = {
   args: { label: "Bay 8 rip log", lines: LONG_LINES },
+}
+
+/**
+ * The pane mounted inside a **collapsed** `Accordion` section, which
+ * is how the fleet actually renders a log and is the one arrangement
+ * where following used to fail.
+ *
+ * `AccordionSection` renders its panel with `hidden`, deliberately,
+ * so the pane keeps its scroll position and its subscriptions across
+ * a collapse. A `hidden` subtree has no layout, so a pane that
+ * measures itself on mount measures `scrollHeight 0` — and neither
+ * `isFollowing` nor `lines` changes when the section is opened.
+ *
+ * Expand it: the log opens on its **last** line, not its first.
+ */
+export const InsideDisclosure: Story = {
+  args: { label: "Bay 9 rip log", lines: LONG_LINES },
+  render: () => (
+    <Accordion
+      items={[
+        {
+          content: (
+            <LogViewer
+              label="Bay 9 rip log"
+              lines={LONG_LINES}
+            />
+          ),
+          key: "logs",
+          label: "Bay 9 output",
+        },
+      ]}
+    />
+  ),
 }
