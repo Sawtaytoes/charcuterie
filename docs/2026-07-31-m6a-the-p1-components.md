@@ -136,6 +136,22 @@ all.
 mux-magic's `FieldLabel`. It looks correct, reads correctly to a sighted user, and gives a
 screen reader an unnamed textbox.
 
+> **Correction, M6f (2026-08-02).** The heading above is wrong and is left standing so the
+> correction has something to point at. `FieldLabel` **does** render a `htmlFor` —
+> ``htmlFor={`${stepId}-${field.name}`}`` — and has since it was written. The defect is at
+> the other end of the pair: **8 of its 16 call sites never render that id on anything.**
+> The eight that do, on `mux-magic@master`, are `BooleanField`, `ChapterSplitsField`,
+> `EnumField`, `NumberField`, `NumberWithLookupField`, `PathField`, `StringArrayField` and
+> `StringField`; of the rest, `RegexWithFlagsField` mints its own `patternId` / `flagsId` /
+> `sampleId` and `SubtitleRulesField` spells ``${step.command}-hasDefaultRules`` where the
+> label says ``${step.id}-…``.
+>
+> The outcome is the same unnamed textbox, by a worse route — a `<label>` pointing at an id
+> nowhere in the document reads as correct in the label's own file and is only wrong in the
+> *other* file, so half of them are broken and nothing says which half. It is a better
+> argument for the component than the original claim was, which is the usual shape of
+> these: the real defect was more interesting than the one we assumed.
+
 ### 6. A drag target with no keyboard path
 
 gallery-downloader's page **gets the hard part right** — `dragenter`/`dragleave` fire once

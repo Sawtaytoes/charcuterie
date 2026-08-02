@@ -31,11 +31,25 @@ import type { InputHTMLAttributes } from "react"
  * clones onto, so a chain of slots behaves like the one control at
  * the bottom of it.
  *
- * The list is deliberately closed rather than an index signature. It
- * is exactly the wiring `Field` writes plus the wiring `Tooltip`
- * writes, it is greppable, and an open `Record<string, unknown>`
- * would forward a caller's typo onto a DOM node just as silently as
- * the bug it replaces.
+ * ### The list is closed, the forwarding is not
+ *
+ * Worth being exact, because the two are easy to conflate. This type
+ * is a closed list of five keys rather than an index signature: it is
+ * exactly the wiring `Field` writes plus the wiring `Tooltip` writes,
+ * it is greppable, and it is the set whose **merge semantics are
+ * defined** — which for four of them is last-write-wins and for
+ * `aria-describedby` is a join.
+ *
+ * The *runtime* forwards everything. Both components collect their
+ * received props with a rest spread and `mergeSlotProps` starts from
+ * `...receivedProps`, so an ancestor's `onPointerEnter`, its
+ * `onFocus`, its `ref` — none of which are named here — reach the
+ * control at the bottom too. That is not an oversight, it is load
+ * bearing: a `Tooltip` around a `Field` hands down `useHover`,
+ * `useFocus`, `useDismiss` and `refs.setReference`, and a `Field`
+ * that forwarded only the five keys below would leave the tip with no
+ * trigger and no anchor. A closed *runtime* filter would be
+ * mux-magic's `FieldTooltip` defect rebuilt inside the fix for it.
  *
  * The five keys, and who writes them:
  *

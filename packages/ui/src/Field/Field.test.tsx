@@ -16,9 +16,10 @@ test("the label names the control it points at", async () => {
 
   // The whole point of the component in one query: the control is
   // findable by the *label's* text, which is only true if `htmlFor`
-  // and the control's `id` agree. mux-magic's `FieldLabel` renders
-  // a `<label>` with no `htmlFor` at all — it looks right, reads
-  // right to a sighted user, and gives this query nothing.
+  // and the control's `id` agree. mux-magic's `FieldLabel` does
+  // render a `htmlFor` — 8 of its 16 call sites just never render
+  // that id on anything, so the pair agrees in one file and not in
+  // the other, and this query gets nothing.
   const control = expectAgentDrivable(canvas, {
     name: "Output directory",
     role: "textbox",
@@ -151,19 +152,66 @@ test("a slot forwards what an outer slot gave it", async () => {
     ),
   ).toHaveTextContent("Applied to every title.")
 
-  // And the other order, which is the same drop in reverse: a
-  // `Tooltip` cloning onto a `Field` that declared none of its props.
-  const inner = expectAgentDrivable(canvas, {
+  await expectNoAxeViolations(canvasElement)
+})
+
+/**
+ * The same drop in reverse — and the half that nearly shipped
+ * untested.
+ *
+ * The first draft of the test above closed with an `aria-invalid`
+ * assertion on the inner control of the *other* cell and called that
+ * the reverse case. It is not: `Field` writes `aria-invalid` itself,
+ * from its own `error` prop, so that assertion holds whether or not a
+ * single thing arrived from the `Tooltip` above it. Reverting
+ * `Field`'s half of the fix left the whole file green.
+ *
+ * What a `Tooltip` hands down is not one attribute, it is a working
+ * component: `getReferenceProps()`'s hover, focus and dismiss
+ * handlers, `refs.setReference`, and an `aria-describedby` naming the
+ * tip. All of it lands on the `Field` **element**, and `Field` has to
+ * pass every bit of it through to the control at the bottom or the
+ * tip is a floating node with no trigger, no anchor and nobody
+ * pointed at it — mux-magic's `FieldTooltip` defect 1, reproduced by
+ * a library that shipped the fix for it.
+ *
+ * So the assertion is the tip *opening from the inner control's own
+ * focus* and then being named by it, which needs the handlers, the
+ * ref and the attribute to have all three arrived.
+ */
+test("a slot forwards what an outer slot gave it, in the other order", async () => {
+  const { canvas } = await mountStory(Nested)
+
+  const control = expectAgentDrivable(canvas, {
     name: "Archive path",
     role: "textbox",
   })
 
-  await expect(inner).toHaveAttribute(
-    "aria-invalid",
-    "true",
-  )
+  // Focus on the control, not on the `Field` — `Field` renders a
+  // `<div>`, which cannot take focus, so a tip that opens here can
+  // only have been wired to the `<input>`.
+  control.focus()
 
-  await expectNoAxeViolations(canvasElement)
+  await waitFor(() => {
+    expect(canvas.getByRole("tooltip")).toHaveTextContent(
+      "Where finished rips are moved.",
+    )
+  })
+
+  const [tipId, errorId] = (
+    control.getAttribute("aria-describedby") ?? ""
+  ).split(" ")
+
+  // Outer first, which here is the tip: the merge order is
+  // structural — whoever wrapped whom — and the author of the nesting
+  // is the one who chose it.
+  await expect(
+    document.getElementById(tipId ?? ""),
+  ).toHaveTextContent("Where finished rips are moved.")
+
+  await expect(
+    document.getElementById(errorId ?? ""),
+  ).toHaveTextContent("Not writable.")
 })
 
 /**
