@@ -1,6 +1,6 @@
 {
   "name": "@charcuterie/biome-config",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "The shared Biome formatter and linter settings for the Charcuterie fleet.",
   "license": "MIT",
   "type": "module",
