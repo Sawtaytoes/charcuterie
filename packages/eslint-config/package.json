@@ -1,6 +1,6 @@
 {
   "name": "@charcuterie/eslint-config",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "The house ESLint rules Biome cannot express: type-aware naming, identifier length, and logical-properties-only.",
   "license": "MIT",
   "type": "module",
