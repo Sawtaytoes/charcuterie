@@ -85,6 +85,11 @@ announces nothing.
 have. An extra `<div>` around it is how a toolbar's layout quietly changes, and it is why
 this is the pattern v1 chose and M2 ported.
 
+It **composes** rather than overwrites: your button's own `ref` and its own `onClick` are
+still called, with the popover's added. Until 1.0.1 they were replaced — silently, because a
+ref that is never called and a handler that never runs both look exactly like nothing
+happening.
+
 ## Escape *is* pressable here
 
 Unlike `Modal`'s. `useDismiss` listens for a keydown rather than relying on a UA default

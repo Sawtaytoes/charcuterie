@@ -4,6 +4,8 @@ import type { VNode } from "preact"
 import { cloneElement, toChildArray } from "preact"
 import { useMemo, useRef } from "preact/hooks"
 
+import { mergeClonedProps } from "./mergeClonedProps.ts"
+
 const isShallowEqual = (
   first: Record<string, unknown>,
   second: Record<string, unknown>,
@@ -59,6 +61,12 @@ const getOnlyChild = (child: VNode | VNode[]) => {
   return onlyChild
 }
 
+/**
+ * The clone **composes** with what the child element already
+ * carried, rather than overwriting it: a `ref` is a subscription and
+ * an `on*` is a listener, and neither survives being replaced. See
+ * `mergeClonedProps`.
+ */
 export const useClonedChild = <
   Props extends Record<string, unknown>,
 >(
@@ -67,8 +75,21 @@ export const useClonedChild = <
 ) => {
   const stableProps = useShallowStable(childProps)
 
-  return useMemo(
-    () => cloneElement(getOnlyChild(child), stableProps),
-    [child, stableProps],
-  )
+  return useMemo(() => {
+    const onlyChild = getOnlyChild(child)
+
+    return cloneElement(
+      onlyChild,
+      mergeClonedProps(
+        // Preact keeps the ref on the vnode rather than in its
+        // props, so it is put back alongside them here — the merge
+        // is over one shape in both bindings.
+        {
+          ...(onlyChild.props as Record<string, unknown>),
+          ref: onlyChild.ref,
+        },
+        stableProps,
+      ),
+    )
+  }, [child, stableProps])
 }

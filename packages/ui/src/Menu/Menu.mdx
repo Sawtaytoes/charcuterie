@@ -101,3 +101,26 @@ a keystroke buffer and a timer in a component that has neither, for a menu you c
 three arrow presses.
 
 <Canvas of={MenuStories.Interactive} />
+
+## One trigger, two slots
+
+A `Menu` and a `Tooltip` on the same button — the obvious thing to write, and until 1.0.1
+it did not work.
+
+Both components clone onto the trigger and both hand it a floating-ui
+`refs.setReference` — the element each of them positions its panel against. Every merge in
+the library was last-write-wins, so the inner `Tooltip` wrote its ref and the `Menu`'s was
+gone. A menu with no reference element is not an error: floating-ui simply leaves the panel
+at `left: 0; top: 0`, in the corner of the viewport, which reads as a CSS bug.
+
+A `ref` is a subscription and an `on*` is a listener, and neither survives being replaced.
+So both are **merged** now — between two slots by `mergeSlotWiring`, and between a slot and
+the element you wrote by `useClonedChild`, which is what makes
+`<Menu trigger={<Button ref={buttonRef} onClick={toggle} />} />` keep your ref *and* your
+handler.
+
+`SharedTrigger` is padded so the trigger sits away from the viewport origin: at the corner,
+an anchored panel and an unanchored one land in the same place, and the test asserts that
+padding is still there before it asserts anything else.
+
+<Canvas of={MenuStories.SharedTrigger} />

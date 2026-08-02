@@ -23,7 +23,7 @@ export type SelectOption = {
 
 export type SelectOptionGroup = {
   label: string
-  options: SelectOption[]
+  options: readonly SelectOption[]
 }
 
 export type SelectItem = SelectOption | SelectOptionGroup
@@ -56,7 +56,15 @@ export type SelectProps = Omit<
    */
   label?: string
   onChange?: (value: string) => void
-  options: SelectItem[]
+  /**
+   * `readonly`, because a caller's list is usually a constant and
+   * TypeScript will not hand a `readonly` array to a mutable
+   * parameter — image-viewer hit `TS4104` on an `as const` options
+   * table and had to spread a copy at every call. This component
+   * only ever `.map`s over it, so demanding a mutable array was
+   * asking for a permission it never uses.
+   */
+  options: readonly SelectItem[]
   /**
    * A disabled first entry, not a real option. Reads as a prompt to
    * a sighted user and cannot be submitted, which is what a

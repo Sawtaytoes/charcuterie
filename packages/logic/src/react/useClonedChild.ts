@@ -6,6 +6,8 @@ import {
   useRef,
 } from "react"
 
+import { mergeClonedProps } from "./mergeClonedProps.ts"
+
 const isShallowEqual = (
   first: Record<string, unknown>,
   second: Record<string, unknown>,
@@ -64,6 +66,16 @@ const useShallowStable = <
  * The clone keeps its identity while the injected props are
  * shallow-equal, so a `memo()`'d child is not re-rendered by its
  * wrapper on every parent render.
+ *
+ * ### The clone composes, it does not overwrite
+ *
+ * `cloneElement` replaces every key it is given, which is right for
+ * values and wrong for the two props that are not values: a `ref` is
+ * a subscription and an `on*` is a listener. Both are merged with
+ * whatever the child element already carried — see
+ * `mergeClonedProps` for the reasoning — so
+ * `<Menu trigger={<Button ref={buttonRef} onClick={toggle} />} />`
+ * keeps both of the caller's and adds the menu's.
  */
 export const useClonedChild = <
   Props extends Record<string, unknown>,
@@ -73,14 +85,16 @@ export const useClonedChild = <
 ) => {
   const stableProps = useShallowStable(childProps)
 
-  return useMemo(
-    () =>
-      cloneElement(
-        // Throws a useful error on zero or several children,
-        // which is the whole contract of a slot.
-        Children.only(child),
-        stableProps,
-      ),
-    [child, stableProps],
-  )
+  return useMemo(() => {
+    // Throws a useful error on zero or several children, which is
+    // the whole contract of a slot.
+    const onlyChild = Children.only(child) as ReactElement<
+      Record<string, unknown>
+    >
+
+    return cloneElement(
+      onlyChild,
+      mergeClonedProps(onlyChild.props, stableProps),
+    )
+  }, [child, stableProps])
 }
