@@ -33,14 +33,19 @@ const mergedRefs = new WeakMap<
 >()
 
 /**
- * **Difference 1: no cleanup is returned.** React 19's ref-cleanup
- * contract is newer than this package's `preact >=10.11` floor, so
- * the merged ref stays on the shape every version understands — one
- * call with the node, one call with `null`.
+ * **Difference 1: no cleanup is returned, and none is remembered.**
+ * React 19's ref-cleanup contract is newer than this package's
+ * `preact >=10.11` floor, so the merged ref stays on the shape every
+ * version understands: called with the node, called again with
+ * `null`, and it forwards both.
  *
- * A composed ref that *does* return a cleanup is still honoured:
- * its cleanup is remembered and run in place of the `null` it opted
- * out of.
+ * Remembering each composed ref's cleanup was the first version and
+ * it is wrong here. The merged function is **cached by its inputs**,
+ * so two elements composing the same pair of refs share one
+ * function — and a cleanup list held in that function's closure is
+ * then shared between them, where the second mount overwrites the
+ * first's. The React binding has no such state: its cleanups are
+ * local to each attach.
  */
 const mergeRefs = (
   first: MergeableRef,
@@ -58,24 +63,10 @@ const mergeRefs = (
     return cached
   }
 
-  let cleanups: unknown[] = []
-
   const merged = (node: unknown) => {
-    if (node === null) {
-      for (const [index, cleanup] of cleanups.entries()) {
-        if (typeof cleanup === "function") {
-          cleanup()
-        } else {
-          setRef(index === 0 ? first : second, null)
-        }
-      }
+    setRef(first, node)
 
-      cleanups = []
-
-      return
-    }
-
-    cleanups = [setRef(first, node), setRef(second, node)]
+    setRef(second, node)
   }
 
   bySecond.set(second, merged)
