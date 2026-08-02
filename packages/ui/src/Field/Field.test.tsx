@@ -1,5 +1,5 @@
 import { composeStories } from "@storybook/react"
-import { expect } from "storybook/test"
+import { expect, waitFor } from "storybook/test"
 import { test } from "vitest"
 
 import { expectNoAxeViolations } from "../expectNoAxeViolations.testHelpers.ts"
@@ -7,7 +7,7 @@ import { mountStory } from "../mountStory.testHelpers.ts"
 import { expectAgentDrivable } from "../testing/index.ts"
 import * as stories from "./Field.stories.tsx"
 
-const { AllStates, AllVariants, Default } =
+const { AllStates, AllVariants, Default, Group, Nested } =
   composeStories(stories)
 
 test("the label names the control it points at", async () => {
@@ -115,6 +115,98 @@ test("an error is the only source of invalidity", async () => {
 })
 
 /**
+ * The nesting defect, and the reason `SlotProps` exists.
+ *
+ * `Field` clones onto its one child. With a `Tooltip` in between, the
+ * child is the **`Tooltip` element**, so `id`, `aria-describedby`,
+ * `aria-invalid` and `required` were handed to a component that
+ * declares none of them. `cloneElement` does not care, TypeScript
+ * never sees it, and the render is pixel-identical — the only
+ * symptom is a `<label htmlFor>` pointing at an id that is nowhere in
+ * the document, which is exactly the unnamed textbox this component
+ * exists to prevent.
+ *
+ * The query below is the proof: finding the control **by the label's
+ * text** is only possible if the `id` reached the `<input>` at the
+ * bottom of the chain.
+ */
+test("a slot forwards what an outer slot gave it", async () => {
+  const { canvas, canvasElement } = await mountStory(Nested)
+
+  const control = expectAgentDrivable(canvas, {
+    name: "Rename pattern",
+    role: "textbox",
+  })
+
+  await expect(control).toBeRequired()
+
+  await expect(control).toHaveAttribute(
+    "aria-required",
+    "true",
+  )
+
+  await expect(
+    document.getElementById(
+      control.getAttribute("aria-describedby") ?? "",
+    ),
+  ).toHaveTextContent("Applied to every title.")
+
+  // And the other order, which is the same drop in reverse: a
+  // `Tooltip` cloning onto a `Field` that declared none of its props.
+  const inner = expectAgentDrivable(canvas, {
+    name: "Archive path",
+    role: "textbox",
+  })
+
+  await expect(inner).toHaveAttribute("aria-invalid", "true")
+
+  await expectNoAxeViolations(canvasElement)
+})
+
+/**
+ * `aria-describedby` is the one slot prop that is a **list**, so the
+ * merge is not last-write-wins. A `Field` names its description and
+ * its error; a `Tooltip` names its tip. A plain spread keeps one and
+ * loses the other — the same silent drop by a shorter route.
+ *
+ * Outer first: the field's own explanation before the supplementary
+ * tip.
+ */
+test("a tip is described alongside the field's own text, not instead of it", async () => {
+  const { canvas } = await mountStory(Nested)
+
+  const control = expectAgentDrivable(canvas, {
+    name: "Rename pattern",
+    role: "textbox",
+  })
+
+  control.focus()
+
+  // `useFocus` is what opens it — the line mux-magic's hand-rolled
+  // tip is missing, and the reason this is testable without a
+  // pointer at all.
+  await waitFor(() => {
+    expect(
+      canvas.getByRole("tooltip"),
+    ).toHaveTextContent(
+      "A JavaScript regular expression.",
+    )
+  })
+
+  const [descriptionId, tipId] = (
+    control.getAttribute("aria-describedby") ?? ""
+  ).split(" ")
+
+  await expect(
+    document.getElementById(descriptionId ?? ""),
+  ).toHaveTextContent("Applied to every title.")
+
+  await expect(
+    document.getElementById(tipId ?? ""),
+  ).toHaveTextContent("A JavaScript regular expression.")
+})
+
+/**
  * Order inside `aria-describedby` is behaviour, not formatting. A
  * screen reader reads the list in sequence, and "absolute paths only
  * — that path is not writable" is a different sentence from its
@@ -139,4 +231,65 @@ test("description is described before error", async () => {
   await expect(
     document.getElementById(errorId ?? ""),
   ).toHaveTextContent("That path is not writable.")
+})
+
+/**
+ * `Field` cannot go here and the failure is quiet: an `id` names one
+ * element and a `<label htmlFor>` points at one, so a label over three
+ * inputs names one of them and leaves the other two anonymous. Six of
+ * mux-magic's sixteen field components are in exactly that state.
+ *
+ * `<fieldset>` + `<legend>` is the platform's answer, and it is the
+ * one place in this library where the element is right — the content
+ * really is a form-control grouping.
+ */
+test("a group is named by its legend, and its controls keep their own names", async () => {
+  const { canvas, canvasElement } = await mountStory(Group)
+
+  const group = expectAgentDrivable(canvas, {
+    // "Rename pattern", not "Rename pattern *" — the asterisk is
+    // `aria-hidden`, so it is decoration and stays out of the name.
+    name: "Rename pattern",
+    role: "group",
+  })
+
+  // Every control inside is still individually findable. A group
+  // that swallows its members' names is the same defect one level up.
+  for (const name of ["Pattern", "Flags", "Sample"]) {
+    expectAgentDrivable(canvas, { name, role: "textbox" })
+  }
+
+  await expect(
+    document.getElementById(
+      group.getAttribute("aria-describedby") ?? "",
+    ),
+  ).toHaveTextContent("Applied to every title in the disc.")
+
+  await expectNoAxeViolations(canvasElement)
+})
+
+/**
+ * `aria-invalid` has no group form — it belongs on the control that
+ * is actually invalid, and a `FieldGroup` does not know which one
+ * that is. So the error is *described*, not *asserted*, and the
+ * alternative — cloning `aria-invalid` onto every child — would mark
+ * the valid ones invalid.
+ */
+test("a group describes its error rather than asserting invalidity", async () => {
+  const { canvas } = await mountStory(Group)
+
+  const group = expectAgentDrivable(canvas, {
+    name: "Chapter split",
+    role: "group",
+  })
+
+  await expect(group).not.toHaveAttribute("aria-invalid")
+
+  await expect(
+    document.getElementById(
+      group.getAttribute("aria-describedby") ?? "",
+    ),
+  ).toHaveTextContent(
+    "A pattern needs at least one capture group.",
+  )
 })
