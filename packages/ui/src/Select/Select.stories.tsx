@@ -9,11 +9,19 @@ import { Field } from "../Field/Field.tsx"
 import type { SelectItem } from "./Select.tsx"
 import { Select } from "./Select.tsx"
 
-const PROFILES: SelectItem[] = [
+/**
+ * `as const satisfies`, which is a **typecheck** of the `readonly`
+ * widening as much as it is a story: a consumer's options table is
+ * usually a constant, and until 1.0.1 handing one to `options`
+ * failed with `TS4104` — image-viewer copied the array at every call
+ * site to get past it. If that widening is ever reverted, this line
+ * is where `yarn typecheck` says so.
+ */
+const PROFILES = [
   { label: "Lossless remux", value: "lossless" },
   { label: "Compressed 1080p", value: "compressed" },
   { isDisabled: true, label: "Dolby Vision", value: "dv" },
-]
+] as const satisfies readonly SelectItem[]
 
 const GROUPED: SelectItem[] = [
   {
