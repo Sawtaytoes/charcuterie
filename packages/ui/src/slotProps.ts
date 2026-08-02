@@ -1,5 +1,7 @@
 import type { InputHTMLAttributes } from "react"
 
+import { mergeSlotWiring } from "./slotWiring.ts"
+
 /**
  * The props a **cloning ancestor** injects into the control below it.
  *
@@ -114,6 +116,17 @@ export type SlotProps = Pick<
  * `isRequired || undefined`, so a plain spread would let an inner
  * `Field` with no error erase an outer one's `aria-invalid` — the
  * same silent drop, one level down.
+ *
+ * ### The wiring is not a value, and does not last-write-win
+ *
+ * `ref` and the `on*` handlers are merged rather than replaced, by
+ * `mergeSlotWiring`. This was the 1.0.0 hole: `mergeSlotProps`
+ * settled the five *attributes* and left the two props that are not
+ * attributes on last-write-wins, so a `Menu` and a `Tooltip` on one
+ * trigger each handed it a floating-ui `refs.setReference` and the
+ * inner one won. The outer panel had no anchor and rendered in the
+ * corner of the viewport — no error, no failing test, and it looks
+ * like a CSS bug.
  */
 export const mergeSlotProps = <
   OwnProps extends Record<string, unknown>,
@@ -139,5 +152,12 @@ export const mergeSlotProps = <
     ...definedOwnProps,
     "aria-describedby":
       describedBy === "" ? undefined : describedBy,
+    // Last, because it is the only merge that has to beat
+    // `definedOwnProps` — it is composing what that spread would
+    // otherwise have thrown away.
+    ...mergeSlotWiring(
+      receivedProps as Record<string, unknown>,
+      definedOwnProps,
+    ),
   }
 }
