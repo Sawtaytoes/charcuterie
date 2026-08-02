@@ -68,6 +68,8 @@ export type {
 export { EmptyState } from "./EmptyState/EmptyState.tsx"
 export type { FieldProps } from "./Field/Field.tsx"
 export { Field } from "./Field/Field.tsx"
+export type { FieldGroupProps } from "./Field/FieldGroup.tsx"
+export { FieldGroup } from "./Field/FieldGroup.tsx"
 export type { FileDropZoneProps } from "./FileDropZone/FileDropZone.tsx"
 export { FileDropZone } from "./FileDropZone/FileDropZone.tsx"
 export type { IconButtonProps } from "./IconButton/IconButton.tsx"
@@ -145,6 +147,8 @@ export type {
 export { SortableTableHeader } from "./SortableTableHeader/SortableTableHeader.tsx"
 export type { SpinnerProps } from "./Spinner/Spinner.tsx"
 export { Spinner } from "./Spinner/Spinner.tsx"
+export type { SlotProps } from "./slotProps.ts"
+export { mergeSlotProps } from "./slotProps.ts"
 export {
   getAsyncIntent,
   getAsyncLabel,
