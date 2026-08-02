@@ -13,6 +13,7 @@ import {
   SettingsIcon,
   UndoIcon,
 } from "../icons.storyHelpers.tsx"
+import { Tooltip } from "../Tooltip/Tooltip.tsx"
 import type { MenuItem } from "./Menu.tsx"
 import { Menu } from "./Menu.tsx"
 
@@ -67,6 +68,40 @@ const MenuHarness = ({
         <Button appearance="outline" onClick={toggle}>
           {triggerLabel}
         </Button>
+      }
+    />
+  )
+}
+
+/**
+ * The same harness, with a `Tooltip` between the `Menu` and the
+ * button — two components cloning onto **one** trigger, which is what
+ * image-viewer wanted and could not have.
+ */
+const TooltipTriggerHarness = ({
+  isInitiallyVisible = false,
+  tip,
+  triggerLabel,
+}: {
+  isInitiallyVisible?: boolean
+  tip: string
+  triggerLabel: string
+}): ReactNode => {
+  const { hide, isVisible, toggle } = useVisibility({
+    isVisible: isInitiallyVisible,
+  })
+
+  return (
+    <Menu
+      isVisible={isVisible}
+      items={BAY_ACTIONS}
+      onDismiss={hide}
+      trigger={
+        <Tooltip label={tip}>
+          <Button appearance="outline" onClick={toggle}>
+            {triggerLabel}
+          </Button>
+        </Tooltip>
       }
     />
   )
@@ -140,6 +175,38 @@ export const AllStates: Story = {
   },
   render: () => (
     <MenuHarness isInitiallyVisible triggerLabel="Bay 3" />
+  ),
+}
+
+/**
+ * **One trigger, two slots.** `Menu` and `Tooltip` both clone onto
+ * the button and both hand it a `ref` — floating-ui's
+ * `refs.setReference`, which is the anchor each of them positions
+ * against. Until 1.0.1 the second clone's ref simply replaced the
+ * first's, so the panel it belonged to had no anchor and rendered in
+ * the top-left corner of the viewport.
+ *
+ * Hover the button and open the menu: the tip and the panel are both
+ * attached to it.
+ */
+export const SharedTrigger: Story = {
+  args: {
+    isVisible: false,
+    onDismiss: noop,
+    trigger: <Button appearance="outline">Actions</Button>,
+  },
+  render: () => (
+    // Padded, and the padding is load-bearing rather than pretty: an
+    // anchor that has been dropped leaves floating-ui at
+    // `left: 0; top: 0`, so a trigger sitting in the corner of the
+    // viewport is a trigger where "anchored" and "not anchored" look
+    // identical. `Menu.test.tsx` asserts the padding is still here.
+    <div className="p-16">
+      <TooltipTriggerHarness
+        tip="Everything that can be done to this bay."
+        triggerLabel="Bay 5"
+      />
+    </div>
   ),
 }
 
