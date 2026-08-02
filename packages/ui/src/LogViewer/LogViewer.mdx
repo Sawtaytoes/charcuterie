@@ -8,7 +8,8 @@ import * as LogViewerStories from "./LogViewer.stories";
 
 Three repos render a scrolling log pane — mux-magic's `JobLogsDisclosure` and `StepLogs`,
 rip-deck's `LogModal` — and between them they have four defects this component exists not to
-have.
+have. The fifth below is not theirs: it is defect 1 coming back through the front door, in
+this component, found by the first app to consume it.
 
 <Canvas of={LogViewerStories.Default} />
 
@@ -62,6 +63,40 @@ and a log that is there to be read when wanted. `isAnnounced` exists for the sho
 five-line result panel where the lines **are** the outcome.
 
 <Canvas of={LogViewerStories.AllVariants} />
+
+## 5. A pane measured before it has a box
+
+Defect 1 again, and the fix for it cannot see this one. `AccordionSection` renders its panel
+with `hidden` rather than unmounting it, deliberately — an unmounted panel loses a scroll
+position, a partially typed form, and any subscription its content opened, and the fleet's
+log panes are exactly that. A `hidden` subtree has **no layout**, so the mount effect reads
+`scrollHeight 0` and writes `scrollTop = 0`. Measured in mux-magic on a 60-line pane:
+
+```
+while collapsed : scrollTop 0   scrollHeight 0     clientHeight 0
+after expanding : scrollTop 0   scrollHeight 976   clientHeight 254
+```
+
+Neither `isFollowing` nor `lines` changes when the section is opened, so the effect never
+runs again and the log opens on its **first** line. That is this component's own `}, [])`
+bug, rebuilt out of two components whose individual decisions are both right, and invisible
+to both of their test suites — `LogViewer`'s mounted visible, `Accordion`'s holding content
+that never measures itself. mux-magic hit it as a consumer and worked around it downstream,
+in a `DisclosedLogViewer` that withheld the pane until the section had been opened once.
+That workaround is now deletable.
+
+A `ResizeObserver` on the pane, live only while following, is the fix. Not an
+`IntersectionObserver`: that answers "is it on screen", which is a different question with
+two wrong answers here — a pane below the fold on a long page is not intersecting and has
+perfectly good layout, and scrolling the page later would re-fire for no reason.
+`ResizeObserver` answers "does it have a box, and is that box still the same size", which is
+the precondition the measurement actually needs; per spec it does not fire at `observe()`
+time for an element that is not being rendered, so **gaining a box is the first callback**.
+
+It pays for itself twice: a window resize re-wraps the lines and changes what is at the
+bottom, and a following pane belongs at the new bottom.
+
+<Canvas of={LogViewerStories.InsideDisclosure} />
 
 ## Not every boolean is a state kind
 

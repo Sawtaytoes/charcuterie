@@ -7,9 +7,23 @@ import * as FieldStories from "./Field.stories";
 # Field
 
 Sixteen files in the fleet spell a label, a control, and a hint, and no two spell the
-wiring the same way. mux-magic's `FieldLabel` renders a `<label>` with **no `htmlFor`** —
-which looks correct, reads correctly to a sighted user, and gives a screen reader an
-unnamed textbox.
+wiring the same way.
+
+An earlier version of this page said mux-magic's `FieldLabel` renders a `<label>` with
+**no `htmlFor`**. That is false, and worth correcting rather than quietly deleting: it
+renders ``htmlFor={`${stepId}-${field.name}`}``, and has since it was written. The defect
+is at the *other* end of the pair — **8 of its 16 call sites never render that id on
+anything**. Measured on `mux-magic@master`, the eight that do are `BooleanField`,
+`ChapterSplitsField`, `EnumField`, `NumberField`, `NumberWithLookupField`, `PathField`,
+`StringArrayField` and `StringField`. Of the rest, `RegexWithFlagsField` mints its own
+`patternId` / `flagsId` / `sampleId` and `SubtitleRulesField` spells
+``${step.command}-hasDefaultRules`` where the label says ``${step.id}-…``.
+
+The outcome is the same unnamed textbox by a worse route: a `<label>` pointing at an id
+that is nowhere in the document reads as correct in the label's own file, and is only
+wrong in the *other* file. Half of them are broken and nothing says which half. That is
+the argument for a component rather than a convention — here the id is minted and consumed
+in one place and cannot be spelled twice.
 
 <Canvas of={FieldStories.Default} />
 
@@ -24,6 +38,62 @@ Cloned, not wrapped — the same contract as `Popover`'s trigger. An `<input>`, 
 `aria-describedby`, `aria-invalid` and `required` are injected onto whatever arrives.
 
 <Canvas of={FieldStories.AllVariants} />
+
+## A slot is a pass-through
+
+Which is a rule this component needed and did not have. `Field` and `Tooltip` both clone
+onto their single child, so the obvious thing to write —
+
+```tsx
+<Field label="Rename pattern" isRequired>
+  <Tooltip label="A JavaScript regular expression.">
+    <input />
+  </Tooltip>
+</Field>
+```
+
+— handed `id`, `aria-describedby`, `aria-invalid` and `required` to the **`Tooltip`
+component**, which declares none of them. `cloneElement` does not care. React drops all
+four without a warning, TypeScript never sees it (`Children.only` returns a `ReactElement`
+whose props are `any`), every test still passed, and the render was pixel-identical. The
+only symptom was a `<label htmlFor>` pointing at an id nowhere in the document — the exact
+defect above, reproduced by the component built to prevent it, and this time by the
+library rather than by a consumer.
+
+**Silent prop-dropping is the worst version of this**, so anything a slot receives from
+above is forwarded to the child it clones onto, and a chain of slots behaves like the one
+control at the bottom of it. `aria-describedby` — the one prop that is a *list* — is
+merged rather than overwritten, outer first.
+
+It works in both orders, and the second is not symmetrical: a `Tooltip` around a `Field`
+hands down not one attribute but a working component — floating-ui's hover, focus and
+dismiss handlers and `refs.setReference`. Those reach the control too, or the tip is a
+floating node with no trigger and no anchor.
+
+<Canvas of={FieldStories.Nested} />
+
+## Several controls are a `FieldGroup`, not a `Field`
+
+`Field` mints one id and clones it onto one child. An `id` names one element and a
+`<label htmlFor>` points at one, so the moment there are two controls the label names one
+of them and leaves the rest anonymous. Six of mux-magic's sixteen field components are in
+that position — `RegexWithFlagsField` (pattern, flags, sample, and a checkbox),
+`NumberWithLookupField`, `LanguageCodeField`, `LanguageCodesField`, `SubtitleTypesField`
+and `RenameRegexField`.
+
+`FieldGroup` renders `<fieldset>` + `<legend>` and does **not** clone. This is the one
+place in the library where `<fieldset>` is right: `AccordionSection` rejected it for its
+panel precisely because that element means *form-control grouping*, and here the content
+really is one. `<legend>` names the group natively, so no `role="group"` and no
+`aria-labelledby`.
+
+What a group cannot carry is `aria-invalid`, which has no group form — it belongs on the
+control that is actually invalid, and a `FieldGroup` does not know which one that is. So
+`error` here is **described, not asserted**: it joins the `<fieldset>`'s
+`aria-describedby`. Cloning `aria-invalid` onto every child would mark the valid ones
+invalid. A control that is itself invalid says so in its own `Field`.
+
+<Canvas of={FieldStories.Group} />
 
 ## `createLinkedIds` is *not* here, and that is the finding
 

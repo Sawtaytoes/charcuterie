@@ -17,9 +17,11 @@ import {
 } from "@floating-ui/react"
 import type { ReactElement, ReactNode } from "react"
 
+import type { SlotProps } from "../slotProps.ts"
+import { mergeSlotProps } from "../slotProps.ts"
 import { toClassName } from "../toClassName.ts"
 
-export type TooltipProps = {
+export type TooltipProps = SlotProps & {
   /**
    * The control the tip describes. **Cloned, not wrapped** — the
    * same slot contract as `Popover`'s trigger.
@@ -83,6 +85,19 @@ export type TooltipProps = {
  * anything a touch user *must* read belongs in a `Field`'s
  * `description` instead. Building a long-press would make the tip
  * load-bearing on exactly the surface where it is least reliable.
+ *
+ * ### A slot is a pass-through
+ *
+ * A `Tooltip` is the natural thing to put between a `Field` and its
+ * control — mux-magic's `FieldLabel` renders a `FieldTooltip` for
+ * exactly that reason. Both components clone onto their one child, so
+ * an outer `Field` used to hand *this component* the `id`,
+ * `aria-describedby`, `aria-invalid` and `required` meant for the
+ * `<input>`, and this component dropped all four without a word.
+ *
+ * Anything in `SlotProps` that arrives from above is forwarded to the
+ * trigger, and `aria-describedby` is **merged** with the tip's own id
+ * rather than overwriting it. `slotProps.ts` has the reasoning.
  */
 export const Tooltip = ({
   children,
@@ -90,6 +105,7 @@ export const Tooltip = ({
   delay = 200,
   label,
   placement = "top",
+  ...receivedSlotProps
 }: TooltipProps): ReactNode => {
   const { isVisible, setIsVisible } = useVisibility()
 
@@ -121,10 +137,18 @@ export const Tooltip = ({
       useRole(context, { role: "tooltip" }),
     ])
 
-  const clonedTrigger = useClonedChild(children, {
-    ...getReferenceProps(),
-    ref: refs.setReference,
-  })
+  const clonedTrigger = useClonedChild(
+    children,
+    // `mergeSlotProps` rather than a spread, because
+    // `getReferenceProps()` writes an `aria-describedby` of its own —
+    // `useRole` pointing the trigger at the tip — and an outer
+    // `Field` writes one naming its description and its error. A
+    // spread keeps whichever went last.
+    mergeSlotProps(receivedSlotProps, {
+      ...getReferenceProps(),
+      ref: refs.setReference,
+    }),
+  )
 
   return (
     <>

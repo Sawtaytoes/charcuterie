@@ -35,7 +35,9 @@ export type LogViewerProps = {
  * Three repos render a scrolling log pane —
  * mux-magic's `JobLogsDisclosure` and `StepLogs`, rip-deck's
  * `LogModal` — and between them they have four defects that this
- * component exists to not have.
+ * component exists to not have. A fifth, below the effects, is not
+ * theirs: it is defect 1 coming back through the front door, in this
+ * component, found by the first app to consume it.
  *
  * ### 1. The one that follows nothing
  *
@@ -120,6 +122,70 @@ export const LogViewer = ({
     // `shownLines` rather than an empty array — this is the whole fix
     // for defect 1, and the dependency *is* the fix.
   }, [isFollowing, shownLines])
+
+  /**
+   * Defect 1 again, and the effect above cannot see it: **a pane can
+   * be measured before it has a box.**
+   *
+   * `AccordionSection` renders its panel with `hidden` rather than
+   * unmounting it, deliberately — "a panel that unmounts loses a
+   * scroll position, a partially typed form, and any subscription its
+   * content opened — and the fleet's log panes are exactly that." A
+   * `hidden` subtree has no layout, so the effect above runs on mount
+   * with `scrollHeight 0` and writes `scrollTop = 0`, and then never
+   * runs again: neither `isFollowing` nor `shownLines` changes when
+   * the section is opened. Measured in mux-magic on a 60-line pane:
+   *
+   * ```
+   * while collapsed : scrollTop 0   scrollHeight 0     clientHeight 0
+   * after expanding : scrollTop 0   scrollHeight 976   clientHeight 254
+   * ```
+   *
+   * That is this component's own `}, [])` bug, rebuilt out of two
+   * components whose individual decisions are both right, and
+   * invisible to both of their test suites — `LogViewer`'s mounted
+   * visible, `Accordion`'s holding content that never measures
+   * itself. mux-magic hit it in its first week as a consumer and
+   * worked around it downstream, in a `DisclosedLogViewer` that
+   * withheld the pane until the section had been opened once. This is
+   * that workaround coming into the library so it can be deleted.
+   *
+   * ### Why the box and not the viewport
+   *
+   * An `IntersectionObserver` answers "is it on screen", which is a
+   * different question with two wrong answers here: a pane below the
+   * fold on a long page is *not* intersecting and has perfectly good
+   * layout, and scrolling the page later would re-fire for no reason.
+   * `ResizeObserver` answers "does it have a box, and is that box
+   * still the same size" — which is the precondition the measurement
+   * above actually needs. Per spec it does not fire at `observe()`
+   * time for an element that is not being rendered, so gaining a box
+   * *is* the first callback, and that is the reveal.
+   *
+   * It pays for itself twice: a window resize re-wraps the lines and
+   * changes what is at the bottom, and a following pane should be at
+   * the new bottom rather than a few lines above it.
+   *
+   * Only while following. A user who scrolled up to read an error is
+   * not dragged back by resizing their window.
+   */
+  useEffect(() => {
+    const pane = paneRef.current
+
+    if (!pane || !isFollowing) {
+      return
+    }
+
+    const observer = new ResizeObserver(() => {
+      pane.scrollTop = pane.scrollHeight
+    })
+
+    observer.observe(pane)
+
+    return () => {
+      observer.disconnect()
+    }
+  }, [isFollowing])
 
   return (
     <div
