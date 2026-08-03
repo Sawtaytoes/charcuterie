@@ -194,6 +194,17 @@ const DENSITIES: Density[] = [
 ]
 
 /**
+ * The density a consumer gets without asking, and it has to be first
+ * in `DENSITIES`.
+ *
+ * `:root` and `[data-density="compact"]` are the same specificity
+ * (0,1,0), so which one wins is decided by **source order** — the
+ * default block has to be emitted before the others or setting
+ * `data-density="compact"` would do nothing.
+ */
+const DEFAULT_DENSITY: Density = "comfortable"
+
+/**
  * The anti-flash rule, for the inline `<style>` in an entry HTML.
  *
  * Every app in the fleet needs one: between the browser painting
@@ -436,9 +447,34 @@ export const buildVariablesCss = (
     }
 
     for (const density of DENSITIES) {
+      /**
+       * `:root` on the default variant's default density, and it is
+       * load-bearing rather than tidy.
+       *
+       * Every `--control-height-*`, `--control-gap-*`,
+       * `--control-padding-inline-*` and `--font-size-*` lives in one
+       * of these blocks and **nowhere else**. Without a bare `:root`
+       * here, an app that sets `data-scheme` and omits `data-density`
+       * — which nothing in the types, the build, or the console asks
+       * it for — resolves `h-(--control-height-md)` and `text-2xl` to
+       * *nothing*: every control collapses to zero height and the
+       * whole type ramp disappears, on a green build.
+       *
+       * `data-variant` has had this fallback since M0 (`:root,
+       * [data-variant="daylight"]` above); density not having one was
+       * an asymmetry rather than a decision. Found by
+       * `portly-controllers`, which rendered a segmented control with
+       * no segments and no error to explain it.
+       */
       const densitySelector =
         variant.name === defaultVariant
-          ? `[data-density="${density}"], [data-variant="${variant.name}"][data-density="${density}"]`
+          ? [
+              ...(density === DEFAULT_DENSITY
+                ? [":root"]
+                : []),
+              `[data-density="${density}"]`,
+              `[data-variant="${variant.name}"][data-density="${density}"]`,
+            ].join(", ")
           : `[data-variant="${variant.name}"][data-density="${density}"]`
 
       blocks.push(
