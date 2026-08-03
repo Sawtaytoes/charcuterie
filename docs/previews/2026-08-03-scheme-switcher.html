@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en" data-variant="daylight" data-scheme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Charcuterie — Scheme switcher proposal (design preview)</title>
+<link rel="stylesheet" href="2026-08-03-scheme-switcher.tokens.variables.css" />
+<style>
+  /*
+   * This preview links the REAL @charcuterie/tokens variables.css (copied from
+   * packages/tokens/dist). Every colour/space/radius below is a var(--token). No
+   * Tailwind here — the utilities that theme.css bridges are re-expressed as small
+   * hand-written rules over the same custom properties, so what you see is the token
+   * palette, not an approximation. This is a DESIGN MOCK, not the shipping component.
+   */
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Outfit", system-ui, sans-serif;
+    background-color: var(--color-surface-sunken, #0B0F16);
+    color: var(--color-content-primary);
+    -webkit-font-smoothing: antialiased;
+  }
+  .page { max-width: 1180px; margin: 0 auto; padding: var(--space-8) var(--space-6) var(--space-16); }
+  h1 { font-size: 1.6rem; font-weight: var(--font-weight-bold); margin: 0 0 var(--space-2); letter-spacing: -0.01em; }
+  .sub { color: var(--color-content-secondary); margin: 0 0 var(--space-8); font-size: var(--font-size-lg); line-height: var(--line-height-normal); }
+  h2 { font-size: 1.1rem; font-weight: var(--font-weight-semibold); margin: 0 0 var(--space-1); }
+  .note { color: var(--color-content-muted); font-size: var(--font-size-md); margin: 0 0 var(--space-4); line-height: var(--line-height-normal); }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-6); margin-bottom: var(--space-10); }
+  @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
+
+  /* Each panel carries its own data-scheme so the token vars recompute inside it. */
+  .panel {
+    background-color: var(--color-surface-base);
+    color: var(--color-content-primary);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-xl);
+    padding: var(--space-6);
+    box-shadow: var(--elevation-low);
+  }
+  .panel-label {
+    display: inline-flex; align-items: center; gap: var(--space-2);
+    font-size: var(--font-size-sm); font-weight: var(--font-weight-medium);
+    text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--color-content-muted); margin-bottom: var(--space-5);
+  }
+  .row { display: flex; align-items: center; gap: var(--space-4); flex-wrap: wrap; }
+  .row + .row { margin-top: var(--space-5); }
+  .caption { font-size: var(--font-size-sm); color: var(--color-content-secondary); }
+  .mode-readout { font-size: var(--font-size-md); color: var(--color-content-secondary); margin-top: var(--space-4); }
+  .mode-readout b { color: var(--color-content-primary); font-weight: var(--font-weight-semibold); }
+
+  /* ---- Form A: cycling IconButton (single button) ---- */
+  .icon-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    inline-size: var(--control-height-md); block-size: var(--control-height-md);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border-default);
+    background-color: var(--color-surface-raised);
+    color: var(--color-content-primary);
+    cursor: pointer;
+    transition: background-color var(--duration-fast) var(--easing-standard),
+                border-color var(--duration-fast) var(--easing-standard);
+  }
+  .icon-btn:hover { background-color: var(--color-intent-neutral-surface-hover); }
+  .icon-btn:focus-visible {
+    outline: 2px solid var(--color-focus-ring, var(--color-border-focus));
+    outline-offset: 2px;
+  }
+  .icon-btn svg { inline-size: 1.15em; block-size: 1.15em; }
+
+  /* ---- Form B: SegmentedControl (radiogroup) ---- */
+  .segmented {
+    display: inline-flex; align-items: center; gap: var(--space-1);
+    padding: var(--space-1);
+    border: 1px solid var(--color-border-subtle);
+    background-color: var(--color-surface-sunken);
+    border-radius: var(--radius-md);
+  }
+  .segmented button {
+    display: inline-flex; align-items: center; gap: var(--space-2);
+    block-size: calc(var(--control-height-md) - 0.5rem);
+    padding: 0 var(--space-3);
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--color-content-secondary);
+    font: inherit; font-size: var(--font-size-md); font-weight: var(--font-weight-medium);
+    cursor: pointer;
+    transition: background-color var(--duration-fast) var(--easing-standard), color var(--duration-fast) var(--easing-standard);
+  }
+  .segmented button:hover { color: var(--color-content-primary); }
+  .segmented button[aria-checked="true"] {
+    background-color: var(--color-surface-raised);
+    color: var(--color-content-primary);
+    border-color: var(--color-border-default);
+    box-shadow: var(--elevation-low);
+  }
+  .segmented button:focus-visible { outline: 2px solid var(--color-focus-ring, var(--color-border-focus)); outline-offset: 1px; }
+  .segmented svg { inline-size: 1.1em; block-size: 1.1em; }
+  .segmented .label { line-height: 1; }
+
+  .legend { display:flex; gap: var(--space-6); flex-wrap: wrap; margin-top: var(--space-4); }
+  .legend span { display:inline-flex; align-items:center; gap: var(--space-2); font-size: var(--font-size-sm); color: var(--color-content-muted); }
+  .legend svg { inline-size: 1.05em; block-size: 1.05em; color: var(--color-content-secondary); }
+
+  .demo-hint { font-size: var(--font-size-sm); color: var(--color-content-muted); margin-top: var(--space-3); }
+  code { font-family: "Victor Mono", ui-monospace, monospace; background: var(--color-surface-sunken); padding: 0.1em 0.35em; border-radius: var(--radius-sm); font-size: 0.85em; }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Scheme switcher — design preview</h1>
+  <p class="sub">
+    Two candidate presentations for the 3-mode (<b>light / dark / system</b>) scheme control,
+    each rendered with charcuterie's real <code>@charcuterie/tokens</code> palette, in both
+    <code>data-scheme="light"</code> and <code>data-scheme="dark"</code>. Icons are hand-drawn
+    inline SVGs in the <code>icons.storyHelpers.tsx</code> style — the library ships no icons
+    (<a>ship-no-icons</a> decision); a consuming app would pass lucide <code>Sun/Moon/Monitor</code>.
+    This is a proposal mock, not the shipping component.
+  </p>
+
+  <!-- ===================== FORM A ===================== -->
+  <h2>Form A — cycling single button (the owner's description)</h2>
+  <p class="note">
+    One button. It shows the icon for the <em>current mode</em> and cycles
+    <b>light → dark → system → light</b> on click. Accessible name announces the current mode and
+    the next one, so <code>getByRole("button", { name: /scheme/i })</code> resolves.
+    Built on <code>IconButton</code>.
+  </p>
+  <div class="grid">
+    <div class="panel" data-scheme="light">
+      <div class="panel-label">data-scheme = light</div>
+      <div class="row">
+        <button class="icon-btn js-cycle" type="button" aria-label="Colour scheme: light. Activate to switch to dark."></button>
+        <span class="caption">Click it — this panel stays light; the button state cycles.</span>
+      </div>
+      <div class="mode-readout">mode: <b class="js-mode">light</b></div>
+    </div>
+    <div class="panel" data-scheme="dark">
+      <div class="panel-label">data-scheme = dark</div>
+      <div class="row">
+        <button class="icon-btn js-cycle" type="button" aria-label="Colour scheme: dark. Activate to switch to system."></button>
+        <span class="caption">Same control on the dark surface.</span>
+      </div>
+      <div class="mode-readout">mode: <b class="js-mode">dark</b></div>
+    </div>
+  </div>
+
+  <!-- ===================== FORM B ===================== -->
+  <h2>Form B — all-three-visible SegmentedControl</h2>
+  <p class="note">
+    All three modes on screen as a <code>radiogroup</code> (charcuterie's
+    <code>SegmentedControl</code>). Arrow keys move + select; the checked option is the current mode.
+    No hidden state — the tradeoff is horizontal space.
+  </p>
+  <div class="grid">
+    <div class="panel" data-scheme="light">
+      <div class="panel-label">data-scheme = light</div>
+      <div class="segmented js-seg" role="radiogroup" aria-label="Colour scheme"></div>
+    </div>
+    <div class="panel" data-scheme="dark">
+      <div class="panel-label">data-scheme = dark</div>
+      <div class="segmented js-seg" role="radiogroup" aria-label="Colour scheme"></div>
+    </div>
+  </div>
+
+  <!-- ===================== LIVE DEMO ===================== -->
+  <h2>Live cycle + system-resolution demo</h2>
+  <p class="note">
+    This panel is fully wired (Layer 3 behaviour): the control drives <code>data-scheme</code> on
+    the panel, and <b>system</b> resolves through an injected resolver you can flip below —
+    standing in for <code>matchMedia</code> vs Electron <code>nativeTheme</code>.
+  </p>
+  <div class="panel js-live" data-scheme="dark">
+    <div class="row">
+      <button class="icon-btn js-live-cycle" type="button" aria-label="Colour scheme"></button>
+      <div class="segmented js-live-seg" role="radiogroup" aria-label="Colour scheme"></div>
+      <span class="caption js-live-caption"></span>
+    </div>
+    <div class="mode-readout">
+      mode: <b class="js-live-mode"></b> &nbsp;·&nbsp; resolvedScheme: <b class="js-live-resolved"></b>
+    </div>
+    <p class="demo-hint">
+      Injected OS resolver says: <b class="js-os"></b> —
+      <button type="button" class="js-os-flip" style="font:inherit;text-decoration:underline;background:none;border:none;color:var(--color-intent-accent-content);cursor:pointer;padding:0">flip it</button>
+      (only affects the resolved scheme while mode = system)
+    </p>
+  </div>
+
+  <div class="legend">
+    <span><svg class="i-sun"></svg> light (sun)</span>
+    <span><svg class="i-moon"></svg> dark (moon)</span>
+    <span><svg class="i-monitor"></svg> system (monitor)</span>
+  </div>
+</div>
+
+<script>
+/* --- Hand-drawn icons, icons.storyHelpers.tsx style: stroke=currentColor, viewBox 0 0 24 24 --- */
+const SVG = {
+  light: '<path d="M12 3v2M12 19v2M5 12H3M21 12h-2M6.3 6.3 4.9 4.9M19.1 19.1l-1.4-1.4M17.7 6.3l1.4-1.4M4.9 19.1l1.4-1.4"/><circle cx="12" cy="12" r="4"/>',
+  dark:  '<path d="M20 14.5A8 8 0 1 1 9.5 4a6.2 6.2 0 0 0 10.5 10.5z"/>',
+  system:'<rect x="3" y="4.5" width="18" height="12" rx="2"/><path d="M8 20.5h8M12 16.5v4"/>',
+};
+function iconSvg(mode, extraClass) {
+  return '<svg class="'+(extraClass||'')+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+SVG[mode]+'</svg>';
+}
+const MODES = ["light","dark","system"];
+const NEXT = { light:"dark", dark:"system", system:"light" };
+const LABEL = { light:"Light", dark:"Dark", system:"System" };
+
+/* paint the legend swatches */
+document.querySelector('.i-sun').outerHTML = iconSvg('light','i-sun');
+document.querySelector('.i-moon').outerHTML = iconSvg('dark','i-moon');
+document.querySelector('.i-monitor').outerHTML = iconSvg('system','i-monitor');
+
+/* Form A static buttons (per-panel independent cycle) */
+document.querySelectorAll('.js-cycle').forEach((btn) => {
+  const panel = btn.closest('.panel');
+  const readout = panel.querySelector('.js-mode');
+  let mode = readout.textContent.trim();
+  const render = () => {
+    btn.innerHTML = iconSvg(mode);
+    btn.setAttribute('aria-label', 'Colour scheme: '+mode+'. Activate to switch to '+NEXT[mode]+'.');
+    readout.textContent = mode;
+  };
+  btn.addEventListener('click', () => { mode = NEXT[mode]; render(); });
+  render();
+});
+
+/* Form B segmented (per-panel) */
+function buildSegmented(container, initial, onChange) {
+  container.innerHTML = '';
+  MODES.forEach((m) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.setAttribute('role','radio');
+    b.setAttribute('aria-checked', String(m === initial));
+    b.setAttribute('aria-label', LABEL[m]);
+    b.innerHTML = iconSvg(m) + '<span class="label">'+LABEL[m]+'</span>';
+    b.addEventListener('click', () => {
+      container.querySelectorAll('button').forEach((x)=>x.setAttribute('aria-checked','false'));
+      b.setAttribute('aria-checked','true');
+      onChange && onChange(m);
+    });
+    container.appendChild(b);
+  });
+}
+document.querySelectorAll('.js-seg').forEach((c) => buildSegmented(c, 'system'));
+
+/* Live wired demo (Layer 3): resolves system via injectable OS resolver */
+(function(){
+  const panel = document.querySelector('.js-live');
+  let mode = 'system';
+  let osDark = true; // the "injected resolver" answer
+  const modeEl = panel.querySelector('.js-live-mode');
+  const resolvedEl = panel.querySelector('.js-live-resolved');
+  const capEl = panel.querySelector('.js-live-caption');
+  const osEl = panel.querySelector('.js-os');
+  const cycleBtn = panel.querySelector('.js-live-cycle');
+  const seg = panel.querySelector('.js-live-seg');
+
+  function resolve(){ return mode === 'system' ? (osDark ? 'dark' : 'light') : mode; }
+  function apply(){
+    const resolved = resolve();
+    panel.setAttribute('data-scheme', resolved);
+    modeEl.textContent = mode;
+    resolvedEl.textContent = resolved;
+    osEl.textContent = osDark ? 'dark' : 'light';
+    cycleBtn.innerHTML = iconSvg(mode);
+    cycleBtn.setAttribute('aria-label','Colour scheme: '+mode+'. Activate to switch to '+NEXT[mode]+'.');
+    seg.querySelectorAll('button').forEach((b)=> b.setAttribute('aria-checked', String(b.getAttribute('aria-label').toLowerCase()===mode)));
+    capEl.textContent = mode === 'system' ? '(system → following the injected OS resolver)' : '';
+  }
+  buildSegmented(seg, mode, (m)=>{ mode = m; apply(); });
+  cycleBtn.addEventListener('click', ()=>{ mode = NEXT[mode]; apply(); });
+  panel.querySelector('.js-os-flip').addEventListener('click', ()=>{ osDark = !osDark; apply(); });
+  apply();
+})();
+</script>
+</body>
+</html>
