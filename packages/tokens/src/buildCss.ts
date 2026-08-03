@@ -285,6 +285,88 @@ export const buildFirstPaintCss = (variant: Variant) =>
   ].join("\n")
 
 /**
+ * The default `localStorage` key the first-paint script reads.
+ *
+ * It **must** equal `@charcuterie/logic/browser`'s
+ * `DEFAULT_COLOR_SCHEME_STORAGE_KEY` — the runtime hook and this
+ * pre-paint snippet share one key or they disagree by exactly one
+ * flash. Duplicated as a literal rather than imported because
+ * `@charcuterie/tokens` has no dependency on `@charcuterie/logic`
+ * (and must not gain one); an app that overrides the key passes the
+ * same value to both.
+ */
+export const DEFAULT_COLOR_SCHEME_STORAGE_KEY =
+  "charcuterie-scheme"
+
+/**
+ * The inline `<head>` script that sets `data-scheme` **before first
+ * paint** from the persisted or OS choice — the companion to
+ * `buildFirstPaintRule` for an app that follows the OS rather than
+ * pinning one scheme.
+ *
+ * `buildFirstPaintRule` alone is enough for an app hard-pinned to
+ * one scheme: the attribute is a constant in the HTML and the
+ * `var()` fallback carries the pre-token instant. The moment the
+ * scheme is *dynamic* — persisted, or `system` — two things must
+ * happen before the browser paints, and only inline script in
+ * `<head>` runs that early:
+ *
+ *  1. `<html data-scheme>` must be set from the resolved choice, so
+ *     `variables.css` selects the right block; and
+ *  2. the fallback hex must branch on the resolved scheme, not sit
+ *     pinned to one — otherwise a dark-default fallback flashes on a
+ *     light-resolved load.
+ *
+ * The script reproduces `createColorScheme`'s resolution rule
+ * (`stored==="dark" || (system && matchMedia matches)`) against the
+ * **same** `storageKey` the runtime `localStoragePersistence` uses,
+ * so the pre-paint attribute and the hydrated state always agree.
+ * Both surface hexes come from the token source, so
+ * `distFreshness.test.ts` fails if either drifts — the same
+ * provenance guarantee `buildFirstPaintRule` has.
+ *
+ * Paste it — do not `<link>` or bundle it. It has to be in the
+ * document before any request completes, which is the one thing a
+ * bundled module cannot promise.
+ */
+export const buildFirstPaintScript = (
+  variant: Variant,
+  {
+    storageKey = DEFAULT_COLOR_SCHEME_STORAGE_KEY,
+  }: { storageKey?: string } = {},
+) => {
+  const lightBackground = variant.schemes.light.surface.base
+
+  const darkBackground = variant.schemes.dark.surface.base
+
+  return [
+    "<script>",
+    "  (function () {",
+    `    var KEY = ${JSON.stringify(storageKey)};`,
+    "    var stored;",
+    "    try {",
+    "      stored = window.localStorage.getItem(KEY);",
+    "    } catch (error) {",
+    "      stored = null;",
+    "    }",
+    '    var isDark = stored === "dark" ||',
+    '      ((stored === null || stored === "system") &&',
+    '        window.matchMedia("(prefers-color-scheme: dark)").matches);',
+    '    var scheme = isDark ? "dark" : "light";',
+    '    document.documentElement.setAttribute("data-scheme", scheme);',
+    `    var background = isDark ? ${JSON.stringify(darkBackground)} : ${JSON.stringify(lightBackground)};`,
+    '    var style = document.createElement("style");',
+    '    style.textContent =',
+    '      "html,body{background-color:var(--color-surface-base," +',
+    "      background +",
+    '      \");color-scheme:\" + scheme + \"}\";',
+    "    document.head.appendChild(style);",
+    "  })();",
+    "</script>",
+  ].join("\n")
+}
+
+/**
  * The runtime substrate: `:root` + `[data-variant]` +
  * `[data-scheme]` + `[data-density]`, all on `<html>`.
  *
