@@ -1,4 +1,7 @@
-import { useClonedChild } from "@charcuterie/logic"
+import {
+  useClonedChild,
+  useUniqueId,
+} from "@charcuterie/logic"
 import type { Placement } from "@floating-ui/react"
 import {
   autoUpdate,
@@ -154,8 +157,32 @@ export const useAnchoredOverlay = ({
       useRole(context, { role }),
     ])
 
+  // `useRole` for a `listbox` overwrites the trigger's own role with
+  // `combobox` — the select-only-combobox pattern, which then demands
+  // its own `aria-label`. The fleet's pattern is a plain button that
+  // *opens* a listbox, so the injected `role` is dropped and the
+  // trigger keeps its native semantics while still gaining
+  // `aria-haspopup="listbox"`/`aria-expanded`/`aria-controls`. `useRole`
+  // injects a reference `role` only for listbox/combobox, so this is a
+  // no-op for `Popover` (dialog) and `Menu` (menu).
+  const { role: _discardedTriggerRole, ...referenceProps } =
+    getReferenceProps()
+
+  // A stable id on the trigger, so a panel that needs a name can point
+  // `aria-labelledby` at it across the portal. `useRole` already gives
+  // a `menu`'s reference an id (and labels the panel with it); this
+  // reuses that when present and supplies one otherwise — which is what
+  // a `listbox` panel needs, since a bare `role="listbox"` is an ARIA
+  // input field and must be named.
+  const generatedTriggerId = useUniqueId()
+
+  const triggerId =
+    (referenceProps.id as string | undefined) ??
+    generatedTriggerId
+
   const clonedTrigger = useClonedChild(trigger, {
-    ...getReferenceProps(),
+    ...referenceProps,
+    id: triggerId,
     ref: refs.setReference,
   })
 
@@ -165,5 +192,6 @@ export const useAnchoredOverlay = ({
     floatingStyles,
     getFloatingProps,
     setFloating: refs.setFloating,
+    triggerId,
   }
 }
