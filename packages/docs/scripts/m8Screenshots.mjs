@@ -67,7 +67,7 @@ const shots = [
     id: "components-dialog--stacked",
     name: "m8-dialog-stacked",
     open: "Open the first dialog",
-    then: "Open a second over it",
+    andThen: "Open a second over it",
   },
   {
     id: "components-listbox--all-states",
@@ -109,9 +109,9 @@ for (const shot of shots) {
     await page.waitForTimeout(300)
   }
 
-  if (shot.then) {
+  if (shot.andThen) {
     await page
-      .getByRole("button", { name: shot.then })
+      .getByRole("button", { name: shot.andThen })
       .first()
       .click()
 
