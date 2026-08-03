@@ -18,6 +18,7 @@ import {
 import type { ReactElement, ReactNode } from "react"
 import { useEffect, useRef } from "react"
 
+import { PANEL_SURFACE_CLASS } from "../Overlay/overlayPanelClass.ts"
 import { toClassName } from "../toClassName.ts"
 import { MenuAction } from "./MenuAction.tsx"
 
@@ -219,7 +220,8 @@ export const Menu = ({
           <div
             {...getFloatingProps()}
             className={toClassName(
-              "inset-auto m-0 flex min-w-48 flex-col gap-0.5 rounded-md border border-border-default bg-surface-overlay p-1 shadow-medium",
+              PANEL_SURFACE_CLASS,
+              "inset-auto m-0 flex min-w-48 flex-col gap-0.5 p-1",
               className,
             )}
             onKeyDown={(keyEvent) => {

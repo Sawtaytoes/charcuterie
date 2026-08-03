@@ -13,6 +13,7 @@ import {
 } from "@floating-ui/react"
 import type { ReactElement, ReactNode } from "react"
 
+import { PANEL_SURFACE_CLASS } from "../Overlay/overlayPanelClass.ts"
 import { toClassName } from "../toClassName.ts"
 
 export type PopoverProps = {
@@ -130,7 +131,8 @@ export const Popover = ({
             {...getFloatingProps()}
             aria-label={heading}
             className={toClassName(
-              "inset-auto m-0 max-w-xs rounded-md border border-border-default bg-surface-overlay p-3 text-content-primary text-sm shadow-medium",
+              PANEL_SURFACE_CLASS,
+              "inset-auto m-0 max-w-xs p-3 text-content-primary text-sm",
               className,
             )}
             popover="manual"
