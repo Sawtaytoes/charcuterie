@@ -1,10 +1,16 @@
 # Overlays reach the top layer through the platform, never through a portal
 
-**Status:** Accepted
+**Status:** Superseded
 **Date:** 2026-07-30
 **Type:** Architecture
 **Supersedes:** —
-**Superseded by:** —
+**Superseded by:** [Overlays portal to the body, not the top layer](2026-08-03-overlays-portal-to-the-body-not-the-top-layer.md) (2026-08-03)
+
+> **Superseded 2026-08-03.** Real `overflow: hidden` clipping the top layer did not solve —
+> and the last paragraph of this record anticipated exactly this reversal ("the day one does
+> not… that component states its case and supersedes this record"). See the M8 decision for
+> what changed and what the objection below (a portal moves the node out of a scoped query)
+> is answered by. The rest of this file is left as written.
 
 ## Decision
 
