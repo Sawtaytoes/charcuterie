@@ -1,0 +1,87 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as DialogStories from "./Dialog.stories";
+
+<Meta of={DialogStories} />
+
+# Dialog
+
+`Dialog` is [`Modal`](?path=/docs/components-modal--docs) plus the chrome: a heading, a
+Close button, a scrolling body, an optional footer, and five sizes. This is what `Modal`
+*was* before the M8 rebuild — a dialog is one kind of modal, so it takes the specific name
+and hands the generic one back to the base layer
+([decision](../../../docs/decisions/2026-08-03-modal-is-the-base-layer-and-dialog-is-the-component.md)).
+
+<Canvas of={DialogStories.Default} />
+
+## Props
+
+<Controls />
+
+## Everything modal is `Modal`'s
+
+The portal, the scrim, the focus trap, the scroll lock, Escape, an outside press, and the
+stacking all live in `Modal` (via `OverlayPanel`). `Dialog` is just the box's contents and
+the size it wants — `SIZE_CLASS` composed over `Modal`'s default surface, which is why
+`full` carries `rounded-none` to square off the base's `rounded-lg` at the viewport edge.
+
+```tsx
+const { hide, isVisible, show } = useVisibility()
+
+<Button onClick={show}>Stop the rip</Button>
+
+<Dialog heading="Stop the rip?" isVisible={isVisible} onClose={hide}>
+  …
+</Dialog>
+```
+
+`onClose` is every route out — the close button, Escape, a backdrop press — so there is
+one place to wire and no way to end up with the element shut and the state still open.
+`heading` is required: it names both the visible header and, through `aria-labelledby`,
+the dialog itself.
+
+<Canvas of={DialogStories.AllVariants} />
+
+## Escape is pressable now
+
+The old `Modal` was a native `<dialog>`, whose trusted `cancel` a story's synthetic
+`userEvent` could not fire — so its tests dispatched a fake close request. `useDismiss`
+listens for a plain keydown instead, so `userEvent.keyboard("{Escape}")` is a real close
+request. `isDismissable={false}` disables it at the dismiss layer, so a dialog the app
+still owns cannot be closed behind its back. `AllStates` pairs the refusal with a
+differential — the dialog that ignores Escape is then closed by its own button — because
+"still open" is also true of a dialog nothing can close at all.
+
+<Canvas of={DialogStories.AllStates} />
+
+## Stacking, and the one shared scrim
+
+A lone dialog needs no setup. Stack one over another and an `OverlayStackProvider` at the
+app root renders a **single** scrim behind both, keeps the second on top, marks the first
+`inert`, and closes them top-first on Escape or a backdrop press. The scroll lock
+ref-counts through the stack, so the page frees only when the last closes.
+
+<Canvas of={DialogStories.Stacked} />
+
+## `dvh`, and the scrim token
+
+Every size clamps at `85dvh`; `full` takes the lot. `dvh` rather than `vh` because on a
+phone the two differ by the address bar, and a dialog whose footer is under it is a dialog
+with no buttons.
+
+The scrim reads `--color-scrim`, a **variant** token: `legible` dims at 0.84 and
+`daylight` at 0.66, because how hard a direction separates a dialog from the page is
+exactly the sort of thing a visual direction decides. ePaper's is `transparent` — a panel
+with no opacity cannot dim, so it says so instead of faking it. `Responsive` asserts the
+computed scrim colour is really there, since a `var()` that failed to resolve would just
+look like a design choice.
+
+<Canvas of={DialogStories.Responsive} />
+
+## A dialog is not a container-query citizen
+
+It gets no `ContainerBoard`. Its size is measured against the viewport by definition — it
+is the thing covering the viewport — so boarding it at three container widths would be
+measuring something with no bearing on it.
+
+<Canvas of={DialogStories.Interactive} />

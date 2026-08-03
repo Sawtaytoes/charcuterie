@@ -59,6 +59,8 @@ export type {
   ColorSchemeToggleProps,
 } from "./ColorSchemeToggle/ColorSchemeToggle.tsx"
 export { ColorSchemeToggle } from "./ColorSchemeToggle/ColorSchemeToggle.tsx"
+export type { ComboboxProps } from "./Combobox/Combobox.tsx"
+export { Combobox } from "./Combobox/Combobox.tsx"
 export type { BadgeSize } from "./controlStyles.ts"
 export {
   BADGE_SIZE_CLASS,
@@ -68,6 +70,11 @@ export {
   MIN_TOUCH_TARGET_CLASS,
   SPINNER_SIZE_CLASS,
 } from "./controlStyles.ts"
+export type {
+  DialogProps,
+  DialogSize,
+} from "./Dialog/Dialog.tsx"
+export { Dialog } from "./Dialog/Dialog.tsx"
 export type {
   EmptyStateProps,
   EmptyStateSize,
@@ -93,6 +100,11 @@ export {
 export type { LightboxProps } from "./Lightbox/Lightbox.tsx"
 export { Lightbox } from "./Lightbox/Lightbox.tsx"
 export type {
+  ListboxItem,
+  ListboxProps,
+} from "./Listbox/Listbox.tsx"
+export { Listbox } from "./Listbox/Listbox.tsx"
+export type {
   LiveStatusIndicatorProps,
   LiveStatusIndicatorSize,
 } from "./LiveStatusIndicator/LiveStatusIndicator.tsx"
@@ -114,10 +126,7 @@ export type {
   MenuProps,
 } from "./Menu/Menu.tsx"
 export { Menu } from "./Menu/Menu.tsx"
-export type {
-  ModalProps,
-  ModalSize,
-} from "./Modal/Modal.tsx"
+export type { ModalProps } from "./Modal/Modal.tsx"
 export { Modal } from "./Modal/Modal.tsx"
 export type { PopoverProps } from "./Popover/Popover.tsx"
 export { Popover } from "./Popover/Popover.tsx"

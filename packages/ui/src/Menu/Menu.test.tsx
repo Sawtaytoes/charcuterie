@@ -15,8 +15,7 @@ const {
 } = composeStories(stories)
 
 test("the menu is named, and its items are menuitems", async () => {
-  const { canvas, canvasElement } =
-    await mountStory(AllStates)
+  const { body } = await mountStory(AllStates)
 
   // **Named by its trigger**, not by a `label` prop. `useRole` puts
   // `aria-labelledby` on the panel pointing at the button, and
@@ -27,17 +26,17 @@ test("the menu is named, and its items are menuitems", async () => {
   // overlay with **no trigger relationship** (`Spinner`'s
   // `role="status"`, `Popover`'s `role="dialog"`) needs its own
   // name. A menu has one.
-  expectAgentDrivable(canvas, {
+  const menu = expectAgentDrivable(body, {
     name: "Bay 3",
     role: "menu",
   })
 
-  expectAgentDrivable(canvas, {
+  expectAgentDrivable(body, {
     name: "Retry title",
     role: "menuitem",
   })
 
-  await expectNoAxeViolations(canvasElement)
+  await expectNoAxeViolations(menu)
 })
 
 /**
@@ -46,7 +45,7 @@ test("the menu is named, and its items are menuitems", async () => {
  * still on the trigger, with a menu they cannot reach.
  */
 test("opening moves focus into the menu", async () => {
-  const { canvas } = await mountStory(Interactive)
+  const { body, canvas } = await mountStory(Interactive)
 
   await userEvent.click(
     expectAgentDrivable(canvas, {
@@ -57,7 +56,7 @@ test("opening moves focus into the menu", async () => {
 
   await waitFor(() => {
     expect(
-      expectAgentDrivable(canvas, {
+      expectAgentDrivable(body, {
         name: "Retry title",
         role: "menuitem",
       }),
@@ -66,14 +65,14 @@ test("opening moves focus into the menu", async () => {
 })
 
 test("the arrow keys move within the menu and skip the disabled item", async () => {
-  const { canvas } = await mountStory(AllStates)
+  const { body } = await mountStory(AllStates)
 
-  const skip = expectAgentDrivable(canvas, {
+  const skip = expectAgentDrivable(body, {
     name: "Skip title",
     role: "menuitem",
   })
 
-  const eject = expectAgentDrivable(canvas, {
+  const eject = expectAgentDrivable(body, {
     name: "Eject disc",
     role: "menuitem",
   })
@@ -84,7 +83,7 @@ test("the arrow keys move within the menu and skip the disabled item", async () 
   // clicking an item to "focus" it closes the thing under test. This
   // story opens already visible, and opening is what puts focus on
   // the first item.
-  const retry = expectAgentDrivable(canvas, {
+  const retry = expectAgentDrivable(body, {
     name: "Retry title",
     role: "menuitem",
   })
@@ -118,9 +117,9 @@ test("the arrow keys move within the menu and skip the disabled item", async () 
  * that is the pattern, not a bug.
  */
 test("the menu has one tab stop", async () => {
-  const { canvas } = await mountStory(AllStates)
+  const { body } = await mountStory(AllStates)
 
-  const menu = expectAgentDrivable(canvas, {
+  const menu = expectAgentDrivable(body, {
     name: "Bay 3",
     role: "menu",
   })
@@ -135,7 +134,7 @@ test("the menu has one tab stop", async () => {
 })
 
 test("choosing an item dismisses the menu", async () => {
-  const { canvas } = await mountStory(Interactive)
+  const { body, canvas } = await mountStory(Interactive)
 
   await userEvent.click(
     expectAgentDrivable(canvas, {
@@ -145,7 +144,7 @@ test("choosing an item dismisses the menu", async () => {
   )
 
   await userEvent.click(
-    expectAgentDrivable(canvas, {
+    expectAgentDrivable(body, {
       name: "Retry title",
       role: "menuitem",
     }),
@@ -154,14 +153,12 @@ test("choosing an item dismisses the menu", async () => {
   // A menu that stays open after an action has fired is the one
   // interaction users read as "it didn't work".
   await waitFor(() => {
-    expect(canvas.queryAllByRole("menuitem")).toHaveLength(
-      0,
-    )
+    expect(body.queryAllByRole("menuitem")).toHaveLength(0)
   })
 })
 
 test("Escape dismisses without choosing", async () => {
-  const { canvas } = await mountStory(Interactive)
+  const { body, canvas } = await mountStory(Interactive)
 
   await userEvent.click(
     expectAgentDrivable(canvas, {
@@ -172,37 +169,50 @@ test("Escape dismisses without choosing", async () => {
 
   await waitFor(() => {
     expect(
-      canvas.queryAllByRole("menuitem").length,
+      body.queryAllByRole("menuitem").length,
     ).toBeGreaterThan(0)
   })
 
   await userEvent.keyboard("{Escape}")
 
   await waitFor(() => {
-    expect(canvas.queryAllByRole("menuitem")).toHaveLength(
-      0,
-    )
+    expect(body.queryAllByRole("menuitem")).toHaveLength(0)
   })
 })
 
 /**
- * The panel is in the top layer via `popover="manual"` and **stays
- * in the DOM where it was written** — so a scoped query still finds
- * it. A portalled menu would move to `document.body` and every story
- * here would have to reach for `screen`.
+ * The panel portals to `document.body` — escaping any
+ * `overflow: hidden` ancestor — and the trigger→panel link survives
+ * the boundary: `useRole` writes `aria-labelledby` on the menu
+ * pointing back at the button that names it. A scoped query for the
+ * panel now reaches for `body`; the trigger stays in the canvas.
  */
-test("the menu is not portalled out of its canvas", async () => {
-  const { canvas, canvasElement } =
+test("the menu portals to the body, still named by its trigger", async () => {
+  const { body, canvas, canvasElement } =
     await mountStory(AllVariants)
 
-  const menu = expectAgentDrivable(canvas, {
+  const trigger = expectAgentDrivable(canvas, {
+    name: "Bay 2",
+    role: "button",
+  })
+
+  const menu = expectAgentDrivable(body, {
     name: "Bay 2",
     role: "menu",
   })
 
-  await expect(canvasElement).toContainElement(menu)
+  await expect(canvasElement).not.toContainElement(menu)
 
-  await expectNoAxeViolations(canvasElement)
+  await expect(document.body).toContainElement(menu)
+
+  // The link, across the portal: the menu is named by pointing at its
+  // trigger, and the id really resolves.
+  await expect(menu).toHaveAttribute(
+    "aria-labelledby",
+    trigger.id,
+  )
+
+  await expectNoAxeViolations(menu)
 })
 
 /**
@@ -239,8 +249,7 @@ const expectAnchoredTrigger = (trigger: HTMLElement) => {
 }
 
 test("a menu sharing its trigger with a tooltip is still anchored to it", async () => {
-  const { canvas, canvasElement } =
-    await mountStory(SharedTrigger)
+  const { body, canvas } = await mountStory(SharedTrigger)
 
   const trigger = expectAgentDrivable(canvas, {
     name: "Bay 5",
@@ -252,7 +261,7 @@ test("a menu sharing its trigger with a tooltip is still anchored to it", async 
   await userEvent.click(trigger)
 
   const menu = await waitFor(() =>
-    expectAgentDrivable(canvas, { role: "menu" }),
+    expectAgentDrivable(body, { role: "menu" }),
   )
 
   // `bottom-start` with `offset(4)`: flush with the trigger's
@@ -273,7 +282,7 @@ test("a menu sharing its trigger with a tooltip is still anchored to it", async 
     )
   })
 
-  await expectNoAxeViolations(canvasElement)
+  await expectNoAxeViolations(menu)
 })
 
 /**
@@ -282,7 +291,7 @@ test("a menu sharing its trigger with a tooltip is still anchored to it", async 
  * pointing at nothing and the test above would still pass.
  */
 test("the tooltip sharing that trigger is anchored to it too", async () => {
-  const { canvas } = await mountStory(SharedTrigger)
+  const { body, canvas } = await mountStory(SharedTrigger)
 
   const trigger = expectAgentDrivable(canvas, {
     name: "Bay 5",
@@ -294,7 +303,7 @@ test("the tooltip sharing that trigger is anchored to it too", async () => {
   trigger.focus()
 
   const tip = await waitFor(() =>
-    expectAgentDrivable(canvas, { role: "tooltip" }),
+    expectAgentDrivable(body, { role: "tooltip" }),
   )
 
   // The **main axis** only: `top` with `offset(6)`. The cross axis
