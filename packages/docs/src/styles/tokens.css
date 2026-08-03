@@ -109,9 +109,76 @@
     em,
     blockquote,
     figcaption,
-    summary
+    summary,
+    table,
+    thead,
+    tbody,
+    tr,
+    th,
+    td
   ):not(.sb-story *) {
   color: var(--color-content-primary);
+}
+
+/* ── A prose table ────────────────────────────────────────────
+
+   A GFM table in MDX is a plain `<table>` — no component could
+   style it, and Charcuterie deliberately ships `SortableTableHeader`
+   and nothing else
+   (`docs/decisions/2026-08-02-sortabletableheader-toast-and-filedropzone-ship-in-1-0-0.md`),
+   so this is the layer that has to.
+
+   The rules above set `border-color` on `table, th, td, tr` and
+   stopped there, which left the cells taking their text and their
+   fill from Storybook's own `Table` styled-component — painted from
+   the stock **light** DocsContainer theme, on our dark surface.
+   Measured on `Tokens/Overview`: cell text `rgb(46, 51, 56)` on
+   `#131822` is **1.1:1**, and the zebra rows came back
+   `rgb(246, 249, 252)` under text at `rgb(237, 240, 245)`. Ten MDX
+   files render one, so it was ten unreadable pages.
+
+   The cells go transparent so the page's own surface shows through,
+   and the zebra is redrawn from `surface-raised` — the same call
+   `Card` makes for a row that sits above its page.
+
+   `!important` for the same reason the props table needs it, and
+   under the same narrow exception
+   (`docs/decisions/2026-07-31-important-is-for-storybook-chrome-only.md`):
+   Storybook's rule doubles its own runtime-injected emotion class,
+   and a static stylesheet loses equal specificity on source order.
+   The `biome-ignore` id has to be exact — `yarn lint` runs
+   `biome check --write --unsafe`, and that rule's unsafe fix
+   *deletes* the `!important` and leaves the declaration, which reads
+   correct in the source while the built CSS has no priority on it.
+
+   `:not(.sb-story *)` is load-bearing here more than anywhere else
+   in this file: `SortableTableHeader`'s own stories render tables,
+   and restyling the component being documented is the exact
+   opposite of the point. */
+
+.sbdocs.sbdocs-content
+  table:not(.docblock-argstable):not(.sb-story *)
+  :is(th, td) {
+  /* biome-ignore lint/complexity/noImportantStyles: beats Storybook's runtime-injected emotion rule, which specificity alone cannot do stably */
+  background-color: transparent !important;
+}
+
+.sbdocs.sbdocs-content
+  table:not(.docblock-argstable):not(.sb-story *)
+  tbody
+  tr:nth-of-type(2n)
+  :is(th, td) {
+  /* biome-ignore lint/complexity/noImportantStyles: beats Storybook's runtime-injected emotion rule, which specificity alone cannot do stably */
+  background-color: var(--color-surface-raised) !important;
+}
+
+/* A column head reads quieter than its rows, the same call the
+   props table makes. */
+.sbdocs.sbdocs-content
+  table:not(.docblock-argstable):not(.sb-story *)
+  thead
+  th {
+  color: var(--color-content-secondary);
 }
 
 /* The rules under a heading, the `<hr>`, and a blockquote's edge —
