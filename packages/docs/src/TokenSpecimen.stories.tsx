@@ -69,7 +69,7 @@ export const Legible: Story = {
  * for somebody to flip the toolbar.
  */
 export const Light: Story = {
-  globals: { theme: "light" },
+  globals: { scheme: "light" },
 }
 
 /**
