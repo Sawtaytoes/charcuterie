@@ -90,6 +90,8 @@ export {
   INTENT_HOVER_CLASS,
   INTENT_SOLID_FILL_CLASS,
 } from "./intentStyles.ts"
+export type { LightboxProps } from "./Lightbox/Lightbox.tsx"
+export { Lightbox } from "./Lightbox/Lightbox.tsx"
 export type {
   LiveStatusIndicatorProps,
   LiveStatusIndicatorSize,
