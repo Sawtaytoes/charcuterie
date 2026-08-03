@@ -298,8 +298,9 @@ test("the barrel is the only place components are re-exported", async () => {
   //
   // The M8 overlay rebuild renames the old chrome-bearing `Modal` to
   // `Dialog` and reintroduces `Modal` as the base layer, so both are
-  // components: +1 → 29. (`Listbox`/`Combobox` land in later commits.)
-  expect(componentNames.length).toBe(29)
+  // components: +1 → 29. `Listbox` (the single-select fancy dropdown)
+  // is +1 → 30; `Combobox` lands in the next commit.
+  expect(componentNames.length).toBe(30)
 
   for (const name of componentNames) {
     expect(barrel).toContain(`export { ${name} }`)
