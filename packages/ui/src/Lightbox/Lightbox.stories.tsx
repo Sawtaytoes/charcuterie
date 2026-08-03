@@ -66,8 +66,8 @@ export const WithCaption: Story = {
 
 /**
  * Boards here are a trigger plus one open overlay, not a grid — a
- * lightbox is a `Modal` underneath, and two dialogs in the top layer
- * side by side is not a thing the platform can do.
+ * lightbox is a `Dialog` underneath, and a dialog covers the viewport,
+ * so two side by side is not the real arrangement.
  */
 export const AllStates: Story = {
   render: () => (
@@ -122,7 +122,7 @@ export const Controlled: Story = {
 }
 
 /**
- * The keyboard contract, inherited from `Modal` and asserted here so
+ * The keyboard contract, inherited from `Dialog` and asserted here so
  * the skin cannot quietly drop it: the trigger opens, Escape routes
  * through `onClose`, and focus returns to the thumbnail button.
  */
