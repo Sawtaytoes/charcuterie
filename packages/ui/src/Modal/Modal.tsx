@@ -6,8 +6,8 @@ import type {
 import { useEffect, useRef } from "react"
 
 import { Button } from "../Button/Button.tsx"
+import { lockScrollBehind } from "../Overlay/lockScrollBehind.ts"
 import { toClassName } from "../toClassName.ts"
-import { lockScrollBehind } from "./lockScrollBehind.ts"
 
 export type ModalSize = "full" | "lg" | "md" | "sm" | "xl"
 

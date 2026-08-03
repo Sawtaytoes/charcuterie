@@ -24,21 +24,32 @@ import { expect, test } from "vitest"
 const sourceDirectory = resolve(import.meta.dirname)
 
 const readComponent = async (name: string) => {
-  const [component, story] = await Promise.all([
-    readFile(
+  // A `<Name>/<Name>.tsx` is the component-folder signal. An
+  // uppercase folder without one — `Overlay/`, which holds the shared
+  // portal/backdrop/anchoring infrastructure and no storied component
+  // — is not a component and is skipped, so this rule stays about the
+  // things that have a Controls panel to get wrong. A real component
+  // missing only its *story* still throws below, which is the guard.
+  let component: string
+
+  try {
+    component = await readFile(
       join(sourceDirectory, name, `${name}.tsx`),
       "utf8",
-    ),
-    readFile(
-      join(sourceDirectory, name, `${name}.stories.tsx`),
-      "utf8",
-    ),
-  ])
+    )
+  } catch {
+    return null
+  }
+
+  const story = await readFile(
+    join(sourceDirectory, name, `${name}.stories.tsx`),
+    "utf8",
+  )
 
   return { component, name, story }
 }
 
-const componentNames = (
+const componentDirectories = (
   await readdir(sourceDirectory, { withFileTypes: true })
 )
   .filter(
@@ -48,9 +59,11 @@ const componentNames = (
   .map((entry) => entry.name)
   .sort()
 
-const components = await Promise.all(
-  componentNames.map(readComponent),
-)
+const components = (
+  await Promise.all(componentDirectories.map(readComponent))
+).filter((one) => one !== null)
+
+const componentNames = components.map((one) => one.name)
 
 /**
  * `import type { A, B } from "@scope/pkg"` — bare specifiers only.
