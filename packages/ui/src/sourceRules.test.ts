@@ -293,9 +293,14 @@ test("the barrel is the only place components are re-exported", async () => {
   //
   // 2026-08-03 adds the two colour-scheme controls — `ColorSchemeToggle`
   // (Layer 2, presentational) and `ColorSchemeSwitcher` (Layer 3,
-  // connected) — plus `Lightbox` (landed the same day on its own
-  // branch), taking the count to 28.
-  expect(componentNames.length).toBe(28)
+  // connected) — and `Lightbox`, the thumbnail-over-`Dialog` viewer —
+  // taking the count to 28.
+  //
+  // The M8 overlay rebuild renames the old chrome-bearing `Modal` to
+  // `Dialog` and reintroduces `Modal` as the base layer, so both are
+  // components: +1 → 29. The picker family adds `Listbox` (single-select)
+  // and `Combobox` (searchable/virtualized): +2 → 31.
+  expect(componentNames.length).toBe(31)
 
   for (const name of componentNames) {
     expect(barrel).toContain(`export { ${name} }`)
@@ -394,6 +399,10 @@ const ENTRY_POINT_RUNTIMES: Record<
       "@charcuterie/logic/browser",
       "@charcuterie/tokens",
       "@floating-ui/react",
+      // `Combobox`'s virtualization — the second runtime dependency
+      // this package has ever taken. MIT, US-origin (Tanner Linsley),
+      // tree-shakeable, ~4 KB gz.
+      "@tanstack/react-virtual",
       "react",
     ],
     "./testing": [],
