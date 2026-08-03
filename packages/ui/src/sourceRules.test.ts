@@ -293,9 +293,13 @@ test("the barrel is the only place components are re-exported", async () => {
   //
   // 2026-08-03 adds the two colour-scheme controls — `ColorSchemeToggle`
   // (Layer 2, presentational) and `ColorSchemeSwitcher` (Layer 3,
-  // connected) — and `Lightbox`, the thumbnail-over-`Modal` viewer —
+  // connected) — and `Lightbox`, the thumbnail-over-`Dialog` viewer —
   // taking the count to 28.
-  expect(componentNames.length).toBe(28)
+  //
+  // The M8 overlay rebuild renames the old chrome-bearing `Modal` to
+  // `Dialog` and reintroduces `Modal` as the base layer, so both are
+  // components: +1 → 29. (`Listbox`/`Combobox` land in later commits.)
+  expect(componentNames.length).toBe(29)
 
   for (const name of componentNames) {
     expect(barrel).toContain(`export { ${name} }`)
