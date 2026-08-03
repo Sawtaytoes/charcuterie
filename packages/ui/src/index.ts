@@ -165,6 +165,12 @@ export type {
 export { SortableTableHeader } from "./SortableTableHeader/SortableTableHeader.tsx"
 export type { SpinnerProps } from "./Spinner/Spinner.tsx"
 export { Spinner } from "./Spinner/Spinner.tsx"
+export type {
+  SwatchAppearance,
+  SwatchProps,
+  SwatchSize,
+} from "./Swatch/Swatch.tsx"
+export { Swatch } from "./Swatch/Swatch.tsx"
 export type { SlotProps } from "./slotProps.ts"
 export { mergeSlotProps } from "./slotProps.ts"
 export {

@@ -1,0 +1,50 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as SwatchStories from "./Swatch.stories";
+
+<Meta of={SwatchStories} />
+
+# Swatch
+
+A colour presented **as content**, with a name attached. It is the one colour the design
+system does not own: the red sticker on a game controller, the accent castkit pulls off an
+album, a user's tag colour. Not a token — a value from data.
+
+<Canvas of={SwatchStories.Default} />
+
+## Props
+
+<Controls />
+
+## Why it is not a `Badge` or a status dot
+
+`Badge` and `LiveStatusIndicator` both take an `intent`, because both show a *state* whose
+colour the system owns and can name — `danger` is red and is called "danger". A swatch
+shows a colour the system cannot name, so the colour is a `color` prop that lands in an
+inline `style`, and the meaning travels in a **required** `label`. A `background-color` is
+nothing to a screen reader and nothing to `getByRole`, so the type asks for the name and
+there is no way to render one without it.
+
+`DOT_SIZE_CLASS` is exported so an app *can* hand-roll one of these — and three across the
+fleet did, each without a name. This is that dot, named, and sized as content rather than
+punctuation.
+
+## `outline` — present but inactive
+
+<Canvas of={SwatchStories.AllVariants} />
+
+`outline` keeps the hue and drops the fill. It is the one visual state a status colour
+cannot borrow from `intent`: a subject that is there but not active — a powered-off
+controller beside its live siblings. The ring is drawn in the colour itself, so it survives
+where a token could not follow.
+
+## Findable, and white stays visible
+
+<Canvas of={SwatchStories.AllStates} />
+
+It is a `role="img"` with an accessible name, so `getByRole("img", { name })` resolves in
+both the dot-only and labelled forms — one stable handle whether or not the text is on
+screen. The translucent inset ring on `solid` is what keeps a white or near-white swatch
+from vanishing against `surface-raised` in one of the two schemes.
+
+<Canvas of={SwatchStories.InAList} />
