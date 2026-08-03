@@ -59,6 +59,8 @@ export type {
   ColorSchemeToggleProps,
 } from "./ColorSchemeToggle/ColorSchemeToggle.tsx"
 export { ColorSchemeToggle } from "./ColorSchemeToggle/ColorSchemeToggle.tsx"
+export type { ComboboxProps } from "./Combobox/Combobox.tsx"
+export { Combobox } from "./Combobox/Combobox.tsx"
 export type { BadgeSize } from "./controlStyles.ts"
 export {
   BADGE_SIZE_CLASS,
