@@ -19,8 +19,12 @@ import { daylight } from "./variants/index.ts"
 test("both surface hexes are embedded so the fallback can branch", () => {
   const script = buildFirstPaintScript(daylight)
 
-  expect(script).toContain(daylight.schemes.light.surface.base)
-  expect(script).toContain(daylight.schemes.dark.surface.base)
+  expect(script).toContain(
+    daylight.schemes.light.surface.base,
+  )
+  expect(script).toContain(
+    daylight.schemes.dark.surface.base,
+  )
 })
 
 test("it sets data-scheme and reads the default storage key", () => {
@@ -48,7 +52,5 @@ test("the storage key is overridable, and the default matches the shared literal
 test("it keeps the var() fallback so the token wins once loaded", () => {
   const script = buildFirstPaintScript(daylight)
 
-  expect(script).toContain(
-    "var(--color-surface-base,",
-  )
+  expect(script).toContain("var(--color-surface-base,")
 })

@@ -290,7 +290,11 @@ test("the barrel is the only place components are re-exported", async () => {
   // directory because a region with no toasts in it is not a thing
   // anybody renders. It is therefore outside this count by the same
   // rule, and the barrel assertion below does not reach it.
-  expect(componentNames.length).toBe(25)
+  //
+  // 2026-08-03 adds the two colour-scheme controls — `ColorSchemeToggle`
+  // (Layer 2, presentational) and `ColorSchemeSwitcher` (Layer 3,
+  // connected) — taking the count to 27.
+  expect(componentNames.length).toBe(27)
 
   for (const name of componentNames) {
     expect(barrel).toContain(`export { ${name} }`)
@@ -364,6 +368,13 @@ const ENTRY_POINT_RUNTIMES: Record<
 > = {
   logic: {
     ".": ["react"],
+    // The DOM defaults for `useColorScheme`. It reaches no bare
+    // specifier at all: `matchMedia`/`localStorage`/`document` are
+    // globals, not imports, and its only imports are type-only ones
+    // into `core` — which is why `ColorSchemeApplier` lives in the
+    // core rather than beside the hook, so this entry never pulls
+    // `react`.
+    "./browser": [],
     "./core": [],
     "./jotai": ["jotai"],
     "./preact": ["preact", "preact/hooks"],
@@ -376,6 +387,10 @@ const ENTRY_POINT_RUNTIMES: Record<
   ui: {
     ".": [
       "@charcuterie/logic",
+      // `ColorSchemeSwitcher` is the one component that reaches the
+      // browser, and it does so through this subpath so the coupling
+      // is named rather than smuggled in through the main entry.
+      "@charcuterie/logic/browser",
       "@charcuterie/tokens",
       "@floating-ui/react",
       "react",

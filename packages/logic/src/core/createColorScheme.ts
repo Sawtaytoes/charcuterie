@@ -31,6 +31,20 @@ import type { ReadableCore, StoreOptions } from "./types.ts"
 /** The two schemes `data-scheme` can hold — mirrors `@charcuterie/tokens`' `Scheme`. */
 export type ResolvedColorScheme = "light" | "dark"
 
+/**
+ * What to do with the resolved scheme — the one DOM side effect the
+ * React binding performs, and injected so it can be swapped. The
+ * browser default writes `data-scheme` on `<html>`
+ * (`@charcuterie/logic/browser`); a React-Native consumer sets a
+ * context value instead and never touches the DOM.
+ *
+ * Defined here rather than beside the hook so the browser subpath
+ * can name it without importing React through the hook module.
+ */
+export type ColorSchemeApplier = (
+  resolvedScheme: ResolvedColorScheme,
+) => void
+
 /** The three-way user preference. `system` defers to the resolver. */
 export type ColorSchemeMode = ResolvedColorScheme | "system"
 
@@ -121,7 +135,9 @@ export const nextColorSchemeMode = (
 
   const index = order.indexOf(current)
 
-  return order[(index + 1) % order.length] as ColorSchemeMode
+  return order[
+    (index + 1) % order.length
+  ] as ColorSchemeMode
 }
 
 const resolveScheme = (
@@ -141,14 +157,19 @@ export const createColorScheme = ({
   // The resolver's answer, held so `setMode` can re-resolve without
   // reading the seam again — a resolver `get()` may be a real DOM
   // query and this must stay a cheap synchronous recompute.
-  let systemScheme: ResolvedColorScheme = resolver?.get() ?? "light"
+  let systemScheme: ResolvedColorScheme =
+    resolver?.get() ?? "light"
 
-  const initialMode = persistence?.read() ?? initialModeOption
+  const initialMode =
+    persistence?.read() ?? initialModeOption
 
   const store = createStore<ColorSchemeState>(
     Object.freeze({
       mode: initialMode,
-      resolvedScheme: resolveScheme(initialMode, systemScheme),
+      resolvedScheme: resolveScheme(
+        initialMode,
+        systemScheme,
+      ),
     }),
   )
 
@@ -156,7 +177,10 @@ export const createColorScheme = ({
     store.set(
       Object.freeze({
         mode: nextMode,
-        resolvedScheme: resolveScheme(nextMode, systemScheme),
+        resolvedScheme: resolveScheme(
+          nextMode,
+          systemScheme,
+        ),
       }),
     )
   }

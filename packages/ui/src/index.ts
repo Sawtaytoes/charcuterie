@@ -52,6 +52,13 @@ export type {
   CardSurface,
 } from "./Card/Card.tsx"
 export { Card } from "./Card/Card.tsx"
+export type { ColorSchemeSwitcherProps } from "./ColorSchemeSwitcher/ColorSchemeSwitcher.tsx"
+export { ColorSchemeSwitcher } from "./ColorSchemeSwitcher/ColorSchemeSwitcher.tsx"
+export type {
+  ColorSchemeIcons,
+  ColorSchemeToggleProps,
+} from "./ColorSchemeToggle/ColorSchemeToggle.tsx"
+export { ColorSchemeToggle } from "./ColorSchemeToggle/ColorSchemeToggle.tsx"
 export type { BadgeSize } from "./controlStyles.ts"
 export {
   BADGE_SIZE_CLASS,

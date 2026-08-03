@@ -1,0 +1,70 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as ColorSchemeSwitcherStories from "./ColorSchemeSwitcher.stories";
+
+<Meta of={ColorSchemeSwitcherStories} />
+
+# ColorSchemeSwitcher
+
+The connected switcher — **Layer 3, and the only layer that touches the browser.** It wires
+the [`useColorScheme`](/) hook to the three defaults from `@charcuterie/logic/browser`
+(`matchMedia` + `localStorage` + `data-scheme` on `<html>`) and renders the presentational
+[`ColorSchemeToggle`](?path=/docs/components-colorschemetoggle--docs). Drop it in and the app
+follows the OS, remembers the user's choice, and re-themes with zero React re-render.
+
+<Canvas of={ColorSchemeSwitcherStories.Default} />
+
+## Props
+
+<Controls />
+
+## Every seam is overridable — that is the point
+
+`resolver`, `persistence`, and `apply` all default to the browser implementations but can be
+replaced. Isolating the browser dependency to this one component is what lets a **non-browser
+host** reuse the entire stack unchanged.
+
+### Electron (`nativeTheme`) — copy-paste
+
+The image-viewer is Electron, which owns the OS appearance through `nativeTheme`. Pass it as
+the resolver and nothing else changes:
+
+```tsx
+import { ColorSchemeSwitcher } from "@charcuterie/ui";
+import type { ColorSchemeResolver } from "@charcuterie/logic";
+import { nativeTheme } from "electron";
+import { Monitor, Moon, Sun } from "lucide-react";
+
+const nativeThemeResolver: ColorSchemeResolver = {
+  get: () => (nativeTheme.shouldUseDarkColors ? "dark" : "light"),
+  subscribe: (listener) => {
+    nativeTheme.on("updated", listener);
+    return () => nativeTheme.off("updated", listener);
+  },
+};
+
+<ColorSchemeSwitcher
+  resolver={nativeThemeResolver}
+  icons={{ light: <Sun />, dark: <Moon />, system: <Monitor /> }}
+/>;
+```
+
+`persistence` and `apply` keep their browser defaults in an Electron **renderer** (it has
+`localStorage` and a `document`). Only the resolver needs replacing, because only the OS
+answer comes from outside the DOM.
+
+### React-Native — the shape
+
+RN has no `data-scheme` and no `matchMedia`. Replace **all three** seams: a resolver over
+`Appearance.getColorScheme()` / `Appearance.addChangeListener`, a persistence over
+`AsyncStorage`, and an `apply` that sets a theme **context value** instead of a DOM
+attribute. `ColorSchemeToggle` renders as-is; only the seams differ.
+
+## First paint
+
+Following the OS/persisted choice means `<html data-scheme>` must be set **before first
+paint**, or the page flashes the wrong theme for a frame. `@charcuterie/tokens` ships the
+inline snippet — `buildFirstPaintScript(variant, { storageKey })`, emitted to
+`dist/first-paint-script.html`. Paste it into `<head>` before any stylesheet, and keep its
+`storageKey` equal to the one `localStoragePersistence(key)` uses — the shared default is
+`DEFAULT_COLOR_SCHEME_STORAGE_KEY` (`"charcuterie-scheme"`), exported from both packages.

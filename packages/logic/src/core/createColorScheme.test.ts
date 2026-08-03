@@ -47,12 +47,18 @@ const makeResolver = (initial: ResolvedColorScheme) => {
     }
   }
 
-  return { flip, resolver, get listenerCount() {
-    return listeners.size
-  } }
+  return {
+    flip,
+    resolver,
+    get listenerCount() {
+      return listeners.size
+    },
+  }
 }
 
-const makePersistence = (stored: ColorSchemeMode | null = null) => {
+const makePersistence = (
+  stored: ColorSchemeMode | null = null,
+) => {
   let value = stored
 
   const persistence: ColorSchemePersistence = {
@@ -62,9 +68,12 @@ const makePersistence = (stored: ColorSchemeMode | null = null) => {
     },
   }
 
-  return { persistence, get value() {
-    return value
-  } }
+  return {
+    persistence,
+    get value() {
+      return value
+    },
+  }
 }
 
 test("a fresh core with no saved choice starts on system", () => {

@@ -1,24 +1,13 @@
 import { useEffect, useState } from "react"
 
 import type {
+  ColorSchemeApplier,
   ColorSchemeOptions,
   ColorSchemeState,
-  ResolvedColorScheme,
 } from "../core/createColorScheme.ts"
 import { createColorScheme } from "../core/createColorScheme.ts"
 import { useLatestRef } from "./useLatestRef.ts"
 import { useStoreValue } from "./useStoreValue.ts"
-
-/**
- * What to do with the resolved scheme — the one DOM side effect
- * this hook performs, and injected for the same reason the resolver
- * is: the browser default writes `data-scheme` on `<html>`
- * (`@charcuterie/logic/browser`), but a React-Native consumer sets
- * a context value instead and never imports the DOM.
- */
-export type ColorSchemeApplier = (
-  resolvedScheme: ResolvedColorScheme,
-) => void
 
 export type UseColorSchemeOptions = ColorSchemeOptions & {
   apply?: ColorSchemeApplier
