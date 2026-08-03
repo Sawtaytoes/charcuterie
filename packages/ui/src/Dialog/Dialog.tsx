@@ -8,7 +8,13 @@ import { toClassName } from "../toClassName.ts"
 export type DialogSize = "full" | "lg" | "md" | "sm" | "xl"
 
 export type DialogProps = {
-  children: ReactNode
+  /**
+   * The scrolling body. Optional: a confirm dialog whose question is
+   * its `heading` and whose answers are its `footer` has no body, and
+   * the old chrome `Modal` (which extended `<dialog>`'s DOM props)
+   * allowed that — `Dialog` keeps it.
+   */
+  children?: ReactNode
   className?: string
   /** The footer row. Buttons, usually. */
   footer?: ReactNode

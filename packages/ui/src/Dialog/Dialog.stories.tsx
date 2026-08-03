@@ -316,6 +316,56 @@ export const Responsive: Story = {
  * unlike the old native `<dialog>`, a synthetic `userEvent.keyboard`
  * can now press for real.
  */
+/**
+ * A confirm dialog with **no body**: the question is the `heading`
+ * (which is the dialog's accessible name) and the answers are the
+ * `footer`. `children` is optional precisely for this shape — the old
+ * chrome `Modal` extended `<dialog>`'s DOM props, so it allowed it,
+ * and image-viewer's delete-confirm renders exactly this.
+ */
+const NoBodyDemo = (): ReactNode => {
+  const { hide, isVisible, show } = useVisibility()
+
+  return (
+    <>
+      <Button appearance="soft" onClick={show} size="sm">
+        Delete the file
+      </Button>
+
+      <Dialog
+        footer={
+          <>
+            <Button
+              appearance="soft"
+              intent="neutral"
+              onClick={hide}
+              size="sm"
+            >
+              Keep it
+            </Button>
+
+            <Button intent="danger" size="sm">
+              Delete
+            </Button>
+          </>
+        }
+        heading="Delete this file? This cannot be undone."
+        isVisible={isVisible}
+        onClose={hide}
+      />
+    </>
+  )
+}
+
+export const NoBody: Story = {
+  args: {
+    heading: "Delete this file? This cannot be undone.",
+    isVisible: false,
+    onClose: () => {},
+  },
+  render: () => <NoBodyDemo />,
+}
+
 export const Interactive: Story = {
   args: {
     heading: "Bay 3",
