@@ -45,15 +45,18 @@ instead of falling out of it.** Here `useRole` writes `aria-describedby` on the 
 An `IconButton` under a tooltip still carries its own `aria-label`. `AllVariants` proves the
 button stays findable by the same query whether or not the tip is open.
 
-## No `popover` and no focus manager
+## Portalled, and no focus manager
 
-Unlike `Popover`, which is in the top layer and traps nothing. Focus never enters a tooltip
-— moving it there is what makes one inescapable — so there is no `FloatingFocusManager` and
-no `popover="manual"`.
+The tip renders in a `FloatingPortal` at `document.body` — the same reversal as the other
+overlays
+([decision](../../../docs/decisions/2026-08-03-overlays-portal-to-the-body-not-the-top-layer.md)):
+`strategy: "fixed"` alone still let an `overflow: hidden` ancestor clip it, and a portal
+does not. `--layer-tooltip` keeps it above a modal.
 
-The trade is real and worth stating: a tooltip is therefore **not** in the top layer and can
-be clipped by an `overflow: hidden` ancestor. `strategy: "fixed"` keeps that to ancestors
-which actually clip fixed descendants.
+There is no `FloatingFocusManager`, unlike `Popover`. Focus never enters a tooltip — moving
+it there is what would make one inescapable — so the tip stays out of the focus manager and
+the overlay stack. A scoped query for the tip now reaches for `body`; `useRole` writes
+`aria-describedby` on the trigger, so the link survives the boundary.
 
 <Canvas of={TooltipStories.AllStates} />
 

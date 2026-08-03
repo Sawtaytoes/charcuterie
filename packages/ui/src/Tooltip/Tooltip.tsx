@@ -5,6 +5,7 @@ import {
 import type { Placement } from "@floating-ui/react"
 import {
   autoUpdate,
+  FloatingPortal,
   flip,
   offset,
   shift,
@@ -155,38 +156,40 @@ export const Tooltip = ({
       {clonedTrigger}
 
       {isVisible ? (
-        <div
-          {...getFloatingProps()}
-          className={toClassName(
-            // `intent-neutral-solid` + its own `on-solid`, rather
-            // than `surface-inverse` + `content-on-accent`. The
-            // second pair looks like the obvious one and is not a
-            // *pair* at all — nothing in the token set promises those
-            // two contrast, and in `daylight` dark they land at
-            // 2.9:1. The `solid`/`on-solid` roles exist precisely to
-            // be a guaranteed couple, and the contrast gate checks
-            // them as one.
-            "inset-auto m-0 max-w-xs rounded-md bg-intent-neutral-solid px-2 py-1 text-intent-neutral-on-solid text-xs shadow-medium",
-            className,
-          )}
-          // No `popover="manual"` and no `FloatingFocusManager`,
-          // unlike `Popover`. Both exist to manage focus, and focus
-          // never enters a tooltip — moving it here is what makes
-          // one unescapable. The trade is that a tooltip is not in
-          // the top layer, so it can be clipped by an
-          // `overflow: hidden` ancestor; `strategy: "fixed"` keeps
-          // that to ancestors that actually clip fixed descendants.
-          ref={refs.setFloating}
-          // Duplicated from `getFloatingProps()` deliberately, and
-          // the two cannot differ — `useRole(context, { role:
-          // "tooltip" })` above is where it comes from. Stated here
-          // because a linter cannot see a role through a spread, and
-          // neither can the next reader.
-          role="tooltip"
-          style={floatingStyles}
-        >
-          {label}
-        </div>
+        <FloatingPortal>
+          <div
+            {...getFloatingProps()}
+            className={toClassName(
+              // `intent-neutral-solid` + its own `on-solid`, rather
+              // than `surface-inverse` + `content-on-accent`. The
+              // second pair looks like the obvious one and is not a
+              // *pair* at all — nothing in the token set promises those
+              // two contrast, and in `daylight` dark they land at
+              // 2.9:1. The `solid`/`on-solid` roles exist precisely to
+              // be a guaranteed couple, and the contrast gate checks
+              // them as one.
+              "z-[var(--layer-tooltip)] max-w-xs rounded-md bg-intent-neutral-solid px-2 py-1 text-intent-neutral-on-solid text-xs shadow-medium",
+              className,
+            )}
+            // Portalled to `document.body`, the same reversal as the
+            // other overlays: `strategy: "fixed"` alone still let an
+            // `overflow: hidden` ancestor clip the tip, and a portal
+            // does not. No `FloatingFocusManager`, unlike `Popover` —
+            // focus never enters a tooltip, and moving it here is what
+            // would make one unescapable. `--layer-tooltip` keeps it
+            // above a modal.
+            ref={refs.setFloating}
+            // Duplicated from `getFloatingProps()` deliberately, and
+            // the two cannot differ — `useRole(context, { role:
+            // "tooltip" })` above is where it comes from. Stated here
+            // because a linter cannot see a role through a spread, and
+            // neither can the next reader.
+            role="tooltip"
+            style={floatingStyles}
+          >
+            {label}
+          </div>
+        </FloatingPortal>
       ) : null}
     </>
   )

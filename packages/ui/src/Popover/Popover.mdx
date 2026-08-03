@@ -32,35 +32,32 @@ useFloating({
 ```
 
 It is used for the three things only it can do — collision handling, a real dismiss layer,
-and focus management. The top layer, the positioning strategy, and the ARIA wiring come
-from the platform and from `useRole`.
+and focus management — all consolidated in `useAnchoredOverlay`. The positioning strategy
+and the ARIA wiring come from the platform and from `useRole`.
 
 Passing `open:` *into* floating-ui does not violate the `is`/`has` rule; the adapter
 boundary is exactly the carve-out that rule already has
 ([decision](../../../docs/decisions/2026-07-29-is-has-rule-has-no-external-api-carve-out.md)).
 
-## `popover="manual"`, not a portal and not `auto`
+## Portalled, not the top layer
 
-`popover="manual"` puts the panel in the **top layer** — no `z-index` contest, and no
-`overflow: hidden` ancestor clipping it. That is what a portal is normally reached for,
-and unlike a portal the element **stays where it is in the DOM**:
+The panel renders in a `FloatingPortal` at `document.body`. `popover="manual"` was reached
+for first — no `z-index` contest, no portal — but the top layer does not escape an
+`overflow: hidden` ancestor's *clipping* in every case the fleet hit, and a portal does
+([decision](../../../docs/decisions/2026-08-03-overlays-portal-to-the-body-not-the-top-layer.md)).
 
-> `canvas.getByRole("dialog")` finds this panel. It would not find a portalled one, and
-> every story here would have to reach for `screen` and lose its scoping. Same argument as
-> `Modal`, one layer down.
+The objection a portal used to raise — that it moves the panel out of a scoped `canvas`
+query — is answered:
 
-`manual` rather than `auto` is the state-ownership decision again. `auto` brings the UA's
-own light-dismiss, which closes the element by itself and leaves `isVisible` true.
-`useDismiss` does the same job through our callback, so Charcuterie stays the only thing
-that decides.
+> `useRole` writes `aria-controls` on the trigger pointing at the panel `id`, so
+> trigger→panel stays followable across the boundary (the test asserts it). And the story
+> scopes panel queries to `within(document.body)` while `expectAgentDrivable` — structural
+> — needs no change.
 
-### Two UA defaults that must be undone
-
-`[popover]` ships `position: fixed; inset: 0; margin: auto`. Left in place it centres the
-panel in the viewport and fights every coordinate floating-ui computes — and it looks
-deliberate, which is the worst kind of bug. `inset-auto m-0` puts it back, and
-`strategy: "fixed"` keeps the numbers viewport-relative like the top layer itself.
-`AllVariants` asserts the panel is positioned at all, for exactly this reason.
+`useDismiss` owns Escape and outside-press through our callback, so Charcuterie stays the
+only thing that decides `isVisible`. `strategy: "fixed"` keeps the coordinates
+viewport-relative; `AllVariants` asserts the panel is positioned at all, for exactly this
+reason.
 
 <Canvas of={PopoverStories.AllVariants} />
 

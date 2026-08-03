@@ -1,0 +1,68 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as ListboxStories from "./Listbox.stories";
+
+<Meta of={ListboxStories} />
+
+# Listbox
+
+The single-select **fancy** dropdown — the rich-option sibling of the native
+[`Select`](?path=/docs/components-select--docs), not a replacement for it. `Select` keeps
+type-ahead, Home/End, the mobile wheel picker, form submission, `:invalid` and autofill;
+`Listbox` is for the cases `<option>` cannot render — a leading icon, two lines, a trailing
+badge ([decision](../../../docs/decisions/2026-08-03-listbox-and-combobox-are-siblings-of-select.md)).
+
+<Canvas of={ListboxStories.Default} />
+
+## Props
+
+<Controls />
+
+## A listbox is not a menu
+
+An `option` **is** something you are choosing; a `menuitem` **does** something. So a
+`Listbox` carries `aria-selected`, it type-aheads (the APG requires it of a listbox and
+`Menu` deliberately omits it), and a screen reader announces "listbox, selected, 2 of 4".
+That is the distinction `Menu` documents from the other side.
+
+```tsx
+const { hide, isVisible, toggle } = useVisibility()
+const [value, setValue] = useState<string>()
+
+<Listbox
+  isVisible={isVisible}
+  onDismiss={hide}
+  onSelect={setValue}
+  options={LANGUAGES}
+  selectedValue={value}
+  trigger={<Button onClick={toggle}>{label}</Button>}
+/>
+```
+
+## Two kinds of state, composed
+
+`useRovingFocus` owns which option is tabbable — exactly one, so Tab enters and leaves the
+group once and the arrow keys move within it — and `useSinglePicker` owns which option is
+chosen. They are the same two kinds `Tabs` composes, and they never disturb each other:
+arrowing moves focus without selecting, Enter selects the focused option. A disabled option
+joins the choice but not the focus group, so the arrow keys and type-ahead skip it.
+
+<Canvas of={ListboxStories.AllStates} />
+
+## Rich options, and `textValue`
+
+The options take a `ReactNode` label — two lines, a flag, an intent-coloured confidence
+badge. When the label is rich, `textValue` is required: it is the type-ahead target and the
+name a screen reader reads, so a picture of a value is still a value you can find by typing.
+
+<Canvas of={ListboxStories.AllVariants} />
+
+## Portalled, and a plain button opens it
+
+The panel portals to `document.body`. The trigger stays a native **button** that gains
+`aria-haspopup="listbox"`, `aria-expanded`, and `aria-controls` — the button-opens-listbox
+pattern, not a `combobox` (that is `Combobox`, where focus stays in a text input). So there
+is no `heading` prop; the button names the widget. The panel height is clamped to the
+viewport by floating-ui's `size` middleware and scrolls within it.
+
+<Canvas of={ListboxStories.Interactive} />

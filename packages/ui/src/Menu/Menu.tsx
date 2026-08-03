@@ -1,23 +1,17 @@
 import {
   selectTabIndex,
-  useClonedChild,
   useRovingFocus,
 } from "@charcuterie/logic"
 import type { Placement } from "@floating-ui/react"
 import {
-  autoUpdate,
   FloatingFocusManager,
-  flip,
-  offset,
-  shift,
-  useDismiss,
-  useFloating,
-  useInteractions,
-  useRole,
+  FloatingPortal,
 } from "@floating-ui/react"
 import type { ReactElement, ReactNode } from "react"
 import { useEffect, useRef } from "react"
 
+import { PANEL_SURFACE_CLASS } from "../Overlay/overlayPanelClass.ts"
+import { useAnchoredOverlay } from "../Overlay/useAnchoredOverlay.ts"
 import { toClassName } from "../toClassName.ts"
 import { MenuAction } from "./MenuAction.tsx"
 
@@ -112,8 +106,6 @@ export const Menu = ({
     new Map<string, HTMLButtonElement>(),
   )
 
-  const panelElement = useRef<HTMLDivElement>(null)
-
   const focus = useRovingFocus<string>()
 
   const { activeValue, registeredValues, setActiveValue } =
@@ -121,52 +113,20 @@ export const Menu = ({
 
   const [firstValue] = registeredValues
 
-  const { context, floatingStyles, refs } = useFloating({
-    open: isVisible,
-    onOpenChange: (isNextVisible) => {
-      if (!isNextVisible) {
-        onDismiss()
-      }
-    },
+  const {
+    clonedTrigger,
+    context,
+    floatingStyles,
+    getFloatingProps,
+    setFloating,
+  } = useAnchoredOverlay({
+    isVisible,
+    offsetValue: 4,
+    onDismiss,
     placement,
-    middleware: [offset(4), flip(), shift({ padding: 8 })],
-    strategy: "fixed",
-    whileElementsMounted: autoUpdate,
+    role: "menu",
+    trigger,
   })
-
-  const { getFloatingProps, getReferenceProps } =
-    useInteractions([
-      useDismiss(context),
-      useRole(context, { role: "menu" }),
-    ])
-
-  const clonedTrigger = useClonedChild(trigger, {
-    ...getReferenceProps(),
-    ref: refs.setReference,
-  })
-
-  /**
-   * The other half of the `isConnected` guard below. If the ref
-   * fired while the node was still detached, nothing has shown the
-   * popover — and a `[popover]` that was never shown is
-   * `display: none`, so the menu renders, passes typecheck, and is
-   * invisible to `getByRole` and to a user alike.
-   *
-   * Effects run after the tree is connected, so this is the
-   * backstop. It is idempotent: `:popover-open` is the same question
-   * the ref asks.
-   */
-  useEffect(() => {
-    const panel = panelElement.current
-
-    if (
-      isVisible &&
-      panel?.isConnected &&
-      !panel.matches(":popover-open")
-    ) {
-      panel.showPopover()
-    }
-  }, [isVisible])
 
   /**
    * Opening **makes** a member active, and this is the step the
@@ -205,95 +165,74 @@ export const Menu = ({
       {clonedTrigger}
 
       {isVisible ? (
-        <FloatingFocusManager
-          context={context}
-          // `false`, so Tab leaves the menu and lands on the next
-          // control in the page — which is what closes it, through
-          // `useDismiss`. A trapped menu is a dialog.
-          modal={false}
-          // Focus is moved by the effect above, to whichever item
-          // `RovingFocus` made active. Letting the manager also aim
-          // it is two owners for one caret.
-          initialFocus={-1}
-        >
-          <div
-            {...getFloatingProps()}
-            className={toClassName(
-              "inset-auto m-0 flex min-w-48 flex-col gap-0.5 rounded-md border border-border-default bg-surface-overlay p-1 shadow-medium",
-              className,
-            )}
-            onKeyDown={(keyEvent) => {
-              const commands: Record<string, () => void> = {
-                ArrowDown: focus.next,
-                ArrowUp: focus.previous,
-                End: focus.last,
-                Home: focus.first,
-              }
-
-              const command = commands[keyEvent.key]
-
-              if (command) {
-                // Arrow keys scroll the page by default, and a menu
-                // that scrolls the document behind it while moving
-                // focus is the hand-rolled version of this
-                // component.
-                keyEvent.preventDefault()
-
-                command()
-              }
-            }}
-            popover="manual"
-            ref={(node) => {
-              refs.setFloating(node)
-
-              panelElement.current = node
-
-              // A ref callback rather than an effect, for the same
-              // reason as `Popover`: a `[popover]` is
-              // `display: none` until shown, and every child effect
-              // — including the focus move above — would otherwise
-              // be aiming at a hidden element.
-              //
-              // `isConnected` is the guard `Popover` does not need
-              // and this does. `FloatingFocusManager` renders a pair
-              // of focus guards around its child, so React commits
-              // this subtree in an order where the ref can fire
-              // while the node is still detached — and
-              // `showPopover()` on a disconnected element throws
-              // `InvalidStateError`, which surfaces as an unhandled
-              // rejection rather than as a failing assertion.
-              if (
-                node?.isConnected &&
-                !node.matches(":popover-open")
-              ) {
-                node.showPopover()
-              }
-            }}
-            // Duplicated from `getFloatingProps()` on purpose, and
-            // the two cannot differ — `useRole(context, { role:
-            // "menu" })` above is where it comes from. Stated here
-            // because a linter cannot see a role through a spread.
-            role="menu"
-            style={floatingStyles}
+        <FloatingPortal>
+          <FloatingFocusManager
+            context={context}
+            // `false`, so Tab leaves the menu and lands on the next
+            // control in the page — which is what closes it, through
+            // `useDismiss`. A trapped menu is a dialog.
+            modal={false}
+            // Focus is moved by the effect above, to whichever item
+            // `RovingFocus` made active. Letting the manager also aim
+            // it is two owners for one caret.
+            initialFocus={-1}
           >
-            {items.map((item) => (
-              <MenuAction
-                item={item}
-                key={item.key}
-                onDismiss={onDismiss}
-                register={focus.register}
-                tabIndex={selectTabIndex(focus, item.key)}
-                trackElement={(key, element) => {
-                  if (element) {
-                    itemElements.current.set(key, element)
-                  } else {
-                    itemElements.current.delete(key)
+            <div
+              {...getFloatingProps()}
+              className={toClassName(
+                PANEL_SURFACE_CLASS,
+                "z-[var(--layer-modal)] flex min-w-48 flex-col gap-0.5 p-1",
+                className,
+              )}
+              onKeyDown={(keyEvent) => {
+                const commands: Record<string, () => void> =
+                  {
+                    ArrowDown: focus.next,
+                    ArrowUp: focus.previous,
+                    End: focus.last,
+                    Home: focus.first,
                   }
-                }}
-              />
-            ))}
-          </div>
-        </FloatingFocusManager>
+
+                const command = commands[keyEvent.key]
+
+                if (command) {
+                  // Arrow keys scroll the page by default, and a menu
+                  // that scrolls the document behind it while moving
+                  // focus is the hand-rolled version of this
+                  // component.
+                  keyEvent.preventDefault()
+
+                  command()
+                }
+              }}
+              ref={setFloating}
+              // Duplicated from `getFloatingProps()` on purpose, and
+              // the two cannot differ — `useRole(context, { role:
+              // "menu" })` in the hook is where it comes from. Stated
+              // here because a linter cannot see a role through a
+              // spread.
+              role="menu"
+              style={floatingStyles}
+            >
+              {items.map((item) => (
+                <MenuAction
+                  item={item}
+                  key={item.key}
+                  onDismiss={onDismiss}
+                  register={focus.register}
+                  tabIndex={selectTabIndex(focus, item.key)}
+                  trackElement={(key, element) => {
+                    if (element) {
+                      itemElements.current.set(key, element)
+                    } else {
+                      itemElements.current.delete(key)
+                    }
+                  }}
+                />
+              ))}
+            </div>
+          </FloatingFocusManager>
+        </FloatingPortal>
       ) : null}
     </>
   )
