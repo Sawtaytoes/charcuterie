@@ -255,6 +255,27 @@ test("stacked dialogs share one scrim and dismiss top-first", async () => {
     )
   })
 
+  // The top dialog's own controls are actually **hittable** — the
+  // scrim sits a layer below the panels, so it does not intercept a
+  // real click. `userEvent` fires on the element directly and would
+  // miss this; `elementFromPoint` is the check that a covering scrim
+  // fails.
+  const closeButton = expectAgentDrivable(body, {
+    name: "Close this one",
+    role: "button",
+  })
+
+  const buttonRect = closeButton.getBoundingClientRect()
+
+  const atPoint = document.elementFromPoint(
+    buttonRect.left + buttonRect.width / 2,
+    buttonRect.top + buttonRect.height / 2,
+  )
+
+  await expect(
+    atPoint !== null && closeButton.contains(atPoint),
+  ).toBe(true)
+
   // An outside press closes the top only.
   await userEvent.click(document.body)
 
