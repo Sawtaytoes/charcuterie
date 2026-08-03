@@ -7,8 +7,34 @@ import { mountStory } from "../mountStory.testHelpers.ts"
 import { expectAgentDrivable } from "../testing/index.ts"
 import * as stories from "./Combobox.stories.tsx"
 
-const { Default, Interactive, Virtualized } =
-  composeStories(stories)
+const {
+  AllVariants,
+  Default,
+  DisabledFirstOption,
+  Interactive,
+  Virtualized,
+} = composeStories(stories)
+
+const openMulti = async () => {
+  const mounted = await mountStory(AllVariants)
+
+  await userEvent.click(
+    expectAgentDrivable(mounted.canvas, {
+      name: "Pick languages",
+      role: "button",
+    }),
+  )
+
+  const input = expectAgentDrivable(mounted.body, {
+    role: "combobox",
+  })
+
+  await waitFor(() => {
+    expect(input).toHaveFocus()
+  })
+
+  return { ...mounted, input }
+}
 
 const openDefault = async () => {
   const mounted = await mountStory(Default)
@@ -160,6 +186,87 @@ test("Escape clears the query first, then closes", async () => {
   await waitFor(() => {
     expect(body.queryByRole("combobox")).toBeNull()
   })
+})
+
+test("multi-select Tab escapes the field instead of committing", async () => {
+  const { body, canvas, input } = await openMulti()
+
+  // Nothing chosen yet.
+  await expect(
+    canvas.getByText("Chosen: —"),
+  ).toBeInTheDocument()
+
+  await userEvent.tab()
+
+  // Tab did not commit the active option — no chip, still nothing chosen…
+  await expect(
+    canvas.getByText("Chosen: —"),
+  ).toBeInTheDocument()
+
+  await expect(
+    body.queryByRole("button", { name: /^Remove / }),
+  ).toBeNull()
+
+  // …and focus left the input rather than being trapped back in it.
+  await expect(input).not.toHaveFocus()
+})
+
+test("removing a chip reports the removal through onSelect", async () => {
+  const { body, canvas } = await openMulti()
+
+  // Enter commits the active option in multi-select and keeps the popup
+  // open, so a chip appears and the parent is told.
+  await userEvent.keyboard("{Enter}")
+
+  await waitFor(() => {
+    expect(
+      canvas.getByText("Chosen: eng"),
+    ).toBeInTheDocument()
+  })
+
+  await userEvent.click(
+    body.getByRole("button", { name: "Remove eng" }),
+  )
+
+  // The removal flowed back through `onSelect`, so the parent cleared it
+  // — a chip removal and a list toggle-off now agree.
+  await waitFor(() => {
+    expect(
+      canvas.getByText("Chosen: —"),
+    ).toBeInTheDocument()
+  })
+})
+
+test("a disabled first option is skipped, never active or committed", async () => {
+  const { body, canvas } = await mountStory(
+    DisabledFirstOption,
+  )
+
+  const input = body.getByRole("combobox")
+
+  await waitFor(() => {
+    expect(input).toHaveFocus()
+  })
+
+  const options = body.getAllByRole("option")
+
+  // The seed lands on index 0 (disabled English); the resolved active
+  // descendant skips to the first enabled option, Spanish.
+  await expect(input).toHaveAttribute(
+    "aria-activedescendant",
+    options[1]?.id,
+  )
+
+  await userEvent.keyboard("{Enter}")
+
+  // Enter committed Spanish, not the disabled English, and closed.
+  await waitFor(() => {
+    expect(body.queryByRole("combobox")).toBeNull()
+  })
+
+  await expect(
+    canvas.getByText("Chosen: spa"),
+  ).toBeInTheDocument()
 })
 
 test("a windowed list carries aria-setsize and aria-posinset", async () => {

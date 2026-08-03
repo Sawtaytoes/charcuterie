@@ -17,6 +17,12 @@ const LANGUAGES: ListboxItem[] = [
   { label: "Portuguese", value: "por" },
 ]
 
+const LANGUAGES_DISABLED_FIRST: ListboxItem[] = [
+  { isDisabled: true, label: "English", value: "eng" },
+  { label: "Spanish", value: "spa" },
+  { label: "French", value: "fra" },
+]
+
 // A long list, to trip the auto-virtualization threshold.
 const MANY: ListboxItem[] = Array.from(
   { length: 500 },
@@ -211,6 +217,29 @@ export const Interactive: Story = {
     <ComboboxHarness
       options={LANGUAGES}
       triggerLabel="Search languages"
+    />
+  ),
+}
+
+/**
+ * A disabled option in the seed position. Opening seeds the active row at
+ * index 0, so the resolved active descendant must skip past the disabled
+ * first option to the first enabled one — and Enter must never commit the
+ * disabled value.
+ */
+export const DisabledFirstOption: Story = {
+  args: {
+    isVisible: false,
+    onDismiss: () => {},
+    onSelect: () => {},
+    options: LANGUAGES_DISABLED_FIRST,
+    trigger: <Button>Pick a language</Button>,
+  },
+  render: () => (
+    <ComboboxHarness
+      isInitiallyVisible
+      options={LANGUAGES_DISABLED_FIRST}
+      triggerLabel="Pick a language"
     />
   ),
 }
