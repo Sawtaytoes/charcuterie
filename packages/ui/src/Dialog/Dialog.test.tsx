@@ -15,9 +15,37 @@ const {
   AllVariants,
   Default,
   Interactive,
+  NoBody,
   Responsive,
   Stacked,
 } = composeStories(stories)
+
+test("a dialog with no body renders from heading and footer alone", async () => {
+  const { body, canvas } = await mountStory(NoBody)
+
+  await userEvent.click(
+    expectAgentDrivable(canvas, {
+      name: "Delete the file",
+      role: "button",
+    }),
+  )
+
+  // `children` is optional: the question is the accessible name and
+  // the answers are the footer, with nothing in between.
+  const dialog = expectAgentDrivable(body, {
+    name: "Delete this file? This cannot be undone.",
+    role: "dialog",
+  })
+
+  await expect(
+    expectAgentDrivable(body, {
+      name: "Delete",
+      role: "button",
+    }),
+  ).toBeInTheDocument()
+
+  await expectNoAxeViolations(dialog)
+})
 
 test("the dialog is reachable from a body-scoped query", async () => {
   const { body, canvas } = await mountStory(Default)
