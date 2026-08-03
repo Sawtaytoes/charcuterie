@@ -1,0 +1,71 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as ComboboxStories from "./Combobox.stories";
+
+<Meta of={ComboboxStories} />
+
+# Combobox
+
+The searchable, filtering, virtualized picker — the other half of the picker family, and
+the one that consolidates the fleet's hand-rolled dropdowns
+([decision](../../../docs/decisions/2026-08-03-listbox-and-combobox-are-siblings-of-select.md)).
+Use it when the list is long enough to search or filter; reach for
+[`Listbox`](?path=/docs/components-listbox--docs) for a short rich-option list, and the
+native [`Select`](?path=/docs/components-select--docs) for a plain one.
+
+<Canvas of={ComboboxStories.Default} />
+
+## Props
+
+<Controls />
+
+## The ARIA is forced, not stylistic
+
+Unlike `Listbox`, **focus stays in the text input**, so the active option is tracked with
+`aria-activedescendant`, not roving tabindex. The input is the `role="combobox"`
+(`aria-autocomplete="list"`, `aria-expanded`, `aria-controls`); the popup is a
+`role="listbox"`. Arrows move the active descendant while the caret stays put; Enter
+selects; Escape clears the query before it closes. The options are `<div>`-shaped
+`role="option"`s with **zero** tab stops — a combobox popup legitimately has none.
+
+## Filtering is the consumer's, or the component's
+
+Omit `onQueryChange` and the list filters internally by `textValue`. Supply it — a
+react-query search, say — and you own the query: the `options` then arrive pre-filtered,
+and the debounce, the request token, and the per-parent cache stay yours, exactly the way
+`PathPicker` already splits async work.
+
+```tsx
+<Combobox
+  isVisible={isVisible}
+  onDismiss={hide}
+  onQueryChange={setQuery}   // omit to filter internally
+  onSelect={choose}
+  options={results}          // pre-filtered when you own the query
+  trigger={<Button onClick={toggle}>Search</Button>}
+/>
+```
+
+## Loading, error, empty, footer, creatable, multiple
+
+`isLoading` and `error` are panel states (only `PathPicker` had all of them); an empty
+result shows `emptyLabel` and stays open. `footer` is a sticky hint (`LinkPicker`'s "type a
+path directly"). `isCreatable` lets Enter commit the raw query (`AssFieldPicker`), and Tab
+accepts the active suggestion (`PathPicker`). `isMultiple` renders the chosen values as
+removable chips rather than filling the input, and keeps the popup open.
+
+<Canvas of={ComboboxStories.AllVariants} />
+
+<Canvas of={ComboboxStories.AllStates} />
+
+## Virtualization, and why `aria-setsize` is not optional
+
+Above ~100 options (or with `isVirtualized`), the list is windowed with
+`@tanstack/react-virtual` — the second runtime dependency this package has ever taken (MIT,
+US-origin, ~4 KB gz). Because most of the list is not in the DOM, every windowed option
+**must** carry `aria-setsize` and `aria-posinset`, or a screen reader announces "2 of 12"
+for a 4,000-item list. Below the threshold the list is plain DOM.
+
+<Canvas of={ComboboxStories.Virtualized} />
+
+<Canvas of={ComboboxStories.Interactive} />
