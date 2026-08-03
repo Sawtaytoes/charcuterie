@@ -17,6 +17,11 @@
       "types": "./dist/react/index.d.ts",
       "default": "./dist/react/index.js"
     },
+    "./browser": {
+      "source": "./src/browser/index.ts",
+      "types": "./dist/browser/index.d.ts",
+      "default": "./dist/browser/index.js"
+    },
     "./core": {
       "source": "./src/core/index.ts",
       "types": "./dist/core/index.d.ts",
