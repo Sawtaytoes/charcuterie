@@ -300,7 +300,10 @@ test("the barrel is the only place components are re-exported", async () => {
   // `Dialog` and reintroduces `Modal` as the base layer, so both are
   // components: +1 → 29. The picker family adds `Listbox` (single-select)
   // and `Combobox` (searchable/virtualized): +2 → 31.
-  expect(componentNames.length).toBe(31)
+  // `Swatch` — a colour as content with a required name, the one
+  // colour the system does not own — comes out of `portly-controllers`,
+  // the fleet's newest consumer: +1 -> 32.
+  expect(componentNames.length).toBe(32)
 
   for (const name of componentNames) {
     expect(barrel).toContain(`export { ${name} }`)
