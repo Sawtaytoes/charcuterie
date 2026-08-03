@@ -293,8 +293,9 @@ test("the barrel is the only place components are re-exported", async () => {
   //
   // 2026-08-03 adds the two colour-scheme controls — `ColorSchemeToggle`
   // (Layer 2, presentational) and `ColorSchemeSwitcher` (Layer 3,
-  // connected) — taking the count to 27.
-  expect(componentNames.length).toBe(27)
+  // connected) — plus `Lightbox` (landed the same day on its own
+  // branch), taking the count to 28.
+  expect(componentNames.length).toBe(28)
 
   for (const name of componentNames) {
     expect(barrel).toContain(`export { ${name} }`)

@@ -106,8 +106,8 @@ const ControlledDemo = (): ReactNode => {
         alt="THE OUTFIT poster"
         caption="Opened from a button, not the image"
         isOpen={isVisible}
-        onOpenChange={(next) => {
-          if (!next) {
+        onOpenChange={(isOpen) => {
+          if (!isOpen) {
             hide()
           }
         }}

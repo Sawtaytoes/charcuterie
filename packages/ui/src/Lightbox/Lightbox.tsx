@@ -73,7 +73,7 @@ export const Lightbox = ({
 
   const { hide, isVisible, show } = useVisibility()
 
-  const open = isControlled ? isOpen : isVisible
+  const isShown = isControlled ? isOpen : isVisible
 
   const requestOpen = () => {
     if (!isControlled) {
@@ -117,7 +117,7 @@ export const Lightbox = ({
 
       <Modal
         heading={heading ?? alt}
-        isVisible={open}
+        isVisible={isShown}
         onClose={requestClose}
         size="xl"
       >
