@@ -15,6 +15,23 @@
 
 export { areArraysEqual } from "./arrays.ts"
 export type {
+  ColorScheme,
+  ColorSchemeApplier,
+  ColorSchemeMode,
+  ColorSchemeOptions,
+  ColorSchemePersistence,
+  ColorSchemeResolver,
+  ColorSchemeState,
+  ResolvedColorScheme,
+} from "./createColorScheme.ts"
+export {
+  createColorScheme,
+  DEFAULT_COLOR_SCHEME_ORDER,
+  nextColorSchemeMode,
+  selectMode,
+  selectResolvedScheme,
+} from "./createColorScheme.ts"
+export type {
   LinkedIds,
   LinkedIdsState,
 } from "./createLinkedIds.ts"
@@ -68,22 +85,6 @@ export {
   getUnreachableStates,
   selectStatus,
 } from "./createStatus.ts"
-export type {
-  ColorScheme,
-  ColorSchemeMode,
-  ColorSchemeOptions,
-  ColorSchemePersistence,
-  ColorSchemeResolver,
-  ColorSchemeState,
-  ResolvedColorScheme,
-} from "./createColorScheme.ts"
-export {
-  createColorScheme,
-  DEFAULT_COLOR_SCHEME_ORDER,
-  nextColorSchemeMode,
-  selectMode,
-  selectResolvedScheme,
-} from "./createColorScheme.ts"
 export { createStore } from "./createStore.ts"
 export type {
   Visibility,
