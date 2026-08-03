@@ -43,7 +43,6 @@ export default defineConfig({
       "@floating-ui/react",
       "@storybook/addon-a11y/preview",
       "@storybook/addon-docs/blocks",
-      "@storybook/addon-themes",
     ],
   },
   test: {

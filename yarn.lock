@@ -548,7 +548,6 @@ __metadata:
     "@charcuterie/ui": "workspace:*"
     "@storybook/addon-a11y": "npm:^10.3.6"
     "@storybook/addon-docs": "npm:^10.3.6"
-    "@storybook/addon-themes": "npm:^10.3.6"
     "@storybook/addon-vitest": "npm:^10.3.6"
     "@storybook/react": "npm:^10.3.6"
     "@storybook/react-vite": "npm:^10.3.6"
@@ -1749,17 +1748,6 @@ __metadata:
     "@types/react":
       optional: true
   checksum: 10c0/7ea6f3dae93ead00330a28cb1a071c8d248d9502c4631b2b5a161b1671f4b075f6ef85f2320e70e6b521da8aa724b77c5c3d3cb36f479ed309113a28686ee31e
-  languageName: node
-  linkType: hard
-
-"@storybook/addon-themes@npm:^10.3.6":
-  version: 10.5.5
-  resolution: "@storybook/addon-themes@npm:10.5.5"
-  dependencies:
-    ts-dedent: "npm:^2.0.0"
-  peerDependencies:
-    storybook: ^10.5.5
-  checksum: 10c0/bff87ab25dfc28ba0e742ae54b804f1a4bddb3526404131a874919b1fd099b9a6ee37a568eaf1f20c77b788793c64e32cc9984ec27348eae6d24582942a881fe
   languageName: node
   linkType: hard
 
