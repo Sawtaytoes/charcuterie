@@ -202,6 +202,18 @@ const preview: Preview = {
     // Enforced, not reported: axe violations fail the run rather
     // than printing a panel nobody opens.
     a11y: {
+      // floating-ui renders focus-guard sentinels around a portalled
+      // panel — `<span aria-hidden tabindex="0">` — which is the
+      // standard, correct focus-trap-across-a-portal technique and the
+      // one axe's `aria-hidden-focus` flags as a false positive. They
+      // are library-owned, carry a stable marker attribute, and appear
+      // only once an overlay portals, so they are excluded by that
+      // marker rather than by switching the rule off for real markup.
+      // The default `include` (the whole body) is preserved, so the
+      // portalled panels themselves are still audited.
+      context: {
+        exclude: ["[data-floating-ui-focus-guard]"],
+      },
       test: "error",
     },
     controls: {

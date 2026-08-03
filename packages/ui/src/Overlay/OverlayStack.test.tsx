@@ -25,9 +25,13 @@ import {
  * ui-dom isolates test files, so it never reaches the story-driven
  * suites next door.
  */
-const reactEnvironment = globalThis as unknown as {
-  IS_REACT_ACT_ENVIRONMENT?: boolean
-}
+// Typed as a string-keyed record so the React flag's own
+// SCREAMING_CASE name never has to be *declared* as a property (the
+// boolean-naming rule wants `is`/`has`); it is only assigned.
+const reactEnvironment = globalThis as unknown as Record<
+  string,
+  boolean
+>
 
 beforeAll(() => {
   reactEnvironment.IS_REACT_ACT_ENVIRONMENT = true
@@ -190,8 +194,7 @@ test("registers in order, closes the top, and toggles the scrim with depth", asy
 })
 
 test("the scroll lock frees the page only when the last modal closes", async () => {
-  const original =
-    document.documentElement.style.overflow
+  const original = document.documentElement.style.overflow
 
   const root = await mount(
     <OverlayStackProvider>

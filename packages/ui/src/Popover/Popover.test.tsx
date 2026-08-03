@@ -16,8 +16,7 @@ const {
 } = composeStories(stories)
 
 test("the trigger and the panel agree about each other", async () => {
-  const { canvas, canvasElement } =
-    await mountStory(Default)
+  const { body, canvas } = await mountStory(Default)
 
   const trigger = expectAgentDrivable(canvas, {
     name: "Filters",
@@ -31,31 +30,31 @@ test("the trigger and the panel agree about each other", async () => {
 
   await userEvent.click(trigger)
 
-  // Found through `canvas`, not `screen` — the panel is in the top
-  // layer and still in this story's DOM, which a portal would have
-  // cost.
-  const panel = expectAgentDrivable(canvas, {
+  // Found through `body`, not `canvas` — the panel portals to
+  // `document.body`, which is the whole point of portalling over the
+  // top layer. The trigger stays in the canvas.
+  const panel = expectAgentDrivable(body, {
     name: "Filters",
     role: "dialog",
   })
 
-  // `aria-controls` really points at the panel. An id that has
-  // drifted renders identically and announces nothing, which is why
-  // `useRole` owns both ends of it.
+  // `aria-controls` really points at the panel across the portal
+  // boundary — the direct answer to the superseded top-layer
+  // decision's one real objection. An id that has drifted renders
+  // identically and announces nothing, which is why `useRole` owns
+  // both ends of it.
   await expect(trigger).toHaveAttribute(
     "aria-controls",
     panel.id,
   )
 
-  // `manual`, not `auto`: the UA's light-dismiss closes the element
-  // by itself and leaves `isVisible` true.
-  await expect(panel).toHaveAttribute("popover", "manual")
-
-  await expectNoAxeViolations(canvasElement)
+  // The open panel audits itself; the a11y addon's own pass fires on
+  // the canvas, which the panel has now left.
+  await expectNoAxeViolations(panel)
 })
 
 test("the panel is positioned rather than centred by the UA", async () => {
-  const { canvas } = await mountStory(AllVariants)
+  const { body, canvas } = await mountStory(AllVariants)
 
   await userEvent.click(
     expectAgentDrivable(canvas, {
@@ -64,14 +63,14 @@ test("the panel is positioned rather than centred by the UA", async () => {
     }),
   )
 
-  const panel = expectAgentDrivable(canvas, {
+  const panel = expectAgentDrivable(body, {
     name: "Filters — top",
     role: "dialog",
   })
 
-  // The thing that silently fails if the UA's `inset: 0; margin:
-  // auto` is left in place: the panel would sit dead centre of the
-  // viewport looking deliberate.
+  // The thing that silently fails if a portalled panel is left at its
+  // default static position: it would sit at the top-left of the
+  // document rather than anchored to its trigger.
   const { left, top } = panel.getBoundingClientRect()
 
   await expect(left).toBeGreaterThan(0)
@@ -80,7 +79,7 @@ test("the panel is positioned rather than centred by the UA", async () => {
 })
 
 test("a panel with nothing tabbable inside is still reachable", async () => {
-  const { canvas } = await mountStory(AllStates)
+  const { body, canvas } = await mountStory(AllStates)
 
   await userEvent.click(
     expectAgentDrivable(canvas, {
@@ -89,7 +88,7 @@ test("a panel with nothing tabbable inside is still reachable", async () => {
     }),
   )
 
-  const panel = expectAgentDrivable(canvas, {
+  const panel = expectAgentDrivable(body, {
     name: "Read error detail",
     role: "dialog",
   })
@@ -108,7 +107,7 @@ test("a panel with nothing tabbable inside is still reachable", async () => {
 })
 
 test("flip and shift keep the panel inside the viewport", async () => {
-  const { canvas } = await mountStory(Responsive)
+  const { body, canvas } = await mountStory(Responsive)
 
   await userEvent.click(
     expectAgentDrivable(canvas, {
@@ -117,7 +116,7 @@ test("flip and shift keep the panel inside the viewport", async () => {
     }),
   )
 
-  const panel = expectAgentDrivable(canvas, {
+  const panel = expectAgentDrivable(body, {
     name: "Filters — top start",
     role: "dialog",
   })
@@ -145,13 +144,13 @@ test("flip and shift keep the panel inside the viewport", async () => {
  * through `useDismiss` → `onDismiss` → `hide()`, so the panel is
  * never closed by anything except the state saying so.
  *
- * Escape *is* pressable here, unlike `Modal`'s: `useDismiss` listens
- * for a keydown rather than relying on a UA default action, and a
- * synthetic keydown is a real keydown as far as a listener is
- * concerned.
+ * Escape *is* pressable here, unlike the old native-`<dialog>`
+ * `Modal`'s: `useDismiss` listens for a keydown rather than relying on
+ * a UA default action, and a synthetic keydown is a real keydown as
+ * far as a listener is concerned.
  */
 test("Escape and an outside press both dismiss through the state", async () => {
-  const { canvas } = await mountStory(Interactive)
+  const { body, canvas } = await mountStory(Interactive)
 
   const trigger = expectAgentDrivable(canvas, {
     name: "Filters",
@@ -160,7 +159,7 @@ test("Escape and an outside press both dismiss through the state", async () => {
 
   await userEvent.click(trigger)
 
-  expectAgentDrivable(canvas, {
+  expectAgentDrivable(body, {
     name: "Bay 3 filters",
     role: "dialog",
   })
@@ -168,7 +167,7 @@ test("Escape and an outside press both dismiss through the state", async () => {
   await userEvent.keyboard("{Escape}")
 
   await waitFor(() => {
-    expect(canvas.queryByRole("dialog")).toBeNull()
+    expect(body.queryByRole("dialog")).toBeNull()
   })
 
   await expect(trigger).toHaveAttribute(
@@ -180,12 +179,12 @@ test("Escape and an outside press both dismiss through the state", async () => {
   await userEvent.click(trigger)
 
   await waitFor(() => {
-    expect(canvas.getByRole("dialog")).toBeInTheDocument()
+    expect(body.getByRole("dialog")).toBeInTheDocument()
   })
 
   await userEvent.click(document.body)
 
   await waitFor(() => {
-    expect(canvas.queryByRole("dialog")).toBeNull()
+    expect(body.queryByRole("dialog")).toBeNull()
   })
 })
