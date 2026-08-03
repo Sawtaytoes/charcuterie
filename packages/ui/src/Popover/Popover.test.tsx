@@ -11,6 +11,7 @@ const {
   AllStates,
   AllVariants,
   Default,
+  EscapesOverflowClip,
   Interactive,
   Responsive,
 } = composeStories(stories)
@@ -187,4 +188,40 @@ test("Escape and an outside press both dismiss through the state", async () => {
   await waitFor(() => {
     expect(body.queryByRole("dialog")).toBeNull()
   })
+})
+
+/**
+ * The bug the whole M8 portal reversal exists to fix: the top layer was
+ * still clipped by an `overflow: hidden` ancestor, and a portal to
+ * `document.body` is not. The proof is structural — the panel is not a
+ * descendant of the clipping box at all.
+ */
+test("the panel escapes an overflow:hidden ancestor", async () => {
+  const { body, canvas, canvasElement } = await mountStory(
+    EscapesOverflowClip,
+  )
+
+  const clipBox = canvasElement.querySelector(
+    ".overflow-hidden",
+  )
+
+  await userEvent.click(
+    expectAgentDrivable(canvas, {
+      name: "Open (escapes the clip)",
+      role: "button",
+    }),
+  )
+
+  const panel = expectAgentDrivable(body, {
+    name: "Escapes the clip",
+    role: "dialog",
+  })
+
+  // Portalled out of the clipping subtree entirely — so nothing clips
+  // it — while the trigger stays inside it.
+  await expect(clipBox).not.toBeNull()
+
+  await expect(clipBox?.contains(panel)).toBe(false)
+
+  await expect(document.body.contains(panel)).toBe(true)
 })
