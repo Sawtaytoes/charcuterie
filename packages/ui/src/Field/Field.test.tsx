@@ -180,7 +180,7 @@ test("a slot forwards what an outer slot gave it", async () => {
  * ref and the attribute to have all three arrived.
  */
 test("a slot forwards what an outer slot gave it, in the other order", async () => {
-  const { canvas } = await mountStory(Nested)
+  const { body, canvas } = await mountStory(Nested)
 
   const control = expectAgentDrivable(canvas, {
     name: "Archive path",
@@ -192,8 +192,10 @@ test("a slot forwards what an outer slot gave it, in the other order", async () 
   // only have been wired to the `<input>`.
   control.focus()
 
+  // The tip portals to the body now; the `aria-describedby` link still
+  // resolves across the boundary, asserted below.
   await waitFor(() => {
-    expect(canvas.getByRole("tooltip")).toHaveTextContent(
+    expect(body.getByRole("tooltip")).toHaveTextContent(
       "Where finished rips are moved.",
     )
   })
@@ -224,7 +226,7 @@ test("a slot forwards what an outer slot gave it, in the other order", async () 
  * tip.
  */
 test("a tip is described alongside the field's own text, not instead of it", async () => {
-  const { canvas } = await mountStory(Nested)
+  const { body, canvas } = await mountStory(Nested)
 
   const control = expectAgentDrivable(canvas, {
     name: "Rename pattern",
@@ -237,7 +239,7 @@ test("a tip is described alongside the field's own text, not instead of it", asy
   // tip is missing, and the reason this is testable without a
   // pointer at all.
   await waitFor(() => {
-    expect(canvas.getByRole("tooltip")).toHaveTextContent(
+    expect(body.getByRole("tooltip")).toHaveTextContent(
       "A JavaScript regular expression.",
     )
   })

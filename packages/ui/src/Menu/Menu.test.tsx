@@ -289,12 +289,9 @@ test("a menu sharing its trigger with a tooltip is still anchored to it", async 
  * The other ref, in the same composition — because a fix that
  * reversed the priority instead of merging would leave *this* one
  * pointing at nothing and the test above would still pass.
- *
- * The tooltip is not portalled yet (it is in a later commit), so it
- * is still found through `canvas`.
  */
 test("the tooltip sharing that trigger is anchored to it too", async () => {
-  const { canvas } = await mountStory(SharedTrigger)
+  const { body, canvas } = await mountStory(SharedTrigger)
 
   const trigger = expectAgentDrivable(canvas, {
     name: "Bay 5",
@@ -306,7 +303,7 @@ test("the tooltip sharing that trigger is anchored to it too", async () => {
   trigger.focus()
 
   const tip = await waitFor(() =>
-    expectAgentDrivable(canvas, { role: "tooltip" }),
+    expectAgentDrivable(body, { role: "tooltip" }),
   )
 
   // The **main axis** only: `top` with `offset(6)`. The cross axis
