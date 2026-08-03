@@ -1,19 +1,9 @@
-import { useClonedChild } from "@charcuterie/logic"
 import type { Placement } from "@floating-ui/react"
-import {
-  autoUpdate,
-  FloatingFocusManager,
-  flip,
-  offset,
-  shift,
-  useDismiss,
-  useFloating,
-  useInteractions,
-  useRole,
-} from "@floating-ui/react"
+import { FloatingFocusManager } from "@floating-ui/react"
 import type { ReactElement, ReactNode } from "react"
 
 import { PANEL_SURFACE_CLASS } from "../Overlay/overlayPanelClass.ts"
+import { useAnchoredOverlay } from "../Overlay/useAnchoredOverlay.ts"
 import { toClassName } from "../toClassName.ts"
 
 export type PopoverProps = {
@@ -88,34 +78,19 @@ export const Popover = ({
   placement = "bottom-start",
   trigger,
 }: PopoverProps): ReactNode => {
-  const { context, floatingStyles, refs } = useFloating({
-    // Read-only. Charcuterie remains the sole owner; floating-ui
-    // is told what is true and never decides it.
-    open: isVisible,
-    onOpenChange: (isNextVisible) => {
-      if (!isNextVisible) {
-        onDismiss()
-      }
-    },
+  const {
+    clonedTrigger,
+    context,
+    floatingStyles,
+    getFloatingProps,
+    setFloating,
+  } = useAnchoredOverlay({
+    isVisible,
+    offsetValue: 8,
+    onDismiss,
     placement,
-    middleware: [offset(8), flip(), shift({ padding: 8 })],
-    strategy: "fixed",
-    whileElementsMounted: autoUpdate,
-  })
-
-  // `useRole` writes `aria-expanded`, `aria-haspopup`, and
-  // `aria-controls` on the trigger and `id` + `role="dialog"` on
-  // the panel, from one source. Hand-writing them alongside is how
-  // an `aria-controls` ends up pointing at an id that moved.
-  const { getFloatingProps, getReferenceProps } =
-    useInteractions([
-      useDismiss(context),
-      useRole(context, { role: "dialog" }),
-    ])
-
-  const clonedTrigger = useClonedChild(trigger, {
-    ...getReferenceProps(),
-    ref: refs.setReference,
+    role: "dialog",
+    trigger,
   })
 
   return (
@@ -143,7 +118,7 @@ export const Popover = ({
             // spread, and neither can the next reader.
             role="dialog"
             ref={(node) => {
-              refs.setFloating(node)
+              setFloating(node)
 
               // In a ref callback rather than an effect, because a
               // `[popover]` is `display: none` until it is shown —
