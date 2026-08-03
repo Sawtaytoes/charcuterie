@@ -1,5 +1,31 @@
 # @charcuterie/ui
 
+## 1.1.0
+
+### Minor Changes
+
+- cab09e5: Add the three-mode (light / dark / system) colour-scheme switcher.
+
+  - `@charcuterie/logic`: `createColorScheme` core + `useColorScheme` hook with an
+    injectable resolver (`{ get, subscribe }`) and injectable persistence; a new
+    `@charcuterie/logic/browser` subpath ships the `matchMedia` / `localStorage` /
+    `data-scheme` defaults so non-browser consumers (Electron `nativeTheme`,
+    React-Native `Appearance`) never import the DOM.
+  - `@charcuterie/ui`: `ColorSchemeToggle` (Layer 2, presentational, controlled) and
+    `ColorSchemeSwitcher` (Layer 3, connected — the only layer that touches the browser).
+  - `@charcuterie/tokens`: `buildFirstPaintScript(variant, { storageKey })` — the inline
+    `<head>` script that sets `data-scheme` before first paint from the persisted/OS choice
+    and branches the fallback hex on the resolved scheme, sharing a storage key
+    (`DEFAULT_COLOR_SCHEME_STORAGE_KEY`) with the runtime hook.
+
+- 0daa161: Add `Lightbox` — a thumbnail that opens its own full-size view, skinned over `Modal`. The thumbnail is the trigger (and carries the accessible name; the image inside it goes `alt=""`), the enlarged view is `object-contain` clamped to the viewport, and Escape / backdrop / focus-restore / scroll-lock are all inherited from `Modal`. Supports an uncontrolled default (pass `thumbnail`) and a controlled mode (`isOpen` / `onOpenChange`) for a trigger elsewhere on the page.
+
+### Patch Changes
+
+- Updated dependencies [cab09e5]
+  - @charcuterie/tokens@1.1.0
+  - @charcuterie/logic@1.1.0
+
 ## 1.0.1
 
 ### Patch Changes
