@@ -245,3 +245,36 @@ export const Interactive: Story = {
     />
   ),
 }
+
+/**
+ * The bug the whole M8 portal reversal exists to fix. The trigger sits
+ * inside a small `overflow: hidden` box — the top layer was still
+ * clipped by it; a `FloatingPortal` to `document.body` is not. Open it
+ * and the panel escapes the clip whole.
+ */
+export const EscapesOverflowClip: Story = {
+  args: {
+    children: null,
+    heading: "Filters",
+    isVisible: false,
+    onDismiss: () => {},
+    trigger: <Button>Filters</Button>,
+  },
+  render: () => (
+    <div className="h-24 w-56 overflow-hidden rounded-md border border-border-default bg-surface-raised p-3">
+      <p className="mb-2 text-content-secondary text-xs">
+        This box is `overflow: hidden`.
+      </p>
+
+      <PopoverDemo
+        heading="Escapes the clip"
+        triggerLabel="Open (escapes the clip)"
+      >
+        <p className="text-content-secondary">
+          Portalled to the body, so the clip cannot reach
+          it.
+        </p>
+      </PopoverDemo>
+    </div>
+  ),
+}
