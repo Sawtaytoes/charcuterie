@@ -51,6 +51,56 @@ test("the default variant also answers to bare :root", () => {
   )
 })
 
+// ---------------------------------------------------------------
+// The default density costs nothing to select either
+// ---------------------------------------------------------------
+
+test("omitting data-density still yields control sizing and a type ramp", () => {
+  // Every `--control-*` and `--font-size-*` lives in a density block
+  // and nowhere else. Without a bare `:root` on the default one, an
+  // app that sets `data-scheme` and omits `data-density` renders
+  // every control at zero height with no type ramp, on a green
+  // build and with no console error — which is exactly what
+  // happened to `portly-controllers`.
+  expect(variablesCss).toContain(
+    ':root, [data-density="comfortable"], [data-variant="daylight"][data-density="comfortable"] {',
+  )
+})
+
+test("the default density block comes before the others", () => {
+  // `:root` and `[data-density="compact"]` are both 0,1,0, so source
+  // order is the whole of the cascade here. Emit comfortable last
+  // and `data-density="compact"` would silently stop working.
+  //
+  // The comparison is against daylight's OWN unqualified selectors,
+  // not a bare `[data-density="compact"]` — that substring also
+  // occurs inside `[data-variant="hairline"][data-density="compact"]`,
+  // which is emitted first and is 0,2,0, so it never competes.
+  const root = variablesCss.indexOf(
+    ':root, [data-density="comfortable"]',
+  )
+
+  expect(root).toBeGreaterThan(-1)
+
+  for (const density of ["compact", "kiosk"]) {
+    expect(root).toBeLessThan(
+      variablesCss.indexOf(
+        `[data-density="${density}"], [data-variant="daylight"][data-density="${density}"]`,
+      ),
+    )
+  }
+})
+
+test("only the default density is unqualified", () => {
+  // A bare `:root` on compact or kiosk would make the axis
+  // unusable — every app would get whichever came last.
+  for (const density of ["compact", "kiosk"]) {
+    expect(variablesCss).not.toContain(
+      `:root, [data-density="${density}"]`,
+    )
+  }
+})
+
 test("losing variants stay available but never unqualified", () => {
   for (const name of ["hairline", "layered", "legible"]) {
     expect(variablesCss).toContain(
