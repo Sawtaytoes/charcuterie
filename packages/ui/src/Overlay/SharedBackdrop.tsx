@@ -13,12 +13,12 @@ import type { ReactNode } from "react"
  * top panel's full-viewport centring layer (which sits above this),
  * so this element never has to be the click target.
  *
- * Portalled to `document.body` and rendered as the **first** portal
- * of the stack — the provider renders it before its children, a
- * self-hosting `Modal` renders it before its own panel portal — so at
- * an equal `--layer-modal` z-index the later-mounted panels paint on
- * top by DOM order. That is the whole stacking model: append order,
- * no per-modal z-index arithmetic.
+ * Portalled to `document.body` on `--layer-overlay`, one step **below**
+ * the panels' `--layer-modal`, so it always paints behind every open
+ * modal and never intercepts a click meant for the dialog on top of it
+ * — a real bug a same-z-plus-DOM-order scheme has, because a
+ * later-mounted scrim then covers the panel. Stacking *between* panels
+ * still falls out of append order at the one `--layer-modal`.
  */
 export const SharedBackdrop = ({
   isVisible,
@@ -33,7 +33,7 @@ export const SharedBackdrop = ({
     <FloatingPortal>
       <div
         aria-hidden="true"
-        className="fixed inset-0 z-[var(--layer-modal)] bg-scrim"
+        className="fixed inset-0 z-[var(--layer-overlay)] bg-scrim"
       />
     </FloatingPortal>
   )
