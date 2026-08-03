@@ -1,5 +1,8 @@
 import type { Placement } from "@floating-ui/react"
-import { FloatingFocusManager } from "@floating-ui/react"
+import {
+  FloatingFocusManager,
+  FloatingPortal,
+} from "@floating-ui/react"
 import type { ReactElement, ReactNode } from "react"
 
 import { PANEL_SURFACE_CLASS } from "../Overlay/overlayPanelClass.ts"
@@ -42,32 +45,24 @@ export type PopoverProps = {
  *
  * What floating-ui is used for is what only it can do: collision
  * handling (`flip`, `shift`), a real dismiss layer, and focus
- * management. Positioning strategy, the top layer, and the ARIA
- * wiring come from the platform and from `useRole`.
+ * management — all of it consolidated in `useAnchoredOverlay`.
+ * Positioning strategy and the ARIA wiring come from the platform and
+ * from `useRole`.
  *
- * ### The top layer, from the platform — not a portal
+ * ### Portalled, not the top layer
  *
- * `popover="manual"` puts the panel in the top layer, which is
- * what a portal is normally reached for: no `z-index` contest, and
- * no `overflow: hidden` ancestor clipping it. Unlike a portal it
- * **stays where it is in the DOM**, so `canvas.getByRole("dialog")`
- * still finds it and a story keeps its scoping. Same argument as
- * `Modal`, one layer down.
- *
- * `manual`, not `auto`, and that is the state-ownership decision
- * again: `auto` brings the UA's own light-dismiss, which closes the
- * element by itself and leaves `isVisible` true. `useDismiss` does
- * the same job through our callback, so Charcuterie stays the only
- * thing that decides.
- *
- * ### Two UA defaults that have to be undone
- *
- * `[popover]` ships `position: fixed; inset: 0; margin: auto`,
- * which centres the panel in the viewport and fights every
- * coordinate floating-ui computes — hence `inset-auto m-0`, and
- * `strategy: "fixed"` so the numbers are viewport-relative like the
- * top layer itself. Getting either wrong reads as a positioning
- * bug rather than as a UA default.
+ * The panel goes in a `FloatingPortal` to `document.body`. The top
+ * layer (`popover="manual"`) was reached for first — it needs no
+ * portal and no `z-index` — but it does not escape an
+ * `overflow: hidden` ancestor's *clipping* in every case the fleet
+ * hit, and a portal does. The objection a portal used to raise, that
+ * it moves the panel out of a scoped `canvas` query, is answered two
+ * ways: `useRole` writes `aria-controls` on the trigger pointing at
+ * the panel `id`, so trigger→panel stays followable across the
+ * boundary; and the story scopes panel queries to
+ * `within(document.body)` while the structural `expectAgentDrivable`
+ * needs no change. `strategy: "fixed"` keeps the coordinates
+ * viewport-relative.
  */
 export const Popover = ({
   children,
@@ -98,43 +93,32 @@ export const Popover = ({
       {clonedTrigger}
 
       {isVisible ? (
-        <FloatingFocusManager
-          context={context}
-          modal={false}
-        >
-          <div
-            {...getFloatingProps()}
-            aria-label={heading}
-            className={toClassName(
-              PANEL_SURFACE_CLASS,
-              "inset-auto m-0 max-w-xs p-3 text-content-primary text-sm",
-              className,
-            )}
-            popover="manual"
-            // Duplicated from `getFloatingProps()` on purpose, and
-            // the two cannot differ — `useRole(context, { role:
-            // "dialog" })` above is where it comes from. Stated
-            // here because a linter cannot see a role through a
-            // spread, and neither can the next reader.
-            role="dialog"
-            ref={(node) => {
-              setFloating(node)
-
-              // In a ref callback rather than an effect, because a
-              // `[popover]` is `display: none` until it is shown —
-              // and `FloatingFocusManager` is a *child*, so its
-              // effect runs first and would be focusing into a
-              // hidden element. Refs are set during commit, before
-              // any of that.
-              if (node && !node.matches(":popover-open")) {
-                node.showPopover()
-              }
-            }}
-            style={floatingStyles}
+        <FloatingPortal>
+          <FloatingFocusManager
+            context={context}
+            modal={false}
           >
-            {children}
-          </div>
-        </FloatingFocusManager>
+            <div
+              {...getFloatingProps()}
+              aria-label={heading}
+              className={toClassName(
+                PANEL_SURFACE_CLASS,
+                "z-[var(--layer-modal)] max-w-xs p-3 text-content-primary text-sm",
+                className,
+              )}
+              ref={setFloating}
+              // Duplicated from `getFloatingProps()` on purpose, and
+              // the two cannot differ — `useRole(context, { role:
+              // "dialog" })` inside the hook is where it comes from.
+              // Stated here because a linter cannot see a role through
+              // a spread, and neither can the next reader.
+              role="dialog"
+              style={floatingStyles}
+            >
+              {children}
+            </div>
+          </FloatingFocusManager>
+        </FloatingPortal>
       ) : null}
     </>
   )

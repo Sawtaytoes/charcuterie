@@ -46,17 +46,37 @@ type MountableStory = {
  * The stale tree is removed rather than unmounted because portable
  * stories expose no unmount. Detaching is enough: it takes the node
  * out of the layout, which is the entire problem.
+ *
+ * ### Portalled panels leave the canvas
+ *
+ * Once the overlays portal to `document.body`, their panels are no
+ * longer inside `canvasElement`, and floating-ui's portal roots
+ * (`[data-floating-ui-portal]`) are body children a portable story
+ * never unmounts. A previous test's panel therefore lingers next to
+ * the live one, and `expectAgentDrivable(body, …)` fails with "2
+ * elements match" — the portal analogue of the fixed-position
+ * `ToastRegion` bug above. So the same cleanup that detaches stale
+ * canvases also removes stale portal roots, and `mountStory` now hands
+ * back `body` (scoped to `document.body`) for querying the panels the
+ * triggers still open from inside `canvas`.
  */
 const mountedCanvases: HTMLElement[] = []
 
 export const mountStory = async (
   story: MountableStory,
 ): Promise<{
+  body: Canvas
   canvas: Canvas
   canvasElement: HTMLElement
 }> => {
   for (const previous of mountedCanvases.splice(0)) {
     previous.remove()
+  }
+
+  for (const portalRoot of document.querySelectorAll(
+    "[data-floating-ui-portal]",
+  )) {
+    portalRoot.remove()
   }
 
   const canvasElement = document.createElement("div")
@@ -67,5 +87,9 @@ export const mountStory = async (
 
   await story.run({ canvasElement })
 
-  return { canvas: within(canvasElement), canvasElement }
+  return {
+    body: within(document.body),
+    canvas: within(canvasElement),
+    canvasElement,
+  }
 }
