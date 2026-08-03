@@ -1,0 +1,62 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as LightboxStories from "./Lightbox.stories";
+
+<Meta of={LightboxStories} />
+
+# Lightbox
+
+A thumbnail that opens its own full-size view. Three apps hand-roll this — a poster,
+a still, a scan the operator wants to read — and none get the focus trap or the scroll
+lock right, because the interesting part is not the overlay, it is the dialog underneath.
+
+So a `Lightbox` is a **skin over `Modal`**, not a second dialog. `Modal` owns
+`showModal()`, the top layer, Escape, the `::backdrop` scrim and `lockScrollBehind`;
+this adds the image-specific part — a `cursor-zoom-in` trigger and an `object-contain`
+image clamped to the viewport, so a 2:3 poster and a 16:9 still both land whole.
+
+<Canvas of={LightboxStories.Default} />
+
+## Props
+
+<Controls />
+
+## The thumbnail is the trigger, and it carries the name
+
+Pass the small image as `thumbnail` and the `Lightbox` wraps it in the button that opens
+the overlay. That button carries the accessible name — `Enlarge {alt}` — so the
+`thumbnail` inside it goes `alt=""`, exactly as `MediaTile` names its link and silences
+the image within it. A button around an empty-alt image is otherwise `button-name` with
+nothing to announce.
+
+```tsx
+<Lightbox
+  alt="THE OUTFIT poster"
+  src={fullSizePoster}
+  thumbnail={<img alt="" className="h-40 w-28 object-cover" src={thumbSrc} />}
+/>
+```
+
+`alt` also names the dialog, through `heading`'s default. Pass `heading` when the two
+should differ — a filename overlay whose thumbnail alt is already the title.
+
+<Canvas of={LightboxStories.WithCaption} />
+
+## Controlled, when something else opens it
+
+Omit `thumbnail` and pass `isOpen` / `onOpenChange`, and the `Lightbox` renders only the
+overlay — a button elsewhere on the page owns the open state through its own
+`useVisibility`. The internal store still runs (hooks cannot be conditional) but goes
+unread; the caller is the one truth.
+
+<Canvas of={LightboxStories.Controlled} />
+
+## What it inherits, and does not re-test
+
+Escape, the focus trap, focus restore to the trigger, the scrim and the scroll lock are
+all `Modal`'s, asserted in `Modal`'s own tests. The lightbox's tests assert only the skin:
+that the thumbnail opens the enlarged image, that the caption rides along, and that the
+contract `Modal` guarantees is not quietly dropped by the wrapper — Escape → `onClose`,
+and focus back to the thumbnail.
+
+<Canvas of={LightboxStories.Interactive} />
