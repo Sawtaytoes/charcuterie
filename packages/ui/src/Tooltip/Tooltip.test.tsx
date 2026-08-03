@@ -11,7 +11,7 @@ const { AllVariants, Default, Interactive } =
   composeStories(stories)
 
 test("nothing is shown until something asks", async () => {
-  const { canvas, canvasElement } =
+  const { body, canvas, canvasElement } =
     await mountStory(Default)
 
   expectAgentDrivable(canvas, {
@@ -19,9 +19,9 @@ test("nothing is shown until something asks", async () => {
     role: "button",
   })
 
-  await expect(
-    canvas.queryAllByRole("tooltip"),
-  ).toHaveLength(0)
+  await expect(body.queryAllByRole("tooltip")).toHaveLength(
+    0,
+  )
 
   await expectNoAxeViolations(canvasElement)
 })
@@ -34,8 +34,7 @@ test("nothing is shown until something asks", async () => {
  * floating node nobody is pointed at.
  */
 test("the trigger is described by the tip that opened", async () => {
-  const { canvas, canvasElement } =
-    await mountStory(Interactive)
+  const { body, canvas } = await mountStory(Interactive)
 
   const trigger = expectAgentDrivable(canvas, {
     name: "Keyboard tip",
@@ -52,8 +51,10 @@ test("the trigger is described by the tip that opened", async () => {
     expect(trigger).toHaveFocus()
   })
 
+  // Portalled now, so found through `body`; the `aria-describedby`
+  // link survives the boundary.
   const tip = await waitFor(() =>
-    expectAgentDrivable(canvas, { role: "tooltip" }),
+    expectAgentDrivable(body, { role: "tooltip" }),
   )
 
   await expect(trigger).toHaveAttribute(
@@ -65,10 +66,7 @@ test("the trigger is described by the tip that opened", async () => {
     "Opened by focus, closed by Escape.",
   )
 
-  // Audited in the *driven* state, not at mount. The a11y addon
-  // runs axe once, when `run()` resolves — before anything has been
-  // focused — so an open tip would never be seen by it.
-  await expectNoAxeViolations(canvasElement)
+  await expectNoAxeViolations(tip)
 })
 
 /**
@@ -77,28 +75,28 @@ test("the trigger is described by the tip that opened", async () => {
  * failure on the one control whose explanation lives there.
  */
 test("focus opens it and blur closes it", async () => {
-  const { canvas } = await mountStory(Interactive)
+  const { body } = await mountStory(Interactive)
 
   await userEvent.tab()
 
   await waitFor(() => {
-    expectAgentDrivable(canvas, { role: "tooltip" })
+    expectAgentDrivable(body, { role: "tooltip" })
   })
 
   await userEvent.tab()
 
   await waitFor(() => {
-    expect(canvas.queryAllByRole("tooltip")).toHaveLength(0)
+    expect(body.queryAllByRole("tooltip")).toHaveLength(0)
   })
 })
 
 test("Escape dismisses it", async () => {
-  const { canvas } = await mountStory(Interactive)
+  const { body } = await mountStory(Interactive)
 
   await userEvent.tab()
 
   await waitFor(() => {
-    expectAgentDrivable(canvas, { role: "tooltip" })
+    expectAgentDrivable(body, { role: "tooltip" })
   })
 
   // WCAG 1.4.13 requires content shown on hover or focus to be
@@ -106,7 +104,7 @@ test("Escape dismisses it", async () => {
   await userEvent.keyboard("{Escape}")
 
   await waitFor(() => {
-    expect(canvas.queryAllByRole("tooltip")).toHaveLength(0)
+    expect(body.queryAllByRole("tooltip")).toHaveLength(0)
   })
 })
 
@@ -117,7 +115,7 @@ test("Escape dismisses it", async () => {
  * whether or not the tip is open.
  */
 test("the tip does not become the control's name", async () => {
-  const { canvas } = await mountStory(AllVariants)
+  const { body, canvas } = await mountStory(AllVariants)
 
   const iconButton = expectAgentDrivable(canvas, {
     name: "Bay settings",
@@ -127,7 +125,7 @@ test("the tip does not become the control's name", async () => {
   await userEvent.hover(iconButton)
 
   await waitFor(() => {
-    expectAgentDrivable(canvas, { role: "tooltip" })
+    expectAgentDrivable(body, { role: "tooltip" })
   })
 
   // Still "Bay settings", not "Opens the bay's rip settings."
