@@ -1,0 +1,48 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as ColorSchemeToggleStories from "./ColorSchemeToggle.stories";
+
+<Meta of={ColorSchemeToggleStories} />
+
+# ColorSchemeToggle
+
+The cycling colour-scheme button — **light → dark → system → light**. Layer 2 of three:
+presentational and **controlled**, with no `matchMedia`, `localStorage`, or `document` in
+sight. It renders the current `mode` and reports the next one through `onCycle`; it stores
+nothing.
+
+That split is deliberate. The browser dependency lives one layer up in
+[`ColorSchemeSwitcher`](?path=/docs/components-colorschemeswitcher--docs), so this component
+runs unchanged in any runtime — a plain React app wires `onCycle` to `useState`, an Electron
+or React-Native host wires it to `useColorScheme` with its own resolver.
+
+<Canvas of={ColorSchemeToggleStories.Default} />
+
+## Props
+
+<Controls />
+
+## `mode` vs scheme
+
+`mode` is the three-way user preference — `"light" | "dark" | "system"`. It is **not** a
+`data-scheme` value: `data-scheme` only ever holds `"light"` or `"dark"`. Resolving
+`system` to a concrete scheme is the connected layer's job, not this one's.
+
+## Icons are yours
+
+The library ships **no icons**
+([decision](?path=/docs/foundations-decisions--docs)) — `icons` is a `ReactNode` per mode,
+and an app passes lucide `Sun` / `Moon` / `Monitor` (the fleet recommendation). The glyph is
+`aria-hidden`; the button's name comes from `label`, which states the current mode so the
+control is agent-drivable and a screen reader that lands on it hears "Colour scheme: system"
+rather than a nameless button.
+
+<Canvas of={ColorSchemeToggleStories.AllModes} />
+
+## Cycling is the only form, for now
+
+A segmented, all-three-visible `ColorSchemePicker` was considered and deferred (owner chose
+cycling-only, 2026-08-03). `icons` and `order` are shaped so that form can be added later
+without changing this API.
+
+<Canvas of={ColorSchemeToggleStories.Sizes} />

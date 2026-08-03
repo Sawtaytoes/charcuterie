@@ -104,6 +104,28 @@ export const ImageOffIcon = (): ReactNode => (
   </svg>
 )
 
+export const SunIcon = (): ReactNode => (
+  <svg {...iconProps} aria-hidden="true">
+    <circle cx="12" cy="12" r="4" />
+
+    <path d="M12 2v2M12 20v2M4 12H2M22 12h-2M5.6 5.6 4.2 4.2M19.8 19.8l-1.4-1.4M18.4 5.6l1.4-1.4M4.2 19.8l1.4-1.4" />
+  </svg>
+)
+
+export const MoonIcon = (): ReactNode => (
+  <svg {...iconProps} aria-hidden="true">
+    <path d="M20 14.5A8 8 0 1 1 9.5 4a6.2 6.2 0 0 0 10.5 10.5z" />
+  </svg>
+)
+
+export const MonitorIcon = (): ReactNode => (
+  <svg {...iconProps} aria-hidden="true">
+    <rect height="12" rx="2" width="18" x="3" y="4.5" />
+
+    <path d="M8 20.5h8M12 16.5v4" />
+  </svg>
+)
+
 export const DotIcon = (): ReactNode => (
   <svg
     {...iconProps}

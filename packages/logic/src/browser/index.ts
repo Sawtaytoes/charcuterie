@@ -15,11 +15,11 @@
  */
 
 import type {
+  ColorSchemeApplier,
   ColorSchemePersistence,
   ColorSchemeResolver,
   ResolvedColorScheme,
 } from "../core/createColorScheme.ts"
-import type { ColorSchemeApplier } from "../react/useColorScheme.ts"
 
 /**
  * The default `localStorage` key. Exported so the first-paint inline

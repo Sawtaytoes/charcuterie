@@ -14,12 +14,9 @@
  */
 
 export * from "../core/index.ts"
-export type {
-  ColorSchemeApplier,
-  UseColorSchemeOptions,
-} from "./useColorScheme.ts"
-export { useColorScheme } from "./useColorScheme.ts"
 export { useClonedChild } from "./useClonedChild.ts"
+export type { UseColorSchemeOptions } from "./useColorScheme.ts"
+export { useColorScheme } from "./useColorScheme.ts"
 export { useLatestRef } from "./useLatestRef.ts"
 export { useLinkedIds } from "./useLinkedIds.ts"
 export { useMultiplePicker } from "./useMultiplePicker.ts"

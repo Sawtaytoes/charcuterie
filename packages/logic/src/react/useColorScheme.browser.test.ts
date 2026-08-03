@@ -18,11 +18,11 @@ import { createRoot } from "react-dom/client"
 import { expect, test, vi } from "vitest"
 
 import type {
+  ColorSchemeApplier,
   ColorSchemePersistence,
   ColorSchemeResolver,
   ResolvedColorScheme,
 } from "../core/createColorScheme.ts"
-import type { ColorSchemeApplier } from "./useColorScheme.ts"
 import { useColorScheme } from "./useColorScheme.ts"
 
 ;(
