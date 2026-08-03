@@ -10,10 +10,11 @@ A thumbnail that opens its own full-size view. Three apps hand-roll this — a p
 a still, a scan the operator wants to read — and none get the focus trap or the scroll
 lock right, because the interesting part is not the overlay, it is the dialog underneath.
 
-So a `Lightbox` is a **skin over `Modal`**, not a second dialog. `Modal` owns
-`showModal()`, the top layer, Escape, the `::backdrop` scrim and `lockScrollBehind`;
-this adds the image-specific part — a `cursor-zoom-in` trigger and an `object-contain`
-image clamped to the viewport, so a 2:3 poster and a 16:9 still both land whole.
+So a `Lightbox` is a **skin over `Dialog`**, not a second dialog. `Dialog` (through
+`Modal`/`OverlayPanel`) owns the portal, the scrim, Escape, the focus trap and
+`lockScrollBehind`; this adds the image-specific part — a `cursor-zoom-in` trigger and an
+`object-contain` image clamped to the viewport, so a 2:3 poster and a 16:9 still both land
+whole.
 
 <Canvas of={LightboxStories.Default} />
 
@@ -54,9 +55,9 @@ unread; the caller is the one truth.
 ## What it inherits, and does not re-test
 
 Escape, the focus trap, focus restore to the trigger, the scrim and the scroll lock are
-all `Modal`'s, asserted in `Modal`'s own tests. The lightbox's tests assert only the skin:
-that the thumbnail opens the enlarged image, that the caption rides along, and that the
-contract `Modal` guarantees is not quietly dropped by the wrapper — Escape → `onClose`,
-and focus back to the thumbnail.
+all `Dialog`'s (via `Modal`), asserted in their own tests. The lightbox's tests assert only
+the skin: that the thumbnail opens the enlarged image, that the caption rides along, and
+that the contract `Dialog` guarantees is not quietly dropped by the wrapper — Escape →
+`onClose`, and focus back to the thumbnail.
 
 <Canvas of={LightboxStories.Interactive} />

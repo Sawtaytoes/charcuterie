@@ -29,19 +29,17 @@ The last row is why it matters to an agent driving the app: after choosing an `o
 needs to know what the control now holds. After invoking a `menuitem` there is nothing to
 read back. Getting the role wrong is invisible in a browser and invisible to axe.
 
-## A `[popover]` that was never shown is `display: none`
+## Portalled, and no `[popover]` machinery
 
-The panel calls `showPopover()` from its ref callback, like `Popover` does — plus an
-`isConnected` guard and an effect that `Popover` does not need.
-
-`FloatingFocusManager` renders a pair of focus guards around its child, so React commits this
-subtree in an order where the ref can fire while the node is still **detached**.
-`showPopover()` on a disconnected element throws `InvalidStateError`, which surfaces as an
-unhandled rejection rather than a failing assertion — and if it is simply swallowed, the menu
-renders, typechecks, and is invisible to `getByRole` and to a user alike.
-
-The effect is the backstop, because effects run after the tree is connected. Both are
-idempotent: `:popover-open` is the same question.
+The panel renders in a `FloatingPortal` at `document.body`, through the same
+`useAnchoredOverlay` `Popover` uses
+([decision](../../../docs/decisions/2026-08-03-overlays-portal-to-the-body-not-the-top-layer.md)).
+A portalled node is visible when mounted, so the whole `popover="manual"` /
+`showPopover()` / `isConnected`-guard class of "a `[popover]` that was never shown is
+`display: none`" bug is simply gone. The menu keeps its roving focus, its arrow/Home/End
+keymap, its seed-first-item-on-open effect, and its `MenuAction` items. A scoped query for
+the panel now reaches for `body`; `useRole` names it by pointing `aria-labelledby` at the
+trigger, so the link survives the boundary.
 
 ## There is no `label` prop, and that corrects a lesson
 
