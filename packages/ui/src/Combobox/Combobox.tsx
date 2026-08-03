@@ -200,7 +200,23 @@ export const Combobox = ({
   const optionDomId = (value: string) =>
     `${listboxId}-opt-${value}`
 
-  const activeValue = filtered[activeIndex]?.value
+  // `activeIndex` is seeded at 0 on open and on every query reset, which
+  // can land on a disabled option; arrowing skips disabled but the seed
+  // does not. Resolve to the nearest enabled row and drive the highlight,
+  // `aria-activedescendant`, arrow moves and commit off *this* — never the
+  // raw index — so a disabled option is neither announced nor committable.
+  const resolvedActiveIndex =
+    filtered.length === 0
+      ? -1
+      : filtered[activeIndex] !== undefined &&
+          !filtered[activeIndex]?.isDisabled
+        ? activeIndex
+        : nextEnabledIndex(filtered, -1, 1)
+
+  const activeValue =
+    resolvedActiveIndex < 0
+      ? undefined
+      : filtered[resolvedActiveIndex]?.value
 
   const commitValue = (value: string) => {
     if (isMultiple) {
@@ -233,8 +249,8 @@ export const Combobox = ({
     if (keyEvent.key === "ArrowDown") {
       keyEvent.preventDefault()
 
-      setActiveIndex((index) =>
-        nextEnabledIndex(filtered, index, 1),
+      setActiveIndex(
+        nextEnabledIndex(filtered, resolvedActiveIndex, 1),
       )
 
       return
@@ -243,8 +259,8 @@ export const Combobox = ({
     if (keyEvent.key === "ArrowUp") {
       keyEvent.preventDefault()
 
-      setActiveIndex((index) =>
-        nextEnabledIndex(filtered, index, -1),
+      setActiveIndex(
+        nextEnabledIndex(filtered, resolvedActiveIndex, -1),
       )
 
       return
@@ -253,8 +269,11 @@ export const Combobox = ({
     if (
       keyEvent.key === "Enter" ||
       // Tab-to-accept (`PathPicker`): the active suggestion is taken.
+      // Single-select only — in multi-select `commitValue` refocuses the
+      // input, so accepting on Tab would trap forward focus in the field.
       (keyEvent.key === "Tab" &&
         !keyEvent.shiftKey &&
+        !isMultiple &&
         activeValue !== undefined)
     ) {
       if (activeValue !== undefined) {
@@ -301,7 +320,7 @@ export const Combobox = ({
     }
 
     if (isWindowed) {
-      rowVirtualizer.scrollToIndex(activeIndex)
+      rowVirtualizer.scrollToIndex(resolvedActiveIndex)
 
       return
     }
@@ -314,7 +333,7 @@ export const Combobox = ({
         ?.scrollIntoView({ block: "nearest" })
     }
   }, [
-    activeIndex,
+    resolvedActiveIndex,
     activeValue,
     isVisible,
     isWindowed,
@@ -328,7 +347,7 @@ export const Combobox = ({
   ) => (
     <ComboboxOption
       id={optionDomId(option.value)}
-      isActive={index === activeIndex}
+      isActive={index === resolvedActiveIndex}
       isSelected={selected.includes(option.value)}
       item={option}
       key={option.value}
@@ -382,6 +401,11 @@ export const Combobox = ({
                                   (one) => one !== value,
                                 ),
                               )
+
+                              // Mirror the list toggle-off: the parent
+                              // tracks selection through `onSelect`, so a
+                              // chip removal must report the same value.
+                              onSelect(value)
                             }}
                             type="button"
                           >
