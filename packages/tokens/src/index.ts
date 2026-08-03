@@ -13,8 +13,10 @@ export {
   buildDensityProperties,
   buildFirstPaintCss,
   buildFirstPaintRule,
+  buildFirstPaintScript,
   buildThemeCss,
   buildVariablesCss,
+  DEFAULT_COLOR_SCHEME_STORAGE_KEY,
 } from "./buildCss.ts"
 export type { ContrastResult } from "./contrast.ts"
 export {
