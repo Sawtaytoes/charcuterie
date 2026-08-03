@@ -1,7 +1,7 @@
 import { useVisibility } from "@charcuterie/logic"
 import type { ReactNode } from "react"
 
-import { Modal } from "../Modal/Modal.tsx"
+import { Dialog } from "../Dialog/Dialog.tsx"
 import { toClassName } from "../toClassName.ts"
 
 export type LightboxProps = {
@@ -43,13 +43,13 @@ export type LightboxProps = {
 /**
  * A thumbnail that opens its own full-size view — the one image
  * interaction three apps hand-roll and none get the focus trap or
- * the scroll lock right. It is a **skin over `Modal`**, not a second
- * dialog: `Modal` owns `showModal()`, the top layer, Escape, the
- * `::backdrop` scrim and `lockScrollBehind`, and everything that
- * makes those correct in every browser the fleet runs. What this
- * adds is the image-specific part — a `cursor-zoom-in` trigger and
- * an `object-contain` image clamped to the viewport so a 2:3 poster
- * and a 16:9 still both land whole.
+ * the scroll lock right. It is a **skin over `Dialog`**, not a second
+ * dialog: `Dialog` (through `Modal`/`OverlayPanel`) owns the portal,
+ * the scrim, Escape, the focus trap and `lockScrollBehind`, and
+ * everything that makes those correct in every browser the fleet
+ * runs. What this adds is the image-specific part — a `cursor-zoom-in`
+ * trigger and an `object-contain` image clamped to the viewport so a
+ * 2:3 poster and a 16:9 still both land whole.
  *
  * ### Controlled and not, one component
  *
@@ -115,7 +115,7 @@ export const Lightbox = ({
         </button>
       )}
 
-      <Modal
+      <Dialog
         heading={heading ?? alt}
         isVisible={isShown}
         onClose={requestClose}
@@ -137,7 +137,7 @@ export const Lightbox = ({
             </figcaption>
           ) : null}
         </figure>
-      </Modal>
+      </Dialog>
     </>
   )
 }

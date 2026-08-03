@@ -157,7 +157,7 @@ export const OverlayPanel = ({
       )}
 
       <FloatingPortal>
-        <div className="fixed inset-0 z-[var(--layer-modal)] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[var(--layer-modal)] flex items-center justify-center">
           <FloatingFocusManager
             context={context}
             // Only the top traps focus; a lower panel is `inert`
