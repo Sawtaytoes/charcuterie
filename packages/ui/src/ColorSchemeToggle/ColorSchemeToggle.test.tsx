@@ -1,11 +1,14 @@
-import { composeStories } from "@storybook/react"
-import { userEvent } from "storybook/test"
+import {
+  composeStories,
+  composeStory,
+} from "@storybook/react"
+import { expect, userEvent } from "storybook/test"
 import { test } from "vitest"
 
 import { expectNoAxeViolations } from "../expectNoAxeViolations.testHelpers.ts"
 import { mountStory } from "../mountStory.testHelpers.ts"
 import { expectAgentDrivable } from "../testing/index.ts"
-import * as stories from "./ColorSchemeToggle.stories.tsx"
+import meta, * as stories from "./ColorSchemeToggle.stories.tsx"
 
 const { AllModes, Default } = composeStories(stories)
 
@@ -77,4 +80,37 @@ test("each mode renders its own control", async () => {
     name: /colour scheme: system/i,
     role: "button",
   })
+})
+
+/**
+ * The fix: the switcher is chrome, so it forwards `neutral` to the
+ * button by default — a neutral ghost hover
+ * (`hover:bg-intent-neutral-surface`) and a neutral icon colour,
+ * rather than `IconButton`'s accent default that read as a violet
+ * action on real app chrome.
+ */
+test("defaults to the neutral intent, not accent", async () => {
+  const { canvasElement } = await mountStory(Default)
+
+  const button = canvasElement.querySelector("button")
+
+  expect(button?.className).toContain(
+    "hover:bg-intent-neutral-surface",
+  )
+  expect(button?.className).not.toContain("intent-accent")
+})
+
+test("an explicit intent overrides the default", async () => {
+  const AccentToggle = composeStory(
+    { args: { intent: "accent" } },
+    meta,
+  )
+
+  const { canvasElement } = await mountStory(AccentToggle)
+
+  const button = canvasElement.querySelector("button")
+
+  expect(button?.className).toContain(
+    "hover:bg-intent-accent-surface",
+  )
 })
