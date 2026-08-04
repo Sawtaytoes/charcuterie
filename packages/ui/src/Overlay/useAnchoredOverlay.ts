@@ -14,7 +14,8 @@ import {
   useInteractions,
   useRole,
 } from "@floating-ui/react"
-import type { ReactElement } from "react"
+import type { ReactElement, RefObject } from "react"
+import { createElement, useEffect } from "react"
 
 /**
  * The floating-ui block every anchored overlay — `Popover`, `Menu`,
@@ -68,6 +69,15 @@ export type AnchoredOverlayRole =
 
 export type UseAnchoredOverlayOptions = {
   /**
+   * Anchor the panel to a **pre-existing** element the consumer already
+   * rendered, instead of cloning a `trigger`. For the attached-input
+   * `Combobox`, whose reference is the consumer's own `<input>` (both the
+   * value and the query) — there is nothing to clone. Supply exactly one
+   * of `anchorRef` / `trigger`; with `anchorRef`, `clonedTrigger` is
+   * `null`.
+   */
+  anchorRef?: RefObject<HTMLElement | null>
+  /**
    * Both default **on** — Escape and outside-press are what makes an
    * overlay an overlay. Switch one off for the honest exception (a
    * combobox that swallows the first Escape to clear its query), never
@@ -86,11 +96,21 @@ export type UseAnchoredOverlayOptions = {
   onDismiss: () => void
   placement?: Placement
   role: AnchoredOverlayRole
-  /** The control the panel hangs off. **Cloned, not wrapped.** */
-  trigger: ReactElement
+  /**
+   * The control the panel hangs off. **Cloned, not wrapped.** Omit only
+   * when `anchorRef` is supplied instead.
+   */
+  trigger?: ReactElement
 }
 
+// `useClonedChild` insists on exactly one element, and hooks cannot be
+// called conditionally — so in `anchorRef` mode we still call it, on this
+// throwaway, and discard the result. It is never rendered and never
+// receives the floating reference (that goes to `anchorRef`).
+const PLACEHOLDER_TRIGGER = createElement("span")
+
 export const useAnchoredOverlay = ({
+  anchorRef,
   isEscapeDismissable = true,
   isOutsidePressDismissable = true,
   isTriggerWidthMatched = false,
@@ -127,6 +147,8 @@ export const useAnchoredOverlay = ({
       }),
     )
   }
+
+  const isAnchored = anchorRef !== undefined
 
   const { context, floatingStyles, refs } = useFloating({
     // Read-only. Charcuterie remains the sole owner; floating-ui is
@@ -180,11 +202,30 @@ export const useAnchoredOverlay = ({
     (referenceProps.id as string | undefined) ??
     generatedTriggerId
 
-  const clonedTrigger = useClonedChild(trigger, {
-    ...referenceProps,
-    id: triggerId,
-    ref: refs.setReference,
-  })
+  // In anchor mode floating-ui's reference is the consumer's element, set
+  // imperatively — there is no cloned trigger to carry `refs.setReference`.
+  // `setReference` is stable; re-running on `isVisible` re-applies it when
+  // the panel opens (and after the anchor element mounts).
+  useEffect(() => {
+    if (!isAnchored) {
+      return
+    }
+
+    refs.setReference(anchorRef.current)
+  }, [isAnchored, anchorRef, refs])
+
+  const clonedChild = useClonedChild(
+    trigger ?? PLACEHOLDER_TRIGGER,
+    {
+      ...referenceProps,
+      id: triggerId,
+      // The anchor element already exists; the clone (a discarded
+      // placeholder here) must not also claim the floating reference.
+      ...(isAnchored ? {} : { ref: refs.setReference }),
+    },
+  )
+
+  const clonedTrigger = isAnchored ? null : clonedChild
 
   return {
     clonedTrigger,
