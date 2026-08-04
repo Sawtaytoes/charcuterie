@@ -2,7 +2,10 @@ import type { ColorSchemeMode } from "@charcuterie/logic"
 import type { Meta, StoryObj } from "@storybook/react"
 import { useState } from "react"
 
-import { controlSizeArgType } from "../argTypes.storyHelpers.ts"
+import {
+  controlSizeArgType,
+  intentArgType,
+} from "../argTypes.storyHelpers.ts"
 import {
   ContainerBoard,
   StoryCell,
@@ -34,6 +37,7 @@ const meta = {
   component: ColorSchemeToggle,
   parameters: { layout: "padded" },
   argTypes: {
+    intent: intentArgType,
     // `mode` is `ColorSchemeMode` from @charcuterie/logic — a bare
     // specifier docgen cannot enumerate, so it gets an explicit
     // radio rather than falling through to the object control.
@@ -46,6 +50,7 @@ const meta = {
   args: {
     appearance: "ghost",
     icons: ICONS,
+    intent: "neutral",
     isDisabled: false,
     mode: "system",
     onCycle: () => {},
@@ -108,6 +113,39 @@ export const AllModes: Story = {
         <StoryCell label="system">
           <ColorSchemeToggle
             {...toggleProps}
+            mode="system"
+            onCycle={() => {}}
+          />
+        </StoryCell>
+      </StoryGrid>
+    </StorySection>
+  ),
+}
+
+/**
+ * The tone is **neutral by default** — a scheme switcher is toolbar
+ * chrome, so its ghost hover is `hover:bg-intent-neutral-surface` and
+ * its icon `text-intent-neutral-content`, which read as chrome on a
+ * normal surface rather than as an accent action. A consumer that
+ * wants it to draw attention passes `intent="accent"` (or any tone).
+ */
+export const Intents: Story = {
+  render: (toggleProps) => (
+    <StorySection title="neutral (default) vs an explicit accent override.">
+      <StoryGrid columns={2}>
+        <StoryCell label="intent=neutral (default)">
+          <ColorSchemeToggle
+            {...toggleProps}
+            intent="neutral"
+            mode="system"
+            onCycle={() => {}}
+          />
+        </StoryCell>
+
+        <StoryCell label="intent=accent">
+          <ColorSchemeToggle
+            {...toggleProps}
+            intent="accent"
             mode="system"
             onCycle={() => {}}
           />
