@@ -3,7 +3,12 @@ import {
   FloatingPortal,
 } from "@floating-ui/react"
 import { useVirtualizer } from "@tanstack/react-virtual"
-import type { ReactElement, ReactNode } from "react"
+import type {
+  ReactElement,
+  KeyboardEvent as ReactKeyboardEvent,
+  ReactNode,
+  RefObject,
+} from "react"
 import { useEffect, useRef, useState } from "react"
 
 import type { ListboxItem } from "../Listbox/Listbox.tsx"
@@ -20,6 +25,20 @@ export type ComboboxProps = {
   error?: ReactNode
   /** A sticky footer hint (`LinkPicker`'s "type a path directly"). */
   footer?: ReactNode
+  /**
+   * Attached-input mode. Supply the consumer's own `<input>` and
+   * Combobox stops rendering its internal input/chip bar: it anchors the
+   * popup to this element, drives arrow/Enter/Tab/Escape off it, and
+   * mirrors the active option onto it for a screen reader. The consumer
+   * owns the input's `value`/`onChange` (wire them to the controlled
+   * `query`, which is then required) **and** `isVisible` — so a select
+   * does NOT auto-dismiss in this mode; staying open (a folder-picker
+   * drilling in) or closing (`onSelect` calls the consumer's own close)
+   * is the consumer's call. Options arrive pre-filtered (as with
+   * `onQueryChange`). Single-select only; `isMultiple` is not supported
+   * here.
+   */
+  inputRef?: RefObject<HTMLInputElement | null>
   /** Enter commits the raw query as a value (`AssFieldPicker`). */
   isCreatable?: boolean
   /** The loading panel state. */
@@ -42,8 +61,12 @@ export type ComboboxProps = {
   /** Controlled query; uncontrolled when absent. */
   query?: string
   selectedValue?: readonly string[] | string
-  /** The control the popup hangs off. **Cloned, not wrapped.** */
-  trigger: ReactElement
+  /**
+   * The control the popup hangs off. **Cloned, not wrapped.** Omit only
+   * in attached-input mode (`inputRef`), where the consumer's `<input>`
+   * is the anchor.
+   */
+  trigger?: ReactElement
 }
 
 const AUTO_VIRTUALIZE_THRESHOLD = 100
@@ -94,6 +117,7 @@ export const Combobox = ({
   emptyLabel = "No matches",
   error,
   footer,
+  inputRef,
   isCreatable = false,
   isLoading = false,
   isMultiple = false,
@@ -108,7 +132,19 @@ export const Combobox = ({
   selectedValue,
   trigger,
 }: ComboboxProps): ReactNode => {
-  const inputElement = useRef<HTMLInputElement>(null)
+  // Attached-input mode: the consumer's `<input>` is the reference,
+  // query source, focus holder and keyboard target; Combobox renders the
+  // list-only panel.
+  const isAttached = inputRef !== undefined
+
+  const internalInputElement =
+    useRef<HTMLInputElement>(null)
+
+  // The input Combobox drives — the consumer's in attached mode, its own
+  // otherwise.
+  const inputElement = isAttached
+    ? inputRef
+    : internalInputElement
 
   const listElement = useRef<HTMLDivElement>(null)
 
@@ -128,10 +164,11 @@ export const Combobox = ({
         : [...selectedValue],
   )
 
-  // The consumer owns filtering when it owns the query; otherwise it is
-  // a plain `textValue` contains-match.
+  // The consumer owns filtering when it owns the query or drives an
+  // attached input (the query is a full path, not an option-label match);
+  // otherwise it is a plain `textValue` contains-match.
   const filtered =
-    onQueryChange === undefined
+    onQueryChange === undefined && !isAttached
       ? options.filter((option) =>
           getOptionText(option).includes(
             currentQuery.toLowerCase(),
@@ -151,6 +188,9 @@ export const Combobox = ({
     setFloating,
     triggerId,
   } = useAnchoredOverlay({
+    // Attached mode anchors to the consumer's input; classic mode clones
+    // the trigger.
+    anchorRef: isAttached ? inputRef : undefined,
     // Escape is handled here so it can clear the query before closing.
     isEscapeDismissable: false,
     isVisible,
@@ -158,7 +198,7 @@ export const Combobox = ({
     offsetValue: 4,
     onDismiss,
     role: "listbox",
-    trigger,
+    trigger: isAttached ? undefined : trigger,
   })
 
   // The panel wraps an input *and* a listbox, so the wrapper is a
@@ -185,10 +225,21 @@ export const Combobox = ({
   }
 
   useEffect(() => {
-    if (isVisible) {
+    // In attached mode focus stays where the user is typing (the
+    // consumer's input); Combobox never grabs it.
+    if (isVisible && !isAttached) {
       inputElement.current?.focus()
     }
-  }, [isVisible])
+  }, [isVisible, isAttached, inputElement])
+
+  // Attached mode's query lives on the consumer's input, so `setQuery`
+  // (which reseeds the highlight) never runs on a keystroke — reseed here
+  // when the controlled query changes.
+  useEffect(() => {
+    if (isAttached) {
+      setActiveIndex(0)
+    }
+  }, [isAttached])
 
   const rowVirtualizer = useVirtualizer({
     count: filtered.length,
@@ -236,6 +287,22 @@ export const Combobox = ({
       return
     }
 
+    if (isAttached) {
+      // The consumer owns the value, the query and `isVisible`: report the
+      // pick and let it update the controlled query (→ refetch) and decide
+      // whether to stay open (drill-down) or close. No `onDismiss`, no
+      // `setQuery` (that would double-fire the consumer's query), no
+      // `setSelected` (the picked row leaves the list on refetch).
+      onSelect(value)
+
+      // Reseed the highlight for the list that is about to arrive.
+      setActiveIndex(0)
+
+      inputElement.current?.focus()
+
+      return
+    }
+
     setSelected([value])
 
     onSelect(value)
@@ -243,8 +310,13 @@ export const Combobox = ({
     onDismiss()
   }
 
+  // Typed as either event so the same logic serves the classic mode's
+  // React `onKeyDown` and attached mode's native `keydown` listener —
+  // both carry `key`/`shiftKey`/`preventDefault`.
   const handleKeyDown = (
-    keyEvent: React.KeyboardEvent<HTMLInputElement>,
+    keyEvent:
+      | ReactKeyboardEvent<HTMLInputElement>
+      | KeyboardEvent,
   ) => {
     if (keyEvent.key === "ArrowDown") {
       keyEvent.preventDefault()
@@ -299,6 +371,17 @@ export const Combobox = ({
     }
 
     if (keyEvent.key === "Escape") {
+      // Attached mode's query lives on the consumer's input, which
+      // `setQuery` cannot clear — so Escape closes outright (the
+      // `PathPicker` contract).
+      if (isAttached) {
+        keyEvent.preventDefault()
+
+        onDismiss()
+
+        return
+      }
+
       // Clears the query first, closes only when it is already empty.
       if (currentQuery.length > 0) {
         keyEvent.preventDefault()
@@ -341,6 +424,80 @@ export const Combobox = ({
     rowVirtualizer.scrollToIndex,
   ])
 
+  // ─── Attached mode: drive the consumer's input ──────────────────────
+  //
+  // Combobox does not render the input, so its keyboard handler and ARIA
+  // are applied to the consumer's element. A ref-to-latest keeps the
+  // native listener stable across keystrokes (the `PathPicker` pattern).
+  const handleKeyDownRef = useRef(handleKeyDown)
+  handleKeyDownRef.current = handleKeyDown
+
+  useEffect(() => {
+    if (!isAttached || !isVisible) {
+      return
+    }
+
+    const element = inputRef.current
+
+    if (!element) {
+      return
+    }
+
+    const listener = (keyEvent: KeyboardEvent) => {
+      handleKeyDownRef.current(keyEvent)
+    }
+
+    element.addEventListener("keydown", listener)
+
+    return () => {
+      element.removeEventListener("keydown", listener)
+    }
+  }, [isAttached, isVisible, inputRef])
+
+  // Mirror the combobox ARIA onto the consumer's input. It owns
+  // `value`/`onChange`; these attributes are React-unmanaged, so setting
+  // them imperatively is stable across the consumer's re-renders.
+  useEffect(() => {
+    if (!isAttached) {
+      return
+    }
+
+    const element = inputRef.current
+
+    if (!element) {
+      return
+    }
+
+    element.setAttribute("role", "combobox")
+    element.setAttribute("aria-autocomplete", "list")
+
+    if (isVisible) {
+      element.setAttribute("aria-expanded", "true")
+      element.setAttribute("aria-controls", listboxId)
+
+      if (activeValue === undefined) {
+        element.removeAttribute("aria-activedescendant")
+      } else {
+        // Inlined rather than via `optionDomId` so the effect depends on
+        // the stable `listboxId`, not a per-render closure.
+        element.setAttribute(
+          "aria-activedescendant",
+          `${listboxId}-opt-${activeValue}`,
+        )
+      }
+    } else {
+      element.setAttribute("aria-expanded", "false")
+      element.removeAttribute("aria-controls")
+      element.removeAttribute("aria-activedescendant")
+    }
+  }, [
+    isAttached,
+    isVisible,
+    activeValue,
+    listboxId,
+    inputRef,
+  ])
+
   const renderOption = (
     option: ListboxItem,
     index: number,
@@ -365,6 +522,9 @@ export const Combobox = ({
         <FloatingPortal>
           <FloatingFocusManager
             context={context}
+            // Attached mode keeps focus in the consumer's input — the
+            // panel must never grab it.
+            disabled={isAttached}
             initialFocus={inputElement}
             modal={false}
           >
@@ -378,69 +538,80 @@ export const Combobox = ({
               ref={setFloating}
               style={floatingStyles}
             >
-              <div className="flex flex-wrap items-center gap-1 border-border-subtle border-b p-2">
-                {isMultiple
-                  ? selected.map((value) => {
-                      const chip = options.find(
-                        (option) => option.value === value,
-                      )
+              {isAttached ? null : (
+                <div className="flex flex-wrap items-center gap-1 border-border-subtle border-b p-2">
+                  {isMultiple
+                    ? selected.map((value) => {
+                        const chip = options.find(
+                          (option) =>
+                            option.value === value,
+                        )
 
-                      return (
-                        <span
-                          className="inline-flex items-center gap-1 rounded-sm bg-intent-neutral-surface px-1.5 py-0.5 text-content-primary text-xs"
-                          key={value}
-                        >
-                          {chip?.textValue ?? value}
-
-                          <button
-                            aria-label={`Remove ${chip?.textValue ?? value}`}
-                            className="cursor-pointer text-content-secondary hover:text-content-primary"
-                            onClick={() => {
-                              setSelected((previous) =>
-                                previous.filter(
-                                  (one) => one !== value,
-                                ),
-                              )
-
-                              // Mirror the list toggle-off: the parent
-                              // tracks selection through `onSelect`, so a
-                              // chip removal must report the same value.
-                              onSelect(value)
-                            }}
-                            type="button"
+                        return (
+                          <span
+                            className="inline-flex items-center gap-1 rounded-sm bg-intent-neutral-surface px-1.5 py-0.5 text-content-primary text-xs"
+                            key={value}
                           >
-                            ✕
-                          </button>
-                        </span>
-                      )
-                    })
-                  : null}
+                            {chip?.textValue ?? value}
 
-                <input
-                  aria-activedescendant={
-                    activeValue === undefined
-                      ? undefined
-                      : optionDomId(activeValue)
-                  }
-                  aria-autocomplete="list"
-                  aria-controls={listboxId}
-                  aria-expanded="true"
-                  aria-labelledby={triggerId}
-                  className="min-w-24 flex-1 bg-transparent text-content-primary text-sm outline-none placeholder:text-content-muted"
-                  onChange={(changeEvent) => {
-                    setQuery(changeEvent.target.value)
-                  }}
-                  onKeyDown={handleKeyDown}
-                  placeholder={placeholder}
-                  ref={inputElement}
-                  role="combobox"
-                  type="text"
-                  value={currentQuery}
-                />
-              </div>
+                            <button
+                              aria-label={`Remove ${chip?.textValue ?? value}`}
+                              className="cursor-pointer text-content-secondary hover:text-content-primary"
+                              onClick={() => {
+                                setSelected((previous) =>
+                                  previous.filter(
+                                    (one) => one !== value,
+                                  ),
+                                )
+
+                                // Mirror the list toggle-off: the parent
+                                // tracks selection through `onSelect`, so a
+                                // chip removal must report the same value.
+                                onSelect(value)
+                              }}
+                              type="button"
+                            >
+                              ✕
+                            </button>
+                          </span>
+                        )
+                      })
+                    : null}
+
+                  <input
+                    aria-activedescendant={
+                      activeValue === undefined
+                        ? undefined
+                        : optionDomId(activeValue)
+                    }
+                    aria-autocomplete="list"
+                    aria-controls={listboxId}
+                    aria-expanded="true"
+                    aria-labelledby={triggerId}
+                    className="min-w-24 flex-1 bg-transparent text-content-primary text-sm outline-none placeholder:text-content-muted"
+                    onChange={(changeEvent) => {
+                      setQuery(changeEvent.target.value)
+                    }}
+                    onKeyDown={handleKeyDown}
+                    placeholder={placeholder}
+                    ref={internalInputElement}
+                    role="combobox"
+                    type="text"
+                    value={currentQuery}
+                  />
+                </div>
+              )}
 
               <div
-                aria-labelledby={triggerId}
+                // Classic mode names the listbox after its trigger;
+                // attached mode has no rendered trigger to point at, so it
+                // carries its own label.
+                aria-label={
+                  isAttached ? "Suggestions" : undefined
+                }
+                aria-labelledby={
+                  isAttached ? undefined : triggerId
+                }
                 className="min-h-0 flex-1 overflow-auto p-1"
                 id={listboxId}
                 ref={listElement}

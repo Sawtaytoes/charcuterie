@@ -9,6 +9,7 @@ import * as stories from "./Combobox.stories.tsx"
 
 const {
   AllVariants,
+  AttachedInputDrillDown,
   Default,
   DisabledFirstOption,
   Interactive,
@@ -267,6 +268,122 @@ test("a disabled first option is skipped, never active or committed", async () =
   await expect(
     canvas.getByText("Chosen: spa"),
   ).toBeInTheDocument()
+})
+
+test("attached mode: the consumer input is the combobox and options are shown", async () => {
+  const { body, canvas } = await mountStory(
+    AttachedInputDrillDown,
+  )
+
+  const input = canvas.getByLabelText("Path")
+
+  // The a11y is mirrored onto the consumer's own input.
+  await waitFor(() => {
+    expect(input).toHaveAttribute("role", "combobox")
+  })
+
+  await expect(input).toHaveAttribute(
+    "aria-autocomplete",
+    "list",
+  )
+
+  const listbox = body.getByRole("listbox")
+
+  await expect(input).toHaveAttribute(
+    "aria-controls",
+    listbox.id,
+  )
+
+  // The three top-level folders, from the pre-filtered options.
+  await expect(body.getAllByRole("option")).toHaveLength(3)
+
+  await expectNoAxeViolations(listbox)
+})
+
+test("attached mode: selecting a folder drills in and keeps the popup open", async () => {
+  const { body, canvas } = await mountStory(
+    AttachedInputDrillDown,
+  )
+
+  const input = canvas.getByLabelText("Path")
+
+  await userEvent.click(input)
+
+  await waitFor(() => {
+    expect(input).toHaveFocus()
+  })
+
+  // Enter commits the active option ("apps") — but does not close.
+  await userEvent.keyboard("{Enter}")
+
+  await waitFor(() => {
+    expect(
+      body.getByRole("option", { name: /mux-magic/ }),
+    ).toBeInTheDocument()
+  })
+
+  // The field drilled in, the popup is still open, and focus never left.
+  await expect(input).toHaveValue("/apps/")
+
+  await expect(
+    body.getByRole("listbox"),
+  ).toBeInTheDocument()
+
+  await expect(input).toHaveFocus()
+})
+
+test("attached mode: Tab also accepts the active option and drills", async () => {
+  const { body, canvas } = await mountStory(
+    AttachedInputDrillDown,
+  )
+
+  const input = canvas.getByLabelText("Path")
+
+  await userEvent.click(input)
+
+  await waitFor(() => {
+    expect(input).toHaveFocus()
+  })
+
+  await userEvent.keyboard("{Tab}")
+
+  await waitFor(() => {
+    expect(input).toHaveValue("/apps/")
+  })
+
+  // Tab drilled rather than moving focus out; the popup stays open.
+  await expect(
+    body.getByRole("listbox"),
+  ).toBeInTheDocument()
+
+  await expect(input).toHaveFocus()
+})
+
+test("attached mode: Escape closes the popup outright", async () => {
+  const { body, canvas } = await mountStory(
+    AttachedInputDrillDown,
+  )
+
+  const input = canvas.getByLabelText("Path")
+
+  await userEvent.click(input)
+
+  await waitFor(() => {
+    expect(input).toHaveFocus()
+  })
+
+  await userEvent.keyboard("{Escape}")
+
+  await waitFor(() => {
+    expect(body.queryByRole("listbox")).toBeNull()
+  })
+
+  // The consumer's input persists (Combobox never rendered it); it just
+  // reports itself collapsed.
+  await expect(input).toHaveAttribute(
+    "aria-expanded",
+    "false",
+  )
 })
 
 test("a windowed list carries aria-setsize and aria-posinset", async () => {
