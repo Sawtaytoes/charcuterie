@@ -22,6 +22,7 @@ export type ColorSchemeSwitcherProps = Pick<
   ColorSchemeToggleProps,
   | "appearance"
   | "className"
+  | "intent"
   | "isDisabled"
   | "label"
   | "order"
