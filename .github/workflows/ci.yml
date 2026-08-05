@@ -136,9 +136,12 @@ jobs:
       # commit whose snapshot is the baseline — a shallow clone starves it.
       - uses: actions/checkout@v6
         with: { fetch-depth: 0 }
-      - uses: actions/setup-node@v6
-        with: { node-version: 26 }
-      - run: corepack enable && yarn install --immutable
+      # No setup-node / corepack enable here, unlike the ubuntu-latest jobs: the
+      # runner image (agent-sandbox-base) IS the pinned toolchain — its node +
+      # yarn are exactly what keep the pixels deterministic, and fetching a
+      # different node would undo that. `corepack enable` also can't symlink
+      # into the image's root-owned /usr/bin as the non-root runner user.
+      - run: yarn install --immutable
       - run: yarn workspace @charcuterie/docs exec playwright install chromium
       - run: yarn build:storybook
       - run: yarn workspace @charcuterie/docs vrt:capture
