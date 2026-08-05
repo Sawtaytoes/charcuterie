@@ -85,6 +85,10 @@ are `cloneElement`-based would be two composition models with one vocabulary. Se
 
 ### `EmptyState`'s `headingLevel` stops at 4
 
+> **Shipped 2026-08-05** — widened to `2 | 3 | 4 | 5 | 6` (`@charcuterie/ui` minor). Type-only;
+> default stays `2`, `` `h${headingLevel}` `` unchanged. A `DeeplyNested` story + an
+> `h6` test guard it.
+
 `headingLevel?: 2 | 3 | 4`. A consumer nesting an empty state inside an already-deep section
 needs `5` and `6`; there is nothing in the component that cares — `` `h${headingLevel}` `` is
 the whole implementation — so the cap is a guess about document structure that the consumer
