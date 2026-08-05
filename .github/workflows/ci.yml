@@ -143,11 +143,16 @@ jobs:
       # see, so enable one into a writable dir on PATH. A plain `corepack enable`
       # can't symlink into the image's root-owned /usr/bin as the non-root
       # runner; `--install-directory` writes the shim somewhere we own instead.
-      - name: Enable yarn (corepack)
+      - name: Prepare toolchain (yarn shim + Playwright browsers path)
         run: |
           mkdir -p "$HOME/.local/bin"
           corepack enable --install-directory "$HOME/.local/bin" yarn
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          # The base image pins PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers, which
+          # is root-owned — the non-root runner can't write there. Install the
+          # browser under HOME instead (persists on the runner-home volume, so
+          # it's downloaded once and reused across runs).
+          echo "PLAYWRIGHT_BROWSERS_PATH=$HOME/.cache/ms-playwright" >> "$GITHUB_ENV"
       - run: yarn install --immutable
       - run: yarn workspace @charcuterie/docs exec playwright install chromium
       - run: yarn build:storybook
