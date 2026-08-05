@@ -44,7 +44,9 @@ font download. A Satori consumer wants the woff2 alone and can reach them at
 **The mono is Victor Mono, not Dank Mono.** That is a licensing constraint rather than a
 preference, and overriding it per-app is a supported one-liner —
 [the decision](../../docs/decisions/2026-07-30-the-shipped-mono-is-victor-mono.md) has
-the snippet.
+the snippet. In this fleet the licensed Dank Mono woff2 must not enter any repo; it
+reaches an app by a read-only bind mount off the NAS —
+[how](../../docs/decisions/2026-08-05-dank-mono-reaches-the-fleet-by-bind-mount.md).
 
 Through Yarn, from anywhere in the repo:
 
