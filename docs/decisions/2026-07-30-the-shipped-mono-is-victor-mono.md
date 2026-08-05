@@ -79,6 +79,13 @@ That is the whole override — one custom property, because `--font-mono` is a r
 variable rather than a build-time constant. Keep Victor Mono in the stack so the app
 degrades to a ligature mono rather than to the system default.
 
+**How the file actually reaches the app** — the snippet above assumes
+`/fonts/DankMono-Regular.woff2` already exists in the app's static root, which for most of
+this fleet it must never (the font cannot enter a repo, public or private). The fleet
+mechanism — a read-only bind mount off the NAS, no font server, no CI copy — is its own
+record: [Dank Mono reaches the fleet by bind
+mount](2026-08-05-dank-mono-reaches-the-fleet-by-bind-mount.md).
+
 **Do not add Dank Mono to `packages/tokens/fonts/` or to any `.gitignore`-plus-script
 arrangement in this repo.** The preview used exactly such a script during the bake-off;
 it was deleted with the rest of the scaffolding, and reintroducing it would put the
