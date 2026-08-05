@@ -1,10 +1,7 @@
 import type { ControlSize } from "@charcuterie/tokens"
 import type { ChangeEvent, ReactNode } from "react"
 
-import {
-  DISABLED_CLASS,
-  FOCUS_RING_CLASS,
-} from "../intentStyles.ts"
+import { FOCUS_RING_CLASS } from "../intentStyles.ts"
 import { toClassName } from "../toClassName.ts"
 
 export type CheckboxProps = {
@@ -104,8 +101,16 @@ export const Checkbox = ({
         className={toClassName(
           "peer cursor-pointer appearance-none rounded-sm border border-border-strong bg-surface-sunken transition-colors duration-(--duration-fast) ease-standard",
           "checked:border-intent-accent-solid checked:bg-intent-accent-solid",
+          // Disabled mutes the border and the cursor, and — unlike the
+          // shared `DISABLED_CLASS` — does *not* touch the background.
+          // The generic bundle repaints the box `surface-sunken`, which
+          // erased both the checked accent fill (white tick on grey)
+          // and, in a light scheme, the unchecked box entirely: a
+          // `border-subtle` outline on `surface-sunken` on
+          // `surface-base` is three near-identical creams. A disabled
+          // box is still a box the user has to see.
+          "disabled:cursor-not-allowed disabled:border-border-default",
           BOX_SIZE_CLASS[size],
-          DISABLED_CLASS,
           FOCUS_RING_CLASS,
         )}
         defaultChecked={isChecked}

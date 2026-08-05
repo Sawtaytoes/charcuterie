@@ -22,10 +22,15 @@ export type SwitchProps = {
   size?: ControlSize
 }
 
+// Track and thumb are sized so `p-1` (4px) breathes evenly on every
+// side and the thumb is centred by arithmetic, not by eye: inner
+// height (track − 2·padding) equals the thumb, and the on-translate is
+// (track width − 2·padding − thumb). Break one of those and the thumb
+// clips an edge, which is what the first cut did.
 const TRACK_SIZE_CLASS: Record<ControlSize, string> = {
-  sm: "h-4 w-7",
-  md: "h-5 w-9",
-  lg: "h-6 w-11",
+  sm: "h-5 w-9",
+  md: "h-6 w-11",
+  lg: "h-7 w-14",
 }
 
 const THUMB_SIZE_CLASS: Record<ControlSize, string> = {
@@ -38,9 +43,9 @@ const THUMB_ON_TRANSLATE_CLASS: Record<
   ControlSize,
   string
 > = {
-  sm: "translate-x-3",
-  md: "translate-x-4",
-  lg: "translate-x-5",
+  sm: "translate-x-4",
+  md: "translate-x-5",
+  lg: "translate-x-7",
 }
 
 const TEXT_SIZE_CLASS: Record<ControlSize, string> = {
@@ -70,12 +75,19 @@ const TEXT_SIZE_CLASS: Record<ControlSize, string> = {
  * React state seeded once from `isChecked` — the switch is the
  * store, the same as the DOM is for `Checkbox`.
  *
- * ### The thumb changes colour, not just position
+ * ### The thumb is one colour, the track carries the state
  *
- * On `bg-intent-accent-solid`, off on `bg-surface-sunken`, and the
- * thumb picks a token that contrasts with whichever it is sitting on
- * — so the state survives a `daylight` theme in sunlight, which a
- * thumb that only *moved* would not read at a glance.
+ * `bg-surface-raised` in both positions — the knob is the same object
+ * sliding, not two differently-painted dots, which is what the first
+ * cut looked like when off was `content-secondary` and on was
+ * `on-solid`. A themed system has no single colour that is "light" in
+ * both schemes, so consistency lives *within* a scheme: `surface-raised`
+ * is a white knob in a light one and a raised charcoal knob in a dark
+ * one, off and on identical either way. The **track** shows the state —
+ * `bg-intent-accent-solid` on, `bg-surface-sunken` with a `ring-2`
+ * outline off — which is where a switch's state belongs, and the ring
+ * gives the off track the defined edge a bare well would miss on a pale
+ * theme.
  */
 export const Switch = ({
   className,
@@ -102,18 +114,19 @@ export const Switch = ({
         aria-checked={isOn}
         aria-labelledby={labelId}
         className={toClassName(
-          // The border stays transparent when on so the accent fill
-          // reaches the edge, and becomes a hairline when off so an
-          // empty track is not a shapeless well on a pale theme.
-          "inline-flex shrink-0 cursor-pointer items-center rounded-full border p-0.5 transition-colors duration-(--duration-fast) ease-standard",
-          // One `bg-`/`border-` pair, chosen by state — two utilities
-          // of the same specificity do not resolve by class-list
-          // order, so disabled has to win as the only one written.
+          // `p-1` is the breathing room; `ring-inset` draws the off
+          // outline without changing the box size, so the centring
+          // arithmetic above stays exact.
+          "inline-flex shrink-0 cursor-pointer items-center rounded-full p-1 transition-colors duration-(--duration-fast) ease-standard",
+          // One state class, chosen by ternary — two `bg-`/`ring-`
+          // utilities of the same specificity do not resolve by
+          // class-list order, so disabled has to win as the only one
+          // written.
           isDisabled
-            ? "cursor-not-allowed border-border-subtle bg-surface-sunken"
+            ? "cursor-not-allowed bg-surface-sunken ring-2 ring-border-subtle ring-inset"
             : isOn
-              ? "border-transparent bg-intent-accent-solid"
-              : "border-border-strong bg-surface-sunken",
+              ? "bg-intent-accent-solid"
+              : "bg-surface-sunken ring-2 ring-border-strong ring-inset",
           TRACK_SIZE_CLASS[size],
           FOCUS_RING_CLASS,
         )}
@@ -131,11 +144,10 @@ export const Switch = ({
         <span
           className={toClassName(
             "rounded-full transition-transform duration-(--duration-fast) ease-standard",
+            // One knob, same colour off and on; disabled mutes it.
             isDisabled
               ? "bg-content-disabled"
-              : isOn
-                ? "bg-intent-accent-on-solid"
-                : "bg-content-secondary",
+              : "bg-surface-raised",
             isOn
               ? THUMB_ON_TRANSLATE_CLASS[size]
               : "translate-x-0",
