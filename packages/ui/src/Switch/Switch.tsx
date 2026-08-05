@@ -16,6 +16,12 @@ export type SwitchProps = {
    */
   isChecked?: boolean
   isDisabled?: boolean
+  /**
+   * Shows the state at full contrast but refuses to flip it — a
+   * setting you may read here and change elsewhere. Unlike
+   * `isDisabled` it does not dim, and it announces `aria-readonly`.
+   */
+  isReadOnly?: boolean
   /** The visible text, and the switch's accessible name. */
   label: ReactNode
   onChange?: (isChecked: boolean) => void
@@ -93,6 +99,7 @@ export const Switch = ({
   className,
   isChecked = false,
   isDisabled = false,
+  isReadOnly = false,
   label,
   onChange,
   size = "md",
@@ -106,32 +113,50 @@ export const Switch = ({
       className={toClassName(
         "inline-flex items-center gap-2 text-content-secondary select-none",
         TEXT_SIZE_CLASS[size],
-        isDisabled && "text-content-disabled",
+        // Disabled turns the whole control down with `opacity-60`, the
+        // same family treatment as `Checkbox` and `RadioGroup` — the
+        // track keeps its full-contrast state colour underneath.
+        isDisabled && "opacity-60",
         className,
       )}
     >
       <button
         aria-checked={isOn}
         aria-labelledby={labelId}
+        aria-readonly={isReadOnly || undefined}
         className={toClassName(
           // `p-1` is the breathing room; `ring-inset` draws the off
           // outline without changing the box size, so the centring
           // arithmetic above stays exact.
-          "inline-flex shrink-0 cursor-pointer items-center rounded-full p-1 transition-colors duration-(--duration-fast) ease-standard",
-          // One state class, chosen by ternary — two `bg-`/`ring-`
-          // utilities of the same specificity do not resolve by
-          // class-list order, so disabled has to win as the only one
-          // written.
-          isDisabled
-            ? "cursor-not-allowed bg-surface-sunken ring-2 ring-border-subtle ring-inset"
+          "inline-flex shrink-0 items-center rounded-full p-1 transition-colors duration-(--duration-fast) ease-standard",
+          // The track carries the state at full contrast whether or not
+          // it is disabled; `opacity-60` on the wrapper does the dimming.
+          // Read-only swaps the accent for the neutral intent and softens
+          // the off outline — readable, plainly not an actionable accent,
+          // the same language as `Checkbox` and `RadioGroup`.
+          isReadOnly
+            ? isOn
+              ? "bg-intent-neutral-solid"
+              : "bg-surface-sunken ring-2 ring-border-default ring-inset"
             : isOn
               ? "bg-intent-accent-solid"
               : "bg-surface-sunken ring-2 ring-border-strong ring-inset",
+          isDisabled
+            ? "cursor-not-allowed"
+            : isReadOnly
+              ? "cursor-default"
+              : "cursor-pointer",
           TRACK_SIZE_CLASS[size],
           FOCUS_RING_CLASS,
         )}
         disabled={isDisabled}
         onClick={() => {
+          // Read-only shows the state but will not flip it — the switch
+          // owns its value, so the guard is just an early return.
+          if (isReadOnly) {
+            return
+          }
+
           const isNextOn = !isOn
 
           setIsOn(isNextOn)
@@ -143,11 +168,7 @@ export const Switch = ({
       >
         <span
           className={toClassName(
-            "rounded-full transition-transform duration-(--duration-fast) ease-standard",
-            // One knob, same colour off and on; disabled mutes it.
-            isDisabled
-              ? "bg-content-disabled"
-              : "bg-surface-raised",
+            "rounded-full bg-surface-raised transition-transform duration-(--duration-fast) ease-standard",
             isOn
               ? THUMB_ON_TRANSLATE_CLASS[size]
               : "translate-x-0",
