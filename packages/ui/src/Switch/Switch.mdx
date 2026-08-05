@@ -1,0 +1,53 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as SwitchStories from "./Switch.stories";
+
+<Meta of={SwitchStories} />
+
+# Switch
+
+A boolean that takes effect the moment it is flipped — a setting, not a form value.
+
+A `Switch` and a [`Checkbox`](/docs/components-checkbox--docs) are the **same state kind and
+a different affordance**, and the split is meaning rather than looks. A checkbox is a value
+you submit — "delete originals", "I agree". A switch is a state you toggle and live with
+immediately — "automatic imports on". ARIA gives the second its own role, and a screen
+reader announces "on/off" for a `switch` where it announces "checked/unchecked" for a
+checkbox.
+
+<Canvas of={SwitchStories.Default} />
+
+## Props
+
+<Controls />
+
+## A `button role="switch"`, not an `input`
+
+The sliding track and thumb are the whole affordance, and a `<button>` styles them without
+fighting a native control's own rendering. It carries `aria-checked` and `aria-labelledby`
+and nothing else the browser would try to own, so its keyboard path is the button's: Tab
+reaches it, Space and Enter flip it.
+
+The value lives in React state seeded once from `isChecked` — the switch is the store, the
+same way the DOM is for `Checkbox`, and the same refusal of a controlled prop.
+
+<Canvas of={SwitchStories.AllVariants} />
+
+## The thumb changes colour, not just position
+
+On `bg-intent-accent-solid`, off on `bg-surface-sunken`, and the thumb picks the token that
+contrasts with whichever it is sitting on. A switch whose only signal was the thumb's
+*position* loses that signal to a `daylight` theme in sunlight or to a colour-blind reader;
+a filled track plus a contrasting thumb survives both, which is the same reason
+`SegmentedControl` fills its checked option rather than tinting it.
+
+<Canvas of={SwitchStories.AllStates} />
+
+## One that is off is still reachable
+
+`disabled` removes it from the tab order and the pointer, and `aria-disabled` is left to the
+native `disabled` the `<button>` already carries. A disabled-and-on switch is a setting the
+user cannot currently change — a policy forced from above, say — not a broken control, and
+it reads that way to a screen reader.
+
+<Canvas of={SwitchStories.Interactive} />
