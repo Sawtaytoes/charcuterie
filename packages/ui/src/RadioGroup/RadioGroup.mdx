@@ -47,6 +47,15 @@ at.
 
 <Canvas of={RadioGroupStories.AllStates} />
 
+## A read-only group shows the choice without moving it
+
+`isReadOnly` severs the one link that defines this component — selection follows focus — so
+the arrow keys and clicks still travel the options for reading but no longer move the
+choice. The group announces `aria-readonly`, and the chosen option shows at full contrast
+in the **neutral** intent: a value you may read here and change elsewhere. That is distinct
+from a single **disabled** option, which is dimmed with `opacity-60` and dropped from the
+focus group but stays selectable via `selectedValue`.
+
 ## `selectedValue` is the initial value, not a controlled one
 
 It decides the first render and nothing after — Charcuterie owns the choice from then on,
