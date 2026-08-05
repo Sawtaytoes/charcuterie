@@ -177,8 +177,8 @@ export const layered: Variant = {
       },
       intent: {
         neutral: {
-          surface: "#EDEAF0",
-          surfaceHover: "#E4E0E9",
+          surface: "#E8E4EC",
+          surfaceHover: "#DFDBE7",
           border: "#DCD9E1",
           content: "#413D4C",
           solid: "#413D4C",
