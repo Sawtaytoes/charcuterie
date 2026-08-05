@@ -20,6 +20,10 @@ item can wait.
 
 ### `Field` overwrites the child's own `id`
 
+> **Shipped 2026-08-05** — precedence is now `<Field id>` → child's own `id` → generated; the
+> `Field` prop wins when both are set. See the
+> [decision](decisions/2026-08-05-field-adopts-the-childs-own-id.md). `@charcuterie/ui` patch.
+
 `Field` generates `<baseId>-control` and clones it onto its child, so a control that already
 had an `id` loses it:
 

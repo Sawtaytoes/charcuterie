@@ -37,6 +37,25 @@ export const Default: Story = {
 }
 
 /**
+ * The control carries its own `id` — `rename-pattern`, the kind of
+ * stable id a deep link or a server-rendered error summary points at.
+ * The `Field` adopts it rather than minting a `-control` id over the
+ * top, so the `<label htmlFor>` and every outside-in reference agree.
+ */
+export const AdoptsChildId: Story = {
+  args: {
+    children: (
+      <input
+        className={TEXT_INPUT_CLASS}
+        id="rename-pattern"
+        type="text"
+      />
+    ),
+    label: "Rename pattern",
+  },
+}
+
+/**
  * The control is a slot, not a hardcoded `<input>` — `Select` goes
  * in the same hole, and so does an app's own control. The `id`,
  * `aria-describedby`, `aria-invalid`, and `required` are cloned onto
