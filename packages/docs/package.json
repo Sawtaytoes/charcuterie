@@ -13,6 +13,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@charcuterie/storybook-config": "workspace:*",
     "@charcuterie/tokens": "workspace:*",
     "@charcuterie/ui": "workspace:*",
     "react": "^19.2.8",
