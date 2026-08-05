@@ -1,5 +1,46 @@
 # @charcuterie/ui
 
+## 2.5.0
+
+### Minor Changes
+
+- 6fbb12e: Add the boolean-input family — `Checkbox`, `RadioGroup`, and `Switch` — the primitives
+  mux-magic's `BooleanField` hand-rolled in `bg-slate-700 border-slate-500 accent-blue-500`
+  because the library had no boolean control to reach for. All three are tokenised
+  (`bg-surface-sunken`, `bg-intent-accent-solid`, `text-intent-accent-on-solid`), so one
+  control reads correctly in every scheme and variant with no per-app override, and each
+  ships stories, an `.mdx` docs page, and a driven-state test suite.
+
+  - `Checkbox` — a native `<input type="checkbox">` the `<label>` wraps (no `for` to get
+    wrong), uncontrolled with `defaultChecked` from `isChecked`; a submitted value.
+  - `Switch` — a `button role="switch"` with a sliding, colour-changing thumb; the same
+    state kind as `Checkbox` and the "takes effect on flip" affordance. `aria-checked`, so a
+    screen reader reads "on/off" rather than "checked/unchecked".
+  - `RadioGroup` — the stacked sibling of `SegmentedControl`, the same `SinglePicker` +
+    `RovingFocus` composition rendered `role="radiogroup"`: arrow keys move-and-check, Tab
+    enters once, disabled options leave the focus group but stay selectable via
+    `selectedValue`.
+
+### Patch Changes
+
+- d5046d0: Field: adopt the control's own `id` instead of overwriting it. A control written
+  `<input id="rename-pattern" />` used to lose its id to a minted `<baseId>-control`,
+  breaking the outside-in references the id exists for (a deep link, an autofill hint,
+  a server-rendered error summary, a consumer's own selector). Precedence is now
+  `<Field id>` → the child's own `id` → generated; the `Field` prop still wins when
+  both are set (it is the outer, later declaration). The `<label htmlFor>` follows
+  `controlId` as before, so the label/control pair still agrees. Reported by a consumer.
+- 5a4433d: Share the slot/clone `ref` + `on*` merge primitives. `mergeRefs`, `chainHandlers`,
+  `isMergeableRef`, `isEventHandlerName` and the `MergeableRef` type move into
+  `@charcuterie/logic/react` (`mergeRefsAndHandlers.ts`) and become public exports of
+  `@charcuterie/logic`; `@charcuterie/ui`'s `slotWiring.ts` imports them instead of
+  carrying a byte-identical copy, keeping only its own `mergeSlotWiring`. No behaviour
+  change — the React implementation (with its React 19 callback-ref cleanup) is the one
+  kept. The Preact mirror is intentionally _not_ shared: its `mergeRefs` is genuinely
+  different (Preact has no ref-cleanup return), so this is a react↔ui dedup only.
+- Updated dependencies [5a4433d]
+  - @charcuterie/logic@1.2.0
+
 ## 2.4.1
 
 ### Patch Changes
