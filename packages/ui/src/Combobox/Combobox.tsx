@@ -600,7 +600,10 @@ export const Combobox = ({
               style={floatingStyles}
             >
               {isAttached ? null : (
-                <div className="flex items-center gap-1 border-border-subtle border-b p-2">
+                // px-3 aligns the input's text start with the options
+                // below: each option sits at 0.75rem (listbox p-1 + option
+                // px-2), so the search row needs the same 0.75rem inset.
+                <div className="flex items-center gap-1 border-border-subtle border-b px-3 py-2">
                   <input
                     aria-activedescendant={
                       activeValue === undefined
