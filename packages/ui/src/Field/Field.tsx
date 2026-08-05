@@ -126,9 +126,21 @@ export const Field = ({
    * link, a server-rendered error summary linking to the control.
    * `useUniqueId` is still called: hooks are unconditional, and it
    * costs one counter read.
+   *
+   * Precedence is `Field` prop → **the child's own `id`** →
+   * generated. The child's is read because a control written as
+   * `<input id="rename-pattern" />` puts the id where the author can
+   * see it, not on the `Field`; overwriting it with a minted
+   * `-control` id used to break exactly the outside-in references the
+   * `Field` prop exists to keep — a deep link, an autofill hint, a
+   * consumer's own selector. The `Field` prop still wins when both
+   * are set: it is the outer, later declaration, and last-writer-wins
+   * is the slot's rule for a value.
    */
+  const childId = (children.props as { id?: string }).id
+
   const controlId =
-    receivedSlotProps.id ?? `${baseId}-control`
+    receivedSlotProps.id ?? childId ?? `${baseId}-control`
 
   const descriptionId = `${baseId}-description`
 
