@@ -310,6 +310,35 @@ export const Combobox = ({
     onDismiss()
   }
 
+  // A chip's face is the option's human label, not its `value` — a
+  // language chip reads "English", not "eng". `textValue` (the rich-label
+  // fallback) wins, then a plain-string `label`, then the raw value only
+  // when the option has since left `options`.
+  const chipLabel = (value: string) => {
+    const item = options.find(
+      (option) => option.value === value,
+    )
+
+    if (item === undefined) {
+      return value
+    }
+
+    return (
+      item.textValue ??
+      (typeof item.label === "string" ? item.label : value)
+    )
+  }
+
+  const removeValue = (value: string) => {
+    setSelected((previous) =>
+      previous.filter((one) => one !== value),
+    )
+
+    // The parent tracks selection through `onSelect`, so removing a chip
+    // reports the same value the list toggle would — a symmetric toggle.
+    onSelect(value)
+  }
+
   // Typed as either event so the same logic serves the classic mode's
   // React `onKeyDown` and attached mode's native `keydown` listener —
   // both carry `key`/`shiftKey`/`preventDefault`.
@@ -516,6 +545,38 @@ export const Combobox = ({
 
   return (
     <>
+      {/*
+        Multi-select chips live *here*, above the trigger and outside the
+        `isVisible` gate — so a picked value stays on screen as a removable
+        tag after the popup closes. The previous build rendered them inside
+        the panel, where they vanished with it and the field read as empty
+        (the "no way to see or remove what I picked" report). Attached mode
+        is single-select, so it never grows a chip row.
+      */}
+      {isMultiple && !isAttached && selected.length > 0 ? (
+        <div className="mb-1 flex flex-wrap items-center gap-1">
+          {selected.map((value) => (
+            <span
+              className="inline-flex items-center gap-1 rounded-sm bg-intent-neutral-surface-hover px-1.5 py-0.5 text-content-primary text-xs"
+              key={value}
+            >
+              {chipLabel(value)}
+
+              <button
+                aria-label={`Remove ${chipLabel(value)}`}
+                className="cursor-pointer text-content-secondary hover:text-content-primary"
+                onClick={() => {
+                  removeValue(value)
+                }}
+                type="button"
+              >
+                ✕
+              </button>
+            </span>
+          ))}
+        </div>
+      ) : null}
+
       {clonedTrigger}
 
       {isVisible ? (
@@ -539,45 +600,7 @@ export const Combobox = ({
               style={floatingStyles}
             >
               {isAttached ? null : (
-                <div className="flex flex-wrap items-center gap-1 border-border-subtle border-b p-2">
-                  {isMultiple
-                    ? selected.map((value) => {
-                        const chip = options.find(
-                          (option) =>
-                            option.value === value,
-                        )
-
-                        return (
-                          <span
-                            className="inline-flex items-center gap-1 rounded-sm bg-intent-neutral-surface px-1.5 py-0.5 text-content-primary text-xs"
-                            key={value}
-                          >
-                            {chip?.textValue ?? value}
-
-                            <button
-                              aria-label={`Remove ${chip?.textValue ?? value}`}
-                              className="cursor-pointer text-content-secondary hover:text-content-primary"
-                              onClick={() => {
-                                setSelected((previous) =>
-                                  previous.filter(
-                                    (one) => one !== value,
-                                  ),
-                                )
-
-                                // Mirror the list toggle-off: the parent
-                                // tracks selection through `onSelect`, so a
-                                // chip removal must report the same value.
-                                onSelect(value)
-                              }}
-                              type="button"
-                            >
-                              ✕
-                            </button>
-                          </span>
-                        )
-                      })
-                    : null}
-
+                <div className="flex items-center gap-1 border-border-subtle border-b p-2">
                   <input
                     aria-activedescendant={
                       activeValue === undefined
