@@ -3,7 +3,10 @@ import {
   DEFAULT_COLOR_SCHEME_ORDER,
   nextColorSchemeMode,
 } from "@charcuterie/logic"
-import type { ControlSize } from "@charcuterie/tokens"
+import type {
+  ControlSize,
+  IntentName,
+} from "@charcuterie/tokens"
 import type { ReactNode } from "react"
 
 import { IconButton } from "../IconButton/IconButton.tsx"
@@ -25,6 +28,15 @@ export type ColorSchemeToggleProps = {
   appearance?: IntentAppearance
   className?: string
   icons: ColorSchemeIcons
+  /**
+   * The intent (tone) forwarded to the underlying `IconButton` — the
+   * same union `Button`/`IconButton` accept. **Defaults to `neutral`**,
+   * not `accent`: a scheme switcher is toolbar chrome, so its ghost
+   * hover reads as `hover:bg-intent-neutral-surface` and its icon as
+   * `text-intent-neutral-content` rather than accent-violet. Pass
+   * `intent="accent"` (or any tone) to make it an accent action.
+   */
+  intent?: IntentName
   isDisabled?: boolean
   /**
    * Builds the accessible name from the current and next mode.
@@ -81,6 +93,7 @@ export const ColorSchemeToggle = ({
   appearance = "ghost",
   className,
   icons,
+  intent = "neutral",
   isDisabled = false,
   label = defaultLabel,
   mode,
@@ -94,6 +107,7 @@ export const ColorSchemeToggle = ({
     <IconButton
       appearance={appearance}
       className={className}
+      intent={intent}
       isDisabled={isDisabled}
       label={label(mode, nextMode)}
       onClick={() => {
