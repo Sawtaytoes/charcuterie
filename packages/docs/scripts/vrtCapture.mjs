@@ -150,16 +150,22 @@ const capture = async (page, { id, scheme }) => {
   await page.goto(target, { waitUntil: "load" })
 
   // The scheme is applied by preview.tsx's writer in response to the
-  // global, not synchronously on load — wait for it to actually land
-  // on <html> so we never shoot the seed scheme under a light global.
-  await page.waitForFunction(
-    (want) =>
-      document.documentElement.getAttribute(
-        "data-scheme",
-      ) === want,
-    scheme,
-    { timeout: 15_000 },
-  )
+  // global, not synchronously on load — wait for it to land on <html>
+  // so we never shoot the seed scheme under a light global. Best-effort:
+  // a few specimen stories (e.g. tokens-specimen--light) PIN their own
+  // scheme and never match `want`. That's not a failure — the pinned
+  // render is still deterministic — so fall through after a short wait
+  // and shoot whatever scheme they fixed themselves to.
+  await page
+    .waitForFunction(
+      (want) =>
+        document.documentElement.getAttribute(
+          "data-scheme",
+        ) === want,
+      scheme,
+      { timeout: 5_000 },
+    )
+    .catch(() => {})
 
   await page.addStyleTag({ content: freezeStyle })
 
