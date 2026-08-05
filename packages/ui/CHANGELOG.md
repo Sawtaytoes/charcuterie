@@ -1,5 +1,33 @@
 # @charcuterie/ui
 
+## 2.6.0
+
+### Minor Changes
+
+- 1efe6f3: Polish the boolean-input family (`Checkbox`, `RadioGroup`, `Switch`) and add read-only.
+
+  - **`isReadOnly`** on all three — shows the value at full contrast but refuses to change
+    it (`aria-readonly`, toggle blocked on pointer and keyboard; a read-only `RadioGroup`
+    severs selection-follows-focus so focus can still travel to read). It wears the
+    **neutral** intent instead of the accent, so it reads as an informational value rather
+    than an actionable control — distinct from both enabled (accent) and disabled.
+  - **Disabled is visible again.** The token scale has no step between `border-default`
+    and `border-strong`, so a muted outline was either invisible or looked enabled;
+    disabled now dims the whole control with `opacity-60`, keeping full shape and colour.
+  - **Unified border weight.** The `Checkbox` box, `RadioGroup` ring, and `Switch` track
+    all carry a 2px edge, and the radio ring is now the same diameter as the switch knob,
+    so the three read as one set.
+
+- 012a1ed: Menu: `items` accepts non-item entries. It is now a union — a `MenuItem` (a bare
+  `{ key, label, onSelect }` still type-checks), a `MenuSeparator` (`{ type:
+"separator" }` → `role="separator"`), or a `MenuGroup` (`{ type: "group", label,
+items }` → `role="group"` named by its label). Plus a new `emptyState?: ReactNode`
+  prop, rendered as a disabled `menuitem` when there is nothing to show (a `role="menu"`
+  must own a `menuitem`, so the note is one — `aria-disabled`, out of the roving group).
+  Backward compatible: existing `MenuItem[]` arrays need no change. The keyboard model
+  is unchanged — separators and group headings register nothing, so the arrow keys skip
+  them the same way a disabled item is skipped.
+
 ## 2.5.0
 
 ### Minor Changes
