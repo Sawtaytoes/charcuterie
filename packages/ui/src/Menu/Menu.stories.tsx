@@ -14,7 +14,7 @@ import {
   UndoIcon,
 } from "../icons.storyHelpers.tsx"
 import { Tooltip } from "../Tooltip/Tooltip.tsx"
-import type { MenuItem } from "./Menu.tsx"
+import type { MenuEntry, MenuItem } from "./Menu.tsx"
 import { Menu } from "./Menu.tsx"
 
 const noop = () => undefined
@@ -41,18 +41,50 @@ const BAY_ACTIONS: MenuItem[] = [
   },
 ]
 
+const GROUPED_ACTIONS: MenuEntry[] = [
+  {
+    items: [
+      {
+        key: "retry",
+        label: "Retry title",
+        onSelect: noop,
+      },
+      { key: "skip", label: "Skip title", onSelect: noop },
+    ],
+    key: "disc",
+    label: "Disc",
+    type: "group",
+  },
+  { key: "sep", type: "separator" },
+  {
+    items: [
+      {
+        icon: <SettingsIcon />,
+        key: "eject",
+        label: "Eject disc",
+        onSelect: noop,
+      },
+    ],
+    key: "danger",
+    label: "Danger",
+    type: "group",
+  },
+]
+
 /**
  * A menu's visibility belongs to the app, exactly like `Popover`'s —
  * so the stories hold it in a `useVisibility`, which is what a
  * consumer writes too.
  */
 const MenuHarness = ({
+  emptyState,
   isInitiallyVisible = false,
   items = BAY_ACTIONS,
   triggerLabel,
 }: {
+  emptyState?: ReactNode
   isInitiallyVisible?: boolean
-  items?: MenuItem[]
+  items?: MenuEntry[]
   triggerLabel: string
 }): ReactNode => {
   const { hide, isVisible, toggle } = useVisibility({
@@ -61,6 +93,7 @@ const MenuHarness = ({
 
   return (
     <Menu
+      emptyState={emptyState}
       isVisible={isVisible}
       items={items}
       onDismiss={hide}
@@ -224,5 +257,50 @@ export const Interactive: Story = {
   },
   render: () => (
     <MenuHarness triggerLabel="Open bay 4 menu" />
+  ),
+}
+
+/**
+ * `items` is a union — a `group` (`role="group"`, named by its
+ * label) and a `separator` (`role="separator"`) opt in by their
+ * `type`, and a bare item still works unchanged. Neither the
+ * separator nor the group headings register with the roving group,
+ * so arrow-down goes Retry → Skip → Eject, straight past both
+ * headings and the rule between them.
+ */
+export const Grouped: Story = {
+  args: {
+    isVisible: false,
+    onDismiss: noop,
+    trigger: <Button appearance="outline">Actions</Button>,
+  },
+  render: () => (
+    <MenuHarness
+      isInitiallyVisible
+      items={GROUPED_ACTIONS}
+      triggerLabel="Bay 6"
+    />
+  ),
+}
+
+/**
+ * No actions to show. The `emptyState` renders as a **disabled**
+ * `menuitem` — a `role="menu"` must own one — so it is announced but
+ * takes no tab stop and no roving-focus membership, and a keyboard
+ * user can still Escape out of it.
+ */
+export const Empty: Story = {
+  args: {
+    isVisible: false,
+    onDismiss: noop,
+    trigger: <Button appearance="outline">Actions</Button>,
+  },
+  render: () => (
+    <MenuHarness
+      emptyState="No actions available"
+      isInitiallyVisible
+      items={[]}
+      triggerLabel="Bay 7"
+    />
   ),
 }

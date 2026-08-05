@@ -1,6 +1,7 @@
 import {
   selectTabIndex,
   useRovingFocus,
+  useUniqueId,
 } from "@charcuterie/logic"
 import type { Placement } from "@floating-ui/react"
 import {
@@ -21,18 +22,73 @@ export type MenuItem = {
   key: string
   label: ReactNode
   onSelect: () => void
+  /**
+   * The default kind, and optional so the common `{ key, label,
+   * onSelect }` still type-checks. Present only to discriminate this
+   * from a `separator` or a `group`.
+   */
+  type?: "item"
 }
+
+/**
+ * A rule between groups of items — `role="separator"`, and nothing a
+ * keyboard user lands on. It never registers with the roving group,
+ * so the arrow keys pass straight over it, the same mechanism a
+ * disabled item uses.
+ */
+export type MenuSeparator = {
+  key: string
+  type: "separator"
+}
+
+/**
+ * A named set of items — `role="group"` with the `label` as its
+ * accessible name (a screen reader announces "Danger, group" before
+ * its members). The heading itself is not focusable; only the items
+ * inside it register.
+ */
+export type MenuGroup = {
+  items: MenuItem[]
+  key: string
+  label: ReactNode
+  type: "group"
+}
+
+/**
+ * What a menu is made of. A bare `MenuItem` is still valid on its
+ * own, so existing `items` arrays need no change; a `separator` or a
+ * `group` opts in by its `type`.
+ */
+export type MenuEntry = MenuGroup | MenuItem | MenuSeparator
 
 export type MenuProps = {
   className?: string
+  /**
+   * Shown when there is no item to show — a `group` with no members
+   * and a bare separator list both count as empty. Rendered as a
+   * **disabled** `menuitem` (a `role="menu"` must own one), so it is
+   * announced but never focused. Without it an empty menu renders
+   * nothing.
+   */
+  emptyState?: ReactNode
   isVisible: boolean
-  items: MenuItem[]
+  items: MenuEntry[]
   /** Outside press, Escape, and choosing an item all land here. */
   onDismiss: () => void
   placement?: Placement
   /** The control the menu hangs off. **Cloned, not wrapped.** */
   trigger: ReactElement
 }
+
+const isMenuItem = (entry: MenuEntry): entry is MenuItem =>
+  entry.type === undefined || entry.type === "item"
+
+const hasAnyItem = (items: MenuEntry[]): boolean =>
+  items.some(
+    (entry) =>
+      isMenuItem(entry) ||
+      (entry.type === "group" && entry.items.length > 0),
+  )
 
 /**
  * A menu is **not** a listbox, and mux-magic's `TypePicker` is the
@@ -86,6 +142,22 @@ export type MenuProps = {
  * focus is whichever one `RovingFocus` says is active, and that is
  * not known until the items have registered.
  *
+ * ### Separators, groups, and an empty state
+ *
+ * `items` is a union, not a flat `MenuItem[]`: a `separator`
+ * (`role="separator"`) and a `group` (`role="group"`, named by its
+ * `label`) opt in by their `type`, and a bare item still type-checks
+ * unchanged. The keyboard model needs no new code for them — a
+ * separator and a group heading register nothing, so the roving
+ * group never sees them and the arrow keys skip straight over, the
+ * same mechanism a disabled item already used. A `group`'s items
+ * register normally, so focus moves through them in DOM order as if
+ * the heading were not there. When there is nothing to show, the
+ * `emptyState` renders as a **disabled** `menuitem` — a `role="menu"`
+ * with no `menuitem` child fails `aria-required-children`, so the
+ * note has to be one, `aria-disabled` and out of the roving group:
+ * announced as "No actions available, dimmed", focusable by nothing.
+ *
  * ### No type-ahead, deliberately
  *
  * The APG lists type-ahead as optional for a menu and required for a
@@ -96,12 +168,15 @@ export type MenuProps = {
  */
 export const Menu = ({
   className,
+  emptyState,
   isVisible,
   items,
   onDismiss,
   placement = "bottom-start",
   trigger,
 }: MenuProps): ReactNode => {
+  const menuId = useUniqueId()
+
   const itemElements = useRef(
     new Map<string, HTMLButtonElement>(),
   )
@@ -160,6 +235,83 @@ export const Menu = ({
     itemElements.current.get(activeValue)?.focus()
   }, [activeValue, isVisible])
 
+  // One member of the roving group, whether it sits at the top level
+  // or inside a `group`. The registration lives in `MenuAction`'s
+  // effect, so an item nested in a group joins the same arrow-key
+  // sequence in DOM order — the heading above it registers nothing.
+  const renderItem = (item: MenuItem) => (
+    <MenuAction
+      item={item}
+      key={item.key}
+      onDismiss={onDismiss}
+      register={focus.register}
+      tabIndex={selectTabIndex(focus, item.key)}
+      trackElement={(key, element) => {
+        if (element) {
+          itemElements.current.set(key, element)
+        } else {
+          itemElements.current.delete(key)
+        }
+      }}
+    />
+  )
+
+  const renderEntry = (entry: MenuEntry) => {
+    if (entry.type === "separator") {
+      // A native `<hr>` — implicit `role="separator"`, and the one
+      // that does *not* need `aria-valuenow` (that is the focusable
+      // splitter kind, not a static rule between menu groups).
+      return (
+        <hr
+          className="-mx-1 my-1 h-px border-0 bg-border-subtle"
+          key={entry.key}
+        />
+      )
+    }
+
+    if (entry.type === "group") {
+      const headingId = `${menuId}-${entry.key}`
+
+      return (
+        // biome-ignore lint/a11y/useSemanticElements: a menu group is `role="group"` (ARIA APG), not a form `<fieldset>` — a fieldset is invalid content inside `role="menu"` and drags legend/border/reset semantics onto it.
+        <div
+          aria-labelledby={headingId}
+          key={entry.key}
+          role="group"
+        >
+          <div
+            className="px-2 pt-1.5 pb-0.5 font-medium text-content-secondary text-xs"
+            id={headingId}
+          >
+            {entry.label}
+          </div>
+
+          {entry.items.map(renderItem)}
+        </div>
+      )
+    }
+
+    return renderItem(entry)
+  }
+
+  // A **disabled** `menuitem`, not inert text: a `role="menu"` with
+  // no `menuitem` child fails `aria-required-children`, so the empty
+  // note has to be one — `aria-disabled` and `tabindex="-1"`, so it
+  // is announced ("No actions available, dimmed") but takes no tab
+  // stop and never joins the roving group. `null` when the consumer
+  // gave no `emptyState`, so an empty menu renders nothing.
+  const emptyElement =
+    emptyState === undefined ? null : (
+      <div
+        aria-disabled="true"
+        className="px-2 py-1.5 text-content-disabled text-sm"
+        role="menuitem"
+        tabIndex={-1}
+      >
+        {emptyState}
+      </div>
+    )
+
   return (
     <>
       {clonedTrigger}
@@ -214,22 +366,9 @@ export const Menu = ({
               role="menu"
               style={floatingStyles}
             >
-              {items.map((item) => (
-                <MenuAction
-                  item={item}
-                  key={item.key}
-                  onDismiss={onDismiss}
-                  register={focus.register}
-                  tabIndex={selectTabIndex(focus, item.key)}
-                  trackElement={(key, element) => {
-                    if (element) {
-                      itemElements.current.set(key, element)
-                    } else {
-                      itemElements.current.delete(key)
-                    }
-                  }}
-                />
-              ))}
+              {hasAnyItem(items)
+                ? items.map(renderEntry)
+                : emptyElement}
             </div>
           </FloatingFocusManager>
         </FloatingPortal>
