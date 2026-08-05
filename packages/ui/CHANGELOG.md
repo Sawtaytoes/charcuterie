@@ -1,5 +1,40 @@
 # @charcuterie/ui
 
+## 2.4.0
+
+### Minor Changes
+
+- 2f097f9: EmptyState: widen `headingLevel` from `2 | 3 | 4` to `2 | 3 | 4 | 5 | 6`. The cap
+  was a guess about document structure the consumer knows better — an empty state
+  nested inside an already-deep section needs `5` or `6` to keep the outline from
+  skipping, and the implementation (`` `h${headingLevel}` ``) never cared about the
+  upper bound. Type-only widening; no runtime or default change (still defaults to
+  `2`). Reported by a consumer; was queued for 1.1.
+
+### Patch Changes
+
+- 0e975b4: Listbox/Combobox: disabled options now look disabled, the Listbox active
+  option is visible when opened by mouse, and a multi-select chip removes on a
+  click anywhere (not only the ✕).
+
+  - **Disabled colour was clobbered.** The option row set `text-content-primary`
+    in its base class and `text-content-disabled` conditionally — equal
+    specificity, base emitted last, so a disabled option rendered full-strength.
+    It read as a normal row the arrow keys "wrongly" skipped. The base now sets no
+    colour; one of the two applies.
+  - **Listbox active row was invisible on mouse-open.** The roving focus lands on
+    the first/selected option when the popup opens, but the indicator was a
+    `:focus-visible` ring, which a mouse-triggered open does not match — so the
+    active option had no highlight and the first ArrowDown looked like it skipped
+    it. The active row now takes a fill on `:focus` (any focus), keeping the
+    keyboard ring on top.
+  - **Whole chip removes.** A multi-select chip is now a single remove `<button>`
+    (the ✕ is decorative) rather than a label wrapping a small ✕ button — a bigger
+    target, no nested interactive element, and it tints danger on hover.
+
+- Updated dependencies [7ed1bda]
+  - @charcuterie/tokens@1.1.2
+
 ## 2.3.0
 
 ### Minor Changes
