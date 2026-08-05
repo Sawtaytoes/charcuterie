@@ -556,23 +556,30 @@ export const Combobox = ({
       {isMultiple && !isAttached && selected.length > 0 ? (
         <div className="mb-1 flex flex-wrap items-center gap-1">
           {selected.map((value) => (
-            <span
-              className="inline-flex items-center gap-1 rounded-sm bg-intent-neutral-surface-hover px-1.5 py-0.5 text-content-primary text-xs"
+            // The whole chip is the remove control, not just the ✕ — a
+            // bigger target, and removal is the chip's only action. One
+            // `<button>` (the ✕ is decorative) rather than a chip wrapping
+            // a button, so there is no nested interactive element and the
+            // accessible name is just "Remove <label>". Hover tints danger
+            // to signal the click removes.
+            <button
+              aria-label={`Remove ${chipLabel(value)}`}
+              className="inline-flex cursor-pointer items-center gap-1 rounded-sm bg-intent-neutral-surface-hover px-1.5 py-0.5 text-content-primary text-xs transition-colors duration-(--duration-fast) ease-standard hover:bg-intent-danger-surface hover:text-intent-danger-content"
               key={value}
+              onClick={() => {
+                removeValue(value)
+              }}
+              type="button"
             >
               {chipLabel(value)}
 
-              <button
-                aria-label={`Remove ${chipLabel(value)}`}
-                className="cursor-pointer text-content-secondary hover:text-content-primary"
-                onClick={() => {
-                  removeValue(value)
-                }}
-                type="button"
+              <span
+                aria-hidden="true"
+                className="text-content-secondary"
               >
                 ✕
-              </button>
-            </span>
+              </span>
+            </button>
           ))}
         </div>
       ) : null}
