@@ -69,11 +69,19 @@ export const ListboxOption = ({
     <button
       aria-selected={isSelected}
       className={toClassName(
-        "flex w-full cursor-pointer items-center justify-between gap-2 rounded-sm bg-transparent px-2 py-1.5 text-start text-content-primary text-sm transition-colors duration-(--duration-fast) ease-standard",
-        "hover:bg-intent-neutral-surface",
+        // No base `bg-transparent`: it is emitted after the state tints
+        // and silently won at equal specificity, so the selected option's
+        // accent fill never showed (only its ✓ did). Default is
+        // transparent anyway; the tints below add a fill.
+        "flex w-full cursor-pointer items-center justify-between gap-2 rounded-sm px-2 py-1.5 text-start text-content-primary text-sm transition-colors duration-(--duration-fast) ease-standard",
+        // `-hover`, not plain `intent-neutral-surface`: on the
+        // `surface-overlay` panel the plain tint is darker than the
+        // surface in dark schemes and the hover reads as no change.
+        !isDisabled &&
+          "hover:bg-intent-neutral-surface-hover",
         isSelected && "bg-intent-accent-surface",
         isDisabled &&
-          "cursor-not-allowed text-content-disabled hover:bg-transparent",
+          "cursor-not-allowed text-content-disabled",
         FOCUS_RING_CLASS,
       )}
       disabled={isDisabled}
