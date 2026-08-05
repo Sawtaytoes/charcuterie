@@ -1,6 +1,6 @@
 {
   "name": "@charcuterie/storybook-config",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "The shared Storybook setup for the fleet: theme-axis toolbars (scheme/variant/density), the first-paint seed, and the a11y + controls defaults, so every app's Storybook themes light/dark the same way.",
   "license": "MIT",
   "type": "module",
