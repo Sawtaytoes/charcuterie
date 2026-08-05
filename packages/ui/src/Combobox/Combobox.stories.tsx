@@ -310,6 +310,67 @@ export const AttachedInputDrillDown: Story = {
   render: () => <AttachedInputHarness />,
 }
 
+// Long, space-separated names — the real-world case (a media library of
+// long folder names) the short demo tree does not show.
+const LONG_OPTIONS: ListboxItem[] = [
+  "Armored Trooper Votoms - Brilliantly Shining Heresy [anidb-7910]",
+  "Armored Trooper Votoms - Case;Irvine [anidb-7911]",
+  "Armored Trooper Votoms - Chirico's Return [anidb-1234]",
+  "Armored Trooper Votoms - Deadworld Sunsa [anidb-5678]",
+  "Armored Trooper Votoms - Pailsen Files - The Movie [anidb-9012]",
+].map((name) => ({
+  label: `📁 ${name}`,
+  textValue: name,
+  value: name,
+}))
+
+const LongOptionsHarness = (): ReactNode => {
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  const [isVisible, setIsVisible] = useState(true)
+
+  return (
+    <>
+      <input
+        aria-label="Path"
+        className="w-80 rounded-md border border-border-default bg-surface-raised px-2 py-1.5 font-mono text-content-primary text-sm outline-none"
+        readOnly
+        ref={inputRef}
+        value="/media/Media-Storage/Anime/"
+      />
+
+      <Combobox
+        emptyLabel="No matching entries."
+        inputRef={inputRef}
+        isVisible={isVisible}
+        onDismiss={() => {
+          setIsVisible(false)
+        }}
+        onSelect={() => {}}
+        options={LONG_OPTIONS}
+        query="/media/Media-Storage/Anime/"
+      />
+    </>
+  )
+}
+
+/**
+ * How the attached-input popup handles **long option labels** — a media
+ * library of long folder names, the case the short drill-down demo hides.
+ * Shows how the panel sizes and how each option row treats overflow.
+ */
+export const AttachedInputLongOptions: Story = {
+  args: {
+    inputRef: { current: null },
+    isVisible: true,
+    onDismiss: () => {},
+    onSelect: () => {},
+    options: LONG_OPTIONS,
+    query: "/media/Media-Storage/Anime/",
+  },
+  render: () => <LongOptionsHarness />,
+}
+
 export const DisabledFirstOption: Story = {
   args: {
     isVisible: false,
