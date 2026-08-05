@@ -60,3 +60,10 @@ outline does not disappear under the cursor.
 - Before/after served at review time over `devshare`
   (`charcuterie-ghost-hover-before-after`); 137/137 tokens tests pass after a
   fresh `dist` rebuild (`distFreshness`).
+
+## Update (2026-08-05)
+
+The "daylight only" scope above was revisited the same day: `layered` and
+`hairline` had the same weak neutral surface and got the same deepening, while
+`legible` (already ΔE≈23) was left alone. See
+[neutral-ghost-hover-swept-to-layered-and-hairline](2026-08-05-neutral-ghost-hover-swept-to-layered-and-hairline.md).

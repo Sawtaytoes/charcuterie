@@ -175,7 +175,7 @@ export const hairline: Variant = {
       },
       intent: {
         neutral: {
-          surface: "#EFECE6",
+          surface: "#ECE8E1",
           surfaceHover: "#E7E3DB",
           border: "#D6D1C8",
           content: "#3E4247",
