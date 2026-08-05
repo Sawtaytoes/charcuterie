@@ -544,6 +544,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@charcuterie/docs@workspace:packages/docs"
   dependencies:
+    "@charcuterie/storybook-config": "workspace:*"
     "@charcuterie/tokens": "workspace:*"
     "@charcuterie/ui": "workspace:*"
     "@storybook/addon-a11y": "npm:^10.3.6"
@@ -617,6 +618,44 @@ __metadata:
     preact:
       optional: true
     react:
+      optional: true
+  languageName: unknown
+  linkType: soft
+
+"@charcuterie/storybook-config@workspace:*, @charcuterie/storybook-config@workspace:packages/storybook-config":
+  version: 0.0.0-use.local
+  resolution: "@charcuterie/storybook-config@workspace:packages/storybook-config"
+  dependencies:
+    "@charcuterie/tokens": "workspace:*"
+    "@storybook/addon-docs": "npm:^10.3.6"
+    "@storybook/react": "npm:^10.3.6"
+    "@storybook/react-vite": "npm:^10.3.6"
+    "@tailwindcss/vite": "npm:^4.3.0"
+    "@types/node": "npm:^25.6.2"
+    "@types/react": "npm:^19.2.14"
+    "@types/react-dom": "npm:^19.2.3"
+    react: "npm:^19.2.8"
+    react-dom: "npm:^19.2.8"
+    remark-gfm: "npm:^4.0.1"
+    storybook: "npm:^10.3.6"
+    typescript: "npm:^6.0.3"
+    vite: "npm:^8.0.16"
+    vitest: "npm:^4.1.8"
+  peerDependencies:
+    "@storybook/addon-docs": ">=10"
+    "@storybook/react": ">=10"
+    "@storybook/react-vite": ">=10"
+    "@tailwindcss/vite": ">=4"
+    react: ">=19"
+    react-dom: ">=19"
+    storybook: ">=10"
+    vite: ">=6"
+  peerDependenciesMeta:
+    "@storybook/react-vite":
+      optional: true
+    "@tailwindcss/vite":
+      optional: true
+    vite:
       optional: true
   languageName: unknown
   linkType: soft
