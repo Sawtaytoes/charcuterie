@@ -7,8 +7,33 @@ import { mountStory } from "../mountStory.testHelpers.ts"
 import { expectAgentDrivable } from "../testing/index.ts"
 import * as stories from "./Field.stories.tsx"
 
-const { AllStates, AllVariants, Default, Group, Nested } =
-  composeStories(stories)
+const {
+  AdoptsChildId,
+  AllStates,
+  AllVariants,
+  Default,
+  Group,
+  Nested,
+} = composeStories(stories)
+
+test("a control's own id is adopted, not overwritten", async () => {
+  const { canvas, canvasElement } =
+    await mountStory(AdoptsChildId)
+
+  // The child was written `<input id="rename-pattern" />`. The Field
+  // must keep that id — overwriting it with a minted `-control` id is
+  // what broke the outside-in references the id exists for — and the
+  // `<label htmlFor>` must agree, so the control is still findable by
+  // its label's text.
+  const control = expectAgentDrivable(canvas, {
+    name: "Rename pattern",
+    role: "textbox",
+  })
+
+  await expect(control).toHaveAttribute("id", "rename-pattern")
+
+  await expectNoAxeViolations(canvasElement)
+})
 
 test("the label names the control it points at", async () => {
   const { canvas, canvasElement } =
