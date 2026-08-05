@@ -153,10 +153,11 @@ export const AllStates: Story = {
 }
 
 /**
- * Multi-select renders the chosen values as removable chips rather
- * than filling the input, with a sticky footer hint — the
- * `LanguageCodeField` and `LinkPicker` shapes. `isCreatable` lets Enter
- * commit the raw query.
+ * Multi-select renders the chosen values as an always-visible row of
+ * removable chips **above the trigger** — they stay on screen after the
+ * popup closes, and each carries its option's human label (not its raw
+ * value) and an ✕ to remove it. The `LanguageCodeField` and `LinkPicker`
+ * shapes. `isCreatable` lets Enter commit the raw query.
  */
 export const AllVariants: Story = {
   args: {

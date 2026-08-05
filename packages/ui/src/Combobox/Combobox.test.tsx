@@ -225,8 +225,10 @@ test("removing a chip reports the removal through onSelect", async () => {
     ).toBeInTheDocument()
   })
 
+  // The chip's face and accessible name are the option's human label,
+  // not its `value` — "English", not "eng".
   await userEvent.click(
-    body.getByRole("button", { name: "Remove eng" }),
+    body.getByRole("button", { name: "Remove English" }),
   )
 
   // The removal flowed back through `onSelect`, so the parent cleared it
