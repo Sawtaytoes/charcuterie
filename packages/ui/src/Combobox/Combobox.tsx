@@ -679,9 +679,21 @@ export const Combobox = ({
                         return (
                           <div
                             className="absolute start-0 top-0 w-full"
+                            // Measured, not fixed-height. A long option
+                            // label wraps to two lines (~56px), but the
+                            // estimate is 36px — so pinning the row to
+                            // `virtualRow.size` clipped it to one line's
+                            // worth and stacked the next row on top of it,
+                            // and the popup rendered as overlapping text.
+                            // `measureElement` + `data-index` let the
+                            // virtualizer read each row's real height and
+                            // lay the rest out below it.
+                            data-index={virtualRow.index}
                             key={option.value}
+                            ref={
+                              rowVirtualizer.measureElement
+                            }
                             style={{
-                              height: `${virtualRow.size}px`,
                               transform: `translateY(${virtualRow.start}px)`,
                             }}
                           >
