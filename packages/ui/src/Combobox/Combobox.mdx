@@ -58,6 +58,36 @@ removable chips rather than filling the input, and keeps the popup open.
 
 <Canvas of={ComboboxStories.AllStates} />
 
+## Attached input & drill-down
+
+Supply `inputRef` and Combobox stops rendering its own input: it anchors a **list-only**
+popup to the consumer's `<input>`, mirrors the combobox ARIA (`role`, `aria-controls`,
+`aria-activedescendant`) onto it, and drives arrows/Enter/Tab/Escape off it while focus
+stays put. Use it when the field is **both the value and the query** — a path field whose
+text you type *and* filter by, the shape `PathPicker` needs.
+
+The consumer owns the input's `value`/`onChange` (wire them to the controlled `query`,
+which is then required) **and** `isVisible`. Because of that, **a select does not
+auto-dismiss** in this mode: `onSelect` fires and the consumer decides what happens next —
+append the folder and leave `isVisible` on to drill deeper (the popup re-queries from the
+new path and stays open), or call its own `close()` to finish. Enter and Tab both accept
+the active option; Escape closes outright. Single-select only (`isMultiple` is classic-mode
+only, and it stays the only mode that keeps the popup open on a normal select).
+
+```tsx
+<input ref={inputRef} value={path} onChange={(e) => setPath(e.target.value)} />
+<Combobox
+  inputRef={inputRef}
+  isVisible={isVisible}
+  query={path}
+  options={folders}                 // pre-filtered by the trailing segment
+  onSelect={(name) => setPath(`${parentPath}${name}/`)}  // drills; stays open
+  onDismiss={() => setIsVisible(false)}
+/>
+```
+
+<Canvas of={ComboboxStories.AttachedInputDrillDown} />
+
 ## Virtualization, and why `aria-setsize` is not optional
 
 Above ~100 options (or with `isVirtualized`), the list is windowed with
