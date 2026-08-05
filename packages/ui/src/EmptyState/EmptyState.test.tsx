@@ -6,7 +6,8 @@ import { mountStory } from "../mountStory.testHelpers.ts"
 import { expectAgentDrivable } from "../testing/index.ts"
 import * as stories from "./EmptyState.stories.tsx"
 
-const { Default, Interactive } = composeStories(stories)
+const { Default, DeeplyNested, Interactive } =
+  composeStories(stories)
 
 test("the heading is the handle", async () => {
   const { canvas } = await mountStory(Default)
@@ -38,4 +39,18 @@ test("the heading level is the caller's, and Tab reaches the way out", async () 
   await userEvent.tab()
 
   await expect(action).toHaveFocus()
+})
+
+test("the heading level reaches h6 for a deeply nested section", async () => {
+  const { canvas } = await mountStory(DeeplyNested)
+
+  // An empty state nested past four sections needs 5 or 6; the old
+  // `2 | 3 | 4` cap was a guess about depth the caller knows, and
+  // `` `h${headingLevel}` `` never had an upper bound to begin with.
+  await expect(
+    canvas.getByRole("heading", {
+      level: 6,
+      name: "No discs queued",
+    }),
+  ).toBeVisible()
 })
