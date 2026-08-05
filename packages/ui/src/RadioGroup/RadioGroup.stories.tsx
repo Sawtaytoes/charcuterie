@@ -31,7 +31,7 @@ const meta = {
   // The component's own defaults, restated — Storybook does not seed
   // `args` from docgen, so an unstated default shows in the props
   // table with nothing selected in its control.
-  args: { size: "md" },
+  args: { isReadOnly: false, size: "md" },
 } satisfies Meta<typeof RadioGroup>
 
 export default meta
@@ -113,6 +113,16 @@ export const AllStates: Story = {
               { label: "Copy the files", value: "copy" },
             ]}
             label="On import"
+          />
+        </StoryCell>
+
+        <StoryCell label="read-only">
+          <RadioGroup
+            {...controlProps}
+            isReadOnly
+            items={NAMING_ITEMS}
+            label="Naming scheme, read-only"
+            selectedValue="anidb"
           />
         </StoryCell>
       </StoryGrid>

@@ -84,3 +84,32 @@ test("isChecked decides the first render", async () => {
     }),
   ).toHaveAttribute("aria-checked", "true")
 })
+
+test("a read-only switch is announced and cannot be flipped", async () => {
+  const { canvas, canvasElement } =
+    await mountStory(AllStates)
+
+  const readOnly = expectAgentDrivable(canvas, {
+    name: "Read-only",
+    role: "switch",
+  })
+
+  await expect(readOnly).toHaveAttribute(
+    "aria-readonly",
+    "true",
+  )
+
+  await expect(readOnly).toHaveAttribute(
+    "aria-checked",
+    "false",
+  )
+
+  await userEvent.click(readOnly)
+
+  await expect(readOnly).toHaveAttribute(
+    "aria-checked",
+    "false",
+  )
+
+  await expectNoAxeViolations(canvasElement)
+})

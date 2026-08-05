@@ -49,6 +49,19 @@ is a control every consumer has to hold it for.
 
 <Canvas of={CheckboxStories.AllStates} />
 
+## Three ways a box can be inactive
+
+`isDisabled` and `isReadOnly` are different states, and the box shows all three:
+
+- **Enabled** — the accent intent, a crisp `border-strong` edge.
+- **Disabled** — the same box turned down with `opacity-60`. It dims rather than fading a
+  token because the scale has no step between `border-default` and `border-strong`, so a
+  muted outline was either invisible or indistinguishable from enabled.
+- **Read-only** — full contrast, because the whole point is that the value stays legible,
+  but in the **neutral** intent with a softer edge: an informational value you may read
+  here and change elsewhere, not an actionable accent. It announces `aria-readonly`, and
+  the toggle is blocked on both pointer and `Space`.
+
 ## Checkbox or `Switch`
 
 Same state kind, different meaning. A checkbox is a value you **submit** — "delete
