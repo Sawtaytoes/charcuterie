@@ -136,6 +136,11 @@ jobs:
       # commit whose snapshot is the baseline — a shallow clone starves it.
       - uses: actions/checkout@v6
         with: { fetch-depth: 0 }
+      # actions/checkout leaves a detached HEAD on PRs, but
+      # reg-keygen-git-hash-plugin needs a branch name to key the baseline —
+      # re-attach to the source branch (PR) or the pushed branch (master).
+      - name: Attach HEAD to its branch
+        run: git checkout -B "${{ github.head_ref || github.ref_name }}"
       # No setup-node, unlike the ubuntu-latest jobs: the runner image
       # (agent-sandbox-base) IS the pinned toolchain — its node keeps the pixels
       # deterministic, and fetching a different node would undo that. But its
