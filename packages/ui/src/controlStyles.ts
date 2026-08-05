@@ -46,6 +46,14 @@ export const ICON_CONTROL_SIZE_CLASS: Record<
  * density — a finger does not get smaller because the list is
  * dense — so this is opt-in per control rather than baked into the
  * size classes, which would make `compact` a lie.
+ *
+ * **Do NOT add this to a control that shares a form row** (`Button`,
+ * `Select`, a `Listbox`/`Combobox` trigger, `SegmentedControl`, …). It
+ * overrides the shared `CONTROL_SIZE_CLASS` height and makes that one
+ * control taller than its neighbours at desktop density — touch sizing is
+ * the density axis's job. Reserve this for a genuinely standalone tap
+ * target. See
+ * `docs/decisions/2026-08-05-controls-share-one-height-no-per-component-touch-floor.md`.
  */
 export const MIN_TOUCH_TARGET_CLASS =
   "min-h-(--control-min-touch-target) min-w-(--control-min-touch-target)"
