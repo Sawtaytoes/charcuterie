@@ -101,6 +101,19 @@ shallower than ideal, which is a nesting warning in axe rather than a failure.
 
 ### The two merge helpers are duplicated
 
+> **Shipped 2026-08-05** — `mergeRefs` / `chainHandlers` / `isMergeableRef` / `isEventHandlerName`
+> (+ the `MergeableRef` type) now live in `packages/logic/src/react/mergeRefsAndHandlers.ts` and
+> are public exports of `@charcuterie/logic` (`minor`); `slotWiring.ts` imports them and keeps
+> only its own `mergeSlotWiring` (`@charcuterie/ui` `patch`, no behaviour change).
+>
+> **The Preact mirror was deliberately left standalone**, correcting the "plus its Preact
+> mirror … delete two copies" framing below. Its `mergeRefs` is genuinely different, not a stale
+> copy: React 19's callback ref returns a **cleanup** and the merged ref honours it per-ref;
+> Preact has no ref-cleanup return, so its `mergeRefs` is `(node) => void` and calls `setRef(…,
+> null)` the legacy way. Sharing that one across bindings would hand Preact a contract it does
+> not have. So this was a **react ↔ ui** dedup (one copy deleted); `logic/src/preact/mergeClonedProps.ts`
+> stays as-is on purpose. A future agent should not "finish the job" by merging it.
+
 `packages/ui/src/slotWiring.ts` and `packages/logic/src/react/mergeClonedProps.ts` (plus its
 Preact mirror) carry near-identical `mergeRefs` / `chainHandlers`. Sharing them means
 exporting from `@charcuterie/logic`, which is a `minor` — and 1.0.1 is a patch, so the

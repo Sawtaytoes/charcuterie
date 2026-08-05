@@ -21,126 +21,18 @@
  * `<Menu trigger={<Button ref={buttonRef} />} />` dropped
  * `buttonRef` on the floor, and the only symptom was a ref that
  * stayed `null`.
+ *
+ * The `ref`/`on*` primitives live in `./mergeRefsAndHandlers.ts` —
+ * `mergeSlotWiring` in `@charcuterie/ui` faced the identical problem
+ * one level up and used to carry a byte-identical copy of them.
  */
 
-const isEventHandlerName = (name: string) =>
-  /^on[A-Z]/.test(name)
-
-type MergeableRef =
-  | ((node: unknown) => unknown)
-  | { current: unknown }
-
-const isMergeableRef = (
-  value: unknown,
-): value is MergeableRef =>
-  typeof value === "function" ||
-  (typeof value === "object" &&
-    value !== null &&
-    "current" in value)
-
-const setRef = (ref: MergeableRef, node: unknown) => {
-  if (typeof ref === "function") {
-    return ref(node)
-  }
-
-  ref.current = node
-
-  return undefined
-}
-
-/**
- * Every pair of refs ever merged, so the same two always come back
- * as the **same function**.
- *
- * This is not an optimisation, it is the difference between working
- * and hanging. React re-runs a callback ref whenever its identity
- * changes between renders — detaching with the old one, attaching
- * with the new — and both refs in play here are floating-ui
- * `setReference`s, which set state when they are called. A merged
- * ref rebuilt on every render would therefore call `setReference`
- * twice per render, each of which schedules the render that rebuilds
- * it again.
- *
- * A `WeakMap` of `WeakMap`s rather than a cache key, because the
- * keys *are* the identities being compared, and neither map keeps a
- * ref (or the component that owns it) alive.
- */
-const mergedRefs = new WeakMap<
-  MergeableRef,
-  WeakMap<MergeableRef, (node: unknown) => () => void>
->()
-
-const mergeRefs = (
-  first: MergeableRef,
-  second: MergeableRef,
-) => {
-  const bySecond =
-    mergedRefs.get(first) ??
-    new WeakMap<
-      MergeableRef,
-      (node: unknown) => () => void
-    >()
-
-  mergedRefs.set(first, bySecond)
-
-  const cached = bySecond.get(second)
-
-  if (cached) {
-    return cached
-  }
-
-  const merged = (node: unknown) => {
-    const cleanups = [
-      setRef(first, node),
-      setRef(second, node),
-    ]
-
-    /**
-     * Returning a cleanup is React 19's contract, and it has to be
-     * honoured **per ref**: a ref that returned its own cleanup has
-     * opted out of being called with `null`, and calling it with
-     * `null` anyway is the legacy behaviour it opted out of. One
-     * that returned nothing still expects the `null`.
-     */
-    return () => {
-      for (const [index, cleanup] of cleanups.entries()) {
-        if (typeof cleanup === "function") {
-          cleanup()
-        } else {
-          setRef(index === 0 ? first : second, null)
-        }
-      }
-    }
-  }
-
-  bySecond.set(second, merged)
-
-  return merged
-}
-
-/**
- * Deliberately **not** memoised, unlike the refs above.
- *
- * Nothing observes a handler's identity the way React observes a
- * ref's — a new `onPointerEnter` every render is attached to the
- * same DOM node with no detach — and there would be nothing to cache
- * against anyway: floating-ui's `getReferenceProps()` composes its
- * handlers fresh on every call, so the pair being merged is a new
- * pair every time.
- */
-const chainHandlers =
-  (
-    first: (...args: unknown[]) => unknown,
-    second: (...args: unknown[]) => unknown,
-  ) =>
-  (...args: unknown[]) => {
-    // The child's own handler first. It is the one the caller wrote
-    // on the element they can see, and a wrapper reading
-    // `defaultPrevented` needs it to have already run.
-    first(...args)
-
-    second(...args)
-  }
+import {
+  chainHandlers,
+  isEventHandlerName,
+  isMergeableRef,
+  mergeRefs,
+} from "./mergeRefsAndHandlers.ts"
 
 const composeProp = (
   name: string,
