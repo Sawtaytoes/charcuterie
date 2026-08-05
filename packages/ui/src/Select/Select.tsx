@@ -5,10 +5,7 @@ import type {
   ReactNode,
 } from "react"
 
-import {
-  CONTROL_SIZE_CLASS,
-  MIN_TOUCH_TARGET_CLASS,
-} from "../controlStyles.ts"
+import { CONTROL_SIZE_CLASS } from "../controlStyles.ts"
 import {
   DISABLED_CLASS,
   FOCUS_RING_CLASS,
@@ -139,8 +136,12 @@ export const Select = ({
         // removes, and forgetting to put one back leaves a control
         // that looks exactly like a text input.
         "pe-9",
+        // Height comes from the shared control-size/density system ONLY —
+        // no per-component touch-target floor. Touch is the density axis's
+        // job (`[data-density]` scales `--control-height-*` past 44px on a
+        // kiosk), so forcing 44px here made Select taller than Button et al.
+        // at desktop density. See the controls-share-one-height decision.
         CONTROL_SIZE_CLASS[size],
-        MIN_TOUCH_TARGET_CLASS,
         "hover:border-border-strong",
         FOCUS_RING_CLASS,
         DISABLED_CLASS,
