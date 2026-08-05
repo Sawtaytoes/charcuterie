@@ -256,16 +256,18 @@ test("this package has class names to check at all", () => {
 })
 
 /**
- * The two class names in this package that are deliberately not
+ * The class names in this package that are deliberately not
  * utilities.
  *
- * `group` is Tailwind's own marker — it generates no CSS by design,
- * it is what `group-hover:` reads. The `charcuterie-*` four are the
- * looping affordances, which cannot be utilities because Tailwind's
- * own `animate-spin` hardcodes 1s past `prefers-reduced-motion`;
- * they live in `styles.css` and are checked against it below.
+ * `group` and `peer` are Tailwind's own markers — they generate no
+ * CSS by design, they are what `group-hover:` and `peer-checked:`
+ * read (`Checkbox` overlays its tick with `peer-checked:visible`).
+ * The `charcuterie-*` four are the looping affordances, which cannot
+ * be utilities because Tailwind's own `animate-spin` hardcodes 1s
+ * past `prefers-reduced-motion`; they live in `styles.css` and are
+ * checked against it below.
  */
-const TAILWIND_MARKER_CLASSES = ["group"]
+const TAILWIND_MARKER_CLASSES = ["group", "peer"]
 
 test("every `charcuterie-` class a component uses is defined in styles.css", async () => {
   // The other half of the "no silently-unstyled component" gate. A

@@ -1,0 +1,58 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as CheckboxStories from "./Checkbox.stories";
+
+<Meta of={CheckboxStories} />
+
+# Checkbox
+
+A single boolean, on or off, that owns nothing but itself.
+
+This is the primitive mux-magic's `BooleanField` hand-rolled because the library had no
+checkbox to reach for. Its box was `bg-slate-700 border-slate-500 accent-blue-500` — three
+palette colours with no light mode, the exact M6 defect the token layer exists to delete.
+Here the box is `bg-surface-sunken`, its border `border-border-strong`, and the fill
+`bg-intent-accent-solid`, so one control reads correctly in `daylight`, `midnight`, and on
+the kiosk with no per-app override. `BooleanField` becomes a thin wrapper that binds this
+to a `CommandField`.
+
+<Canvas of={CheckboxStories.Default} />
+
+## Props
+
+<Controls />
+
+## The `<label>` wraps the control
+
+A checkbox reads to the **left** of its text, which is why it is not a `Field`. `Field`
+stacks label above control in a `flex-col` — right for a text input, wrong for a boolean —
+and stacking every checkbox in a step card (`isRecursive`, `isDryRun`, …) would double the
+card's height for no gain.
+
+Wrapping is also the one label association that needs no `for` at all: the control is a
+descendant of its `<label>`, so there is no id to mint, clone, and get wrong. That is the
+whole defect [`Field`](/docs/components-field--docs) exists to prevent, avoided here by
+construction rather than by wiring.
+
+<Canvas of={CheckboxStories.AllVariants} />
+
+## The `<input>` is the store
+
+`defaultChecked`, not `checked`. The DOM owns a checkbox's state natively, so there is no
+second copy to keep in step and no controlled round-trip — reading the value back is the
+`<input>`'s job, and `onChange` reports each change to a consumer that wants to persist it.
+`isChecked` seeds the first paint and nothing after.
+
+This is the same refusal `SegmentedControl` makes about `selectedValue`: a controlled prop
+is the thing this library does not have, because a control that cannot hold its own state
+is a control every consumer has to hold it for.
+
+<Canvas of={CheckboxStories.AllStates} />
+
+## Checkbox or `Switch`
+
+Same state kind, different meaning. A checkbox is a value you **submit** — "delete
+originals", "I agree" — and a [`Switch`](/docs/components-switch--docs) is a setting that
+**takes effect the moment it is flipped**. A screen reader announces
+"checked/unchecked" for one and "on/off" for the other, which is the line to hold when
+choosing between them.
