@@ -60,6 +60,11 @@ pointer is the hand-rolled version, and it is worse than waiting.
 
 ### `Menu` has no non-item states
 
+> **Shipped 2026-08-05** — `items` is now a union (`MenuItem | MenuSeparator | MenuGroup`) with
+> `role="separator"` / `role="group"`, plus an `emptyState?` prop (a disabled `menuitem`, since a
+> `role="menu"` must own one). Arbitrary interactive nodes were **excluded on purpose** — see the
+> [decision](decisions/2026-08-05-menu-items-is-a-discriminated-union.md). `@charcuterie/ui` minor.
+
 `items: MenuItem[]` is the whole content model: every entry is a `menuitem` with a label and
 an `onSelect`. There is no separator, no group heading, no "no actions available" empty
 state, and no way to put an arbitrary node in the panel.
