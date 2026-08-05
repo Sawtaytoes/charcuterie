@@ -53,9 +53,28 @@ export const ComboboxOption = ({
       aria-selected={isSelected}
       aria-setsize={setSize}
       className={toClassName(
-        "flex w-full cursor-pointer items-center justify-between gap-2 rounded-sm bg-transparent px-2 py-1.5 text-start text-content-primary text-sm",
-        isActive && "bg-intent-neutral-surface",
-        isSelected && "bg-intent-accent-surface",
+        // No base `bg-transparent`: it is a plain `background-color`
+        // utility at the same specificity as the state tints below, and
+        // Tailwind emits it *after* them, so it silently won every row —
+        // the active option and the selected option both rendered with no
+        // fill and the keyboard cursor was invisible (it read as "arrows
+        // do nothing"). A button's background is transparent by default;
+        // the tint classes only ever add one.
+        "flex w-full cursor-pointer items-center justify-between gap-2 rounded-sm px-2 py-1.5 text-start text-content-primary text-sm",
+        // The row highlight sits on `surface-overlay`, and on that panel
+        // `intent-neutral-surface` is *darker* than the surface in every
+        // dark scheme (it is a base-surface tint) — so the visible token
+        // is `-hover`. Active is the keyboard cursor; hover is the
+        // pointer's; both use it.
+        !isDisabled &&
+          "hover:bg-intent-neutral-surface-hover",
+        isActive && "bg-intent-neutral-surface-hover",
+        // The accent tint marks selection when the cursor is elsewhere;
+        // the active row keeps its own highlight (the ✓ still marks it as
+        // selected), so the two are never fighting for one row's fill.
+        isSelected &&
+          !isActive &&
+          "bg-intent-accent-surface",
         isDisabled &&
           "cursor-not-allowed text-content-disabled",
       )}
