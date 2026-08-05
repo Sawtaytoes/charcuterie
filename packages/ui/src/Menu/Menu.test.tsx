@@ -10,6 +10,8 @@ import * as stories from "./Menu.stories.tsx"
 const {
   AllStates,
   AllVariants,
+  Empty,
+  Grouped,
   Interactive,
   SharedTrigger,
 } = composeStories(stories)
@@ -319,4 +321,104 @@ test("the tooltip sharing that trigger is anchored to it too", async () => {
       Math.round(triggerRect.top) - 6,
     )
   })
+})
+
+test("a group is a named group and a separator is a separator", async () => {
+  const { body } = await mountStory(Grouped)
+
+  const menu = expectAgentDrivable(body, {
+    name: "Bay 6",
+    role: "menu",
+  })
+
+  // Each group is a `role="group"` named by its heading, so a screen
+  // reader announces "Danger, group" before its members.
+  expectAgentDrivable(body, {
+    name: "Disc",
+    role: "group",
+  })
+
+  expectAgentDrivable(body, {
+    name: "Danger",
+    role: "group",
+  })
+
+  // A native `<hr>`, which carries the implicit `role="separator"`.
+  await expect(menu.querySelectorAll("hr")).toHaveLength(1)
+
+  await expect(body.getAllByRole("separator")).toHaveLength(
+    1,
+  )
+
+  await expectNoAxeViolations(menu)
+})
+
+test("arrow keys skip group headings and separators", async () => {
+  const { body } = await mountStory(Grouped)
+
+  const retry = expectAgentDrivable(body, {
+    name: "Retry title",
+    role: "menuitem",
+  })
+
+  const skip = expectAgentDrivable(body, {
+    name: "Skip title",
+    role: "menuitem",
+  })
+
+  const eject = expectAgentDrivable(body, {
+    name: "Eject disc",
+    role: "menuitem",
+  })
+
+  // Opening lands on the first item, and arrow-down walks the items
+  // in DOM order across the group boundary — the heading and the
+  // separator register nothing, so there is nothing between Skip
+  // (end of group one) and Eject (start of group two) to stop on.
+  await waitFor(() => {
+    expect(retry).toHaveFocus()
+  })
+
+  await userEvent.keyboard("{ArrowDown}")
+
+  await waitFor(() => {
+    expect(skip).toHaveFocus()
+  })
+
+  await userEvent.keyboard("{ArrowDown}")
+
+  await waitFor(() => {
+    expect(eject).toHaveFocus()
+  })
+})
+
+test("an empty menu shows a disabled note, not an actionable item", async () => {
+  const { body } = await mountStory(Empty)
+
+  const menu = expectAgentDrivable(body, {
+    name: "Bay 7",
+    role: "menu",
+  })
+
+  await expect(menu).toHaveTextContent(
+    "No actions available",
+  )
+
+  // The note is the menu's one `menuitem` — a `role="menu"` must own
+  // one — but it is `aria-disabled` and carries no tab stop, so a
+  // keyboard user is told the menu is empty and cannot land on it.
+  const items = menu.querySelectorAll<HTMLElement>(
+    '[role="menuitem"]',
+  )
+
+  await expect(items).toHaveLength(1)
+
+  await expect(items[0]).toHaveAttribute(
+    "aria-disabled",
+    "true",
+  )
+
+  await expect(items[0]?.tabIndex).toBe(-1)
+
+  await expectNoAxeViolations(menu)
 })
