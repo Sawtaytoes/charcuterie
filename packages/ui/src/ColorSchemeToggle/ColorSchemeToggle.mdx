@@ -39,6 +39,18 @@ rather than a nameless button.
 
 <Canvas of={ColorSchemeToggleStories.AllModes} />
 
+## Intent is `neutral`, not accent
+
+`intent` is the same tone union `Button`/`IconButton` accept, and it **defaults to
+`neutral`** here on purpose. A scheme switcher is toolbar chrome, so its ghost hover reads
+as `hover:bg-intent-neutral-surface` and its icon as `text-intent-neutral-content` —
+chrome, not a violet accent action. `IconButton`'s own default is `accent`, which on real
+app chrome made this control look like a call-to-action; forwarding `neutral` is the fix,
+and it means a consumer no longer needs an `!important` className to tone it down. Pass
+`intent="accent"` (or any tone) to opt back in.
+
+<Canvas of={ColorSchemeToggleStories.Intents} />
+
 ## Cycling is the only form, for now
 
 A segmented, all-three-visible `ColorSchemePicker` was considered and deferred (owner chose
