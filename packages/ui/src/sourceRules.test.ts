@@ -303,7 +303,17 @@ test("the barrel is the only place components are re-exported", async () => {
   // `Swatch` — a colour as content with a required name, the one
   // colour the system does not own — comes out of `portly-controllers`,
   // the fleet's newest consumer: +1 -> 32.
-  expect(componentNames.length).toBe(32)
+  //
+  // The boolean-input family fills the gap `mux-magic`'s `BooleanField`
+  // hand-rolled around: `Checkbox` and `Switch` (the same state kind,
+  // a submitted value versus a setting that takes effect on flip) and
+  // `RadioGroup` (the stacked sibling of `SegmentedControl`, same
+  // `SinglePicker` + `RovingFocus` composition): +3 -> 35.
+  // `RadioGroupOption` is `RadioGroup`'s member — its own file only
+  // because both registrations are effects — and stays out of this
+  // count and the barrel by the `<Name>/<Name>.tsx` rule, exactly as
+  // `SegmentedOption` does.
+  expect(componentNames.length).toBe(35)
 
   for (const name of componentNames) {
     expect(barrel).toContain(`export { ${name} }`)

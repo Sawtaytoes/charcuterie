@@ -1,0 +1,58 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as RadioGroupStories from "./RadioGroup.stories";
+
+<Meta of={RadioGroupStories} />
+
+# RadioGroup
+
+One choice out of many, each on its own row with a label the size of prose.
+
+`RadioGroup` and [`SegmentedControl`](/docs/components-segmentedcontrol--docs) are the
+**same composition** — `SinglePicker` + `RovingFocus`, a `radiogroup` of `radio`s where
+selection follows focus — and a different shape. The segmented strip is compact, for a
+handful of short options that share a control row; the radio group is form-length, where
+each option carries a real sentence and an in-line strip would wrap. Choosing between them
+is layout, not behaviour, which is why the keyboard model is identical and lives in the same
+two hooks.
+
+<Canvas of={RadioGroupStories.Default} />
+
+## Props
+
+<Controls />
+
+## `radiogroup`, not a stack of checkboxes
+
+A column of `<input type="checkbox">` is the **independent toggles** pattern: nothing in it
+says the options are mutually exclusive, so a screen reader announces each as its own
+on/off with no "1 of 4" and no clue that checking one unchecks the rest. A single choice
+from a named set is a radio group, and ARIA has a pattern for it — which is the same
+correction `SegmentedControl` makes to rip-deck's row of `aria-pressed` buttons.
+
+<Canvas of={RadioGroupStories.AllVariants} />
+
+## Selection follows focus
+
+APG gives a radio group one activation mode: the arrow keys both move focus and check.
+There is nothing behind an option here to be expensive — no panel, no request — so unlike
+`Tabs` there is no `manual` mode and no prop, because a `manual` radio group is one the
+arrow keys appear to do nothing in. Tab enters the group once (the roving-tabindex rule),
+the arrows move and check together, Home and End jump to the ends, and the ends wrap.
+
+A disabled option is simply **not registered** with the roving group, so the arrows skip it
+without any command having to know what "disabled" means. It stays registered with the
+picker — it is still one of the options, and still the one a saved `selectedValue` may point
+at.
+
+<Canvas of={RadioGroupStories.AllStates} />
+
+## `selectedValue` is the initial value, not a controlled one
+
+It decides the first render and nothing after — Charcuterie owns the choice from then on,
+and `onChange` reports it outward. Members register from an effect, so on the first paint
+the value lives in the picker's `pendingValue` and the group paints already showing it
+rather than flashing empty for a frame — a flash on a desktop, a visible blank on a kiosk
+Pi.
+
+<Canvas of={RadioGroupStories.Interactive} />

@@ -52,6 +52,8 @@ export type {
   CardSurface,
 } from "./Card/Card.tsx"
 export { Card } from "./Card/Card.tsx"
+export type { CheckboxProps } from "./Checkbox/Checkbox.tsx"
+export { Checkbox } from "./Checkbox/Checkbox.tsx"
 export type { ColorSchemeSwitcherProps } from "./ColorSchemeSwitcher/ColorSchemeSwitcher.tsx"
 export { ColorSchemeSwitcher } from "./ColorSchemeSwitcher/ColorSchemeSwitcher.tsx"
 export type {
@@ -142,6 +144,11 @@ export {
   toProgressValue,
 } from "./ProgressBar/progressValue.ts"
 export type {
+  RadioGroupProps,
+  RadioItem,
+} from "./RadioGroup/RadioGroup.tsx"
+export { RadioGroup } from "./RadioGroup/RadioGroup.tsx"
+export type {
   SegmentedControlProps,
   SegmentedItem,
 } from "./SegmentedControl/SegmentedControl.tsx"
@@ -171,6 +178,8 @@ export type {
   SwatchSize,
 } from "./Swatch/Swatch.tsx"
 export { Swatch } from "./Swatch/Swatch.tsx"
+export type { SwitchProps } from "./Switch/Switch.tsx"
+export { Switch } from "./Switch/Switch.tsx"
 export type { SlotProps } from "./slotProps.ts"
 export { mergeSlotProps } from "./slotProps.ts"
 export {
