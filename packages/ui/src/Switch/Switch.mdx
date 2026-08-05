@@ -43,11 +43,13 @@ a filled track plus a contrasting thumb survives both, which is the same reason
 
 <Canvas of={SwitchStories.AllStates} />
 
-## One that is off is still reachable
+## Disabled dims, read-only does not
 
-`disabled` removes it from the tab order and the pointer, and `aria-disabled` is left to the
-native `disabled` the `<button>` already carries. A disabled-and-on switch is a setting the
-user cannot currently change — a policy forced from above, say — not a broken control, and
-it reads that way to a screen reader.
+`isDisabled` removes the switch from the tab order and the pointer and turns the whole
+control down with `opacity-60` — a setting the user cannot currently change, a policy
+forced from above, still fully visible. `isReadOnly` is the other half: full contrast so
+the state stays legible, but the accent gives way to the **neutral** intent and the flip
+is refused (`aria-readonly`, the `onClick` guarded). A read-only switch is a value you may
+read here and change elsewhere; a disabled one is a control that is simply off-limits now.
 
 <Canvas of={SwitchStories.Interactive} />

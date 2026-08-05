@@ -189,3 +189,44 @@ test("selectedValue decides the first render and nothing after", async () => {
     ).toHaveTextContent("Use a custom pattern")
   })
 })
+
+test("a read-only group is announced and its choice cannot move", async () => {
+  const { canvas, canvasElement } =
+    await mountStory(AllStates)
+
+  const group = expectAgentDrivable(canvas, {
+    name: "Naming scheme, read-only",
+    role: "radiogroup",
+  })
+
+  await expect(group).toHaveAttribute(
+    "aria-readonly",
+    "true",
+  )
+
+  // The checked option shows at full contrast; that is the value the
+  // read-only group is displaying.
+  await waitFor(() => {
+    expect(
+      group.querySelector('[aria-checked="true"]'),
+    ).toHaveTextContent("Match AniDB titles")
+  })
+
+  const other = Array.from(
+    group.querySelectorAll<HTMLButtonElement>(
+      '[role="radio"]',
+    ),
+  ).find(
+    (one) => one.textContent === "Use a custom pattern",
+  )
+
+  await userEvent.click(other ?? group)
+
+  // Selection-follows-focus is severed when read-only — a click on
+  // another option does not move the choice.
+  await expect(
+    group.querySelector('[aria-checked="true"]'),
+  ).toHaveTextContent("Match AniDB titles")
+
+  await expectNoAxeViolations(canvasElement)
+})
