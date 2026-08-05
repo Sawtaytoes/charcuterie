@@ -181,3 +181,18 @@ export const Interactive: Story = {
     />
   ),
 }
+
+/**
+ * Nested inside an already-deep section, an empty state is not an
+ * `<h2>`. The level goes to `6` so the outline never has to skip —
+ * the cap was a guess about document depth the consumer knows
+ * better than the component does.
+ */
+export const DeeplyNested: Story = {
+  args: {
+    description:
+      "Insert a disc and rip-deck will pick it up automatically.",
+    heading: "No discs queued",
+    headingLevel: 6,
+  },
+}

@@ -19,8 +19,13 @@ export type EmptyStateProps = Omit<
    * only the caller knows what it sits under. Getting this wrong
    * breaks a screen reader's document outline, which is how the
    * fleet's `<h2>`-with-a-`<button>`-inside pattern happened.
+   *
+   * The full `2–6` range because the cap is a guess about document
+   * structure the consumer knows better than we do — an empty state
+   * nested inside an already-deep section needs `5` or `6`, and
+   * `` `h${headingLevel}` `` never cared about the upper bound.
    */
-  headingLevel?: 2 | 3 | 4
+  headingLevel?: 2 | 3 | 4 | 5 | 6
   heading: string
   icon?: ReactNode
   size?: EmptyStateSize
