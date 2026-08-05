@@ -21,6 +21,15 @@ export type CheckboxProps = {
   isChecked?: boolean
   isDisabled?: boolean
   /**
+   * Shows the value at full contrast but refuses to change it — a
+   * setting you may read here and edit elsewhere. Distinct from
+   * `isDisabled`, which dims: a read-only box is not turned down,
+   * because the whole point is that you can still read it. Announced
+   * as `aria-readonly`, and the toggle is blocked on both pointer and
+   * `Space`.
+   */
+  isReadOnly?: boolean
+  /**
    * The visible text beside the box, and the checkbox's accessible
    * name — the `<label>` wraps the control, so there is no `for` to
    * get wrong. A box with no label is a control a screen reader
@@ -83,33 +92,59 @@ export const Checkbox = ({
   id,
   isChecked = false,
   isDisabled = false,
+  isReadOnly = false,
   label,
   onChange,
   size = "md",
 }: CheckboxProps): ReactNode => (
   <label
     className={toClassName(
-      "inline-flex cursor-pointer items-center gap-2 text-content-secondary select-none",
+      "inline-flex items-center gap-2 text-content-secondary select-none",
       TEXT_SIZE_CLASS[size],
-      isDisabled &&
-        "cursor-not-allowed text-content-disabled",
+      // One cursor, chosen by state — two cursor utilities of the same
+      // specificity do not resolve by class-list order.
+      isDisabled
+        ? "cursor-not-allowed"
+        : isReadOnly
+          ? "cursor-default"
+          : "cursor-pointer",
+      // Disabled dims the whole control with opacity rather than fading
+      // the box to a quieter token. The token scale has no step between
+      // `border-default` and `border-strong`, so a muted outline was
+      // either invisible or indistinguishable from enabled; `opacity-60`
+      // keeps the full shape and colour and just turns them down, which
+      // is the "present but inactive" the box actually is. Read-only is
+      // *not* dimmed — its whole point is that the value stays readable.
+      // The same treatment is on `Switch` and `RadioGroup`.
+      isDisabled && "opacity-60",
       className,
     )}
   >
     <span className="relative grid shrink-0 place-items-center">
       <input
+        aria-readonly={isReadOnly || undefined}
         className={toClassName(
-          "peer cursor-pointer appearance-none rounded-sm border border-border-strong bg-surface-sunken transition-colors duration-(--duration-fast) ease-standard",
-          "checked:border-intent-accent-solid checked:bg-intent-accent-solid",
-          // Disabled mutes the border and the cursor, and — unlike the
-          // shared `DISABLED_CLASS` — does *not* touch the background.
-          // The generic bundle repaints the box `surface-sunken`, which
-          // erased both the checked accent fill (white tick on grey)
-          // and, in a light scheme, the unchecked box entirely: a
-          // `border-subtle` outline on `surface-sunken` on
-          // `surface-base` is three near-identical creams. A disabled
-          // box is still a box the user has to see.
-          "disabled:cursor-not-allowed disabled:border-border-default",
+          // `border-2` is the family's shared weight — the `Switch`
+          // track's `ring-2` and the `RadioGroup` ring match it, so the
+          // three read as one set — and a 2px edge is also what keeps a
+          // disabled box visible where a 1px one washed out.
+          "peer appearance-none rounded-sm border-2 bg-surface-sunken transition-colors duration-(--duration-fast) ease-standard",
+          // Read-only wears the **neutral** intent, not the accent: full
+          // contrast (so the value reads) but plainly not an actionable
+          // accent control, with a softer `border-default` resting edge.
+          // Three distinct states result — enabled (accent, crisp),
+          // disabled (accent, dimmed by the wrapper), read-only (neutral).
+          // No `disabled:` colour override; the wrapper's `opacity-60`
+          // does the dimming, and doubling it on the box is what made a
+          // disabled checkbox vanish.
+          isReadOnly
+            ? "border-border-default checked:border-intent-neutral-solid checked:bg-intent-neutral-solid"
+            : "border-border-strong checked:border-intent-accent-solid checked:bg-intent-accent-solid",
+          isDisabled
+            ? "cursor-not-allowed"
+            : isReadOnly
+              ? "cursor-default"
+              : "cursor-pointer",
           BOX_SIZE_CLASS[size],
           FOCUS_RING_CLASS,
         )}
@@ -119,7 +154,26 @@ export const Checkbox = ({
         onChange={(
           event: ChangeEvent<HTMLInputElement>,
         ) => {
+          if (isReadOnly) {
+            return
+          }
+
           onChange?.(event.target.checked)
+        }}
+        onClick={(clickEvent) => {
+          // Native checkboxes have no `readonly`, so the toggle is
+          // blocked here — `preventDefault` on the click stops the
+          // checked flip a pointer would make.
+          if (isReadOnly) {
+            clickEvent.preventDefault()
+          }
+        }}
+        onKeyDown={(keyEvent) => {
+          // …and Space, the keyboard toggle a click block does not
+          // cover.
+          if (isReadOnly && keyEvent.key === " ") {
+            keyEvent.preventDefault()
+          }
         }}
         type="checkbox"
       />
@@ -127,7 +181,12 @@ export const Checkbox = ({
       <svg
         aria-hidden="true"
         className={toClassName(
-          "pointer-events-none invisible absolute text-intent-accent-on-solid peer-checked:visible",
+          "pointer-events-none invisible absolute peer-checked:visible",
+          // Matches whichever fill the box wears, so the tick keeps its
+          // guaranteed on-solid contrast in either intent.
+          isReadOnly
+            ? "text-intent-neutral-on-solid"
+            : "text-intent-accent-on-solid",
           CHECK_SIZE_CLASS[size],
         )}
         fill="none"
