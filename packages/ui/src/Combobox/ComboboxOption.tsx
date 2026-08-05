@@ -60,7 +60,14 @@ export const ComboboxOption = ({
         // fill and the keyboard cursor was invisible (it read as "arrows
         // do nothing"). A button's background is transparent by default;
         // the tint classes only ever add one.
-        "flex w-full cursor-pointer items-center justify-between gap-2 rounded-sm px-2 py-1.5 text-start text-content-primary text-sm",
+        "flex w-full cursor-pointer items-center justify-between gap-2 rounded-sm px-2 py-1.5 text-start text-sm",
+        // The base sets no text colour: a plain `text-content-primary`
+        // clobbers a conditional `text-content-disabled` at equal
+        // specificity (Tailwind emits the base last), so a disabled option
+        // rendered full-strength instead of greyed. Pick one colour.
+        isDisabled
+          ? "text-content-disabled"
+          : "text-content-primary",
         // The row highlight sits on `surface-overlay`, and on that panel
         // `intent-neutral-surface` is *darker* than the surface in every
         // dark scheme (it is a base-surface tint) — so the visible token
@@ -75,8 +82,7 @@ export const ComboboxOption = ({
         isSelected &&
           !isActive &&
           "bg-intent-accent-surface",
-        isDisabled &&
-          "cursor-not-allowed text-content-disabled",
+        isDisabled && "cursor-not-allowed",
       )}
       disabled={isDisabled}
       id={id}
