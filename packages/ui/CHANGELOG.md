@@ -1,5 +1,45 @@
 # @charcuterie/ui
 
+## 2.3.0
+
+### Minor Changes
+
+- 64709dc: Combobox: add attached-input mode (`inputRef`). Combobox binds to a
+  consumer-owned `<input>` instead of rendering its own — the field is both the
+  value and the query — anchoring a list-only popup to it and mirroring the
+  combobox ARIA onto it. Because the consumer owns `isVisible`, a select does not
+  auto-dismiss in this mode, which supports drill-down (e.g. folder navigation
+  that appends a segment and re-queries the new directory without closing). Also
+  adds an optional `anchorRef` to `useAnchoredOverlay` for anchoring a panel to an
+  existing element rather than a cloned trigger.
+
+### Patch Changes
+
+- 64709dc: Combobox/Listbox: fix an invisible option highlight, and make Combobox
+  multi-select tags persistent.
+
+  - The option row carried a base `bg-transparent`, a plain `background-color`
+    utility Tailwind emits _after_ the `bg-intent-*-surface` state tints — so at
+    equal specificity it silently won every row. Combobox's keyboard cursor
+    (`aria-activedescendant`) and both components' selected fills rendered with no
+    background, which read as "the arrow keys do nothing". The base class no
+    longer sets a background (a button is transparent by default), so the tints
+    apply.
+  - The row highlight also switches from `intent-neutral-surface` to
+    `intent-neutral-surface-hover`: on the `surface-overlay` panel the plain tint
+    is darker than the surface in every dark scheme, so even once it applied it
+    read as no change. `-hover` is the visible token there.
+  - Combobox multi-select (`isMultiple`) chips now render as an always-visible,
+    removable tag row above the trigger instead of inside the popup, so a picked
+    value stays on screen after the popup closes. Each chip shows the option's
+    human label (e.g. "English", not "eng") and an ✕ remove control.
+
+- 64709dc: Select: drop the per-component 44px min-touch-target floor so its height
+  matches Button (and every other control) at the same `size`. Height now comes
+  from the shared control-size/density system only — at desktop density `md` is
+  40px, not 44px; touch sizing remains the density axis's job. See the
+  controls-share-one-height decision.
+
 ## 2.2.0
 
 ### Minor Changes
