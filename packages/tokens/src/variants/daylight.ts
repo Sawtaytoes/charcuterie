@@ -75,8 +75,8 @@ export const daylight: Variant = {
       },
       intent: {
         neutral: {
-          surface: "#EDF0F5",
-          surfaceHover: "#E3E8EF",
+          surface: "#E6EBF2",
+          surfaceHover: "#DEE4EF",
           border: "#DDE2EA",
           content: "#3B4353",
           solid: "#3B4353",
