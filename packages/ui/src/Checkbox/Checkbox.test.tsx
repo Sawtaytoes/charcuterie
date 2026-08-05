@@ -78,3 +78,32 @@ test("isChecked decides the first render", async () => {
     }),
   ).toBeChecked()
 })
+
+test("a read-only box is announced and cannot be toggled", async () => {
+  const { canvas, canvasElement } =
+    await mountStory(AllStates)
+
+  const readOnly = expectAgentDrivable(canvas, {
+    name: "Read-only",
+    role: "checkbox",
+  })
+
+  // Full contrast, not `disabled` — a read-only value stays readable,
+  // and it is focusable so a screen reader reaches it. The state is
+  // carried by `aria-readonly`, not by removing it from the tree.
+  await expect(readOnly).toHaveAttribute(
+    "aria-readonly",
+    "true",
+  )
+
+  await expect(readOnly).not.toBeDisabled()
+
+  await expect(readOnly).not.toBeChecked()
+
+  await userEvent.click(readOnly)
+
+  // The pointer block held — the box did not flip.
+  await expect(readOnly).not.toBeChecked()
+
+  await expectNoAxeViolations(canvasElement)
+})

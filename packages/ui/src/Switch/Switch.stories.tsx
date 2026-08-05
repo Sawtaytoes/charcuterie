@@ -16,7 +16,12 @@ const meta = {
   // The component's own defaults, restated — Storybook does not seed
   // `args` from docgen, so an unstated default shows in the props
   // table with nothing selected in its control.
-  args: { isChecked: false, isDisabled: false, size: "md" },
+  args: {
+    isChecked: false,
+    isDisabled: false,
+    isReadOnly: false,
+    size: "md",
+  },
 } satisfies Meta<typeof Switch>
 
 export default meta
@@ -78,6 +83,23 @@ export const AllStates: Story = {
             isChecked
             isDisabled
             label="Disabled and on"
+          />
+        </StoryCell>
+
+        <StoryCell label="read-only, off">
+          <Switch
+            {...controlProps}
+            isReadOnly
+            label="Read-only"
+          />
+        </StoryCell>
+
+        <StoryCell label="read-only, on">
+          <Switch
+            {...controlProps}
+            isChecked
+            isReadOnly
+            label="Read-only and on"
           />
         </StoryCell>
       </StoryGrid>
