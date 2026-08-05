@@ -7,6 +7,13 @@ dist
 node_modules
 storybook-static
 
+# Visual-regression scratch: reg-suit's working dir and the freshly
+# captured "actual" PNGs. Baselines live in Garage S3, never in git
+# (that's the whole point — see agentic VRT decision record).
+.reg
+packages/*/.reg
+packages/*/.vrt-actual
+
 # Generated token artifacts — rebuilt by scripts/buildTokens.ts and
 # scripts/buildPreview.ts. The M0 winner's board gets promoted into
 # docs/previews/ deliberately; the scratch output does not.

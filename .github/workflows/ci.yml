@@ -100,3 +100,89 @@ jobs:
       # Clicks through every entry over the addons channel in ONE page load, so
       # the module-ordering defects a per-story mount cannot see still fail here.
       - run: yarn smoke:storybook
+
+  # **Visual regression — its own job, on a SELF-HOSTED LAN runner.**
+  #
+  # Why not `ubuntu-latest`: the baseline store is Garage (self-hosted S3) at
+  # `garage.octen.dev` / `10.1.0.6:3900`, which resolves only on the LAN — a
+  # GitHub-hosted runner cannot reach it. A LAN runner also pins fonts and the
+  # browser build, so a re-render of an unchanged story is pixel-identical;
+  # that determinism is the single biggest lever against reg-suit flake. The
+  # `vrt` label is served by our own runner (see agentic
+  # docs/runbooks/self-hosted-github-runner-vrt.md).
+  #
+  # Baselines never touch git (that's the whole design — no LFS on a public
+  # repo): capture renders each story light+dark, reg-suit diffs against the
+  # baseline it pulls from Garage and re-publishes actual+diff+report there,
+  # and we post the verdict back as a commit status + PR comment ourselves —
+  # NOT via reg-notify-github-plugin, which would route through reg-suit's
+  # third-party hosted GitHub App. `vrtReportStatus.mjs` exits non-zero on a
+  # real regression so this check goes red; approve a change by merging, and
+  # the baseline advances on the next push to master.
+  #
+  # The `if` skips fork PRs: a self-hosted runner must never execute untrusted
+  # fork code. Same-repo `agent/*` branches — the actual workflow here — run.
+  vrt:
+    runs-on: [self-hosted, vrt]
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name == github.repository
+    permissions:
+      contents: read
+      statuses: write
+      pull-requests: write
+    steps:
+      # fetch-depth 0: reg-keygen-git-hash-plugin walks history to find the
+      # commit whose snapshot is the baseline — a shallow clone starves it.
+      - uses: actions/checkout@v6
+        with: { fetch-depth: 0 }
+      # actions/checkout leaves a detached HEAD on PRs, but
+      # reg-keygen-git-hash-plugin needs a branch name to key the baseline —
+      # re-attach to the source branch (PR) or the pushed branch (master).
+      - name: Attach HEAD to its branch
+        run: git checkout -B "${{ github.head_ref || github.ref_name }}"
+      # No setup-node, unlike the ubuntu-latest jobs: the runner image
+      # (agent-sandbox-base) IS the pinned toolchain — its node keeps the pixels
+      # deterministic, and fetching a different node would undo that. But its
+      # yarn is a login-shell corepack shim the non-login Actions shell can't
+      # see, so enable one into a writable dir on PATH. A plain `corepack enable`
+      # can't symlink into the image's root-owned /usr/bin as the non-root
+      # runner; `--install-directory` writes the shim somewhere we own instead.
+      - name: Prepare toolchain (yarn shim + Playwright browsers path)
+        run: |
+          mkdir -p "$HOME/.local/bin"
+          corepack enable --install-directory "$HOME/.local/bin" yarn
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          # The base image pins PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers, which
+          # is root-owned — the non-root runner can't write there. Install the
+          # browser under HOME instead (persists on the runner-home volume, so
+          # it's downloaded once and reused across runs).
+          echo "PLAYWRIGHT_BROWSERS_PATH=$HOME/.cache/ms-playwright" >> "$GITHUB_ENV"
+      - run: yarn install --immutable
+      - run: yarn workspace @charcuterie/docs exec playwright install chromium
+      - run: yarn build:storybook
+      - run: yarn workspace @charcuterie/docs vrt:capture
+
+      - name: Compare against baseline and publish to Garage
+        id: regsuit
+        working-directory: packages/docs
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.GARAGE_S3_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.GARAGE_S3_SECRET_KEY }}
+          AWS_REGION: garage
+        run: |
+          set -o pipefail
+          yarn reg-suit run | tee reg-out.txt
+          echo "key=$(grep -oP "current snapshot key: '\K[0-9a-f]+" reg-out.txt | tail -1)" >> "$GITHUB_OUTPUT"
+          echo "url=$(grep -oP 'Report URL: \K\S+' reg-out.txt | tail -1)" >> "$GITHUB_OUTPUT"
+
+      - name: Post commit status + PR comment
+        working-directory: packages/docs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          VRT_STATUS_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          VRT_PR_NUMBER: ${{ github.event.pull_request.number }}
+          VRT_REPORT_URL: ${{ steps.regsuit.outputs.url }}
+          VRT_REPORT_KEY: ${{ steps.regsuit.outputs.key }}
+        run: node scripts/vrtReportStatus.mjs
