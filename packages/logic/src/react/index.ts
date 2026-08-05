@@ -14,6 +14,13 @@
  */
 
 export * from "../core/index.ts"
+export {
+  chainHandlers,
+  isEventHandlerName,
+  isMergeableRef,
+  type MergeableRef,
+  mergeRefs,
+} from "./mergeRefsAndHandlers.ts"
 export { useClonedChild } from "./useClonedChild.ts"
 export type { UseColorSchemeOptions } from "./useColorScheme.ts"
 export { useColorScheme } from "./useColorScheme.ts"
