@@ -44,6 +44,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 const ComboboxHarness = ({
+  className,
   emptyLabel,
   error,
   footer,
@@ -55,6 +56,7 @@ const ComboboxHarness = ({
   options,
   triggerLabel,
 }: {
+  className?: string
   emptyLabel?: string
   error?: ReactNode
   footer?: ReactNode
@@ -75,6 +77,7 @@ const ComboboxHarness = ({
   return (
     <>
       <Combobox
+        className={className}
         emptyLabel={emptyLabel}
         error={error}
         footer={footer}
@@ -385,6 +388,48 @@ export const DisabledFirstOption: Story = {
       isInitiallyVisible
       options={LANGUAGES_DISABLED_FIRST}
       triggerLabel="Pick a language"
+    />
+  ),
+}
+
+// 150 long folder names: over the ~100 auto-virtualize threshold, and in
+// a narrow (`w-72`) panel each wraps to two lines — the combination that
+// broke. The virtualizer estimates 36px/row, so a fixed-height row clipped
+// the second line and stacked the next row on top of it (overlapping
+// text). This is the regression guard for the measured-row fix.
+const MANY_LONG: ListboxItem[] = Array.from(
+  { length: 150 },
+  (_unused, index) => {
+    const name = `Armored Trooper Votoms - Very Long Chapter Title Number ${index + 1} [anidb-${1000 + index}]`
+
+    return {
+      label: `📁 ${name}`,
+      textValue: name,
+      value: name,
+    }
+  },
+)
+
+/**
+ * The real-world break: **many** long option labels in a **narrow** panel,
+ * so the list both virtualizes (over ~100 options) and wraps each row to
+ * two lines. Rows are measured, not pinned to the 36px estimate, so they
+ * lay out below one another instead of overlapping.
+ */
+export const VirtualizedLongOptions: Story = {
+  args: {
+    isVisible: false,
+    onDismiss: () => {},
+    onSelect: () => {},
+    options: MANY_LONG,
+    trigger: <Button>Search folders</Button>,
+  },
+  render: () => (
+    <ComboboxHarness
+      className="w-72"
+      isInitiallyVisible
+      options={MANY_LONG}
+      triggerLabel="Search folders"
     />
   ),
 }
