@@ -47,7 +47,13 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          for pkg in tokens logic ui eslint-config biome-config; do
+          # storybook-config last: it depends on tokens, and its FIRST
+          # publish (0.1.0) is done by hand — OIDC trusted publishing cannot be
+          # configured for a package that does not exist yet. See
+          # packages/storybook-config/SEEDING.md. Once 0.1.0 is seeded and its
+          # `storybook-config-v0.1.0` tag pushed, this loop skips it until a
+          # changeset bumps the version, and by then OIDC must be set up.
+          for pkg in tokens logic ui eslint-config biome-config storybook-config; do
             dir="packages/$pkg"
             name="$(node -p "require('./$dir/package.json').name")"
             version="$(node -p "require('./$dir/package.json').version")"
