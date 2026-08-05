@@ -88,11 +88,20 @@ const ComboboxHarness = ({
         isVisible={isVisible}
         onDismiss={hide}
         onSelect={(value) => {
-          setChosen((previous) =>
-            previous.includes(value)
+          // Mirror the control's own selection model so the "Chosen"
+          // line never disagrees with the ticks in the list: multi-select
+          // accumulates/toggles, single-select replaces (one value, one
+          // ✓). Toggling into an array in single-select made the line
+          // claim several were chosen while only the last carried a tick.
+          setChosen((previous) => {
+            if (!isMultiple) {
+              return [value]
+            }
+
+            return previous.includes(value)
               ? previous.filter((one) => one !== value)
-              : [...previous, value],
-          )
+              : [...previous, value]
+          })
         }}
         options={options}
         trigger={
@@ -415,6 +424,11 @@ const MANY_LONG: ListboxItem[] = Array.from(
  * so the list both virtualizes (over ~100 options) and wraps each row to
  * two lines. Rows are measured, not pinned to the 36px estimate, so they
  * lay out below one another instead of overlapping.
+ *
+ * Multi-select as well, so it exercises the case together: every picked
+ * row keeps its own ✓ (a virtualized row that scrolls out and back is
+ * re-rendered from `selected`, not remembered by the DOM), and the chips
+ * above the trigger stay in sync with the ticks.
  */
 export const VirtualizedLongOptions: Story = {
   args: {
@@ -428,6 +442,7 @@ export const VirtualizedLongOptions: Story = {
     <ComboboxHarness
       className="w-72"
       isInitiallyVisible
+      isMultiple
       options={MANY_LONG}
       triggerLabel="Search folders"
     />
