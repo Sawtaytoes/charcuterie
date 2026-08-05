@@ -18,6 +18,12 @@ follows the OS, remembers the user's choice, and re-themes with zero React re-re
 
 <Controls />
 
+## Tone is neutral chrome
+
+Like `ColorSchemeToggle`, this forwards `intent="neutral"` to the button by default — a
+scheme switcher is chrome, not an accent action, so its ghost hover is the neutral surface
+rather than accent-violet. Pass `intent` (any tone `Button` accepts) to change it.
+
 ## Every seam is overridable — that is the point
 
 `resolver`, `persistence`, and `apply` all default to the browser implementations but can be

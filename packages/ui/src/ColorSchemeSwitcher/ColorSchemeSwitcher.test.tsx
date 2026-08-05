@@ -51,3 +51,15 @@ test("cycling to a concrete mode re-applies the scheme", async () => {
 
   await expectNoAxeViolations(canvasElement)
 })
+
+test("the connected switcher forwards the neutral intent by default", async () => {
+  const { canvasElement } = await mountStory(Default)
+
+  const button = canvasElement.querySelector("button")
+
+  // Chrome, not an accent action — the hover is the neutral surface.
+  expect(button?.className).toContain(
+    "hover:bg-intent-neutral-surface",
+  )
+  expect(button?.className).not.toContain("intent-accent")
+})
