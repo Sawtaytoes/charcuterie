@@ -73,15 +73,25 @@ export const ListboxOption = ({
         // and silently won at equal specificity, so the selected option's
         // accent fill never showed (only its ✓ did). Default is
         // transparent anyway; the tints below add a fill.
-        "flex w-full cursor-pointer items-center justify-between gap-2 rounded-sm px-2 py-1.5 text-start text-content-primary text-sm transition-colors duration-(--duration-fast) ease-standard",
-        // `-hover`, not plain `intent-neutral-surface`: on the
-        // `surface-overlay` panel the plain tint is darker than the
-        // surface in dark schemes and the hover reads as no change.
+        "flex w-full cursor-pointer items-center justify-between gap-2 rounded-sm px-2 py-1.5 text-start text-sm transition-colors duration-(--duration-fast) ease-standard",
+        // The base sets no text colour: a plain `text-content-primary` in
+        // it clobbers a conditional `text-content-disabled` at equal
+        // specificity (Tailwind emits the base last), so a disabled option
+        // rendered full-strength and did not look disabled — it read as a
+        // normal row the arrow keys "wrongly" skipped. Pick one colour.
+        isDisabled
+          ? "text-content-disabled"
+          : "text-content-primary",
+        // The active (roving-focused) row gets a fill on **`:focus`**, not
+        // `:focus-visible` — so it is visible even when the listbox was
+        // opened by mouse. The ring is keyboard-only, so on a mouse-open
+        // the initial option had no indicator and the first ArrowDown
+        // looked like it skipped it. `-hover`, not the plain tint, because
+        // that is darker than `surface-overlay` in dark schemes.
         !isDisabled &&
-          "hover:bg-intent-neutral-surface-hover",
+          "hover:bg-intent-neutral-surface-hover focus:bg-intent-neutral-surface-hover",
         isSelected && "bg-intent-accent-surface",
-        isDisabled &&
-          "cursor-not-allowed text-content-disabled",
+        isDisabled && "cursor-not-allowed",
         FOCUS_RING_CLASS,
       )}
       disabled={isDisabled}
