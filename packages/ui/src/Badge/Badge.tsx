@@ -77,7 +77,7 @@ export const Badge = ({
     <span
       {...spanProps}
       className={toClassName(
-        "inline-flex shrink-0 items-center rounded-full border font-medium",
+        "inline-flex shrink-0 items-center rounded-none border font-medium",
         // The cap. Without it every other rule here is decoration.
         "max-w-full",
         overflow === "wrap"
