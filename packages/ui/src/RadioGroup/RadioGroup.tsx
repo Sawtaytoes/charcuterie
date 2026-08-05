@@ -25,6 +25,13 @@ export type RadioItem = {
 export type RadioGroupProps = {
   className?: string
   items: readonly RadioItem[]
+  /**
+   * Shows which option is chosen at full contrast but refuses to move
+   * the choice — the arrow keys and clicks no longer select, and the
+   * group announces `aria-readonly`. Focus can still travel the
+   * options so a keyboard user can read them.
+   */
+  isReadOnly?: boolean
   /** The group's accessible name. Required. */
   label: string
   onChange?: (selectedValue: string | null) => void
@@ -64,6 +71,7 @@ const GAP_CLASS: Record<ControlSize, string> = {
 export const RadioGroup = ({
   className,
   items,
+  isReadOnly = false,
   label,
   onChange,
   selectedValue,
@@ -104,21 +112,26 @@ export const RadioGroup = ({
 
   const chooseOption = useCallback(
     (value: string) => {
+      // Focus may still land on the option so it can be read; only the
+      // choice is frozen when read-only.
       setActiveValue(value)
 
-      select(value)
+      if (!isReadOnly) {
+        select(value)
+      }
     },
-    [select, setActiveValue],
+    [isReadOnly, select, setActiveValue],
   )
 
   useEffect(() => {
     // Selection follows focus — the radio-group rule, and the one
     // line a `manual` mode this component deliberately lacks would
-    // remove.
-    if (activeValue !== null) {
+    // remove. Read-only severs exactly this link: focus still travels
+    // for reading, but moving it no longer moves the choice.
+    if (activeValue !== null && !isReadOnly) {
       select(activeValue)
     }
-  }, [activeValue, select])
+  }, [activeValue, isReadOnly, select])
 
   useEffect(() => {
     const group = groupRef.current
@@ -137,6 +150,7 @@ export const RadioGroup = ({
   return (
     <div
       aria-label={label}
+      aria-readonly={isReadOnly || undefined}
       className={toClassName(
         "flex flex-col",
         GAP_CLASS[size],
@@ -167,8 +181,12 @@ export const RadioGroup = ({
 
         // Space checks the focused option. Selection already follows
         // focus, so this is almost always a no-op — one idempotent
-        // command, not a second code path.
-        if (keyEvent.key === " " && activeValue !== null) {
+        // command, not a second code path — and read-only skips it.
+        if (
+          keyEvent.key === " " &&
+          activeValue !== null &&
+          !isReadOnly
+        ) {
           keyEvent.preventDefault()
 
           select(activeValue)
@@ -180,6 +198,7 @@ export const RadioGroup = ({
       {items.map((item) => (
         <RadioGroupOption
           isChecked={checkedValue === item.value}
+          isReadOnly={isReadOnly}
           item={item}
           key={item.value}
           onChoose={chooseOption}
