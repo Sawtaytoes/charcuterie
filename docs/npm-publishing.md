@@ -1,6 +1,6 @@
 # npm Publishing
 
-Charcuterie publishes **five** packages to npm under the `@charcuterie` scope:
+Charcuterie publishes **six** packages to npm under the `@charcuterie` scope:
 
 | Package | Notes |
 | --- | --- |
@@ -9,8 +9,17 @@ Charcuterie publishes **five** packages to npm under the `@charcuterie` scope:
 | `@charcuterie/ui` | Components. Depends on `logic` + `tokens` (`workspace:*`). |
 | `@charcuterie/eslint-config` | Shared ESLint rules. |
 | `@charcuterie/biome-config` | Shared Biome settings. |
+| `@charcuterie/storybook-config` | Shared Storybook setup. Depends on `tokens` (`workspace:*`). |
 
 `@charcuterie/docs` (the Storybook host) is `private` and never publishes.
+
+**A brand-new package's first publish is manual** — npm OIDC trusted publishing
+cannot be configured for a package that does not exist yet, so the name has to be
+claimed and its first version pushed by hand once, then trusted publishing wired
+up in npm's UI. `storybook-config` was seeded this way at `0.1.0`; the runbook is
+[`packages/storybook-config/SEEDING.md`](../packages/storybook-config/SEEDING.md).
+Its `storybook-config-v0.1.0` tag makes the deploy loop skip `0.1.0` until a
+changeset bumps it.
 
 ## How releases work
 
