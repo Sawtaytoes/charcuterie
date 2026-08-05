@@ -1,0 +1,86 @@
+{
+  "name": "@charcuterie/storybook-config",
+  "version": "0.1.0",
+  "description": "The shared Storybook setup for the fleet: theme-axis toolbars (scheme/variant/density), the first-paint seed, and the a11y + controls defaults, so every app's Storybook themes light/dark the same way.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./preview": {
+      "source": "./src/preview.tsx",
+      "types": "./dist/preview.d.ts",
+      "default": "./dist/preview.js"
+    },
+    "./vite": {
+      "source": "./src/vite.ts",
+      "types": "./dist/vite.d.ts",
+      "default": "./dist/vite.js"
+    },
+    "./src/*": "./src/*"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "prepack": "yarn build",
+    "test": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@charcuterie/tokens": "workspace:*",
+    "remark-gfm": "^4.0.1"
+  },
+  "peerDependencies": {
+    "@storybook/addon-docs": ">=10",
+    "@storybook/react": ">=10",
+    "@storybook/react-vite": ">=10",
+    "@tailwindcss/vite": ">=4",
+    "react": ">=19",
+    "react-dom": ">=19",
+    "storybook": ">=10",
+    "vite": ">=6"
+  },
+  "peerDependenciesMeta": {
+    "@storybook/react-vite": {
+      "optional": true
+    },
+    "@tailwindcss/vite": {
+      "optional": true
+    },
+    "vite": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@storybook/addon-docs": "^10.3.6",
+    "@storybook/react": "^10.3.6",
+    "@storybook/react-vite": "^10.3.6",
+    "@tailwindcss/vite": "^4.3.0",
+    "@types/node": "^25.6.2",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "storybook": "^10.3.6",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.16",
+    "vitest": "^4.1.8"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Sawtaytoes/charcuterie.git",
+    "directory": "packages/storybook-config"
+  }
+}
