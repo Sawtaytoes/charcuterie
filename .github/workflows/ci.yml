@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
-        with: { node-version: 24 }
+        with: { node-version: 26 }
       - run: corepack enable && yarn install --immutable
       - run: yarn lint:biome
       - run: yarn lint:eslint
@@ -21,7 +21,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
-        with: { node-version: 24 }
+        with: { node-version: 26 }
       - run: corepack enable && yarn install --immutable
       # Storybook and the docs typecheck read the built dist, so build first.
       - run: yarn build
@@ -32,7 +32,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
-        with: { node-version: 24 }
+        with: { node-version: 26 }
       - run: corepack enable && yarn install --immutable
       # playwright lives in the docs/logic workspaces, not the root — run its
       # installer from a workspace that has it; browsers land in the shared cache.
@@ -72,7 +72,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
-        with: { node-version: 24 }
+        with: { node-version: 26 }
       - run: corepack enable && yarn install --immutable
       # The smoke run drives the built site with playwright, which lives in the
       # docs workspace rather than the root — same install as the `test` job.
