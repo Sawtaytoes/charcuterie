@@ -10,7 +10,10 @@
     "storybook": "storybook dev -p 6006 --config-dir .storybook",
     "test:storybook": "vitest run --config vitest.storybook.config.ts",
     "test:ui-dom": "vitest run --config vitest.ui.config.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "vrt:capture": "node scripts/vrtCapture.mjs",
+    "vrt:compare": "reg-suit run",
+    "vrt:notify": "node scripts/vrtReportStatus.mjs"
   },
   "dependencies": {
     "@charcuterie/storybook-config": "workspace:*",
@@ -32,6 +35,9 @@
     "@vitest/browser": "^4.1.8",
     "@vitest/browser-playwright": "^4.1.8",
     "playwright": "^1.61.1",
+    "reg-keygen-git-hash-plugin": "^0.14.2",
+    "reg-publish-s3-plugin": "^0.14.2",
+    "reg-suit": "^0.14.2",
     "remark-gfm": "^4.0.1",
     "storybook": "^10.3.6",
     "storybook-addon-pseudo-states": "^10.5.5",
