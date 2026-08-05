@@ -30,7 +30,10 @@ test("a control's own id is adopted, not overwritten", async () => {
     role: "textbox",
   })
 
-  await expect(control).toHaveAttribute("id", "rename-pattern")
+  await expect(control).toHaveAttribute(
+    "id",
+    "rename-pattern",
+  )
 
   await expectNoAxeViolations(canvasElement)
 })
