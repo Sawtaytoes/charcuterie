@@ -181,6 +181,15 @@ const capture = async (page, { id, scheme }) => {
 
   await page.evaluate(() => document.fonts.ready)
 
+  // Let post-mount effects settle before the shot. `storybook-addon-pseudo-states`
+  // applies forced :hover/:focus/:active classes a tick AFTER render, so shooting
+  // the instant the root has children catches the un-forced state on some runs and
+  // the forced one on others — a real flake seen on `*--all-states` stories. A
+  // short settle closes that window (transitions are already snapped to their end
+  // state by `animations: "disabled"` below, so this is about class application,
+  // not motion).
+  await page.waitForTimeout(400)
+
   const root = page.locator("#storybook-root")
   const box = await root.boundingBox()
 

@@ -3,6 +3,7 @@
     "workingDir": ".reg",
     "actualDir": ".vrt-actual",
     "thresholdRate": 0.02,
+    "enableAntialias": true,
     "addIgnore": true,
     "ximgdiff": {
       "invocationType": "client"
