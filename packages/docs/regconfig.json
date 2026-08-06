@@ -12,7 +12,7 @@
     "reg-keygen-git-hash-plugin": {},
     "reg-publish-s3-plugin": {
       "bucketName": "vrt-charcuterie",
-      "customDomain": "garage.octen.dev",
+      "customDomain": "charcuterie.reg-suit.octen.dev",
       "sdkOptions": {
         "endpoint": "http://10.1.0.6:3900",
         "region": "garage",
