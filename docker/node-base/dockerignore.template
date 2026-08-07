@@ -1,0 +1,23 @@
+# Canonical .dockerignore for a fleet Yarn-workspace app. Copy to the
+# repo root as `.dockerignore`. Keeps the build context small and the
+# install layer cache-stable; crucially, KEEPS `.yarn/releases` +
+# `.yarn/plugins` (the vendored Yarn the builder needs) while dropping
+# the churny cache/state.
+.git
+.github
+.forgejo
+.gitea
+**/node_modules
+**/dist
+**/build
+**/storybook-static
+**/coverage
+**/__screenshots__
+**/__snapshots__
+.yarn/cache
+.yarn/install-state.gz
+.yarn/unplugged
+*.log
+.env
+.env.*
+!.env.example
