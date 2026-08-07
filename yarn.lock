@@ -880,6 +880,17 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@charcuterie/playwright-config@workspace:packages/playwright-config":
+  version: 0.0.0-use.local
+  resolution: "@charcuterie/playwright-config@workspace:packages/playwright-config"
+  dependencies:
+    "@types/node": "npm:^25.6.2"
+    typescript: "npm:^6.0.3"
+  peerDependencies:
+    "@playwright/test": ">=1.40"
+  languageName: unknown
+  linkType: soft
+
 "@charcuterie/storybook-config@workspace:*, @charcuterie/storybook-config@workspace:packages/storybook-config":
   version: 0.0.0-use.local
   resolution: "@charcuterie/storybook-config@workspace:packages/storybook-config"
@@ -928,6 +939,12 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@charcuterie/tsconfig@workspace:packages/tsconfig":
+  version: 0.0.0-use.local
+  resolution: "@charcuterie/tsconfig@workspace:packages/tsconfig"
+  languageName: unknown
+  linkType: soft
+
 "@charcuterie/ui@workspace:*, @charcuterie/ui@workspace:packages/ui":
   version: 0.0.0-use.local
   resolution: "@charcuterie/ui@workspace:packages/ui"
@@ -948,6 +965,29 @@ __metadata:
   peerDependencies:
     react: ">=19"
     react-dom: ">=19"
+  languageName: unknown
+  linkType: soft
+
+"@charcuterie/vite-config@workspace:packages/vite-config":
+  version: 0.0.0-use.local
+  resolution: "@charcuterie/vite-config@workspace:packages/vite-config"
+  dependencies:
+    "@types/node": "npm:^25.6.2"
+    typescript: "npm:^6.0.3"
+  peerDependencies:
+    vite: ">=5"
+  languageName: unknown
+  linkType: soft
+
+"@charcuterie/vitest-config@workspace:packages/vitest-config":
+  version: 0.0.0-use.local
+  resolution: "@charcuterie/vitest-config@workspace:packages/vitest-config"
+  dependencies:
+    "@types/node": "npm:^25.6.2"
+    typescript: "npm:^6.0.3"
+    vitest: "npm:^4.1.8"
+  peerDependencies:
+    vitest: ">=3"
   languageName: unknown
   linkType: soft
 
