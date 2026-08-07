@@ -1,0 +1,34 @@
+{
+  "name": "@charcuterie/vite-config",
+  "version": "1.0.0",
+  "description": "A shared Vite config factory for the Charcuterie fleet — call createViteConfig(overrides) and add your own plugins.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./*": "./src/*"
+  },
+  "files": [
+    "src"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "vite": ">=5"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.2",
+    "typescript": "^6.0.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Sawtaytoes/charcuterie.git",
+    "directory": "packages/vite-config"
+  }
+}
