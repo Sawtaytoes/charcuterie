@@ -1,7 +1,10 @@
 # Charcuterie
 
-Shared tokens, state logic, and components for the app fleet — so UI is edited in one
-place and every app inherits look, behaviour, and accessibility.
+The app fleet's **shared infrastructure** — design tokens, state logic, UI components, **and
+build/test/lint/Docker tooling** — so those choices are made in one place and every app
+inherits them (look, behaviour, accessibility, *and* how it builds/tests/lints), updating
+hands-off via Renovate. Not just a component library — and deliberately one repo, since the
+`tokens ← logic ← ui` DAG is already the isolation a split would duplicate.
 
 > **This is the `v2` branch.** v1 — the Children-First React state library from
 > [this talk](https://www.youtube.com/watch?v=n62Pc4KV4SM) — lives on `master` and still
@@ -45,7 +48,12 @@ not see.
 | --- | --- | --- |
 | [`@charcuterie/tokens`](packages/tokens/README.md) | **live** | Token source of truth + generated CSS/JSON. Zero deps, no React. |
 | [`@charcuterie/biome-config`](packages/biome-config/README.md) | **live** | Shared Biome settings as an extends-target. |
-| [`@charcuterie/eslint-config`](packages/eslint-config/README.md) | **live** | The rules Biome cannot express. |
+| [`@charcuterie/eslint-config`](packages/eslint-config/README.md) | **live** | The rules Biome cannot express — type-aware naming (incl. the `is`/`has` boolean rule), identifier length, logical-properties-only. |
+| [`@charcuterie/tsconfig`](packages/tsconfig/README.md) | **live** | Shared TS compiler settings: `base` + `app`/`react`/`node-lib` presets via subpath `extends`. |
+| [`@charcuterie/vitest-config`](packages/vitest-config/README.md) | **live** | `createVitestConfig(overrides)` factory over a shared base. |
+| [`@charcuterie/vite-config`](packages/vite-config/README.md) | **live** | `createViteConfig(overrides)` factory — build/server defaults, plugins by the app. |
+| [`@charcuterie/playwright-config`](packages/playwright-config/README.md) | **live** | `createPlaywrightConfig(overrides)` factory for the web-UI apps. |
+| [`@charcuterie/storybook-config`](packages/storybook-config/README.md) | **live** | Shared Storybook theming/preview + vite helpers. |
 | [`@charcuterie/docs`](packages/docs/README.md) | **live**, private | Storybook host. |
 | [`@charcuterie/logic`](packages/logic/README.md) | **live** | The five state kinds as framework-free cores, plus React 19 and Preact bindings and optional Jotai/signals store adapters. |
 | [`@charcuterie/ui`](packages/ui/README.md) | **live** | The P0 components — Spinner, Skeleton, Button, IconButton, Badge, ProgressBar, EmptyState, Card, LiveStatusIndicator, MediaTile, VisuallyHidden — plus Tabs, Alert, SegmentedControl, the P1 set (Accordion, Field, FileDropZone, LogViewer, Select, SortableTableHeader, Toast, Menu, Tooltip), the colour-scheme controls, Lightbox, and M8's portalled overlay family: the base **Modal**, **Dialog** (its chrome), **Popover**, and the picker family **Listbox**/**Combobox** (siblings of Select). Re-exports tokens at `@charcuterie/ui/tokens`. |
@@ -53,6 +61,12 @@ not see.
 
 Dependency direction is one-way: `tokens ← logic ← ui`. Forbidden forever:
 `logic → ui`, `tokens → anything`.
+
+The **build tooling** ships in three channels: the config packages above (consumed by
+`extends`/factory import + `^` range), a **Docker base image**
+[`docker/node-base/`](docker/node-base/README.md) →
+`ghcr.io/sawtaytoes/charcuterie-node-base:<NODE_MAJOR>` (consumed by `FROM`), and the Node
+major as a single source of truth. Renovate keeps every consumer current.
 
 ## Commands
 
