@@ -1,0 +1,32 @@
+{
+  "name": "@charcuterie/tsconfig",
+  "version": "1.0.0",
+  "description": "Shared TypeScript compiler settings for the Charcuterie fleet — a base preset plus app / react / node-lib variants.",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": "./base.json",
+    "./base": "./base.json",
+    "./app": "./app.json",
+    "./react": "./react.json",
+    "./node-lib": "./node-lib.json"
+  },
+  "files": [
+    "base.json",
+    "app.json",
+    "react.json",
+    "node-lib.json"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "scripts": {
+    "typecheck": "echo \"no TypeScript in @charcuterie/tsconfig\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Sawtaytoes/charcuterie.git",
+    "directory": "packages/tsconfig"
+  }
+}

@@ -53,7 +53,7 @@ jobs:
           # packages/storybook-config/SEEDING.md. Once 0.1.0 is seeded and its
           # `storybook-config-v0.1.0` tag pushed, this loop skips it until a
           # changeset bumps the version, and by then OIDC must be set up.
-          for pkg in tokens logic ui eslint-config biome-config storybook-config; do
+          for pkg in tokens logic ui eslint-config biome-config storybook-config tsconfig vitest-config vite-config playwright-config; do
             dir="packages/$pkg"
             name="$(node -p "require('./$dir/package.json').name")"
             version="$(node -p "require('./$dir/package.json').version")"
