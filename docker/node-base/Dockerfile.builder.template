@@ -1,0 +1,34 @@
+# syntax=docker/dockerfile:1
+#
+# Reference builder + runtime skeleton for a fleet Yarn-workspace app.
+# Copy this into the app's own Dockerfile, keep the `base`/`builder`
+# stages ~as-is, and add ONLY the app's runtime layer (OS/native deps,
+# ports, entrypoint) to the `runtime` stage. The scaffolding CLI
+# (`@charcuterie/create-app`) emits this; Renovate bumps the FROM tag.
+
+ARG NODE_MAJOR=26
+
+# The shared base — corepack fix, tini, non-root node user, WORKDIR.
+FROM ghcr.io/sawtaytoes/charcuterie-node-base:${NODE_MAJOR} AS base
+
+# ---------- builder ----------
+# Manifests first so the install layer caches across source-only edits.
+# List every workspace's package.json explicitly for the same reason.
+FROM base AS builder
+COPY --chown=node:node .yarnrc.yml package.json yarn.lock ./
+COPY --chown=node:node .yarn/ .yarn/
+# COPY --chown=node:node packages/<name>/package.json packages/<name>/package.json
+RUN yarn install --immutable
+COPY --chown=node:node . .
+RUN yarn build
+
+# ---------- runtime ----------
+# Production deps + built output only. Add the app's native deps here:
+#   USER root
+#   RUN apt-get update && apt-get install --yes --no-install-recommends <pkgs> \
+#     && rm --recursive --force /var/lib/apt/lists/*
+#   USER node
+FROM base AS runtime
+COPY --chown=node:node --from=builder /app/node_modules ./node_modules
+COPY --chown=node:node --from=builder /app/dist ./dist
+# CMD ["node", "dist/main.js"]
