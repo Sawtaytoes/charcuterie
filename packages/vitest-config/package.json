@@ -1,6 +1,6 @@
 {
   "name": "@charcuterie/vitest-config",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A shared Vitest config factory for the Charcuterie fleet — call createVitestConfig(overrides) instead of hand-rolling vitest.config.ts.",
   "license": "MIT",
   "type": "module",

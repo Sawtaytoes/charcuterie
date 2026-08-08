@@ -1,6 +1,6 @@
 {
   "name": "@charcuterie/playwright-config",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A shared Playwright config factory for the Charcuterie fleet's web-UI apps — call createPlaywrightConfig(overrides).",
   "license": "MIT",
   "type": "module",
