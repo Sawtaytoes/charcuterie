@@ -14,6 +14,11 @@ export default defineConfig(
       "**/node_modules/**",
       "**/storybook-static/**",
       ".yarn/**",
+      // Hand-written declaration files (e.g. the *-config factory
+      // types) carry no runtime logic to lint, and a `.d.ts` that
+      // isn't in a tsconfig `include` trips the type-aware project
+      // service.
+      "**/*.d.ts",
       "packages/eslint-config/src/__fixtures__/**",
       "packages/tokens/preview/**",
     ],
