@@ -153,6 +153,12 @@
  *    standard properties ignores these pseudo-elements, and vice
  *    versa, so the two never fight.
  *
+ *  - `::-webkit-scrollbar-button` is suppressed deliberately: the
+ *    affordance is the thumb on a track, not step arrows. Without
+ *    this, classic Windows-style engines paint up/down (and left/right)
+ *    buttons at the ends of every bar. The standard path has no
+ *    equivalent hook — thin OS scrollbars already omit them.
+ *
  * Both read the same three roles — `border-strong` for the thumb,
  * `surface-sunken` for the track, `content-muted` for the thumb on
  * hover — so the bar is themed by `[data-scheme]` on `<html>` with
@@ -173,6 +179,12 @@
 .charcuterie-scrollbar::-webkit-scrollbar {
   width: 12px;
   height: 12px;
+}
+
+.charcuterie-scrollbar::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .charcuterie-scrollbar::-webkit-scrollbar-track {
