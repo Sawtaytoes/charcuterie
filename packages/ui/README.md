@@ -105,7 +105,7 @@ an hour of confusion.
 | Size | `controlStyles.ts` — `h-(--control-height-md)`, so `[data-density]` decides |
 | Type | `text-sm`/`text-md`/`text-lg`, which are **ours**: `theme.css` bridges `--text-*` onto the density-scaled `--font-size-*` |
 | Motion | `styles.css`, at `--duration-loop-*`, switched off under `prefers-reduced-motion` |
-| Scrollbar | `styles.css` — add `charcuterie-scrollbar` to any scrolling element for a thin, token-tinted bar that flips with `[data-scheme]` |
+| Scrollbar | `styles.css` — add `charcuterie-scrollbar` to any scrolling element for a token-tinted bar (rounded thumb on Chromium/Safari; thin standard match on Firefox) that flips with `[data-scheme]` |
 | State | `@charcuterie/logic` — `useUniqueId` for label wiring, `useStatus` for `MediaTile`'s three image states |
 
 **Class names are never interpolated.** `` `bg-intent-${intent}-solid` `` generates nothing

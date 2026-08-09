@@ -29,8 +29,8 @@ type Story = StoryObj
 
 const paragraphs = [
   "A scroll container earns its scrollbar only when its content overflows, so each box here is sized well under the text it holds.",
-  "The modern properties — scrollbar-width: thin and a token-tinted scrollbar-color — are all Firefox has ever honoured, and Chromium honours them from 121 on.",
-  "The ::-webkit-scrollbar block is the fallback older Chromium and every Safari still need, and the only place a rounded thumb and a track-coloured inset can be drawn.",
+  "The designed bar is the ::-webkit-scrollbar path — a 12px track, a rounded 6px thumb, a track-coloured inset, no step arrows — which is what Chromium, Edge, and Safari paint.",
+  "Firefox never sees those pseudo-elements, so it gets the closest standard-property match (scrollbar-width: thin + a token-tinted scrollbar-color), scoped so Chromium does not drop the designed bar.",
   "Both read the same three roles: border-strong for the thumb, surface-sunken for the track, content-muted for the thumb under the pointer.",
   "So one flip of data-scheme on the html element repaints the bar with the rest of the page, and nothing in the React tree has to know it happened.",
   "The fleet grew this affordance twice by hand before it was promoted here, which is exactly the duplication the design system exists to delete.",

@@ -9,11 +9,11 @@
  * hardcode 1s and 2s, ignore `prefers-reduced-motion`, and are
  * therefore beyond the theme's reach — which is exactly why
  * `MotionTokens` carries a separate `loopFast`/`loopSlow` ramp. The
- * scrollbar is the other: `scrollbar-width`/`scrollbar-color` and the
- * `::-webkit-scrollbar` pseudo-elements have no `@theme`-generated
- * utility, so `.charcuterie-scrollbar` at the foot of this file reads
- * the same `--color-*` roles by hand and flips with `data-scheme` on
- * the same repaint as everything else.
+ * scrollbar is the other: the `::-webkit-scrollbar` pseudo-elements
+ * (and Firefox's `scrollbar-width`/`scrollbar-color`) have no
+ * `@theme`-generated utility, so `.charcuterie-scrollbar` at the foot
+ * of this file reads the same `--color-*` roles by hand and flips with
+ * `data-scheme` on the same repaint as everything else.
  *
  * Consumers import this once, after `@charcuterie/tokens/theme.css`.
  *
@@ -134,48 +134,36 @@
   }
 }
 
-/* `.charcuterie-scrollbar` — a thin, token-tinted scrollbar for any
- * element that scrolls. The fleet grew this twice by hand
- * (gallery-downloader's `scrollbar-thin-token`, image-viewer's global
- * `::-webkit-scrollbar` block); this is the one copy, promoted here so
- * a scheme flip repaints it for free.
+/* `.charcuterie-scrollbar` — a token-tinted scrollbar for any element
+ * that scrolls. The fleet grew this twice by hand (gallery-downloader's
+ * `scrollbar-thin-token`, image-viewer's global `::-webkit-scrollbar`
+ * block); this is the one copy, promoted here so a scheme flip
+ * repaints it for free.
  *
- * Two mechanisms, because no single one covers every engine:
+ * The *designed* look is the `::-webkit-scrollbar` path: a 12px bar, a
+ * rounded thumb, a track-coloured inset, no step arrows. That is what
+ * Chromium, Edge, and Safari paint. Chromium 121+ will *prefer*
+ * `scrollbar-width` / `scrollbar-color` over these pseudo-elements
+ * whenever both are set, which collapses the bar to the thin OS chrome
+ * (arrows and all on Windows) — so the standard properties are scoped
+ * to Firefox only, where `::-webkit-scrollbar` never runs.
  *
- *  - `scrollbar-width` / `scrollbar-color` is the standard, and the
- *    only one Firefox has ever honoured; Chromium supports it from
- *    121. It is the whole affordance where it applies, and it cannot
- *    round a corner or draw a track inset — a deliberate platform
- *    limit, not an omission here.
- *  - `::-webkit-scrollbar` is the fallback older Chromium and every
- *    Safari still need, and the only place the rounded thumb and the
- *    track-coloured inset can be drawn. A browser that honours the
- *    standard properties ignores these pseudo-elements, and vice
- *    versa, so the two never fight.
+ * Firefox gets the closest standard-property match (thin, token-tinted
+ * thumb, transparent track). It cannot round a corner or draw a track
+ * inset — a platform limit, not an omission here.
  *
- *  - `::-webkit-scrollbar-button` is suppressed deliberately: the
- *    affordance is the thumb on a track, not step arrows. Without
- *    this, classic Windows-style engines paint up/down (and left/right)
- *    buttons at the ends of every bar. The standard path has no
- *    equivalent hook — thin OS scrollbars already omit them.
+ * `::-webkit-scrollbar-button` is suppressed deliberately: the
+ * affordance is the thumb on a track, not step arrows.
  *
- * Both read the same three roles — `border-strong` for the thumb,
- * `surface-sunken` for the track, `content-muted` for the thumb on
- * hover — so the bar is themed by `[data-scheme]` on `<html>` with
+ * Both engines read the same three roles — `border-strong` for the
+ * thumb, `surface-sunken` for the track, `content-muted` for the thumb
+ * on hover — so the bar is themed by `[data-scheme]` on `<html>` with
  * nothing in React observing it. `width`/`height` rather than a
  * logical property is not a lapse: the `::-webkit-scrollbar`
  * pseudo-elements size only by the physical pair, and a vertical bar's
  * thickness is its `width` regardless of writing direction. */
-.charcuterie-scrollbar {
-  scrollbar-width: thin;
-  scrollbar-color: color-mix(
-      in oklab,
-      var(--color-border-strong) 70%,
-      transparent
-    )
-    transparent;
-}
 
+/* The designed bar — Chromium, Edge, Safari. */
 .charcuterie-scrollbar::-webkit-scrollbar {
   width: 12px;
   height: 12px;
@@ -199,4 +187,24 @@
 
 .charcuterie-scrollbar::-webkit-scrollbar-thumb:hover {
   background-color: var(--color-content-muted);
+}
+
+.charcuterie-scrollbar::-webkit-scrollbar-corner {
+  background-color: var(--color-surface-sunken);
+}
+
+/* Firefox only: it never paints `::-webkit-scrollbar`. `-moz-appearance`
+ * is the supports probe that Chromium and Safari reject, so this block
+ * does not reintroduce the standard properties on engines that would
+ * then drop the designed bar. */
+@supports (-moz-appearance: none) {
+  .charcuterie-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(
+        in oklab,
+        var(--color-border-strong) 70%,
+        transparent
+      )
+      transparent;
+  }
 }

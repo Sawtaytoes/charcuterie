@@ -2,12 +2,13 @@
 "@charcuterie/ui": minor
 ---
 
-Add `.charcuterie-scrollbar` to `@charcuterie/ui/styles.css` — a thin, token-tinted
-scrollbar any scrolling element opts into. It pairs the standard
-`scrollbar-width: thin` / `scrollbar-color` (Firefox, and Chromium from 121) with a
-`::-webkit-scrollbar` fallback for older Chromium and Safari, so the rounded thumb and
-track inset still draw where the standard properties cannot reach. WebKit step buttons
-(`::-webkit-scrollbar-button`) are suppressed — the affordance is thumb + track only.
+Add `.charcuterie-scrollbar` to `@charcuterie/ui/styles.css` — a token-tinted
+scrollbar any scrolling element opts into. The designed look is the
+`::-webkit-scrollbar` path (12px bar, rounded thumb, track-coloured inset, no
+step buttons) on Chromium, Edge, and Safari. Firefox gets the closest
+`scrollbar-width: thin` / `scrollbar-color` match, scoped behind a
+`-moz-appearance` `@supports` probe so Chromium 121+ does not prefer the thin
+OS chrome over the designed bar.
 
 Both paths read the same three roles — `border-strong` (thumb), `surface-sunken`
 (track), `content-muted` (thumb hover) — so the bar flips with `[data-scheme]` on the
