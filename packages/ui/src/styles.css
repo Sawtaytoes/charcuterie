@@ -1,14 +1,19 @@
-/* `@charcuterie/ui/styles.css` — the four looping affordances, and
- * nothing else.
+/* `@charcuterie/ui/styles.css` — the four looping affordances and
+ * the token-tinted scrollbar: the visuals a Tailwind utility cannot
+ * express against our tokens, and nothing else.
  *
  * Every other visual in this package is a Tailwind utility reading
  * a token, which is what makes a scheme/density/variant flip a
- * repaint with no re-render. Animation is the one thing utilities
- * cannot express against our tokens: Tailwind's own `animate-spin`
- * and `animate-pulse` hardcode 1s and 2s, ignore
- * `prefers-reduced-motion`, and are therefore beyond the theme's
- * reach — which is exactly why `MotionTokens` carries a separate
- * `loopFast`/`loopSlow` ramp.
+ * repaint with no re-render. Two things sit outside that reach.
+ * Animation is one: Tailwind's own `animate-spin` and `animate-pulse`
+ * hardcode 1s and 2s, ignore `prefers-reduced-motion`, and are
+ * therefore beyond the theme's reach — which is exactly why
+ * `MotionTokens` carries a separate `loopFast`/`loopSlow` ramp. The
+ * scrollbar is the other: the `::-webkit-scrollbar` pseudo-elements
+ * (and Firefox's `scrollbar-width`/`scrollbar-color`) have no
+ * `@theme`-generated utility, so `.charcuterie-scrollbar` at the foot
+ * of this file reads the same `--color-*` roles by hand and flips with
+ * `data-scheme` on the same repaint as everything else.
  *
  * Consumers import this once, after `@charcuterie/tokens/theme.css`.
  *
@@ -126,5 +131,80 @@
       transparent 2px,
       transparent 6px
     );
+  }
+}
+
+/* `.charcuterie-scrollbar` — a token-tinted scrollbar for any element
+ * that scrolls. The fleet grew this twice by hand (gallery-downloader's
+ * `scrollbar-thin-token`, image-viewer's global `::-webkit-scrollbar`
+ * block); this is the one copy, promoted here so a scheme flip
+ * repaints it for free.
+ *
+ * The *designed* look is the `::-webkit-scrollbar` path: a 12px bar, a
+ * rounded thumb, a track-coloured inset, no step arrows. That is what
+ * Chromium, Edge, and Safari paint. Chromium 121+ will *prefer*
+ * `scrollbar-width` / `scrollbar-color` over these pseudo-elements
+ * whenever both are set, which collapses the bar to the thin OS chrome
+ * (arrows and all on Windows) — so the standard properties are scoped
+ * to Firefox only, where `::-webkit-scrollbar` never runs.
+ *
+ * Firefox gets the closest standard-property match (thin, token-tinted
+ * thumb, transparent track). It cannot round a corner or draw a track
+ * inset — a platform limit, not an omission here.
+ *
+ * `::-webkit-scrollbar-button` is suppressed deliberately: the
+ * affordance is the thumb on a track, not step arrows.
+ *
+ * Both engines read the same three roles — `border-strong` for the
+ * thumb, `surface-sunken` for the track, `content-muted` for the thumb
+ * on hover — so the bar is themed by `[data-scheme]` on `<html>` with
+ * nothing in React observing it. `width`/`height` rather than a
+ * logical property is not a lapse: the `::-webkit-scrollbar`
+ * pseudo-elements size only by the physical pair, and a vertical bar's
+ * thickness is its `width` regardless of writing direction. */
+
+/* The designed bar — Chromium, Edge, Safari. */
+.charcuterie-scrollbar::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+.charcuterie-scrollbar::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.charcuterie-scrollbar::-webkit-scrollbar-track {
+  background-color: var(--color-surface-sunken);
+}
+
+.charcuterie-scrollbar::-webkit-scrollbar-thumb {
+  background-color: var(--color-border-strong);
+  border: 2px solid var(--color-surface-sunken);
+  border-radius: 6px;
+}
+
+.charcuterie-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-content-muted);
+}
+
+.charcuterie-scrollbar::-webkit-scrollbar-corner {
+  background-color: var(--color-surface-sunken);
+}
+
+/* Firefox only: it never paints `::-webkit-scrollbar`. `-moz-appearance`
+ * is the supports probe that Chromium and Safari reject, so this block
+ * does not reintroduce the standard properties on engines that would
+ * then drop the designed bar. */
+@supports (-moz-appearance: none) {
+  .charcuterie-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(
+        in oklab,
+        var(--color-border-strong) 70%,
+        transparent
+      )
+      transparent;
   }
 }
