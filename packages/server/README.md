@@ -94,6 +94,26 @@ of stale caching.
 | `immutablePathPrefixes` | `["/assets/"]` | Request-path prefixes that may be cached forever. |
 | `index` | `"index.html"` | The SPA shell, relative to `rootDir`. |
 | `hasSpaFallback` | `true` | Serve `index` for extensionless paths that match no file. Turn off for a pure asset origin. |
+| `rewriteRequestPath` | — | Map the request path onto `rootDir` before the lookup, for a mount whose URL prefix is not a real directory. |
+
+### Mounting a directory that lives somewhere else
+
+`board-games` serves `/images/*` out of `$BOARD_GAMES_IMAGES`, which is nowhere near the
+web root:
+
+```ts
+app.use("/images/*", createStaticHandler({
+  immutablePathPrefixes: ["/images/"],
+  rewriteRequestPath: (path) => path.replace(/^\/images/, ""),
+  rootDir: imagesDirectory(),
+}))
+```
+
+The cache bucket is still decided on the **request** path, not the rewritten one — so
+`immutablePathPrefixes` keeps naming URLs as a caller sees them. Rewriting is about where
+bytes live on disk; caching is about what the browser was promised. The SPA fallback is
+unaffected: `index` resolves against `rootDir` directly, so a rewrite cannot misdirect the
+shell.
 
 `precompressAssets()` takes `algorithms` (default `["br", "gz"]`) and `thresholdBytes`
 (default `1024`). `zst` is supported but near-pointless as a third: the handler prefers
