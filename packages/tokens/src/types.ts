@@ -159,8 +159,11 @@ export type TypographyTokens = {
     /**
      * Headings, and only headings. Separate from `sans` because
      * M5 settled that they get their own face — a display cut at
-     * 24px is doing a different job from body copy at 13px, and
+     * 30px is doing a different job from body copy at 17px, and
      * one family covering both means neither is right.
+     *
+     * (Those two numbers were 24px and 13px until the 2026-08-10
+     * ramp rebuild. The argument is unchanged; only the sizes moved.)
      *
      * A variant may point this at `sans` to opt out; nothing
      * requires the two to differ.

@@ -266,16 +266,21 @@ export const legible: Variant = {
     },
   },
 
+  /**
+   * The `fontSize` override is gone: it used to nudge `xs`/`sm` one
+   * step up from `daylight`, which the 2026-08-10 shared ramp now
+   * does for every variant and by more.
+   *
+   * Worth naming, because the name invites the opposite assumption:
+   * `legible` buys its legibility with **colour and weight, not
+   * size**. Its body step has always been identical to `daylight`'s.
+   * Whether the variant sold for "a kiosk across a room" should also
+   * carry a larger ramp is a real open question — deliberately not
+   * settled here, because the owner picked one ramp for the fleet
+   * and inventing a fifth on top of it would not be that.
+   */
   typography: {
     ...defaultTypography,
-    fontSize: {
-      xs: "0.8125rem",
-      sm: "0.875rem",
-      md: "0.9375rem",
-      lg: "1.0625rem",
-      xl: "1.3125rem",
-      "2xl": "1.625rem",
-    },
     fontWeight: {
       normal: "450",
       medium: "550",
