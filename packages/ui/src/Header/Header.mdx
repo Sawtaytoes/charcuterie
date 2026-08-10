@@ -1,0 +1,72 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as HeaderStories from "./Header.stories";
+
+<Meta of={HeaderStories} />
+
+# Header
+
+The `<header>` landmark, the app's name, and the controls that belong to the frame rather
+than to the page. Ten repos hand-roll this row; two of them wrote the same string.
+
+<Canvas of={HeaderStories.Default} />
+
+## Props
+
+<Controls />
+
+<Canvas of={HeaderStories.AllStates} />
+
+## `isSticky` sets `position` **and** `z-index`
+
+That pairing is the entire reason the prop is a boolean rather than two class names.
+
+mux-magic's `PageHeader` is documented as a sticky header and sets only `z-index`
+(`PageHeader.tsx:173`). It never sets `position: sticky`, so it scrolls away like any other
+block and the z-index it carries has nothing to stack against — it is a flex-column shell
+wearing a sticky header's clothes. The CSS is valid, the intent is stated in a comment, and
+nobody scrolls a component in a review.
+
+<Canvas of={HeaderStories.AllVariants} />
+
+The z-index is `--layer-sticky` (100) from the token scale, never a hand-picked number. The
+fleet's headers currently sit at `z-40` (mail-sifter, points-market), `z-50` (rip-deck),
+`z-10` (spoolbuddy) and `z-[100]` (mux-magic) with no ordering guarantee between a header
+and anything else. On the scale, `sticky` is below `dropdown` (200), `modal` (400) and
+`toast` (500) — so a `Menu` opened *from* the header paints over it, by construction.
+
+<Canvas of={HeaderStories.NotSticky} />
+
+## It invents no colours
+
+`bg-surface-raised/85`, `backdrop-blur-md`, `border-border-subtle`. The fleet's copy of this
+line is `bg-surface-base/90` — the header at *the same colour as the page behind it*,
+leaning entirely on the blur to separate the two, so it disappears against a page that has
+not been scrolled. `raised` means *more separated from base*, which is the role this
+element actually wants.
+
+## The width comes from `Shell`
+
+<Canvas of={HeaderStories.Responsive} />
+
+The `<header>` is full-bleed — the border and the translucent fill run edge to edge — and
+only its **inner row** is capped. That is what stops a constrained header from reading as a
+floating island on an ultrawide, and it is the half points-market got right while its
+`<main>` went uncapped.
+
+The cap itself comes from `Shell`'s `contentWidth` through context, so the title always
+sits directly above the content it names. Passing `contentWidth` here overrides it for the
+rare case where they genuinely differ.
+
+## Slots, in render order
+
+`heading` → `children` → `actions`. Every one is optional: a header with only actions is
+image-viewer's `TitleBar`, one with only a heading is board-games'. `children` is the middle
+— a search field, a breadcrumb, a status pill — and `actions` is pushed to the far end with
+`ms-auto`, so it stays at the end in RTL too.
+
+<Canvas of={HeaderStories.Interactive} />
+
+`headingLevel` defaults to `1`, because on most pages the app's name *is* the document's
+top-level heading. An app whose page title is its `h1` sets `headingLevel={2}` here rather
+than leaving two of them.
