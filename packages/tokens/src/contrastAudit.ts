@@ -29,16 +29,29 @@
  * resting `surface` tint, which the resting pairs already cover.
  * A new state role added to `IntentRole` must be paired here in
  * the same change; `contrast.test.ts` fails if one is not.
+ *
+ * **Every list of roles in this file is derived from its role
+ * union, never typed out.** The interactive-state hole above was
+ * one half of a single mistake; the other half was that the
+ * surfaces block hand-listed its foregrounds and backgrounds. That
+ * hid two more failures for the library's whole life: `content.*`
+ * on the intent tints (the highlighted and selected option rows in
+ * `Listbox`/`Combobox`/`Menu`), and `content.*` on `surface.sunken`,
+ * which was simply never in the list. 48 gated pairs per scheme
+ * becomes 63
+ * ([decision](../../../docs/decisions/2026-08-10-content-muted-is-strengthened-so-the-highlighted-option-row-clears-aa.md)).
  */
 
 import type { ContrastResult } from "./contrast.ts"
 import { getContrast } from "./contrast.ts"
 import type {
+  ContentRole,
   Density,
   IntentName,
   IntentRole,
   Scheme,
   SchemeColours,
+  SurfaceRole,
 } from "./types.ts"
 
 export const INTENT_NAMES: IntentName[] = [
@@ -75,6 +88,141 @@ export const RESTING_ROLE_BY_INTENT_ROLE: Record<
   surface: null,
   surfaceHover: "surface",
 }
+
+/**
+ * How each **content** role takes part in the audit.
+ *
+ * Keyed by every member of `ContentRole` for the same reason
+ * `RESTING_ROLE_BY_INTENT_ROLE` is keyed by every `IntentRole`:
+ * the hole this closes was not a wrong number, it was a *class of
+ * pair nobody had enumerated*. The foreground half had exactly the
+ * same weakness — the surfaces block hand-listed
+ * `["primary", "secondary", "muted"]`, so a new content role would
+ * have been silently unmeasured, and `surface.sunken` was in fact
+ * never audited at all because the background half was hand-listed
+ * too.
+ */
+export type ContentRoleAudit =
+  | { kind: "surfaces"; threshold: number }
+  | { kind: "exemptSample"; exemptReason: string }
+  | { kind: "accentFill" }
+
+export const CONTENT_ROLE_AUDIT: Record<
+  ContentRole,
+  ContentRoleAudit
+> = {
+  primary: { kind: "surfaces", threshold: 4.5 },
+  secondary: { kind: "surfaces", threshold: 4.5 },
+  muted: { kind: "surfaces", threshold: 4.5 },
+  disabled: {
+    kind: "exemptSample",
+    exemptReason:
+      "WCAG 1.4.3 exempts inactive controls; gating this would force disabled text to look enabled",
+  },
+  // Not a surface foreground: it is the label on the accent *fill*,
+  // and it is checked against `intent.accent.solid`/`solidHover`
+  // near the bottom of `auditScheme`.
+  onAccent: { kind: "accentFill" },
+}
+
+export const SURFACE_CONTENT_ROLES = (
+  Object.keys(CONTENT_ROLE_AUDIT) as ContentRole[]
+).filter(
+  (role) => CONTENT_ROLE_AUDIT[role].kind === "surfaces",
+)
+
+/**
+ * Which surfaces ordinary content is drawn on.
+ *
+ * `sunken` is `true` and was **not** in the old hand-written list —
+ * it is a real content-bearing surface (inset wells, code blocks),
+ * and it went unmeasured for the library's whole life for no reason
+ * other than that somebody typed three role names instead of five.
+ */
+export const SURFACE_ROLE_CARRIES_CONTENT: Record<
+  SurfaceRole,
+  boolean
+> = {
+  base: true,
+  raised: true,
+  sunken: true,
+  overlay: true,
+  // `inverse` is deliberately the *opposite* scheme's surface — a
+  // dark panel in a light scheme. This scheme's `content.*` roles
+  // are precisely what must never be drawn on it (they measure
+  // 1.0–2.9:1 against it by construction); anything placed there
+  // uses the other scheme's content roles. Gating it would demand
+  // a colour that is legible on both a near-black and a near-white
+  // background, which does not exist.
+  inverse: false,
+}
+
+/**
+ * Which **intent tints** carry ordinary `content.*` text, as
+ * opposed to their own `intent.<name>.content` foreground.
+ *
+ * This is the pair that this file could not see: `Listbox`,
+ * `Combobox` and `Menu` paint `text-content-primary` on
+ * `bg-intent-neutral-surface-hover` (the highlighted row) and on
+ * `bg-intent-accent-surface` (the selected row), so the neutral and
+ * accent tints are content-bearing surfaces in everything but name.
+ * The audit only ever checked `intent.<name>.content` on them.
+ *
+ * The four status tints are `false` because they carry their own
+ * intent foreground — the one `bg-intent-danger-surface` in the
+ * package is paired with `text-intent-danger-content`, which is
+ * already gated above. Gating grey body text on a danger tint would
+ * constrain a pairing the system does not offer, and the borders
+ * block below explains why gating what nothing draws is how a gate
+ * stops being believed.
+ */
+export const INTENT_TINT_CARRIES_PLAIN_CONTENT: Record<
+  IntentName,
+  boolean
+> = {
+  neutral: true,
+  accent: true,
+  success: false,
+  warning: false,
+  danger: false,
+  info: false,
+}
+
+/**
+ * Which intent roles are **backgrounds a tint draws content on**.
+ *
+ * `solid`/`solidHover` are backgrounds too, but their foreground is
+ * `onSolid` and they are already paired with it; the rest are
+ * foregrounds. Keyed by the whole union so a future `surfacePressed`
+ * cannot be added without saying which side of this it is on.
+ */
+export const INTENT_ROLE_IS_TINT_BACKGROUND: Record<
+  IntentRole,
+  boolean
+> = {
+  surface: true,
+  surfaceHover: true,
+  solid: false,
+  solidHover: false,
+  border: false,
+  content: false,
+  onSolid: false,
+}
+
+export const CONTENT_BEARING_SURFACE_ROLES = (
+  Object.keys(SURFACE_ROLE_CARRIES_CONTENT) as SurfaceRole[]
+).filter((role) => SURFACE_ROLE_CARRIES_CONTENT[role])
+
+export const CONTENT_BEARING_INTENT_NAMES =
+  INTENT_NAMES.filter(
+    (intent) => INTENT_TINT_CARRIES_PLAIN_CONTENT[intent],
+  )
+
+export const TINT_BACKGROUND_INTENT_ROLES = (
+  Object.keys(
+    INTENT_ROLE_IS_TINT_BACKGROUND,
+  ) as IntentRole[]
+).filter((role) => INTENT_ROLE_IS_TINT_BACKGROUND[role])
 
 export type ContrastCheck = {
   label: string
@@ -115,17 +263,53 @@ export const auditScheme = (
   colour: SchemeColours,
 ): ContrastCheck[] => [
   // --- Text on surfaces -------------------------------------
-  ...(["base", "raised", "overlay"] as const).flatMap(
-    (surfaceRole) =>
-      (["primary", "secondary", "muted"] as const).map(
-        (contentRole) =>
-          check({
-            label: `content.${contentRole} on surface.${surfaceRole}`,
-            foreground: colour.content[contentRole],
-            background: colour.surface[surfaceRole],
-            threshold: 4.5,
-          }),
-      ),
+  //
+  // Both halves are derived from the role unions rather than typed
+  // out, so a new content role or a new surface role is measured
+  // the day it is added instead of the day somebody notices.
+  ...CONTENT_BEARING_SURFACE_ROLES.flatMap((surfaceRole) =>
+    SURFACE_CONTENT_ROLES.map((contentRole) => {
+      const audit = CONTENT_ROLE_AUDIT[contentRole]
+
+      return check({
+        label: `content.${contentRole} on surface.${surfaceRole}`,
+        foreground: colour.content[contentRole],
+        background: colour.surface[surfaceRole],
+        threshold:
+          audit.kind === "surfaces" ? audit.threshold : 4.5,
+      })
+    }),
+  ),
+
+  // --- Text on the content-bearing intent tints -------------
+  //
+  // An option row in `Listbox`/`Combobox`/`Menu` is `content.*` on
+  // `intent.neutral.surfaceHover` (highlighted) or
+  // `intent.accent.surface` (selected). Those are content-bearing
+  // surfaces that happen to be spelled as intent tints, and until
+  // this block existed nothing measured them — `content.muted` on
+  // the highlighted row failed AA in four of eight variant/scheme
+  // combinations with the gate reporting green
+  // ([decision](../../../docs/decisions/2026-08-10-content-muted-is-strengthened-so-the-highlighted-option-row-clears-aa.md)).
+  //
+  // Resting *and* hover, for the reason the block below the intents
+  // gives: hovering does not make text optional.
+  ...CONTENT_BEARING_INTENT_NAMES.flatMap((intent) =>
+    TINT_BACKGROUND_INTENT_ROLES.flatMap((tintRole) =>
+      SURFACE_CONTENT_ROLES.map((contentRole) => {
+        const audit = CONTENT_ROLE_AUDIT[contentRole]
+
+        return check({
+          label: `content.${contentRole} on intent.${intent}.${tintRole}`,
+          foreground: colour.content[contentRole],
+          background: colour.intent[intent][tintRole],
+          threshold:
+            audit.kind === "surfaces"
+              ? audit.threshold
+              : 4.5,
+        })
+      }),
+    ),
   ),
 
   check({
@@ -134,7 +318,9 @@ export const auditScheme = (
     background: colour.surface.base,
     threshold: 4.5,
     exemptReason:
-      "WCAG 1.4.3 exempts inactive controls; gating this would force disabled text to look enabled",
+      CONTENT_ROLE_AUDIT.disabled.kind === "exemptSample"
+        ? CONTENT_ROLE_AUDIT.disabled.exemptReason
+        : "",
   }),
 
   // --- Intents: tinted pill, and solid fill -----------------
