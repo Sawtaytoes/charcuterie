@@ -14,6 +14,11 @@
  * it looks like beside the component that replaces it".
  *
  *     yarn build:storybook && node scripts/linkScreenshots.mjs
+ *
+ * They land in the gitignored `__screenshots__/` scratch. The ones
+ * worth keeping are copied into `docs/previews/` under a dated name,
+ * which is where this repo archives its before/after boards — the same
+ * convention as `2026-07-29-m1-mux-magic-before-dark.png`.
  */
 
 import { createReadStream } from "node:fs"
