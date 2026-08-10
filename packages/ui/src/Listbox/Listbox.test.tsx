@@ -7,7 +7,7 @@ import { mountStory } from "../mountStory.testHelpers.ts"
 import { expectAgentDrivable } from "../testing/index.ts"
 import * as stories from "./Listbox.stories.tsx"
 
-const { AllStates, Default, Interactive } =
+const { AllStates, AllVariants, Default, Interactive } =
   composeStories(stories)
 
 test("a button opens a listbox whose rows are options", async () => {
@@ -195,4 +195,59 @@ test("Escape dismisses without choosing, and there is one tab stop", async () =>
     name: "Choose a language",
     role: "button",
   })
+})
+
+/**
+ * The rich-option story is the reason `Listbox` exists — a native
+ * `<option>` cannot hold a second line — and it was the one story
+ * `Listbox.test.tsx` never mounted. So the `content.muted` detail
+ * line inside a row had **no** axe coverage in any state, let alone
+ * the highlighted one, while it sat at 4.11:1 on
+ * `intent.neutral.surfaceHover` in the fleet's default variant.
+ *
+ * This is the same shape as the `ButtonLink` miss: there,
+ * `AllVariants` *was* audited but forced no `:hover`, so the failing
+ * hex passed locally and only the token gate caught it. Auditing the
+ * resting row would repeat that mistake exactly, so the row is
+ * driven to its highlighted state and the fill is **asserted** —
+ * without that assertion a silently-resting row would make this test
+ * pass for the wrong reason.
+ */
+test("a highlighted rich option row has no contrast violation", async () => {
+  const { body, canvas } = await mountStory(AllVariants)
+
+  await userEvent.click(
+    expectAgentDrivable(canvas, {
+      name: "Choose a track",
+      role: "button",
+    }),
+  )
+
+  const listbox = expectAgentDrivable(body, {
+    role: "listbox",
+  })
+
+  // Opening focuses the first option, and `ListboxOption` fills the
+  // focused row with `focus:bg-intent-neutral-surface-hover`. Prove
+  // the row really is painted before trusting what axe says about it.
+  const highlighted = body.getAllByRole("option")[0]
+
+  await waitFor(() => {
+    expect(document.activeElement).toBe(highlighted)
+  })
+
+  const rowFill =
+    getComputedStyle(highlighted).backgroundColor
+  const panelFill =
+    getComputedStyle(listbox).backgroundColor
+
+  expect(rowFill).not.toBe("rgba(0, 0, 0, 0)")
+  expect(rowFill).not.toBe(panelFill)
+
+  // The detail line is the `content.muted` half of the pair.
+  expect(
+    highlighted.querySelector(".text-content-muted"),
+  ).not.toBeNull()
+
+  await expectNoAxeViolations(listbox)
 })
