@@ -37,6 +37,27 @@ export type {
   AccordionProps,
 } from "./Accordion/Accordion.tsx"
 export { Accordion } from "./Accordion/Accordion.tsx"
+export type { AdaptiveGridProps } from "./AdaptiveGrid/AdaptiveGrid.tsx"
+export { AdaptiveGrid } from "./AdaptiveGrid/AdaptiveGrid.tsx"
+export type { ColumnChoice } from "./AdaptiveGrid/chooseColumns.ts"
+export {
+  chooseColumns,
+  DEFAULT_MAX_AUTO_COLUMNS,
+  DEFAULT_MAX_MANUAL_COLUMNS,
+  DEFAULT_MIN_COLUMN_INLINE_SIZE_PX,
+  getColumnChoices,
+  getContentMaxInlineSize,
+} from "./AdaptiveGrid/chooseColumns.ts"
+export type {
+  BlockSizeResolver,
+  ColumnPersistence,
+} from "./AdaptiveGrid/useAdaptiveColumns.ts"
+export {
+  localStorageColumnPersistence,
+  readStoredChoice,
+  useAdaptiveColumns,
+  viewportBlockSizeResolver,
+} from "./AdaptiveGrid/useAdaptiveColumns.ts"
 export type {
   AlertProps,
   AlertSize,
