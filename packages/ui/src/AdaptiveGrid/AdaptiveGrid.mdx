@@ -1,0 +1,169 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as AdaptiveGridStories from "./AdaptiveGrid.stories";
+
+<Meta of={AdaptiveGridStories} />
+
+# AdaptiveGrid
+
+**Height is spent before width.** A column is something this grid is *forced* into when
+the items will not stack inside the window — never something it takes because a monitor
+is wide.
+
+That is the opposite of every wrapping grid in the fleet today. `auto-fill, minmax()`
+takes every column the width allows, which is how you end up with seven items strung
+across an ultrawide and nothing below the fold.
+
+<Canvas of={AdaptiveGridStories.Default} />
+
+## Props
+
+<Controls />
+
+## The rule in one sentence
+
+> If you're going to vertically scroll anyway, widen the items. If you're not, keep them
+> in a smaller grid so they all still fit on screen.
+
+Mechanically:
+
+1. Ask how many items stack in the space available — the viewport's block size, minus
+   whatever chrome sits above and below.
+2. Divide the item count by that. **That** is how many columns are needed.
+3. Only then ask how many columns actually fit across the container, and take the smaller
+   of the two.
+
+Step 3 can only ever *reduce* the answer. Width is a veto, not a reason.
+
+## The part that reads backwards
+
+<Canvas of={AdaptiveGridStories.AllVariants} />
+
+Same nine items, same width, three heights — and the **taller** window takes **fewer**
+columns. A 1440x900 laptop gets three columns while a larger 1920x1080 monitor gets two.
+
+That is not a bug and it is not a tuned breakpoint. The taller window stacks the same nine
+items in fewer stacks, so it needs fewer stacks. If you "fix" it, you have thrown the rule
+away and rebuilt `auto-fill`.
+
+## The content cap widens as columns are added
+
+The other half of the complaint this answers is pages that are "1 column, but waaaaaaay
+too wide". So the cap around the grid is not a constant:
+
+| Columns | Cap |
+| --- | --- |
+| 1 | 56rem |
+| 2 | 72rem |
+| 3 | 106rem |
+| 4 | 140rem |
+
+One column stays at a reading measure, because a 2000px-wide card is not a better card —
+it is one line of text the eye has to track from bezel to bezel. The page earns its width
+by having something to fill it with.
+
+The three numbers behind that table are `contentInlineSize` in `@charcuterie/tokens`,
+beside `screen` and `containerQuery`, and every part is overridable per call. The
+arithmetic lives in `getContentMaxInlineSize` and is not a token.
+
+## When to reach for it
+
+Reach for it when **all** of these are true:
+
+- The items wrap, and there could be few or many of them.
+- They are roughly the same height, and you can measure one.
+- Scrolling is a cost rather than the point — a rack of bays, a fleet of hosts, a set of
+  status cards. Ideally the user never scrolls at all.
+
+Do **not** reach for it for a feed, a search-results list, or anything else that is
+inherently long. The rule optimises for "it all fits", and content that will never all fit
+gets nothing from it.
+
+## The one number you must measure
+
+`itemBlockSize` is the only required option and the only genuinely app-specific one.
+Measure it off a running page rather than deriving it from padding, and **err high** — over-
+estimating makes the grid reach for a column slightly early, and a page that scrolls when
+it did not have to is the entire complaint. It only has to be right to within about one
+item; being one out shifts a borderline window by one column, which is taste.
+
+`chromeBlockSize` is everything down the page that is not the grid: header, rails, filter
+rows, labels. It defaults to `0`.
+
+## It measures its container, not the window
+
+<Canvas of={AdaptiveGridStories.Responsive} />
+
+Three grids, one browser window, three different answers. The inline size comes off a
+`ResizeObserver` on the grid's own container, so a grid sitting beside a rail is told the
+truth about the room it has — the container-query thesis this library is built on, applied
+to a layout decision instead of a card's internals.
+
+The block size is the exception, and it has to be: the question is "will this scroll", and
+an element in normal flow is exactly as tall as its contents, so measuring the grid always
+answers "it fits." That number comes from the viewport, behind an injectable
+`blockSizeResolver` for Electron windows, fixed-height kiosk panels, and tests.
+
+⚠️ **Never apply the returned cap to the element being measured.** If you wire
+`useAdaptiveColumns` by hand, the observed box and the capped box must be different
+elements. Collapse them and the fold reads back its own narrowed output: one column,
+forever, with no error anywhere. `AdaptiveGrid` enforces this structurally — an uncapped
+outer box it measures, an inner box it caps.
+
+## Composing with a shell
+
+`AdaptiveGrid` caps itself, so it is correct standing alone. If you want the **page chrome**
+to widen with the grid rather than the grid rattling around inside a fixed column, hoist
+the hook to the page and hand the pieces out:
+
+```tsx
+const layout = useAdaptiveColumns({
+  chromeBlockSize: 260,
+  itemBlockSize: 150,
+  itemCount: bays.length,
+  storageKey: "rip-deck.layout-columns",
+})
+
+<Main maxInlineSize={layout.contentMaxInlineSize} ref={layout.containerRef}>
+  <AdaptiveGrid columns={layout.columns} itemBlockSize={150}>
+    {bays.map(…)}
+  </AdaptiveGrid>
+</Main>
+```
+
+The `Main` region takes a caller-supplied max inline size; the ref goes on whatever box
+sits **outside** that cap.
+
+## Manual override
+
+<Canvas of={AdaptiveGridStories.Interactive} />
+
+`"auto"` is always in the list. A picker that only offers numbers once a number has been
+chosen is a one-way door — it strands someone on a layout they tried once with no route
+back to the mode that adapts.
+
+Pass `storageKey` to remember the choice across visits, namespaced to your app; the
+library will not invent that string for you. Omit it and the choice lasts the session and
+is written nowhere. Every unreadable stored value — a corrupt key, a browser that refuses
+storage, a count the picker cannot offer — falls back to `"auto"`, so a bad value costs a
+preference rather than a page.
+
+## Why the tracks are an inline style
+
+`repeat(N, minmax(0, 1fr))` is interpolated, and a className may not be. Tailwind v4 scans
+source *text* for complete class strings, so `grid-cols-${columns}` generates nothing at
+all — no error, no warning, an unstyled element. A class-per-count would need every count
+to survive the scan; an inline style needs none. `tailwindCandidates.test.ts` rejects the
+interpolated form outright.
+
+## `min-w-0` is not optional
+
+Every child gets `min-w-0`, applied by the component rather than asked for. A grid item's
+automatic minimum size is `min-content`, so one long unbroken string — a file path, a URL —
+widens its own track and shoves the whole grid past the viewport. The rule that stops it
+has to sit on children the caller owns, which is why it is not your job to remember.
+
+You still owe your own items a wrap or a `truncate`; `min-w-0` lets the track get small
+enough for that clipping to matter.
+
+<Canvas of={AdaptiveGridStories.AllStates} />

@@ -18,6 +18,7 @@
 import { INTENT_NAMES } from "./contrastAudit.ts"
 import {
   containerQuery,
+  contentInlineSize,
   densityControl,
   densityFontScale,
   layer,
@@ -94,6 +95,10 @@ const buildStructuralProperties = () => [
   ),
   ...Object.entries(containerQuery).map(([name, value]) =>
     declare(`--cq-${name}`, value),
+  ),
+  ...Object.entries(contentInlineSize).map(
+    ([name, value]) =>
+      declare(`--content-inline-size-${name}`, value),
   ),
 ]
 
