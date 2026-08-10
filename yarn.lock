@@ -891,6 +891,26 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@charcuterie/server@workspace:packages/server":
+  version: 0.0.0-use.local
+  resolution: "@charcuterie/server@workspace:packages/server"
+  dependencies:
+    "@hono/node-server": "npm:^2.0.2"
+    "@types/node": "npm:^25.6.2"
+    hono: "npm:^4.12.21"
+    typescript: "npm:^6.0.3"
+    vite: "npm:^8.0.16"
+    vitest: "npm:^4.1.8"
+  peerDependencies:
+    "@hono/node-server": ">=1.13"
+    hono: ">=4"
+    vite: ">=5"
+  peerDependenciesMeta:
+    vite:
+      optional: true
+  languageName: unknown
+  linkType: soft
+
 "@charcuterie/storybook-config@workspace:*, @charcuterie/storybook-config@workspace:packages/storybook-config":
   version: 0.0.0-use.local
   resolution: "@charcuterie/storybook-config@workspace:packages/storybook-config"
@@ -1394,6 +1414,15 @@ __metadata:
   version: 0.2.12
   resolution: "@floating-ui/utils@npm:0.2.12"
   checksum: 10c0/bb910b90d56991a62011afaf5f8e0c4b7fb6dab69403f4dd17fbd6eb25560b28d533dff9791f270b4f459852e9006a1077b5d73cbedb5e34d9424afc6a828314
+  languageName: node
+  linkType: hard
+
+"@hono/node-server@npm:^2.0.2":
+  version: 2.1.0
+  resolution: "@hono/node-server@npm:2.1.0"
+  peerDependencies:
+    hono: ^4
+  checksum: 10c0/907aa2cabb804cf6f9c6bc329a898803b0794992d1c2d1bea7e4ae803f5d205fd2733d684c9c87b28338964dc437341e3bee1544b4d504a6b19f9e65ba28b198
   languageName: node
   linkType: hard
 
@@ -5530,6 +5559,13 @@ __metadata:
   dependencies:
     function-bind: "npm:^1.1.2"
   checksum: 10c0/2d8de939e270b70618f8cebb69746620db10617dbb495bc66ddad326955ea24d3ca4af133aff3eb7c1853e0218f867bc2b050ec26fe02e3aea58f880ffc5e506
+  languageName: node
+  linkType: hard
+
+"hono@npm:^4.12.21":
+  version: 4.13.1
+  resolution: "hono@npm:4.13.1"
+  checksum: 10c0/83524961f806293464e6c3b31a7fd2ab8cd8e9cb66e65dea1fbbefb70744844c13b7409ed9b49b43e8543e5c0f1b851f2586fa759eea9da0b69503b58cd0d985
   languageName: node
   linkType: hard
 
