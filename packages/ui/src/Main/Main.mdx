@@ -1,0 +1,139 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as MainStories from "./Main.stories";
+
+<Meta of={MainStories} />
+
+# Main
+
+The `<main>` landmark and the content column. **Its width is the crux of the whole shell.**
+
+The owner's complaint, verbatim:
+
+> "All these apps seem to be really narrow with a very large max-width. By that I mean 1
+> column, but waaaaaaay too wide. In almost all cases, what I really want is something like
+> Rip-Deck where the app has a narrower main column but the wrapping grids are all
+> full-width in most of these apps only when you have too many items."
+
+<Canvas of={MainStories.Default} />
+
+## Props
+
+<Controls />
+
+## The width is a value, not a constant
+
+The cap is the least standardized number in the fleet: `max-w-5xl` (board-games, portly),
+`max-w-6xl` *and* `max-w-3xl` mixed inside one app (mux-magic), `max-w-7xl`
+(gallery-downloader, spoolbuddy), `max-w-[90rem]` (mail-sifter), `80rem` (points-market), a
+raw `1400px` in plain CSS (plex-channels), a JS-computed one (rip-deck), and none at all in
+three more.
+
+`contentWidth` accepts three shapes, and the third is why this is a value rather than a
+constant:
+
+| Shape | Example | For |
+| --- | --- | --- |
+| A `screen.*` step | `contentWidth="lg"` | The ordinary page. `lg` (64rem) is the default. |
+| `"full"` | `contentWidth="full"` | A wall of tiles that genuinely wants the window. |
+| A `rem` literal | ``contentWidth={`${rem}rem`}`` | A cap computed at runtime. |
+
+<Canvas of={MainStories.AllVariants} />
+
+**`max-w-*` is not used and must not be.** Tailwind v4 owns `--container-*` for that scale
+at *different* sizes than our `screen.*`, which is the collision that renamed the
+container-query scale to `--cq-*`. The cap is an inline `max-inline-size` reading
+`var(--screen-*)`, so it stays a token instead of becoming a literal.
+
+## How it composes with the adaptive-columns hook
+
+rip-deck's `useLayoutColumns` — lifted into this library separately — decides a column count
+from the viewport, then folds it into a page cap with `contentMaxWidthRem(columns)`: one
+column → 56rem, two → 72rem, three → 106rem. It returns a **number of rem**, which is
+exactly the third shape above:
+
+```tsx
+const { columns } = useLayoutColumns({ cardCount: bays.length })
+
+<Shell contentWidth={`${contentMaxWidthRem(columns)}rem`}>
+  <Header heading="Rip Deck" />
+
+  <Main>
+    <BayGrid columns={columns} />
+  </Main>
+</Shell>
+```
+
+The seam is one prop and no import in either direction: this package does not depend on a
+layout hook to lay out a page, and the hook does not know a `Shell` exists. The value goes
+on **`Shell`** rather than on `Main` so the header's cap stays in step with the column's as
+the count changes — which is the same reason the two share one `contentWidth` at all.
+
+## `@container` is on the column, not on `<main>`
+
+A grid inside the content column answers to **the column's** width. A poster grid beside an
+open rail and the same grid full-bleed are the pair a media query cannot tell apart, and
+getting that wrong at intermediate widths is what the fleet's grids do today.
+
+The container is declared on the capped inner column rather than on `<main>` deliberately.
+`<main>` is as wide as its grid track — 1184px beside an open rail on a 1440px window —
+while the column inside it is capped at `contentWidth`. A container on `<main>` measures a
+width the content never has: a grid would go three-up at `--cq-xl` while sitting in 976px
+of space.
+
+**`container-type: inline-size` implies `contain: layout style inline-size`**, and both
+halves have consequences:
+
+- **The element may not be sized by its own contents.** Here that is wanted — the column
+  has a definite inline size from its parent, so wide content can no longer widen it, which
+  is half of why the page does not scroll sideways.
+- **`contain: layout` makes it a containing block for `position: fixed` descendants.** An
+  app rendering fixed chrome *inside* `Main` gets it positioned against the column rather
+  than the viewport. Every overlay in this library portals to `document.body` and is
+  unaffected; an app's own fixed chrome belongs in `Shell`, beside `Main`.
+
+## Two kinds of overflow, two different answers
+
+<Canvas of={MainStories.Responsive} />
+
+`wrap-break-word` on the column handles content that *can* wrap and does not — a filesystem
+path, a hash, a URL, none of which contain a break opportunity. That is the cheap half of
+the horizontal-scroll fix; the expensive half is `minmax(0, 1fr)` on `Shell`'s middle
+track.
+
+A `<table>` is the one thing neither can save. Table columns have min-content widths that no
+`overflow-wrap` reaches, so a wide table goes in a scroll container:
+
+```tsx
+<section
+  aria-label="Transfer log, scrollable"
+  className="charcuterie-scrollbar overflow-x-auto rounded-lg border border-border-subtle"
+>
+  <table>…</table>
+</section>
+```
+
+Because that container scrolls, the columns off screen have to be reachable **without a
+mouse** — axe's `scrollable-region-focusable`, which is WCAG 2.1.1. There are two ways to
+satisfy it and the choice is not a matter of taste:
+
+1. **The content contains something focusable.** A row that ends in a link is enough:
+   tabbing to it scrolls the container into view. This is the case above and the one the
+   `Responsive` story ships, because a log row with no way into the record is a poor table
+   anyway.
+2. **`tabIndex={0}` on the container.** The answer for a table of pure text, and the one
+   most guidance quotes. Note that Biome's `noNoninteractiveTabindex` rejects it on a
+   non-interactive element and its **unsafe fix removes the attribute before a suppression
+   is evaluated** — so `yarn lint` will silently turn a compliant table into a
+   keyboard-trap. Prefer (1) where the data allows it.
+
+`aria-label` on the container is worth it either way: it turns the scroller into a named
+region, so the table is announced as a thing rather than as loose content.
+
+## `tabIndex={-1}`
+
+<Canvas of={MainStories.Interactive} />
+
+`<main>` accepts focus so `Shell`'s skip link moves **focus** and not merely the scroll
+position. Without it, Safari and Firefox scroll to `<main>` and leave the next Tab back up
+in the header — which looks exactly like a skip link that works.

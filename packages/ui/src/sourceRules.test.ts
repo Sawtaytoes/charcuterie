@@ -201,10 +201,19 @@ test("a container-query component is never storied in a shrink-to-fit cell", () 
 
   // A canary on the derivation itself: if this ever comes back
   // empty the rule silently passes forever.
+  // `Main` joins them with the app shell. It is the one whose
+  // `contain: inline-size` is *wanted* rather than tolerated —
+  // content may no longer widen the content column, which is half
+  // of why the shell does not scroll sideways at 390px — and the
+  // `contain: layout` that rides along with it is documented in
+  // `Main.tsx` and `Main.mdx`, because it makes `<main>` the
+  // containing block for any `position: fixed` an app renders
+  // inside it.
   expect(containerComponents).toEqual([
     "Alert",
     "Card",
     "EmptyState",
+    "Main",
     "MediaTile",
   ])
 
@@ -342,7 +351,14 @@ test("the barrel is the only place components are re-exported", async () => {
   // than components anybody stories, and live in `RouterLink/` and
   // `reactRouter/` — outside this count by the `<Name>/<Name>.tsx`
   // rule, exactly as `Overlay/`'s parts are.
-  expect(componentNames.length).toBe(38)
+  // The unified app shell adds four: `Shell`, `Header`, `Rail`,
+  // `Main` — the fleet's largest single duplication, where ten of
+  // twelve UI repos hand-roll the page chrome and three of them
+  // have a file called `AppShell.tsx`: +4 -> 42, on top of the link family's 38. `contentWidth.ts`
+  // and `shellContext.ts` are `Shell`'s members and stay out of
+  // this count by the `<Name>/<Name>.tsx` rule, exactly as
+  // `mediaStatus.ts` does.
+  expect(componentNames.length).toBe(42)
 
   for (const name of componentNames) {
     expect(barrel).toContain(`export { ${name} }`)

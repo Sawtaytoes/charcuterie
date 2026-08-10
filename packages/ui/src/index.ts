@@ -113,6 +113,8 @@ export type { FieldGroupProps } from "./Field/FieldGroup.tsx"
 export { FieldGroup } from "./Field/FieldGroup.tsx"
 export type { FileDropZoneProps } from "./FileDropZone/FileDropZone.tsx"
 export { FileDropZone } from "./FileDropZone/FileDropZone.tsx"
+export type { HeaderProps } from "./Header/Header.tsx"
+export { Header } from "./Header/Header.tsx"
 export type { IconButtonProps } from "./IconButton/IconButton.tsx"
 export { IconButton } from "./IconButton/IconButton.tsx"
 export type { IntentAppearance } from "./intentStyles.ts"
@@ -142,6 +144,8 @@ export type {
   LogViewerProps,
 } from "./LogViewer/LogViewer.tsx"
 export { LogViewer } from "./LogViewer/LogViewer.tsx"
+export type { MainProps } from "./Main/Main.tsx"
+export { Main } from "./Main/Main.tsx"
 export type {
   MediaTileProps,
   MediaTileRatio,
@@ -185,6 +189,12 @@ export type {
 } from "./RouterLink/routerLink.ts"
 export { getIsRoutedHref } from "./RouterLink/routerLink.ts"
 export type {
+  RailLandmark,
+  RailProps,
+  RailSide,
+} from "./Rail/Rail.tsx"
+export { Rail } from "./Rail/Rail.tsx"
+export type {
   SegmentedControlProps,
   SegmentedItem,
 } from "./SegmentedControl/SegmentedControl.tsx"
@@ -196,6 +206,12 @@ export type {
   SelectProps,
 } from "./Select/Select.tsx"
 export { Select } from "./Select/Select.tsx"
+export type {
+  ContentWidth,
+  ScreenStep,
+} from "./Shell/contentWidth.ts"
+export type { ShellProps } from "./Shell/Shell.tsx"
+export { Shell } from "./Shell/Shell.tsx"
 export type {
   SkeletonProps,
   SkeletonShape,
