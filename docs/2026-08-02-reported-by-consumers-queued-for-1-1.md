@@ -130,6 +130,36 @@ duplication was the cheaper of the two wrongs for one release. Export them in 1.
 two copies; `mergeRefs` is a thing a consumer would use directly anyway, which is an argument
 for making it public rather than merely shared.
 
+### `MenuAction`'s hover highlight is the wrong tint for an overlay
+
+Found while fixing the [option-row contrast
+failure](decisions/2026-08-10-content-muted-is-strengthened-so-the-highlighted-option-row-clears-aa.md)
+(#76). Not a contrast bug — a **visibility** one, and it is already covered by a settled
+decision that `MenuAction` was simply never updated to follow.
+
+`MenuAction.tsx` highlights with `hover:bg-intent-neutral-surface`. But `Menu`'s panel uses
+the shared `PANEL_SURFACE_CLASS`, which is `bg-surface-overlay` — the same panel `Listbox`
+and `Combobox` draw on. [The 2026-08-05
+record](decisions/2026-08-05-option-rows-carry-no-base-bg-transparent-and-highlight-with-surface-hover.md)
+measured exactly this case: in **every dark scheme** `intent-neutral-surface` is a
+*base-surface* tint that sits **darker** than `surface-overlay`, so the highlight reads as
+no change at all. Daylight/dark, from that record: panel `#252D3B`, `intent-neutral-surface`
+`#222A37` (darker), `intent-neutral-surface-hover` `#2B3442` (lighter, visible).
+
+That record says it applies to `ComboboxOption` and `ListboxOption` "**and to any future row
+that lives on the `surface-overlay` panel**". `MenuAction` is such a row and was left on the
+old tint.
+
+The fix is one token — `hover:bg-intent-neutral-surface` → `hover:bg-intent-neutral-surface-hover`
+— but it is a visible change to every menu, so it wants its own before/after rather than
+riding along inside a contrast PR. `MenuAction` also still carries the base `bg-transparent`
+the same record removed from the other two rows; it is harmless there today because the only
+fill is a `hover:` variant (higher specificity), but it is the identical trap the moment
+somebody adds a conditional `isActive` tint.
+
+**Workaround:** none needed in light schemes, where the tint is darker than the panel and
+does read. Dark-scheme menus simply have a very weak pointer affordance today.
+
 ## Not 1.1 — a major, and open
 
 **Should a slot still be built on `cloneElement`?** Kevin's *"we probably shouldn't anymore,
