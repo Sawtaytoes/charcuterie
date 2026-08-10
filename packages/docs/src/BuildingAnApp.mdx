@@ -1,0 +1,320 @@
+import { Meta } from "@storybook/addon-docs/blocks";
+
+<Meta title="Guides/Building an app" />
+
+# Building an app with Charcuterie
+
+Read this **before you write the first component of a new app**, and before you add a screen
+to an existing one.
+
+The goal is one base under every app in the fleet, so a UI fault gets fixed in one place and
+an app review is only ever *"does the logic work?"* — never *"does it look right, does it
+have buttons, is it accessible, can I use the keyboard, can I click this thing to get back
+where I expect?"*. Every rule below exists because an app shipped the other thing.
+
+The failures this guide is aimed at are measured, not hypothetical: **31 raw `<a>` in
+bambuddy** and 14 in mux-magic, **134 raw `<select>` in bambuddy**, a header title in
+points-market that no keyboard can reach, plex-channels navigating with
+`<button onClick={navigate}>`, and **three separate repos with a file called `AppShell.tsx`**
+— two of whose header elements are a byte-identical class string, arrived at independently.
+
+## The component-choice table
+
+Start here. Find the row that matches what you are about to build.
+
+| You want to… | Use | Never |
+| --- | --- | --- |
+| Send the user somewhere, inline in a sentence or as a standalone link | `TextLink` (`appearance="inline"` or `"standalone"`) | `<a>`; `<button onClick={navigate}>`; a clickable `<div>` |
+| Send the user somewhere, but it should *look* like a button | `ButtonLink` — a real `<a href>` painted as a button | `Button` with an `onClick` that navigates |
+| Do something on this page — submit, open, retry, delete | `Button` | `<button>`; a `<div onClick>` |
+| Do something on this page, and the control is icon-only | `IconButton` — `label` is **required** | `Button` with only a glyph inside |
+| Pick one of a handful of rich options | `Listbox` | a hand-rolled `role="listbox"` |
+| Pick from many, or the user should be able to type to find it | `Combobox` (`isMultiple` for multi-select) | a `<select>` with 400 `<option>` |
+| A native select, for one of four platform reasons | `Select`, with a written justification | reaching for it by default |
+| Label, describe or error-annotate any control | `Field` | a bare `<label>` + hand-wired `aria-describedby` |
+| Page chrome — header, rails, the content column | `Shell` / `Header` / `Rail` / `Main` | a new `AppShell.tsx` |
+| A grid of cards that should reflow | `AdaptiveGrid` | `grid-cols-*` breakpoints; `auto-fill, minmax()` |
+| Anything with a glyph in it | your own icon (lucide, ISC, is the fleet pick) | expecting the library to ship one |
+
+### Links are not buttons, and this is encoded in the API
+
+A control that **navigates** is an `<a href>`. A control that **changes this page** is a
+`<button>`. That is not a style preference: middle-click, ctrl-click, open-in-new-tab,
+copy-link-address and the browser's own status-bar preview cannot be added to a `<button>`
+afterwards, and re-implementing them by hand gets the modifier keys wrong every time.
+
+The library ships **two link components rather than one `Link` with an `appearance` prop**,
+because choosing between two names is a clearer decision than setting a prop — and `Button`
+deliberately grows no `href` and no `asChild`.
+
+```tsx
+import { Button, ButtonLink, IconButton, TextLink } from "@charcuterie/ui"
+
+// Navigation.
+<TextLink href="/channels">all channels</TextLink>
+<TextLink appearance="standalone" href="/channels">Back to all channels</TextLink>
+<ButtonLink href={`/channels/${id}/settings`}>Configure</ButtonLink>
+
+// On-page actions.
+<Button intent="danger" onClick={onDelete}>Delete</Button>
+<IconButton label="Undo" onClick={onUndo}><UndoIcon /></IconButton>
+```
+
+`ButtonLink` shares `Button`'s intent and size maps, so the two are pixel-identical — it
+takes `appearance`, `intent`, `size`, `isFullWidth`, `iconStart`/`iconEnd`. It has **no
+`isLoading`**: a navigation has no pending state the component owns. A disabled link *drops*
+`href` rather than keeping a focusable anchor whose handler returns early.
+
+`IconButton`'s `label` is a required `string` and becomes `aria-label`. A glyph is not an
+accessible name — a screen reader reads `↶` as "↶", and
+`getByRole("button", { name: "Undo" })` finds nothing at all, which is the concrete reason
+the fleet is not agent-drivable today.
+
+### Pickers: `Listbox` and `Combobox` first, `Select` with a reason
+
+`Listbox` (short list, rich rows) and `Combobox` (long list, searchable) are the default.
+Both render options as `ReactNode`, so an icon, two lines or a badge is fine — which is what
+`<option>` cannot do.
+
+```tsx
+const [isVisible, setIsVisible] = useState(false)
+
+<Listbox
+  isVisible={isVisible}
+  onDismiss={() => setIsVisible(false)}
+  onSelect={setQuality}
+  options={QUALITY_OPTIONS}
+  selectedValue={quality}
+  trigger={<Button onClick={() => setIsVisible(true)}>{qualityLabel}</Button>}
+/>
+```
+
+`trigger` is **required on `Listbox`** and cloned, not wrapped. `Combobox` takes the same
+`options` shape and adds `query`/`onQueryChange`, `isMultiple`, `isCreatable`,
+`isVirtualized` (auto-on past ~100 options).
+
+Native `Select` is **demoted, not deleted**. It is still right for four platform cases — the
+mobile wheel picker, autofill, `:invalid`, and a form that must submit with no JS on the page
+— and each call site says which, in a one-line reason on its lint suppression:
+
+```tsx
+// eslint-disable-next-line charcuterie/prefer-listbox-over-select -- posted by the browser with no JS on the page at all
+<Select label="Country" options={COUNTRIES} />
+```
+
+Note `Select`'s `value` is an **initial** value that seeds `defaultValue` — the platform owns
+the value, so there is no controlled mode and no prop-sync effect.
+
+### `Field` is a generic wrapper, not a text input
+
+The name undersells it. `Field` is **not** a text field, and it contains no input of its own:
+it renders the label, description and error, and **clones any single child** to wire them up
+— an `<input>`, a `<textarea>`, a `Select`, a `FileDropZone`, or a control your app wrote
+itself. Same slot contract as `Popover`'s trigger, so the child's own layout is untouched.
+
+```tsx
+<Field description="Applies to every job in the queue" label="Output pattern">
+  <input className="…" name="pattern" />
+</Field>
+
+<Field error={errors.quality} isRequired label="Quality">
+  <Select options={QUALITY_OPTIONS} />
+</Field>
+```
+
+`label` is required. There is no `isInvalid` — **the presence of `error` means invalid**, and
+`Field` writes `aria-describedby`, `aria-invalid`, `aria-required`, `required` and the `id`
+onto the child. If the child already has an `id`, it is kept; an `id` passed to the `Field`
+wins over both.
+
+### Page chrome: `Shell` / `Header` / `Rail` / `Main`
+
+Do not write another `AppShell.tsx`. Ten of twelve UI repos hand-roll the page chrome, none
+of the ten has a skip link, and the duplication is the fleet's largest single surface.
+
+```tsx
+import { ColorSchemeSwitcher, Header, Main, Rail, Shell } from "@charcuterie/ui"
+
+<Shell>
+  <Header actions={<ColorSchemeSwitcher icons={ICONS} />} heading="Rip Deck" />
+
+  <Rail label="Sections" landmark="navigation">
+    <SectionNav />
+  </Rail>
+
+  <Main>
+    <PageContent />
+  </Main>
+</Shell>
+```
+
+Order the children the way they should be **read**: header, start rail, main, end rail.
+Three copy-wholesale templates are on the **Shell** docs page — the structure is meant to be
+copied whole, and the only edits are what goes in `actions`, in the rails, and in `Main`.
+
+Three things worth knowing before you reach past them:
+
+- **`contentWidth` is stated once, on `Shell`**, and `Header` and `Main` both read it through
+  context. Setting it in two places is how points-market ships an 80rem header row above an
+  uncapped `<main>`. It takes a `screen.*` step (`"lg"` by default), `"full"`, or a
+  `` `${number}rem` `` literal.
+- **`Header` is sticky by default** (`isSticky`), and it writes `position` **and** `z-index`
+  together. mux-magic's `PageHeader` is documented as sticky and sets only the z-index, so it
+  scrolls away — valid CSS, no error, no failing gate.
+- **A `Rail` collapses by restyling one element**, never by rendering a second copy behind
+  `hidden` / `lg:hidden`. Two repos ship that, and every control lands in the DOM twice at
+  every viewport. `label` is required (it becomes the landmark's name); `landmark` is
+  `"complementary"` (default) or `"navigation"`; `side` is `"start"` (default) or `"end"`.
+
+`Main` is the `<main>` landmark, the capped content column, and the skip link's target.
+
+### `AdaptiveGrid`: columns are bought with height
+
+The rule reads backwards, so read it twice: **a column is added only when the items will
+*not* stack inside the viewport** — the container's width can only ever *cap* that count,
+never produce it. Which means the visible consequence is deliberately non-monotonic:
+**1440x900 takes three columns while the larger 1920x1080 takes two**, because the taller
+window stacks the same items in fewer stacks. That is correct. Do not "fix" it.
+
+The cap around the grid then widens with the count it earned — 1 column → 56rem, 2 → 72rem,
+3 → 106rem, 4 → 140rem — so a page only gets wide when it has something to fill the width
+with. The alternative, `auto-fill, minmax()`, is what every hand-rolled grid in the fleet
+uses and it produces exactly the two complaints this replaces: one column that is
+*way* too wide, and seven items across a 4K monitor.
+
+```tsx
+<AdaptiveGrid itemBlockSize={163} storageKey="library-columns">
+  {items.map((item) => <MediaTile key={item.id} {...item} />)}
+</AdaptiveGrid>
+```
+
+`itemBlockSize` (the item's height in px) is the one required prop — it is what the fold
+arithmetic is done in. `useAdaptiveColumns` is exported for a layout that needs the numbers
+without the grid element; its `containerRef` goes on the element you **measure**, never the
+element `contentMaxInlineSize` is applied to, or the fold reads back its own narrowed output
+and answers "one column" forever.
+
+## Wiring a new app
+
+### 1. Install and import the stylesheets
+
+```bash
+yarn add @charcuterie/ui @charcuterie/tokens
+```
+
+```css
+@import "tailwindcss";
+@import "@charcuterie/tokens/theme.css"; /* colours, type ramp, radii, motion */
+@import "@charcuterie/tokens/fonts.css"; /* Baloo 2, Outfit, Victor Mono */
+@import "@charcuterie/ui/styles.css";    /* looping affordances + .charcuterie-scrollbar */
+
+@source "../node_modules/@charcuterie/ui/dist";
+```
+
+**Both package names, and both of those last two lines, are load-bearing.**
+
+- The token **stylesheet** is imported from `@charcuterie/tokens` **by its own package
+  name** — there is no `@charcuterie/ui/tokens.css`, on purpose. One used to exist, pointing
+  at `./node_modules/@charcuterie/tokens/dist/theme.css` inside `ui`, and it resolved to
+  nothing in the first real consumer: a hoisting linker puts `@charcuterie/tokens` at the
+  *project* root, not inside the dependency. A CSS `@import` that misses fails **silently**
+  in Tailwind — no error, no utilities, an unstyled app. The trap is written up in
+  `packages/ui/src/index.ts`'s docstring.
+- The token **types and values** *are* re-exported, at `@charcuterie/ui/tokens`, so your
+  TypeScript only ever names one package.
+- `@source` is not optional either. Tailwind v4 scans **source text** for complete class
+  strings and does not scan your dependencies — without that line every component renders
+  unstyled, again with no error.
+
+Then copy the first-paint snippet into your HTML head, from `@charcuterie/tokens`'
+`dist/first-paint.css`. It is a **copy-me file, never `<link>`ed** — a
+stylesheet request is the round-trip it exists to beat — and it must stay a `var()` fallback,
+because an inline `<style>` is unlayered and a flat hex there outranks every utility forever
+and pins the canvas to one scheme.
+
+**Light mode is not pure white.** `surface.base` is a warm or cool near-white, and `raised`
+means *more separated from base*, not *lighter*. If you set base to `#FFFFFF`, `raised` has
+nowhere left to go and every card in the app disappears into the page.
+
+### 2. Wire the router
+
+`TextLink` and `ButtonLink` already work with no setup — they render a real anchor, they just
+reload the page. **One provider at the app root** upgrades every link in the tree to soft
+navigation, with no change at any call site:
+
+```tsx
+import { RouterLinkProvider } from "@charcuterie/ui"
+import { ReactRouterLink } from "@charcuterie/ui/react-router"
+
+<RouterLinkProvider link={ReactRouterLink}>
+  <RouterProvider router={router} />
+</RouterLinkProvider>
+```
+
+The seam is keyed on **`href`, not `to`** — each adapter renames it on the way in — so any
+router is a four-line adapter in your own app. `react-router` is an *optional* peer
+dependency and the adapter is a separate entry point, so an app that never imports it never
+resolves it. Full recipe, including wouter and hand-rolled routers, and the three
+destinations that always fall through to a plain `<a>`: **Guides → Routing**.
+
+### 3. Turn on the component-choice lint rules
+
+They are **opt-in and pointed at your app's source**, never at the library's:
+
+```js
+// eslint.config.js
+import { createComponentChoiceRules } from "@charcuterie/eslint-config"
+
+export default defineConfig(
+  // …the rest of your config…
+  createComponentChoiceRules({
+    files: ["packages/web/**/*.tsx"],
+  }),
+)
+```
+
+Seven rules, all errors: `charcuterie/no-raw-anchor`, `no-raw-button`, `no-raw-select`,
+`prefer-listbox-over-select`, `no-clickable-non-interactive`,
+`no-navigation-in-click-handler`, and `require-suppression-reason` — the last of which makes
+every suppression of the other six carry a `-- reason`. Documentation has existed the whole
+time and moved none of the fleet's numbers; that is the entire argument for a rule.
+
+### 4. Storybook
+
+`@charcuterie/storybook-config` is a package, not a `.storybook/` to copy — two thin config
+files and the app's Storybook themes exactly like this one. Recipe:
+`docs/how-we-do-storybook.md` in the charcuterie repo.
+
+## Paste this into your app repo's `AGENTS.md`
+
+So the next agent in *your* repo lands on these rules instead of rediscovering them. Copy it
+verbatim:
+
+```md
+## UI work goes through Charcuterie
+
+This app's UI is built on **`@charcuterie/ui`** — the fleet's shared component library.
+**Before writing or changing any component, read `Guides/Building an app` in the Charcuterie
+Storybook (`storybook.octen.dev`), or `packages/docs/src/BuildingAnApp.mdx` in the
+`charcuterie` repo.** Its component-choice table is binding here.
+
+The short version:
+
+- Navigation is `TextLink` / `ButtonLink` — a real `<a href>`. **Never** `<button onClick={navigate}>`,
+  never a clickable `<div>`.
+- On-page actions are `Button`; icon-only actions are `IconButton`, whose `label` is required.
+- Pickers are `Listbox` (short, rich) or `Combobox` (long, searchable). A native `Select`
+  needs a written reason on the line above it.
+- Labels, descriptions and errors come from `Field`, which clones **any** child control.
+- Page chrome is `Shell` / `Header` / `Rail` / `Main`. Do not add an `AppShell.tsx`.
+- Reflowing grids are `AdaptiveGrid`.
+- The library ships no icons; bring your own (lucide).
+
+Charcuterie's own conventions and decision records are in its `AGENTS.md` and
+`docs/decisions/`. If a component is missing or wrong, fix it **there** and let every app
+inherit it — do not work around it here.
+```
+
+Do not fork a component into your app. If Charcuterie is missing the shape you need, or has
+it wrong, that is a change to Charcuterie — a shape an app spells more than once is exactly
+what earns a place in the library.
