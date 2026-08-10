@@ -18,10 +18,14 @@ import {
 } from "./contrast.ts"
 import {
   auditScheme,
+  CONTENT_BEARING_INTENT_NAMES,
+  CONTENT_BEARING_SURFACE_ROLES,
   getAliasDrift,
   getFailures,
   INTENT_NAMES,
   RESTING_ROLE_BY_INTENT_ROLE,
+  SURFACE_CONTENT_ROLES,
+  TINT_BACKGROUND_INTENT_ROLES,
 } from "./contrastAudit.ts"
 import type { Scheme } from "./types.ts"
 import { variants } from "./variants/index.ts"
@@ -68,7 +72,61 @@ describe.each(variants)("$name", (variant) => {
       // pass in every report.
       expect(
         auditScheme(variant.schemes[scheme]).length,
-      ).toBeGreaterThanOrEqual(45)
+      ).toBeGreaterThanOrEqual(60)
+    },
+  )
+
+  test.each(SCHEMES)(
+    "%s measures every content role on every surface it is drawn on",
+    (scheme) => {
+      // The mirror of the interactive-state test below, for the
+      // *foreground* half. The surfaces block used to hand-list
+      // three surface roles and three content roles, so
+      // `surface.sunken` went unaudited for the library's whole
+      // life — and `content.muted` failed AA on it, at rest, in
+      // `hairline`/light. Deriving the list from the role unions
+      // is what makes that impossible to repeat.
+      const labels = auditScheme(
+        variant.schemes[scheme],
+      ).map((entry) => entry.label)
+
+      const unaudited =
+        CONTENT_BEARING_SURFACE_ROLES.flatMap(
+          (surfaceRole) =>
+            SURFACE_CONTENT_ROLES.map(
+              (contentRole) =>
+                `content.${contentRole} on surface.${surfaceRole}`,
+            ).filter((pair) => !labels.includes(pair)),
+        )
+
+      expect(unaudited).toEqual([])
+    },
+  )
+
+  test.each(SCHEMES)(
+    "%s measures plain content on the tints that carry it",
+    (scheme) => {
+      // The highlighted option row in `Listbox`/`Combobox`/`Menu`
+      // is `content.*` on an intent tint, not on a `surface.*`.
+      // That whole class was invisible to this gate until
+      // `INTENT_TINT_CARRIES_PLAIN_CONTENT` named it, which is how
+      // `content.muted` on `intent.neutral.surfaceHover` shipped at
+      // 4.11:1 in the fleet's default variant.
+      const labels = auditScheme(
+        variant.schemes[scheme],
+      ).map((entry) => entry.label)
+
+      const unaudited =
+        CONTENT_BEARING_INTENT_NAMES.flatMap((intent) =>
+          TINT_BACKGROUND_INTENT_ROLES.flatMap((tintRole) =>
+            SURFACE_CONTENT_ROLES.map(
+              (contentRole) =>
+                `content.${contentRole} on intent.${intent}.${tintRole}`,
+            ).filter((pair) => !labels.includes(pair)),
+          ),
+        )
+
+      expect(unaudited).toEqual([])
     },
   )
 

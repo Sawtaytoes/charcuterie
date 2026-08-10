@@ -66,7 +66,7 @@ export const layered: Variant = {
       content: {
         primary: "#F3F1F6",
         secondary: "#B3AEC0",
-        muted: "#9A95AB",
+        muted: "#9B96AB",
         disabled: "#5B5670",
         // Dark, not white: this direction's accent is a vivid
         // coral, and vivid warm fills carry near-black better than
@@ -165,7 +165,7 @@ export const layered: Variant = {
       content: {
         primary: "#1C1A24",
         secondary: "#514D5C",
-        muted: "#676274",
+        muted: "#605B6C",
         disabled: "#A9A4B6",
         onAccent: "#FFFFFF",
       },
