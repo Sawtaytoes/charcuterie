@@ -14,6 +14,21 @@
  *    `content.disabled` is reported but never gated. Gating it
  *    would force disabled text to look enabled, which is worse
  *    for everyone than the exemption.
+ *
+ * **Interactive states are audited, not just resting ones.** A
+ * pointer sitting on a button is a state the user reads text in,
+ * so `solidHover` and `surfaceHover` are gated exactly as `solid`
+ * and `surface` are. Auditing only the resting state let
+ * `daylight`'s dark accent button ship at 4.47:1 while hovered
+ * with the gate green for the library's whole life
+ * ([decision](../../../docs/decisions/2026-08-10-interactive-states-are-audited-not-just-resting-states.md)).
+ *
+ * The state tokens are enumerated from `IntentRole`: today that is
+ * `surfaceHover` and `solidHover` and nothing else. There is no
+ * pressed/active/selected token — selection is drawn with the
+ * resting `surface` tint, which the resting pairs already cover.
+ * A new state role added to `IntentRole` must be paired here in
+ * the same change; `contrast.test.ts` fails if one is not.
  */
 
 import type { ContrastResult } from "./contrast.ts"
@@ -21,6 +36,7 @@ import { getContrast } from "./contrast.ts"
 import type {
   Density,
   IntentName,
+  IntentRole,
   Scheme,
   SchemeColours,
 } from "./types.ts"
@@ -33,6 +49,32 @@ export const INTENT_NAMES: IntentName[] = [
   "danger",
   "info",
 ]
+
+/**
+ * Which intent roles are **states** of another role, and which are
+ * resting values in their own right. `null` is "this one is a
+ * resting value".
+ *
+ * Keyed by every member of `IntentRole` rather than listing only
+ * the states, so adding a `solidPressed` to that type is a
+ * typecheck error here until somebody classifies it — and once
+ * classified, `contrast.test.ts` fails until `auditScheme` pairs
+ * it with a foreground. Between them that is the thing that was
+ * missing: `solidHover` existed for the library's whole life and
+ * the gate never once looked at it.
+ */
+export const RESTING_ROLE_BY_INTENT_ROLE: Record<
+  IntentRole,
+  IntentRole | null
+> = {
+  border: null,
+  content: null,
+  onSolid: null,
+  solid: null,
+  solidHover: "solid",
+  surface: null,
+  surfaceHover: "surface",
+}
 
 export type ContrastCheck = {
   label: string
@@ -96,6 +138,10 @@ export const auditScheme = (
   }),
 
   // --- Intents: tinted pill, and solid fill -----------------
+  //
+  // Each fill is checked in both the state it rests in and the
+  // state a pointer puts it in. Same foreground, same threshold —
+  // hovering does not make text optional.
   ...INTENT_NAMES.flatMap((intent) => [
     check({
       label: `intent.${intent}.content on intent.${intent}.surface`,
@@ -104,9 +150,21 @@ export const auditScheme = (
       threshold: 4.5,
     }),
     check({
+      label: `intent.${intent}.content on intent.${intent}.surfaceHover`,
+      foreground: colour.intent[intent].content,
+      background: colour.intent[intent].surfaceHover,
+      threshold: 4.5,
+    }),
+    check({
       label: `intent.${intent}.onSolid on intent.${intent}.solid`,
       foreground: colour.intent[intent].onSolid,
       background: colour.intent[intent].solid,
+      threshold: 4.5,
+    }),
+    check({
+      label: `intent.${intent}.onSolid on intent.${intent}.solidHover`,
+      foreground: colour.intent[intent].onSolid,
+      background: colour.intent[intent].solidHover,
       threshold: 4.5,
     }),
     check({
@@ -176,6 +234,12 @@ export const auditScheme = (
     label: "content.onAccent on intent.accent.solid",
     foreground: colour.content.onAccent,
     background: colour.intent.accent.solid,
+    threshold: 4.5,
+  }),
+  check({
+    label: "content.onAccent on intent.accent.solidHover",
+    foreground: colour.content.onAccent,
+    background: colour.intent.accent.solidHover,
     threshold: 4.5,
   }),
 ]
