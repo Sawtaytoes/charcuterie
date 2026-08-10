@@ -172,11 +172,16 @@ rename breaks only the rendered page).
    widths, via `ContainerBoard`), `Interactive` (the complete keyboard path).
 4. Export from `src/index.ts` — the one sanctioned barrel. Components import each other
    directly, never through it.
-5. **If it is an overlay, use the platform's top layer — never a portal.** `<dialog>` +
-   `showModal()`, or `popover="manual"`. Both stay where they are in the DOM, so
-   `canvas.getByRole(…)` still finds the panel; a portal moves it to `document.body`, out
-   of the element a test or an agent scoped its queries to
-   ([decision](../../docs/decisions/2026-07-30-overlays-use-the-top-layer-not-a-portal.md)).
+5. **If it is an overlay, portal it to the body** — `FloatingPortal`, through
+   `OverlayPanel`, never a hand-rolled `<dialog>` + `showModal()` or `popover="manual"`. The
+   top layer wins paint order but is still laid out in place, so a `transform` or
+   `overflow: hidden` ancestor still clips a fixed panel; a portal to `document.body` has no
+   ancestor to be clipped by
+   ([decision](../../docs/decisions/2026-08-03-overlays-portal-to-the-body-not-the-top-layer.md),
+   superseding [M4's](../../docs/decisions/2026-07-30-overlays-use-the-top-layer-not-a-portal.md)).
+   The old objection stands answered rather than waved: `useRole` writes
+   `aria-controls`/`aria-labelledby` across the boundary, and the stories scope panel queries
+   to `body`.
 6. **If it is built on a registering kind, look at its first paint.** Members register
    from effects, so before those run a `RovingFocus` has no active value and a
    `SinglePicker` / `VisibilityGroup` has no selected key — only a pending one. Two of M4's
