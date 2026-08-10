@@ -1,10 +1,10 @@
 # `Listbox` and `Combobox` are siblings of `Select`, not replacements
 
-**Status:** Accepted
+**Status:** Superseded
 **Date:** 2026-08-03
 **Type:** Architecture · API
 **Supersedes:** —
-**Superseded by:** —
+**Superseded by:** [2026-08-10 — `Listbox` and `Combobox` are the default; `Select` is demoted](2026-08-10-listbox-and-combobox-are-the-default-and-select-is-demoted.md)
 
 ## Decision
 
