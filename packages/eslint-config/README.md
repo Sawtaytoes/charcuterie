@@ -12,6 +12,7 @@ in this repo, so apps consume one import instead of six copy-pasted config files
 ```js
 // eslint.config.js
 import {
+  createComponentChoiceRules,
   createLogicalPropertiesRules,
   createReactRules,
   createStoryOverrides,
@@ -28,6 +29,10 @@ export default defineConfig(
   createReactRules({ files: ["packages/ui/**/*.tsx"] }),
   createLogicalPropertiesRules({
     files: ["packages/ui/**/*.tsx"],
+  }),
+  // Opt-in, and pointed at app source rather than the library.
+  createComponentChoiceRules({
+    files: ["packages/web/**/*.tsx"],
   }),
   createStoryOverrides({}),
   createTestRules({}),
@@ -50,6 +55,7 @@ there is no honest default for where somebody else's tsconfig lives.
 | `react/no-multi-comp` | one component per file; off for stories and `__fixtures__` |
 | `vitest/consistent-test-it` (`test`, not `it`) | auto-fixable, which is the only reason a rule this cosmetic earns a slot |
 | `no-restricted-syntax` (logical properties only) | **new here** — see below |
+| `charcuterie/*` (component choice) | **new here, and opt-in** — see below |
 
 ## Logical properties only
 
@@ -69,6 +75,76 @@ rather than every line on screen.
 The pattern's anchors are load-bearing, and `__fixtures__/logicalDirectionClassName.tsx`
 exists to prove it: `border-red-500` contains `border-r`, `rounded-lg` contains
 `rounded-l`, `place-items-center` starts with `pl`. All three must stay clean.
+
+## Component choice — opt-in
+
+Six repos measured on 2026-08-10 keep reaching past the library for the same handful of
+raw elements. Documentation has been in place the whole time and moved none of these
+numbers, which is the entire argument for a lint rule: a doc is read once, a rule is
+enforced on every save.
+
+| Rule | Fires on | Reach for instead | Measured in the fleet |
+| --- | --- | --- | --- |
+| `charcuterie/no-raw-anchor` | `<a>` | `TextLink`, or `ButtonLink` when navigation should look like a button | 14 in mux-magic, 10 in gallery-downloader, 31 in bambuddy |
+| `charcuterie/no-raw-button` | `<button>` | `Button`, or `IconButton` when the control is icon-only | every icon row in the fleet |
+| `charcuterie/no-raw-select` | `<select>` | `Listbox` (short, rich) or `Combobox` (long, searchable) | **134 in bambuddy**, 19 in spoolbuddy, 2 in points-market |
+| `charcuterie/prefer-listbox-over-select` | `<Select>` | `Listbox` or `Combobox` — `Select` needs a stated reason | [the 2026-08-10 demotion](../../docs/decisions/2026-08-10-listbox-and-combobox-are-the-default-and-select-is-demoted.md) |
+| `charcuterie/no-clickable-non-interactive` | `onClick` on `<div>`/`<span>`/`<li>`/… with no `role` or `tabIndex` | `Button`/`IconButton` to act, `TextLink`/`ButtonLink` to navigate | `points-market/…/AppShell.tsx:26-28` — a header title no keyboard can reach |
+| `charcuterie/no-navigation-in-click-handler` | `navigate()`, `router.push()`, `location.href =` inside an `onClick` | `TextLink`/`ButtonLink` with an `href` | all of plex-channels, and mail-sifter's whole shell |
+| `charcuterie/require-suppression-reason` | a disable of any rule above with no `-- reason` | say why in one line | — |
+
+Both link components render a **real `<a href>`**, which is the point: middle-click,
+ctrl-click, open-in-new-tab, copy-link and the browser's status-bar preview all work, and
+none of them work on a click handler. Links go somewhere; buttons act on this page.
+
+`IconButton` gets its own rule for the same kind of reason — an icon-only `Button` has
+nothing but a glyph for its accessible name, so `IconButton` takes a required `label`.
+
+### Wiring it
+
+```js
+createComponentChoiceRules({
+  // The app's own source. `packages/ui/**` is deliberately not
+  // in here.
+  files: ["packages/web/**/*.tsx"],
+})
+```
+
+**It is opt-in on purpose.** Five apps would go red the day they adopted it, and a config
+that turns a whole repo red is a config that gets reverted rather than migrated — so it is
+its own block, added when an app is ready to fix what it finds.
+
+`files` is also the whole mechanism keeping the rules off `@charcuterie/ui`, which renders
+raw `<a>`, `<button>` and `<select>` because rendering them correctly *is* the library.
+Point `files` at app source and the library never matches;
+`__fixtures__/uiPackage/rawElements.tsx` asserts it, because a scoping mechanism nobody
+tests is a scoping mechanism that silently stops scoping.
+
+This block is **seven real plugin rules**, not `no-restricted-syntax` entries like the
+logical-properties one — the plugin object is inline in this package, so there is still
+nothing extra to install, version or publish. Two things only distinct rule ids can do:
+
+1. **An escape hatch turns off exactly what it names.** A `no-restricted-syntax`
+   suppression is all-or-nothing, so silencing a raw `<a>` on one line would also silence
+   the logical-properties selectors on it.
+2. **Flat config replaces rule options rather than merging them.** Two blocks that both set
+   `no-restricted-syntax` over overlapping globs leave only the later one's selectors
+   running, silently.
+
+### The escape hatch
+
+Every rule has one, and it has to carry a reason:
+
+```tsx
+// eslint-disable-next-line charcuterie/no-raw-select -- posted by the browser with no JS on the page at all
+<select name="theme">…</select>
+```
+
+`charcuterie/require-suppression-reason` reports a disable of any of these rules that has no
+`-- reason` after it, including a blanket `// eslint-disable-next-line` (which silences them
+too). Other people's disable comments are left alone. Without the reason the rule stops
+firing, nobody learns why the native element was the right call, and the next agent copies
+the pattern — which is the failure this whole block exists to fix.
 
 ## Tests
 
