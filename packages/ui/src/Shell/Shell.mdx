@@ -1,0 +1,186 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as ShellStories from "./Shell.stories";
+
+<Meta of={ShellStories} />
+
+# Shell
+
+**The fleet's largest duplicated surface.** Ten of twelve UI repos hand-roll the page
+chrome, and three of them have a file literally named `AppShell.tsx` — mail-sifter's and
+points-market's headers are a *byte-identical* string, arrived at independently:
+
+```tsx
+<header className="sticky top-0 z-40 border-b border-border-subtle bg-surface-base/90 backdrop-blur-md">
+```
+
+board-games' is the same structure with `sticky` dropped. The other seven spell the same
+idea as `PageChrome`, `Header`, `DashboardHeader`, `Layout` (twice), `TitleBar`, and
+inline in `App.tsx`.
+
+The owner's ask, verbatim:
+
+> "We need a header component. Apps are all doing it differently, and there's no
+> standardized way to do a sticky header + narrow view... A Unified App Shell basically."
+
+<Canvas of={ShellStories.Default} />
+
+## Props
+
+<Controls />
+
+## The three templates
+
+The controls differ per app. The structure does not — so these are meant to be copied
+whole, and the only edits are what goes in `actions`, in the rails, and in `Main`.
+
+### 1. Header + main
+
+Eight of the fleet's ten hand-rolled shells are this shape, and most apps need nothing
+else.
+
+```tsx
+<Shell>
+  <Header actions={<ColorSchemeSwitcher icons={ICONS} />} heading="Rip Deck" />
+
+  <Main>
+    <PageContent />
+  </Main>
+</Shell>
+```
+
+### 2. Header + a start rail
+
+<Canvas of={ShellStories.WithStartRail} />
+
+```tsx
+<Shell>
+  <Header actions={<ColorSchemeSwitcher icons={ICONS} />} heading="Comic Ingest" />
+
+  <Rail label="Sections" landmark="navigation">
+    <NavLinks />
+  </Rail>
+
+  <Main>
+    <PageContent />
+  </Main>
+</Shell>
+```
+
+`label` is required, and `landmark="navigation"` makes it a `<nav>`. Both matter the
+moment there are two rails.
+
+### 3. Header + both rails
+
+<Canvas of={ShellStories.WithBothRails} />
+
+```tsx
+<Shell>
+  <Header actions={<ColorSchemeSwitcher icons={ICONS} />} heading="Rip Deck" />
+
+  <Rail label="Sections" landmark="navigation">
+    <NavLinks />
+  </Rail>
+
+  <Main>
+    <PageContent />
+  </Main>
+
+  <Rail label="Job detail" side="end">
+    <JobDetail />
+  </Rail>
+</Shell>
+```
+
+Order the children the way they should be **read**: header, start rail, main, end rail.
+Below `md` the grid is one column and that DOM order is the reading order; above it, the
+`side` prop places each rail in its own track.
+
+## One width, not two
+
+`contentWidth` is stated once, on `Shell`, and `Header` and `Main` both read it. That is a
+bug fix, not tidiness: **points-market's header is capped at 80rem and its `<main>` is not
+capped at all**, so on a wide monitor the page title sits above content that starts to its
+left and runs past its right. Nothing errors; the two values were simply written on
+different days.
+
+Either component still takes its own `contentWidth` for a real reason — a full-bleed hero
+under a constrained header — but that now takes a prop somebody wrote on purpose.
+
+The scale and how it composes with a runtime-computed cap are on the
+[`Main`](?path=/docs/components-main--docs) page.
+
+## The rails collapse without duplicating
+
+Below `md` the shell is a single column and each `Rail` becomes a horizontally-scrolling
+strip. **The same element, restyled — never a second copy.** mux-magic's `PageHeader`
+renders its entire control set twice (lines 290–345 and 356–410) behind `hidden` /
+`lg:hidden`, and mail-sifter's `TriageQueue` does it again. The cost is not bytes: every
+action exists twice in the DOM at *every* viewport, so tests must be defensively scoped
+with `within(toolbar)`, an agent driving the page finds two of each button with no way to
+tell which is visible, and the two copies drift.
+
+plex-channels' `App.tsx` shows the pattern for when the contents genuinely have to differ
+— a `useMediaQuery` over `matchMedia` through `useSyncExternalStore`, mounting exactly one
+instance and relocating it. It is strictly more machinery for the same guarantee, so a
+rail that only changes *position* uses a media query and nothing else.
+
+<Canvas of={ShellStories.Responsive} />
+
+## It does not scroll sideways, and that is a test
+
+Plex Channels' narrow view scrolls left and right as wide as its content area. The usual
+causes are all shell faults: a grid track that ignores `min-width: 0`, a `100vw` that
+counts the scrollbar gutter, or a sticky header whose inner container is wider than the
+viewport.
+
+There are **three** shapes of it, and each needs a different answer:
+
+| Shape | Answer |
+| --- | --- |
+| A grid track sized to `min-content` | `minmax(0, 1fr)` on the middle track |
+| Text ink from a long unbroken token | `wrap-anywhere` on `Main`'s column |
+| A box parked off-screen by a transform | `position: relative` + `overflow-x: clip` here |
+
+The third is the one that broke plex-channels: a closed panel at
+`transform: translateX(110%)`. **A transform does not remove a box from the document's
+scrollable overflow region**, and neither does `visibility: hidden` — so a drawer nobody can
+see still makes the page scroll to it.
+
+`clip`, not `hidden`: `overflow: hidden` creates a scroll container, which would become the
+sticky containing block for `Header` and freeze it. `clip` creates no scrollport, and it is
+the one value that may pair with `overflow-y: visible`.
+
+The `relative` is not decoration. `overflow-x: clip` only clips descendants whose containing
+block chain runs through the clipper, and an absolutely positioned box with no positioned
+ancestor resolves against the *initial* containing block instead — sailing past every
+`overflow` in the tree. Measured, before `Shell` took `relative`: `shellScroll: 390`,
+`bodyScroll: 390`, **`docScroll: 742`** at a 390px viewport. The obvious candidate to own it
+— `Main`'s content column — does not, because `container-type: inline-size` computes
+`contain` to `none` in Chromium and establishes no containing block for absolute
+positioning; the drawer's `offsetParent` was `BODY`.
+
+`Shell.test.tsx` and `Main.test.tsx` assert
+`document.documentElement.scrollWidth <= clientWidth` at a real 390px viewport against a
+story carrying all three shapes at once, with each fixture separately asserted to actually
+overflow. **`documentElement`, not `body`** — the parked-drawer case leaves
+`document.body.scrollWidth` reading a clean 390 while the page scrolls, and it leaves no
+overflowing element box for a `getBoundingClientRect()` assertion to catch either.
+
+There is no grid `gap`: an absent rail is a zero-width `auto` track, but a gap beside it is
+not, so a shell with no rails would carry two mystery gutters. `Rail` and `Main` bring
+their own padding.
+
+## The skip link
+
+<Canvas of={ShellStories.Interactive} />
+
+All ten hand-rolled shells are missing one, so on every one of those apps a keyboard user
+starts each page by tabbing through the header. `Shell` renders it, points it at the
+`<main>` it generated the id for, and `Main` carries `tabIndex={-1}` so activating it moves
+**focus** rather than only the scroll position — an `href` at a non-focusable target leaves
+the next Tab back in the header, which looks like a working skip link and is not.
+
+It is hidden by a transform rather than by `sr-only`, because `focus-visible:not-sr-only`
+and `focus-visible:fixed` both write `position` and which one wins is decided by Tailwind's
+internal property order rather than by the order they are written in.
