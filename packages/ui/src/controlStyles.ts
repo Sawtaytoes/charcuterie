@@ -16,7 +16,18 @@
  * `packages/tokens/src/tailwindCollisions.test.ts`.
  */
 
-import type { ControlSize } from "@charcuterie/tokens"
+import type {
+  ControlSize,
+  IntentName,
+} from "@charcuterie/tokens"
+
+import type { IntentAppearance } from "./intentStyles.ts"
+import {
+  FOCUS_RING_CLASS,
+  INTENT_APPEARANCE_CLASS,
+  INTENT_HOVER_CLASS,
+} from "./intentStyles.ts"
+import { toClassName } from "./toClassName.ts"
 
 export const CONTROL_SIZE_CLASS: Record<
   ControlSize,
@@ -57,6 +68,63 @@ export const ICON_CONTROL_SIZE_CLASS: Record<
  */
 export const MIN_TOUCH_TARGET_CLASS =
   "min-h-(--control-min-touch-target) min-w-(--control-min-touch-target)"
+
+/**
+ * Everything a pressable control looks like before an intent, a size,
+ * or a state is applied to it.
+ *
+ * Pulled out of `Button` the day `ButtonLink` shipped. Those two must
+ * paint **identically** — the whole point of `ButtonLink` is that a
+ * navigation can read as a primary button — and "identically" spelled
+ * as two copies of the same string is a promise that survives exactly
+ * one edit.
+ */
+export const CONTROL_BASE_CLASS =
+  "inline-flex cursor-pointer items-center justify-center rounded-md border font-medium whitespace-nowrap transition-colors duration-(--duration-fast) ease-standard select-none"
+
+/**
+ * The one class list a button-shaped control wears, assembled once.
+ *
+ * `Button` and `ButtonLink` call this with the same arguments and get
+ * the same string back, so a new appearance, a changed radius, or a
+ * different hover ramp reaches both or neither. `ButtonLink.test.tsx`
+ * asserts the resulting *computed styles* match, which is the version
+ * of this claim a class-name refactor cannot quietly break.
+ *
+ * The disabled treatment is the caller's, because it is the one thing
+ * that genuinely differs: a `<button>` has a real `disabled`
+ * attribute and gets `DISABLED_CLASS`, while an `<a>` has no such
+ * concept and gets `ARIA_DISABLED_CLASS` keyed off `aria-disabled`.
+ */
+export const getControlClassName = ({
+  appearance,
+  className,
+  disabledClass,
+  intent,
+  isFullWidth,
+  size,
+  sizing,
+}: {
+  appearance: IntentAppearance
+  className?: string
+  disabledClass: string
+  intent: IntentName
+  isFullWidth: boolean
+  size: ControlSize
+  sizing: "control" | "icon"
+}): string =>
+  toClassName(
+    CONTROL_BASE_CLASS,
+    sizing === "icon"
+      ? ICON_CONTROL_SIZE_CLASS[size]
+      : CONTROL_SIZE_CLASS[size],
+    INTENT_APPEARANCE_CLASS[intent][appearance],
+    INTENT_HOVER_CLASS[intent][appearance],
+    FOCUS_RING_CLASS,
+    disabledClass,
+    isFullWidth && "w-full",
+    className,
+  )
 
 /**
  * Non-control sizing: badges, indicator dots, spinners. These are

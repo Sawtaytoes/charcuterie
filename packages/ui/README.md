@@ -27,6 +27,17 @@ an accordion panel is [a `group` rather than a landmark](../../docs/decisions/20
 and [not every boolean is a state kind](../../docs/decisions/2026-07-31-not-every-boolean-is-a-state-kind.md).
 Full write-up: [M6a handoff](../../docs/2026-07-31-m6a-the-p1-components.md).
 
+**The link family** — `TextLink` and `ButtonLink` — closes the gap that had seven repos
+hand-rolling a `←` back-link, plex-channels navigating with
+`<button onClick={() => navigate(…)}>`, and mux-magic reloading the page through 14 raw
+`<a href>`. Buttons are for on-page actions; links are for navigation, and both of these
+render a real `<a href>` so middle-click, ctrl-click, open-in-new-tab and copy-link-address
+work. They differ in **paint, not semantics**
+([decision](../../docs/decisions/2026-08-10-buttons-are-actions-links-are-navigation.md)).
+The router is **injected** rather than depended on — `RouterLinkProvider` at the app root,
+with `@charcuterie/ui/react-router` as an optional subpath adapter and a plain `<a>` when
+nothing is provided. Recipe: **Guides/Routing** in Storybook.
+
 ## Install and wire
 
 ```ts

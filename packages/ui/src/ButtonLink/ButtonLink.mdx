@@ -1,0 +1,75 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as ButtonLinkStories from "./ButtonLink.stories";
+
+<Meta of={ButtonLinkStories} />
+
+# ButtonLink
+
+**Navigation that looks like a button.** It takes `Button`'s visual props and paints
+identically to it — and it is an `<a href>`.
+
+That combination is the whole component. Plex Channels' "Configure" reads as the primary
+action on its card, so it has to look like a solid button; it goes to another page, so it
+has to be a link. Today it is a `<button onClick={() => navigate("#/settings")}>`, which
+cannot be middle-clicked, ctrl-clicked, opened in a new tab, or copied — and mux-magic
+solves the same problem in the other direction, with 14 raw `<a href="/…">` that force a
+full page reload through its own SPA router.
+
+<Canvas of={ButtonLinkStories.Default} />
+
+## Props
+
+<Controls />
+
+## It is the same paint, not a copy of it
+
+`Button` and `ButtonLink` both assemble their class list through `getControlClassName`, so
+`INTENT_APPEARANCE_CLASS`, `CONTROL_SIZE_CLASS`, and `FOCUS_RING_CLASS` are read once
+rather than duplicated. `ButtonLink.test.tsx` then compares the two elements' **computed**
+styles in the real browser, which is the version of that claim a refactor cannot quietly
+break.
+
+<Canvas of={ButtonLinkStories.BesideAButton} />
+
+<Canvas of={ButtonLinkStories.AllVariants} />
+
+<Canvas of={ButtonLinkStories.AllSizes} />
+
+## Three things `Button` has that this does not
+
+| Missing | Why |
+| --- | --- |
+| `isLoading` | A navigation has no pending state **this component** owns. The wait belongs to the destination — a router transition, a `Suspense` boundary, a `ProgressBar` on the page being entered. A spinner here would be the component lying about work it is not doing. |
+| `type` | There is no form to submit. |
+| `sizing="icon"` | An icon-only navigation is an `IconButton` problem — a glyph is not an accessible name — and solving it here would mean a second name-enforcing type. |
+
+## Accessibility contract
+
+- The accessible name is the children. `iconStart`/`iconEnd` are decoration inside the same
+  anchor.
+- `isDisabled` **drops `href`** and sets `aria-disabled` with an explicit `role="link"`,
+  rather than shipping a focusable `<a>` that silently ignores clicks. It is painted
+  through `ARIA_DISABLED_CLASS`, which also switches off pointer events — without a real
+  `:disabled`, CSS `:hover` still matches, so the hover fill has to be taken off the table
+  rather than merely overridden.
+- `isExternal` sets `target="_blank"`, `rel="noopener noreferrer"`, and a visually-hidden
+  *"(opens in a new tab)"*.
+- Contrast on the disabled treatment leans on WCAG 1.4.3's exemption for *inactive*
+  controls, exactly as `Button`'s does.
+
+<Canvas of={ButtonLinkStories.AllStates} />
+
+<Canvas of={ButtonLinkStories.ConfigureCard} />
+
+<Canvas of={ButtonLinkStories.External} />
+
+## Routing
+
+`ButtonLink` renders through whatever link component the app injected at its root, and a
+plain `<a>` when nothing is injected — or when the destination is external or a fragment,
+which no router should intercept. See **Guides/Routing**.
+
+<Canvas of={ButtonLinkStories.Routed} />
+
+<Canvas of={ButtonLinkStories.Responsive} />

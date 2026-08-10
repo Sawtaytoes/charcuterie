@@ -1,0 +1,93 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as TextLinkStories from "./TextLink.stories";
+
+<Meta of={TextLinkStories} />
+
+# TextLink
+
+**Navigation that looks like a link.** Reach for it whenever pressing the thing takes the
+user somewhere — another route, another page, another site. If it changes something on the
+page instead, that is a `Button`
+([decision](https://github.com/Sawtaytoes/charcuterie/blob/master/docs/decisions/2026-08-10-buttons-are-actions-links-are-navigation.md)).
+
+Measured across the fleet before this shipped: **seven repos** hand-roll a back-link with a
+literal `←`, each with its own hover rule and its own idea of whether focus is visible — and
+points-market, which already consumes this library, reaches for a ghost `Button` for its
+header home link because there was nothing else to reach for. All of them are an `<a href>`
+here, so middle-click, ctrl-click, "open in new tab", "copy link address", and the browser's
+status bar work without anybody implementing them.
+
+<Canvas of={TextLinkStories.Default} />
+
+## Props
+
+<Controls />
+
+## Two appearances
+
+<Canvas of={TextLinkStories.AllAppearances} />
+
+| | `inline` | `standalone` |
+| --- | --- | --- |
+| Where it lives | inside a sentence | on its own — a back-link, a nav item, a "view all" |
+| Display | `inline`, so it wraps with the prose | `inline-flex`, with a gap for an icon |
+| Underline | always | on hover |
+| Type size | inherited — never its own | inherited |
+
+The permanent underline on `inline` is not a taste call: inside a paragraph, colour alone
+cannot be the only thing marking a link (WCAG 1.4.1). A standalone nav column has position
+and spacing doing that work, so it underlines on hover instead — a column of permanently
+underlined items reads as a mistake.
+
+There is deliberately **no `size` prop**. Text takes the size of the text around it; a link
+that resized itself would be a hole in whatever type scale it landed in.
+
+<Canvas of={TextLinkStories.BackLink} />
+
+<Canvas of={TextLinkStories.InProse} />
+
+## What it fixes
+
+| Fleet behaviour today | Here |
+| --- | --- |
+| `<div onClick>` or `<button onClick={() => navigate(…)}>` as a nav item | a real `<a href>`, with everything the browser gives one |
+| A `←` and its label as two siblings, so only the label is the tap target | one anchor, arrow inside it |
+| `outline-none` with nothing put back | `focus-visible` at the variant's own ring width |
+| `target="_blank"` with no `rel` and no warning | `isExternal` does all three |
+| Seven spellings of the same hover | one |
+
+## Accessibility contract
+
+- The accessible name is the children. An `iconStart`/`iconEnd` is decoration inside the
+  same anchor, so the name stays the words.
+- `isExternal` adds a visually-hidden **"(opens in a new tab)"** to the name, because a new
+  tab with no warning is a WCAG 3.2.5 surprise — and `rel="noopener noreferrer"`, because
+  `target="_blank"` alone hands the destination a live `window.opener` into the app.
+- `isDisabled` **drops `href`** and sets `aria-disabled` with an explicit `role="link"`. An
+  anchor with no `href` is inert and out of the tab order by the platform's own rules,
+  which is the honest version of a state the platform does not have; the role keeps it
+  announced as an unavailable link rather than vanishing into a `<span>`. Reach for it
+  rarely — a dead link in a sentence usually reads better as plain text.
+- Hover changes the **underline**, never the colour. There is no `intent.*.content-hover`
+  token, and an invented colour is one the contrast gate has never measured.
+
+<Canvas of={TextLinkStories.AllStates} />
+
+<Canvas of={TextLinkStories.External} />
+
+## Icons are the app's
+
+The library ships **zero** SVGs and no symbol glyphs in a default
+([decision](https://github.com/Sawtaytoes/charcuterie/blob/master/docs/decisions/2026-07-29-ship-no-icons-and-no-symbol-glyphs.md)) —
+`←` and `↗` measure blank in this repo's headless Chromium and on the kiosk Pis, so the
+component takes a `ReactNode` and the app passes the arrow it already owns.
+
+## Routing
+
+`TextLink` renders through whatever link component the app injected at its root, and a
+plain `<a>` when nothing is injected. See **Guides/Routing**.
+
+<Canvas of={TextLinkStories.Routed} />
+
+<Canvas of={TextLinkStories.AllIntents} />

@@ -7,19 +7,10 @@ import type {
   ReactNode,
 } from "react"
 
-import {
-  CONTROL_SIZE_CLASS,
-  ICON_CONTROL_SIZE_CLASS,
-} from "../controlStyles.ts"
+import { getControlClassName } from "../controlStyles.ts"
 import type { IntentAppearance } from "../intentStyles.ts"
-import {
-  DISABLED_CLASS,
-  FOCUS_RING_CLASS,
-  INTENT_APPEARANCE_CLASS,
-  INTENT_HOVER_CLASS,
-} from "../intentStyles.ts"
+import { DISABLED_CLASS } from "../intentStyles.ts"
 import { Spinner } from "../Spinner/Spinner.tsx"
-import { toClassName } from "../toClassName.ts"
 
 export type ButtonProps = Omit<
   ComponentPropsWithRef<"button">,
@@ -97,18 +88,15 @@ export const Button = ({
   <button
     {...buttonProps}
     aria-busy={isLoading || undefined}
-    className={toClassName(
-      "inline-flex cursor-pointer items-center justify-center rounded-md border font-medium whitespace-nowrap transition-colors duration-(--duration-fast) ease-standard select-none",
-      sizing === "icon"
-        ? ICON_CONTROL_SIZE_CLASS[size]
-        : CONTROL_SIZE_CLASS[size],
-      INTENT_APPEARANCE_CLASS[intent][appearance],
-      INTENT_HOVER_CLASS[intent][appearance],
-      FOCUS_RING_CLASS,
-      DISABLED_CLASS,
-      isFullWidth && "w-full",
+    className={getControlClassName({
+      appearance,
       className,
-    )}
+      disabledClass: DISABLED_CLASS,
+      intent,
+      isFullWidth,
+      size,
+      sizing,
+    })}
     disabled={isDisabled || isLoading}
     type={type}
   >
