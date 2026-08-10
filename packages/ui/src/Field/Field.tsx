@@ -202,9 +202,17 @@ export const Field = ({
 
       {clonedControl}
 
+      {/*
+        Both of these are `text-sm`, not `text-xs`, since 2026-08-10.
+        A field description is the instruction for the input directly
+        above it, and an error is the one thing the user has to read
+        to get unstuck — neither survives being the smallest text on
+        the page. `aria-describedby` already ties them to the control;
+        the size is what decides whether a sighted user reads them.
+      */}
       {description === undefined ? null : (
         <p
-          className="text-content-secondary text-xs"
+          className="text-content-secondary text-sm"
           id={descriptionId}
         >
           {description}
@@ -213,7 +221,7 @@ export const Field = ({
 
       {error === undefined ? null : (
         <p
-          className="text-intent-danger-content text-xs"
+          className="text-intent-danger-content text-sm"
           id={errorId}
         >
           {error}

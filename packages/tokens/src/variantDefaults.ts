@@ -38,17 +38,42 @@ export const defaultTypography: TypographyTokens = {
     sans: 'Outfit, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
     mono: '"Victor Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
   },
+  /**
+   * The fleet's one type ramp, rebuilt 2026-08-10 around a **17px
+   * body**. See
+   * `docs/decisions/2026-08-10-the-type-ramp-is-built-around-a-17px-body.md`.
+   *
+   * The ramp this replaced put `md` at 14–15px and `xs` at 12px, so
+   * every step below `lg` sat under the 16px browser default and the
+   * owner ran the apps at 200% zoom against 125% for Home Assistant.
+   *
+   * The step that decided the shape is **`sm`, not `md`**. `sm` is
+   * the library's de-facto body step — 34 uses in `packages/ui/src`
+   * against 11 for `md` — so a ramp that fixes `md` and leaves `sm`
+   * at 13px fixes almost nothing anybody looks at. `sm` is therefore
+   * pinned to exactly 1rem, and the rest of the ramp is built
+   * around that.
+   *
+   * Density multiplies through this (`densityFontScale`), so compact
+   * and kiosk move with it and are not restated anywhere.
+   */
   fontSize: {
-    xs: "0.75rem",
-    sm: "0.8125rem",
-    md: "0.875rem",
-    lg: "1rem",
-    xl: "1.25rem",
-    "2xl": "1.5rem",
+    xs: "0.9375rem",
+    sm: "1rem",
+    md: "1.0625rem",
+    lg: "1.1875rem",
+    xl: "1.5rem",
+    "2xl": "1.875rem",
   },
+  /**
+   * Slightly tighter than the old 1.25/1.5/1.7 in relative terms,
+   * because the absolute leading grew with the ramp: 1.55 on a 17px
+   * body is 26.4px of line box against 1.5 on 15px giving 22.5px.
+   * Leading and size are one decision, not two.
+   */
   lineHeight: {
-    tight: "1.25",
-    normal: "1.5",
+    tight: "1.28",
+    normal: "1.55",
     relaxed: "1.7",
   },
   fontWeight: {
