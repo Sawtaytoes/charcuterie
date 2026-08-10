@@ -20,6 +20,8 @@ import {
   auditScheme,
   getAliasDrift,
   getFailures,
+  INTENT_NAMES,
+  RESTING_ROLE_BY_INTENT_ROLE,
 } from "./contrastAudit.ts"
 import type { Scheme } from "./types.ts"
 import { variants } from "./variants/index.ts"
@@ -66,7 +68,37 @@ describe.each(variants)("$name", (variant) => {
       // pass in every report.
       expect(
         auditScheme(variant.schemes[scheme]).length,
-      ).toBeGreaterThanOrEqual(30)
+      ).toBeGreaterThanOrEqual(45)
+    },
+  )
+
+  test.each(SCHEMES)(
+    "%s audits every interactive state, not just the resting one",
+    (scheme) => {
+      // The count above cannot catch this: an audit can grow while
+      // a whole *class* of pair stays invisible, which is exactly
+      // how `solidHover` went unmeasured until an axe run in a
+      // consumer found it at 4.47:1.
+      const labels = auditScheme(
+        variant.schemes[scheme],
+      ).map((entry) => entry.label)
+
+      const unaudited = INTENT_NAMES.flatMap((intent) =>
+        Object.entries(RESTING_ROLE_BY_INTENT_ROLE)
+          .filter(([, restingRole]) => restingRole !== null)
+          .map(
+            ([stateRole]) =>
+              `intent.${intent}.${stateRole}`,
+          )
+          .filter(
+            (background) =>
+              !labels.some((label) =>
+                label.endsWith(` on ${background}`),
+              ),
+          ),
+      )
+
+      expect(unaudited).toEqual([])
     },
   )
 })

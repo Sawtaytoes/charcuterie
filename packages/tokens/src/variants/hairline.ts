@@ -94,7 +94,11 @@ export const hairline: Variant = {
           border: "#2E3563",
           content: "#AEB6F7",
           solid: "#5E6AD2",
-          solidHover: "#6D78DC",
+          // Deeper rather than brighter, for the reason spelled
+          // out on `daylight`'s dark accent: white label, so
+          // brightening walked it down to 3.91:1. 4.70:1 at rest
+          // → 5.59:1 hovered.
+          solidHover: "#555FBD",
           onSolid: "#FFFFFF",
         },
         success: {
@@ -120,8 +124,14 @@ export const hairline: Variant = {
           surfaceHover: "#401D22",
           border: "#58242B",
           content: "#F58E8E",
+          // 4.50:1 against its white label — passing, with no
+          // margin at all. Left as it is because this change is
+          // about hover states, but it is the next rounding error
+          // away from failing.
           solid: "#D2453F",
-          solidHover: "#E0524C",
+          // Same move as accent above: brightened it was 3.83:1.
+          // 4.50:1 at rest → 5.37:1 hovered.
+          solidHover: "#BD3E39",
           onSolid: "#FFFFFF",
         },
         info: {
