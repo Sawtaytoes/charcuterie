@@ -62,6 +62,67 @@ type MountableStory = {
  */
 const mountedCanvases: HTMLElement[] = []
 
+/**
+ * One frame past the mount, so post-mount effects have applied
+ * before anything reads the DOM.
+ *
+ * `storybook-addon-pseudo-states` applies its forced
+ * `:hover`/`:focus`/`:active` classes **a tick after render**, not
+ * during it — `vrtCapture.mjs` documents the same window and closes
+ * it with a settle, after "a real flake seen on `*--all-states`
+ * stories".
+ *
+ * This suite has the identical window and never closed it, and the
+ * consequence is worse here than a pixel diff: the a11y addon's
+ * `afterEach` runs axe the moment `run()` resolves, so a story
+ * whose forced state lands late is audited **un-forced**, and one
+ * whose state lands early is audited **hovered**. That is a
+ * contrast check reading `intent-accent-solid` on one run and
+ * `intent-accent-solid-hover` on the next — which is precisely the
+ * shape of `ButtonLink`'s intermittent `color-contrast` failure in
+ * CI, reported against `#6A64F0`, the daylight `solidHover`.
+ *
+ * Two frames rather than a fixed delay: React flushes effects and
+ * the addon applies classes within a frame, so this is a barrier
+ * tied to the browser's own scheduling instead of a millisecond
+ * count guessed against one machine. `vrtCapture` can afford its
+ * 400ms because it takes ~700 shots; this runs before every one of
+ * 222 tests.
+ */
+/**
+ * Captured at module load, **before any test can replace it**.
+ *
+ * `Toast.test.tsx` stubs `requestAnimationFrame` and *holds* the
+ * callbacks, deliberately, to prove that a dismiss arriving during
+ * the enter frame is not undone by it. A settle that called the
+ * live `globalThis.requestAnimationFrame` would hand its own
+ * continuation to that stub and never be released — which is
+ * exactly what happened: three Toast tests went from passing to a
+ * flat 15s timeout.
+ *
+ * Binding the native one keeps a true frame barrier while staying
+ * immune to a stub, and it does not disturb the test doing the
+ * stubbing: the component's frames still go to its stub, only this
+ * helper's do not.
+ */
+const requestNativeFrame =
+  globalThis.requestAnimationFrame?.bind(globalThis)
+
+const settlePostMountEffects = () =>
+  new Promise<void>((resolve) => {
+    if (!requestNativeFrame) {
+      globalThis.setTimeout(resolve, 0)
+
+      return
+    }
+
+    requestNativeFrame(() => {
+      requestNativeFrame(() => {
+        resolve()
+      })
+    })
+  })
+
 export const mountStory = async (
   story: MountableStory,
 ): Promise<{
@@ -86,6 +147,8 @@ export const mountStory = async (
   mountedCanvases.push(canvasElement)
 
   await story.run({ canvasElement })
+
+  await settlePostMountEffects()
 
   return {
     body: within(document.body),
