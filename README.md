@@ -112,6 +112,13 @@ need a chromium matching this repo's Playwright, which the agent sandbox now shi
 
 ## Where the reasoning lives
 
+- [`AGENTS.md`](AGENTS.md) — the entry point for an AI agent working in this repo: the
+  dependency direction, which gates are load-bearing, and the house rules that bite.
+- [Building an app with Charcuterie](packages/docs/src/BuildingAnApp.mdx) — read **before**
+  writing the first component of an app that consumes this library. The component-choice
+  table (`Button` vs `IconButton` vs `TextLink` vs `ButtonLink`, `Listbox`/`Combobox` vs
+  `Select`, `Shell` vs a hand-rolled `AppShell.tsx`), the wiring, and the opt-in lint rules.
+  Renders in Storybook as **Guides → Building an app**.
 - [`docs/decisions/`](docs/decisions/README.md) — settled calls, newest first. **Check
   here before proposing a change**; a decision on file overrides a default instinct, and
   a past one is superseded by a new dated file rather than edited.
