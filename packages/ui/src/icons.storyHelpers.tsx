@@ -48,6 +48,38 @@ export const SettingsIcon = (): ReactNode => (
   </svg>
 )
 
+/**
+ * The back-arrow seven repos spell as a literal `←`, drawn instead —
+ * so the `TextLink` boards screenshot as an arrow rather than as the
+ * blank box that character measures in this Chromium.
+ */
+export const ArrowLeftIcon = (): ReactNode => (
+  <svg {...iconProps} aria-hidden="true">
+    <path d="M19 12H5" />
+
+    <path d="m11 18-6-6 6-6" />
+  </svg>
+)
+
+export const ArrowRightIcon = (): ReactNode => (
+  <svg {...iconProps} aria-hidden="true">
+    <path d="M5 12h14" />
+
+    <path d="m13 6 6 6-6 6" />
+  </svg>
+)
+
+/** The `↗` an app puts after an external link, drawn. */
+export const ExternalIcon = (): ReactNode => (
+  <svg {...iconProps} aria-hidden="true">
+    <path d="M14 5h5v5" />
+
+    <path d="M19 5 10 14" />
+
+    <path d="M18 14v4a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h4" />
+  </svg>
+)
+
 export const UndoIcon = (): ReactNode => (
   <svg {...iconProps} aria-hidden="true">
     <path d="M9 14 4 9l5-5" />
