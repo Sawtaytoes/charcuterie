@@ -246,22 +246,14 @@ export const daylight: Variant = {
 
   motion: defaultMotion,
 
-  typography: {
-    ...defaultTypography,
-    fontSize: {
-      xs: "0.75rem",
-      sm: "0.8125rem",
-      md: "0.9375rem",
-      lg: "1.0625rem",
-      xl: "1.3125rem",
-      "2xl": "1.625rem",
-    },
-    lineHeight: {
-      tight: "1.3",
-      normal: "1.6",
-      relaxed: "1.75",
-    },
-  },
+  /**
+   * No `fontSize`/`lineHeight` override any more. Both used to
+   * restate a ramp a step below the shared default; since the
+   * 2026-08-10 rebuild the shared ramp *is* this one, and a variant
+   * file is meant to be a list of deliberate differences rather than
+   * copy-paste.
+   */
+  typography: defaultTypography,
 
   control: {
     ...defaultControl,
