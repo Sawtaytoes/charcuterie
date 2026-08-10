@@ -89,6 +89,41 @@ export const containerQuery = {
 } as const
 
 /**
+ * How wide the readable part of a page is allowed to get.
+ *
+ * A structural fact about the fleet in exactly the sense `screen`
+ * and `containerQuery` are: a variant may change how a paragraph
+ * *looks*, but not how far the eye should have to track across a
+ * line before it loses the next one. So it sits here rather than in
+ * the variant table, and rather than staying a private constant in
+ * the one hook that folds it.
+ *
+ * The three parts compose into a cap that **widens as columns are
+ * added** — the answer to the fleet's real complaint, which is
+ * pages that are "1 column, but waaaaaaay too wide":
+ *
+ *  - `single` — the cap when there is only one column. Deliberately
+ *    the largest single number here and still nowhere near a
+ *    monitor: one column stretched across an ultrawide is one line
+ *    of text the eye has to track from bezel to bezel.
+ *  - `column` — what one column is worth once there are several, so
+ *    three columns get room to be three readable things rather than
+ *    three slivers.
+ *  - `gutter` — the slack added on top of a multi-column cap, for
+ *    the gaps between the tracks.
+ *
+ * Folded by `getContentMaxInlineSize` in `@charcuterie/ui`:
+ * `columns <= 1 ? single : column * columns + gutter`. Emitted as
+ * `--content-inline-size-*` for plain-CSS and Satori consumers that
+ * want the same cap without the arithmetic.
+ */
+export const contentInlineSize = {
+  column: "34rem",
+  gutter: "4rem",
+  single: "56rem",
+} as const
+
+/**
  * The density axis. Composes with scheme and variant; all three
  * are `<html>` data attributes.
  *
