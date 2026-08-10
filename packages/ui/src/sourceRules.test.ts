@@ -313,7 +313,18 @@ test("the barrel is the only place components are re-exported", async () => {
   // because both registrations are effects — and stays out of this
   // count and the barrel by the `<Name>/<Name>.tsx` rule, exactly as
   // `SegmentedOption` does.
-  expect(componentNames.length).toBe(35)
+  //
+  // `AdaptiveGrid` is the library's first *layout* component, and the
+  // first one whose reason to exist is a rule rather than a widget:
+  // the wrapping grids in this fleet are `auto-fill, minmax()`, which
+  // takes every column the window allows and lands on seven items
+  // strung across an ultrawide. It spends height first instead, and
+  // it is a component rather than only a hook because three things
+  // about the markup are silent when they are wrong — the
+  // measured box must not be the capped box, `min-w-0` has to reach
+  // children the caller owns, and the track list must be an inline
+  // style because Tailwind cannot scan an interpolated class: +1 -> 36.
+  expect(componentNames.length).toBe(36)
 
   for (const name of componentNames) {
     expect(barrel).toContain(`export { ${name} }`)
