@@ -18,48 +18,60 @@ blocking `tokens`/`logic`/`ui`.
 Do these in order. Skipping step 3 before the next version bump breaks the
 publish job for the whole fleet.
 
-## 1. Get the version to 0.1.0
+## 1. Get the version to 0.1.0 — done
 
-The seed publishes `0.1.0`, not the `0.0.0` in the working tree. Merge this
-branch, let **Version Packages** open its PR, and merge that — it consumes the
-changeset, writes `CHANGELOG.md`, and bumps `package.json` to `0.1.0`. The
-deploy job that follows will try `server` and fail at the last step; that is
-expected and harmless, and step 2 is the fix.
+The seed publishes `0.1.0`, not the `0.0.0` that was in the working tree. #67
+merged, **Version Packages** rolled the changeset into its PR (#66), and that
+branch carries `packages/server/package.json` at `0.1.0` plus the generated
+`CHANGELOG.md`.
 
-(Seeding a hand-set `0.1.0` before merging also works, but then the Version PR
-bumps to `0.2.0` and the `0.1.0` changelog entry never exists.)
+The seed was taken from the **release branch** (`changeset-release/master`,
+`24d09ef`) rather than from master, so that `server-v0.1.0` could be tagged
+*before* #66 merges. That ordering is the point: the deploy loop skips any
+package whose `<pkg>-v<version>` tag already exists, so seeding first turns what
+would have been a guaranteed red release run — OIDC 404 on an unseeded package —
+into a clean skip.
 
 ## 2. Seed it (needs an npm automation token)
 
-From a checkout of master at `0.1.0`:
+> **Done for `@charcuterie/server@0.1.0` on 2026-08-10.** What follows is the
+> transcript of what actually worked, kept for the next package's first publish.
+
+From a checkout at the version you are seeding:
 
 ```bash
 yarn install
-yarn workspace @charcuterie/server pack -o /tmp/server.tgz
-mkdir -p /tmp/server-seed && tar -xzf /tmp/server.tgz -C /tmp/server-seed
 
-export NPM_TOKEN=<npm automation token with publish rights on @charcuterie>
-cd /tmp/server-seed/package
-npm publish --provenance=false --access public \
-  //registry.npmjs.org/:_authToken=$NPM_TOKEN
+# `publishConfig.provenance` WINS over the CLI flag — remove it first.
+# Do this in a throwaway/detached checkout and never commit it.
+#   packages/<pkg>/package.json → delete `"provenance": true`
+
+YARN_NPM_AUTH_TOKEN=<npm automation token> \
+  yarn workspace @charcuterie/<pkg> npm publish --access public
 ```
 
-- `yarn pack`, not `npm pack`: only yarn rewrites `workspace:*` deps into real
-  ranges. This package has none today (its deps are all peers), but the deploy
-  workflow packs this way and the seed should match it rather than diverge.
-- `--provenance=false` for the manual seed — provenance needs the OIDC exchange,
-  which only the Actions runner has.
+- **`yarn npm publish`, not `npm publish`.** yarn packs and publishes in one
+  step, and only yarn rewrites `workspace:*` deps into real ranges.
+- **The provenance field is the trap.** `publishConfig.provenance: true` is what
+  the automated OIDC releases need, and it takes precedence over both
+  `--no-provenance` and `YARN_NPM_CONFIG_PROVENANCE` (the latter is not even a
+  recognised setting in Yarn 4.14 — it errors). yarn fails with
+  `YN0091: Provenance generation is only supported in GitHub Actions and
+  GitLab CI` until the field is gone. Temporarily deleting it from the manifest
+  is the only thing that works, and it must go straight back afterwards or every
+  later automated release loses provenance.
 - **Rotate the token afterwards.** A token with publish rights on the whole
   `@charcuterie` scope is worth more than the one release it was minted for.
 
-Then tag it so the deploy loop skips `0.1.0` cleanly:
+Then tag it so the deploy loop skips that version cleanly — **before** merging
+the Version PR, or the loop reaches an unseeded package and fails:
 
 ```bash
-git tag server-v0.1.0
+git tag server-v0.1.0 24d09ef   # done: pushed 2026-08-10
 git push origin server-v0.1.0
 ```
 
-## 3. Configure OIDC trusted publishing
+## 3. Configure OIDC trusted publishing — outstanding
 
 In npm's web UI: **Package → Settings → Publishing access → Trusted publisher**,
 pointing at `Sawtaytoes/charcuterie`, workflow `npm-package-deploy.yml`.
