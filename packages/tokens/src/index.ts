@@ -36,6 +36,7 @@ export { resolveTokens } from "./resolveTokens.ts"
 
 export {
   containerQuery,
+  contentInlineSize,
   densityControl,
   densityFontScale,
   layer,
