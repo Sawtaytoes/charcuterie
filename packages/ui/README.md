@@ -38,6 +38,15 @@ The router is **injected** rather than depended on — `RouterLinkProvider` at t
 with `@charcuterie/ui/react-router` as an optional subpath adapter and a plain `<a>` when
 nothing is provided. Recipe: **Guides/Routing** in Storybook.
 
+**The unified app shell adds four**: `Shell`, `Header`, `Rail`, `Main` — the fleet's largest
+single duplication, where ten of twelve UI repos hand-roll the page chrome and three of them
+have a file named `AppShell.tsx` (two of those headers are a *byte-identical* class string,
+arrived at independently). One `contentWidth` on `Shell` feeds both the header row and the
+content column, `isSticky` writes `position` and `z-index` together, and a `Rail` collapses
+by restyling rather than by rendering itself twice.
+[Decision](../../docs/decisions/2026-08-10-the-app-shell-is-shell-header-rail-main.md);
+`Shell`'s docs page carries three copy-wholesale templates.
+
 ## Install and wire
 
 ```ts
