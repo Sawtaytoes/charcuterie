@@ -15,8 +15,18 @@
  *
  * Determinism is the whole game for VRT flake: fixed viewport +
  * scale, reduced motion, animations/transitions/caret killed, and
- * `document.fonts.ready` awaited so DankMono is painted, not
+ * `document.fonts.ready` awaited so Victor Mono is painted, not
  * falling back mid-shot.
+ *
+ * That last one bounds the *paint* and not the consequences. Every
+ * shipped face is `font-display: swap`, so a component can be laid
+ * out in the fallback, measure itself, and be re-laid-out in the real
+ * face afterwards — and whatever it derived from the first
+ * measurement is now a race this script cannot wait out. `LogViewer`
+ * lost a pixel of scroll offset that way (to scroll anchoring, on the
+ * relayout) and flaked here on one story for a week. Waiting longer
+ * is not the fix and was measured not to be: the component has to
+ * survive the second layout. Reach for that before any knob in here.
  *
  * Env knobs:
  *   VRT_OUT          actual dir           (default .vrt-actual)
