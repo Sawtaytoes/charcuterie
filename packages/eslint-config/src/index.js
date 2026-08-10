@@ -17,8 +17,26 @@ import vitestPlugin from "@vitest/eslint-plugin"
 import reactPlugin from "eslint-plugin-react"
 import tseslint from "typescript-eslint"
 
+import {
+  COMPONENT_CHOICE_NAMESPACE,
+  componentChoicePlugin,
+} from "./componentChoice.js"
 import { PHYSICAL_DIRECTION_SELECTORS } from "./logicalProperties.js"
 
+export {
+  COMPONENT_CHOICE_NAMESPACE,
+  COMPONENT_CHOICE_RULE_IDS,
+  componentChoicePlugin,
+  NO_CLICKABLE_NON_INTERACTIVE_MESSAGE,
+  NO_NAVIGATION_IN_CLICK_HANDLER_MESSAGE,
+  NO_RAW_ANCHOR_MESSAGE,
+  NO_RAW_BUTTON_MESSAGE,
+  NO_RAW_SELECT_MESSAGE,
+  NON_INTERACTIVE_ELEMENTS,
+  PREFER_LISTBOX_OVER_SELECT_MESSAGE,
+  REQUIRE_SUPPRESSION_REASON_MESSAGE,
+  UI_PACKAGE_NAME,
+} from "./componentChoice.js"
 export {
   PHYSICAL_DIRECTION_MESSAGE,
   PHYSICAL_DIRECTION_PATTERN,
@@ -167,5 +185,51 @@ export const createLogicalPropertiesRules = ({
     "no-restricted-syntax": asError(
       ...PHYSICAL_DIRECTION_SELECTORS,
     ),
+  },
+})
+
+/**
+ * Component choice — reach for the library, not a raw element.
+ *
+ * **Opt-in, and deliberately not folded into the base.** Five
+ * apps would go red on adoption day, and a config that turns a
+ * whole repo red is a config that gets reverted rather than
+ * migrated. A consumer adds this block when it is ready to fix
+ * what it finds, one app at a time.
+ *
+ * `files` has no useful default here, and that is the point:
+ * `@charcuterie/ui` renders raw `<a>`, `<button>` and `<select>`
+ * because rendering them correctly *is* the library. Point
+ * `files` at the app's own source (`packages/web/**\/*.tsx`) and
+ * the library never matches. A `**\/*.tsx` default would have
+ * made the library the first thing the rules broke, so the
+ * default is the narrow one and the consumer widens it.
+ */
+export const createComponentChoiceRules = ({
+  files = ["src/**/*.tsx"],
+}) => ({
+  files,
+  plugins: {
+    [COMPONENT_CHOICE_NAMESPACE]: componentChoicePlugin,
+  },
+  // `asError()` rather than a bare `"error"` for the reason its
+  // own docstring gives: a string literal in an object with a
+  // computed key widens to `string`, which every consumer's
+  // `defineConfig` then rejects.
+  rules: {
+    [`${COMPONENT_CHOICE_NAMESPACE}/no-clickable-non-interactive`]:
+      asError(),
+    [`${COMPONENT_CHOICE_NAMESPACE}/no-navigation-in-click-handler`]:
+      asError(),
+    [`${COMPONENT_CHOICE_NAMESPACE}/no-raw-anchor`]:
+      asError(),
+    [`${COMPONENT_CHOICE_NAMESPACE}/no-raw-button`]:
+      asError(),
+    [`${COMPONENT_CHOICE_NAMESPACE}/no-raw-select`]:
+      asError(),
+    [`${COMPONENT_CHOICE_NAMESPACE}/prefer-listbox-over-select`]:
+      asError(),
+    [`${COMPONENT_CHOICE_NAMESPACE}/require-suppression-reason`]:
+      asError(),
   },
 })
