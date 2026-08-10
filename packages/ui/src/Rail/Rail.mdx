@@ -1,0 +1,75 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as RailStories from "./Rail.stories";
+
+<Meta of={RailStories} />
+
+# Rail
+
+A side column — the app's sections, a filter panel, the selected job's detail. `side` places
+it, `landmark` decides what it is, and `label` is required.
+
+<Canvas of={RailStories.Default} />
+
+## Props
+
+<Controls />
+
+## `label` is required, and that is not pedantry
+
+<Canvas of={RailStories.AllVariants} />
+
+Two rails in one page are two landmarks of the same type. Unnamed, a screen reader
+announces "complementary" twice with no way to tell them apart, axe files
+`landmark-unique`, and `getByRole("navigation")` returns two matches — which is worse for an
+agent than the rail not existing, because it picks one at random.
+
+Named, the rail becomes the scope: `getByRole("navigation", { name: "Sections" })` is what
+distinguishes its "Settings" link from the header's "Settings" button. Same trick `Card`'s
+heading plays for one of nine identical "Start" buttons on a bay tower.
+
+`landmark="navigation"` renders `<nav>`; the default `"complementary"` renders `<aside>`.
+Pick the one the content actually is — a filter panel is not navigation.
+
+## It collapses without duplicating itself
+
+<Canvas of={RailStories.Responsive} />
+
+Below `md` (48rem, which is `screen.md`) the shell is one column and the rail becomes a
+horizontally-scrolling strip: above the content for `side="start"`, below it for
+`side="end"`. Above `md` it is a fixed-width column in the grid.
+
+**The same element, restyled.** The fleet's habit is to render the whole thing twice behind
+`hidden` and `lg:hidden` — mux-magic's `PageHeader` across two ~55-line blocks,
+mail-sifter's `TriageQueue` again. The cost is not bytes: every control is in the DOM
+**twice at every viewport**, so tests have to be defensively scoped with `within(toolbar)`,
+any agent driving the page sees phantom controls it cannot click, and the two copies drift
+apart. `Rail.test.tsx` counts the links at 390px and at 1440px and gets twelve both times.
+
+A media query is enough here because only the rail's *position* changes, never its
+contents. plex-channels' `App.tsx` shows the pattern for when that is not true — a
+`useMediaQuery` over `matchMedia` through `useSyncExternalStore`, mounting exactly one
+instance and relocating it — and it is strictly more machinery for the same guarantee.
+
+The `md` breakpoint and `screen.md` agree by construction: Tailwind v4's default
+`--breakpoint-*` scale and this repo's `screen.*` carry the same five values.
+
+## The strip scrolls itself
+
+Twelve sections on a phone is what makes a naive rail widen the page. `overflow-x-auto`
+keeps the overflow inside an element that scrolls, and `min-w-0` is on it for the same
+reason `Shell`'s middle track is `minmax(0, 1fr)`: a flex or grid child's automatic minimum
+is its content, so one long unbroken string otherwise pushes the layout out of the viewport.
+
+A scrolling region has to be keyboard-reachable. It is here because it is a landmark full of
+links, which is what axe's `scrollable-region-focusable` accepts — **a rail of plain
+non-focusable text would not be**, and that is the honest limit of the pattern. Content
+like that belongs in `Main`.
+
+<Canvas of={RailStories.Interactive} />
+
+## Width
+
+`md:w-64` (16rem) by default, which is what the fleet's nav columns settle on. Override it
+with `className` — the rail's track is `auto`, so it takes whatever definite width the
+element is given, and the content column absorbs the difference through its `minmax(0, 1fr)`.
