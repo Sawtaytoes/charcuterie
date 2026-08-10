@@ -1,6 +1,6 @@
 {
   "name": "@charcuterie/server",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "The fleet's Hono static-asset handler — precompressed bytes, honest cache headers, and the Vite plugin that produces them.",
   "license": "MIT",
   "type": "module",
