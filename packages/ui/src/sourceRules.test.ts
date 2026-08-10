@@ -240,13 +240,22 @@ test("the barrel is the only place components are re-exported", async () => {
   // sibling *through* `index.ts` turns every component into a
   // dependency of every other one, which is how a 3 KB `Spinner`
   // starts pulling in `MediaTile`.
+  //
+  // Comments are stripped first, for the same reason the colour rule
+  // strips them: a docstring showing a *consumer* how to wire
+  // `RouterLinkProvider` has to spell `from "@charcuterie/ui"`, and a
+  // rule that cannot tell a citation from an import is a rule that
+  // gets switched off. An actual import is never inside a comment.
   const offenders = componentFiles
     .filter((one) => one.file !== "index.ts")
-    .filter(
-      (one) =>
-        /from "\.\.?\/index\.ts"/.test(one.contents) ||
-        /from "@charcuterie\/ui"/.test(one.contents),
-    )
+    .filter((one) => {
+      const code = stripComments(one.contents)
+
+      return (
+        /from "\.\.?\/index\.ts"/.test(code) ||
+        /from "@charcuterie\/ui"/.test(code)
+      )
+    })
     .map((one) => one.file)
 
   expect(offenders).toEqual([])
@@ -324,7 +333,16 @@ test("the barrel is the only place components are re-exported", async () => {
   // measured box must not be the capped box, `min-w-0` has to reach
   // children the caller owns, and the track list must be an inline
   // style because Tailwind cannot scan an interpolated class: +1 -> 36.
-  expect(componentNames.length).toBe(36)
+  // The link family closes the gap that made seven repos hand-roll a
+  // back-link and made `Button` get used for navigation: `TextLink`
+  // and `ButtonLink`, both a real `<a href>`, differing in paint
+  // rather than semantics: +2 -> 38, on top of `AdaptiveGrid`'s 36.
+  // `AnchorLink`,
+  // `RouterLinkProvider`, and `ReactRouterLink` are the seam rather
+  // than components anybody stories, and live in `RouterLink/` and
+  // `reactRouter/` — outside this count by the `<Name>/<Name>.tsx`
+  // rule, exactly as `Overlay/`'s parts are.
+  expect(componentNames.length).toBe(38)
 
   for (const name of componentNames) {
     expect(barrel).toContain(`export { ${name} }`)
@@ -429,6 +447,12 @@ const ENTRY_POINT_RUNTIMES: Record<
       "@tanstack/react-virtual",
       "react",
     ],
+    // The router seam's one shipped adapter, and the reason it is a
+    // subpath rather than part of the barrel: `react-router` appears
+    // **only** here, as an optional peer, so the eleven consumers of
+    // the main entry never resolve it. Six of them do not have a
+    // react-router at all.
+    "./react-router": ["react", "react-router"],
     "./testing": [],
     "./tokens": ["@charcuterie/tokens"],
   },

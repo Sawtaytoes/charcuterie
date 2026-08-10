@@ -1,0 +1,178 @@
+import { Meta } from "@storybook/addon-docs/blocks";
+
+<Meta title="Guides/Routing" />
+
+# Routing
+
+`TextLink` and `ButtonLink` render a real `<a href>`. That is already correct with no setup
+at all — it navigates, it can be middle-clicked, ctrl-clicked, opened in a new tab and
+copied — it just reloads the page. **One provider at the app root** upgrades every link in
+the tree to the app's own soft navigation, with no change at any call site.
+
+## Why the library does not just import a router
+
+The fleet runs five answers at once: react-router v8 (mux-magic), react-router-dom v7
+(bambuddy), wouter-preact (spoolbuddy), two hand-rolled routers, and five apps with no
+router at all. A `react-router` dependency in `@charcuterie/ui` would be a package every
+consumer installs and most of them do not use — so the router is **injected**, the same way
+`ColorSchemeSwitcher` takes its `resolver` / `persistence` / `apply` seams, and the default
+is a working plain anchor rather than a throw.
+
+## react-router (v7 or v8)
+
+`react-router` is an **optional peer dependency**, and the adapter is a separate entry
+point — so an app that never imports this path never resolves it.
+
+```bash
+yarn add @charcuterie/ui react-router
+```
+
+```tsx
+// src/main.tsx
+import { RouterLinkProvider } from "@charcuterie/ui"
+import { ReactRouterLink } from "@charcuterie/ui/react-router"
+import { StrictMode } from "react"
+import { createRoot } from "react-dom/client"
+import {
+  createBrowserRouter,
+  RouterProvider,
+} from "react-router"
+
+import { routes } from "./routes.tsx"
+
+const router = createBrowserRouter(routes)
+
+createRoot(document.getElementById("root")).render(
+  <StrictMode>
+    <RouterLinkProvider link={ReactRouterLink}>
+      <RouterProvider router={router} />
+    </RouterLinkProvider>
+  </StrictMode>,
+)
+```
+
+`RouterLinkProvider` goes **outside** `RouterProvider` here on purpose: it is plain React
+context and needs no router of its own, and putting it outermost means a link rendered by a
+route element and a link rendered by an app-level chrome component both see it.
+
+Already on `react-router-dom` v7, as bambuddy is? Nothing changes. `react-router-dom` v7 is
+a re-export shim over `react-router`, and the adapter imports `Link` from the latter, so one
+import covers both installs.
+
+That is the whole integration. Every link in the app is now soft:
+
+```tsx
+import { ButtonLink, TextLink } from "@charcuterie/ui"
+
+export const ChannelCard = ({ channel }) => (
+  <Card>
+    <TextLink appearance="standalone" href="/channels">
+      Back to all channels
+    </TextLink>
+
+    <ButtonLink href={`/channels/${channel.id}/settings`}>
+      Configure
+    </ButtonLink>
+  </Card>
+)
+```
+
+## Any other router
+
+The seam's contract is **a component that takes `href`**, so an adapter is a rename. There
+is nothing to publish for wouter, TanStack Router, or a hand-rolled router — four lines in
+the app is the whole thing.
+
+```tsx
+// src/routing/WouterLink.tsx
+import type { RouterLinkComponent } from "@charcuterie/ui"
+import { Link } from "wouter-preact"
+
+export const WouterLink: RouterLinkComponent = ({
+  href,
+  ...linkProps
+}) => <Link {...linkProps} to={href} />
+```
+
+```tsx
+// src/main.tsx
+import { RouterLinkProvider } from "@charcuterie/ui"
+
+import { WouterLink } from "./routing/WouterLink.tsx"
+
+<RouterLinkProvider link={WouterLink}>
+  <App />
+</RouterLinkProvider>
+```
+
+A hand-rolled router — plex-channels' and gallery-downloader's shape — injects its own
+push:
+
+```tsx
+// src/routing/HashRouterLink.tsx
+import type { RouterLinkComponent } from "@charcuterie/ui"
+
+export const HashRouterLink: RouterLinkComponent = ({
+  href,
+  ...linkProps
+}) => (
+  <a
+    {...linkProps}
+    href={href}
+    onClick={(clickEvent) => {
+      // Let the browser have every click that is *asking* for the
+      // browser: a new tab, a new window, a download, a middle-click.
+      // Swallowing these is exactly what a `<button onClick>` gets
+      // wrong, and re-implementing them is what this component is
+      // avoiding.
+      if (
+        clickEvent.defaultPrevented ||
+        clickEvent.button !== 0 ||
+        clickEvent.altKey ||
+        clickEvent.ctrlKey ||
+        clickEvent.metaKey ||
+        clickEvent.shiftKey
+      ) {
+        return
+      }
+
+      clickEvent.preventDefault()
+
+      window.location.hash = href
+    }}
+  />
+)
+```
+
+## What the seam will not route
+
+Three destinations always fall through to a plain `<a>`, whatever is injected:
+
+| Destination | Why |
+| --- | --- |
+| `isExternal` | A router pushing `https://…` onto its history stack lands the SPA on a route that does not exist. |
+| Another scheme or origin — `https://`, `mailto:`, `tel:`, `//cdn…` | Same. `getIsRoutedHref` is the test, and it is exported. |
+| A fragment — `#credits` | The browser's own scroll-to-id is what a reader expects; a router turns it into a route change. |
+
+It is a test on the **destination** rather than a prop, deliberately: a component that
+routed whatever it was given would make `isExternal` a correctness switch instead of a
+presentation one, and an app that forgot it would ship a broken link rather than a slightly
+plain one.
+
+## Testing an app that uses this
+
+Nothing to mock. Without a provider the components render `AnchorLink`, so a component test
+asserts `getByRole("link", { name: … })` and its `href` with no router in the tree at all.
+With a provider, inject a stand-in that marks what it was handed — `TextLink.stories.tsx`'s
+`Routed` story is exactly that, and `TextLink.test.tsx` reads it.
+
+## API
+
+| Export | From | What |
+| --- | --- | --- |
+| `RouterLinkProvider` | `@charcuterie/ui` | The seam. `link` is the app's link component. |
+| `useRouterLink()` | `@charcuterie/ui` | The injected component, or `AnchorLink`. For an app building its own link-shaped component. |
+| `RouterLinkComponent` / `RouterLinkProps` | `@charcuterie/ui` | The contract: `ComponentPropsWithRef<"a">` with `href` required. |
+| `AnchorLink` | `@charcuterie/ui` | The plain `<a href>` default. |
+| `getIsRoutedHref(href)` | `@charcuterie/ui` | The destination test above. |
+| `ReactRouterLink` | `@charcuterie/ui/react-router` | The one shipped adapter. Optional peer. |
