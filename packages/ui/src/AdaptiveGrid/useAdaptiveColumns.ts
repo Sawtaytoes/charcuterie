@@ -251,7 +251,8 @@ export const useAdaptiveColumns = <
   // same lazy-`useState` seam construction `ColorSchemeSwitcher`
   // uses.
   const [seams] = useState(() => ({
-    blockSize: blockSizeResolver ?? viewportBlockSizeResolver(),
+    blockSize:
+      blockSizeResolver ?? viewportBlockSizeResolver(),
     persistence:
       persistence ??
       (storageKey === undefined

@@ -136,17 +136,17 @@ test("one item gets one column however big the window", () => {
 test("a phone stays at one column", () => {
   // One column is the owner's own answer, and it falls out of the
   // inline-size cap rather than out of a device check.
-  expect(columnsAt({ blockSize: 844, inlineSize: 390 })).toBe(
-    1,
-  )
+  expect(
+    columnsAt({ blockSize: 844, inlineSize: 390 }),
+  ).toBe(1)
 })
 
 test("a phone held sideways takes two", () => {
   // Short AND narrow: the height rule wants more columns and cannot
   // have them.
-  expect(columnsAt({ blockSize: 390, inlineSize: 844 })).toBe(
-    2,
-  )
+  expect(
+    columnsAt({ blockSize: 390, inlineSize: 844 }),
+  ).toBe(2)
 })
 
 test("a tablet takes two", () => {

@@ -55,6 +55,39 @@ const getGrids = (canvasElement: HTMLElement) => [
   ),
 ]
 
+/**
+ * The nth grid, or a thrown error naming what was missing.
+ *
+ * A helper rather than a `!`, because a non-null assertion in a test
+ * turns "the component rendered nothing" into a `TypeError` about
+ * `undefined`, several frames from the thing that actually went
+ * wrong.
+ */
+const getGrid = (
+  canvasElement: HTMLElement,
+  index = 0,
+): HTMLElement => {
+  const grid = getGrids(canvasElement)[index]
+
+  if (!grid) {
+    throw new Error(
+      `No AdaptiveGrid at index ${index}; found ${getGrids(canvasElement).length}.`,
+    )
+  }
+
+  return grid
+}
+
+const getFirstChild = (grid: HTMLElement): Element => {
+  const child = grid.firstElementChild
+
+  if (!child) {
+    throw new Error("The grid rendered no children.")
+  }
+
+  return child
+}
+
 const getTrackCount = (grid: HTMLElement) =>
   getComputedStyle(grid)
     .gridTemplateColumns.split(" ")
@@ -82,7 +115,7 @@ test("the grid re-columns when its container resizes", async () => {
 
   await waitFor(async () => {
     await expect(
-      getTrackCount(getGrids(canvasElement)[0]!),
+      getTrackCount(getGrid(canvasElement)),
     ).toBe(1)
   })
 
@@ -90,7 +123,7 @@ test("the grid re-columns when its container resizes", async () => {
 
   await waitFor(async () => {
     await expect(
-      getTrackCount(getGrids(canvasElement)[0]!),
+      getTrackCount(getGrid(canvasElement)),
     ).toBe(2)
   })
 })
@@ -123,7 +156,7 @@ test("the content cap widens with the columns", async () => {
   // allowed to get wide once there is something to fill it with.
   await waitFor(async () => {
     await expect(
-      getGrids(canvasElement)[0]!.style.maxInlineSize,
+      getGrids(canvasElement)[0]?.style.maxInlineSize,
     ).toBe("72rem")
   })
 })
@@ -134,7 +167,7 @@ test("the measured box is never the capped box", async () => {
     1280,
   )
 
-  const grid = getGrids(canvasElement)[0]!
+  const grid = getGrid(canvasElement)
 
   const measured = grid.parentElement
 
@@ -147,7 +180,7 @@ test("the measured box is never the capped box", async () => {
 
   await waitFor(async () => {
     await expect(
-      measured!.getBoundingClientRect().width,
+      measured?.getBoundingClientRect().width,
     ).toBeGreaterThan(grid.getBoundingClientRect().width)
   })
 })
@@ -159,12 +192,12 @@ test("one item is one column at a reading measure", async () => {
   )
 
   await waitFor(async () => {
-    const [single] = getGrids(canvasElement)
+    const single = getGrid(canvasElement)
 
-    await expect(getTrackCount(single!)).toBe(1)
+    await expect(getTrackCount(single)).toBe(1)
 
     // Not stretched across the monitor it was given.
-    await expect(single!.style.maxInlineSize).toBe("56rem")
+    await expect(single.style.maxInlineSize).toBe("56rem")
   })
 })
 
@@ -180,10 +213,10 @@ test("a long unbroken string does not push a track wide", async () => {
   // stops it, and this asserts it reached children the story — not
   // the component — owns.
   await waitFor(async () => {
-    const grid = getGrids(canvasElement)[0]!
+    const grid = getGrid(canvasElement)
 
     await expect(
-      getComputedStyle(grid.firstElementChild!).minWidth,
+      getComputedStyle(getFirstChild(grid)).minWidth,
     ).toBe("0px")
 
     await expect(grid.scrollWidth).toBeLessThanOrEqual(

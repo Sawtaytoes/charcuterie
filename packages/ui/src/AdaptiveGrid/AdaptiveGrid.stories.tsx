@@ -36,12 +36,12 @@ const fixedBlockSize = (
  * `"auto"` first, because a picker that only offers numbers once a
  * number has been chosen is a one-way door.
  */
-const COLUMN_ITEMS = getColumnChoices({ maxColumns: 4 }).map(
-  (choice) => ({
-    label: String(choice),
-    value: String(choice),
-  }),
-)
+const COLUMN_ITEMS = getColumnChoices({
+  maxColumns: 4,
+}).map((choice) => ({
+  label: String(choice),
+  value: String(choice),
+}))
 
 const NINE_ITEMS = Array.from(
   { length: 9 },
@@ -104,7 +104,10 @@ export const AllVariants: Story = {
   render: (gridProps) => (
     <StorySection title="Same items, same width — only the height changes.">
       {[
-        { blockSize: 1440, label: "1440px tall — 2 columns" },
+        {
+          blockSize: 1440,
+          label: "1440px tall — 2 columns",
+        },
         { blockSize: 900, label: "900px tall — 3 columns" },
         { blockSize: 600, label: "600px tall — 3 columns" },
       ].map((panel) => (

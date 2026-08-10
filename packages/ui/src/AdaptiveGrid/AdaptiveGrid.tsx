@@ -130,7 +130,10 @@ export const AdaptiveGrid = ({
 
   return (
     <div
-      className={toClassName("flex justify-center", className)}
+      className={toClassName(
+        "flex justify-center",
+        className,
+      )}
       ref={layout.containerRef}
     >
       <div

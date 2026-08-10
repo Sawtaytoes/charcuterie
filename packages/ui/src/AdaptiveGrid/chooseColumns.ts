@@ -1,4 +1,7 @@
-import { containerQuery, contentInlineSize } from "../tokens.ts"
+import {
+  containerQuery,
+  contentInlineSize,
+} from "../tokens.ts"
 
 /**
  * How many columns a wrapping grid should draw, and how wide the
@@ -193,7 +196,8 @@ export const chooseColumns = ({
   const rowsThatFit = Math.max(
     1,
     Math.floor(
-      (availableBlockSize - chromeBlockSize) / itemBlockSize,
+      (availableBlockSize - chromeBlockSize) /
+        itemBlockSize,
     ),
   )
 
