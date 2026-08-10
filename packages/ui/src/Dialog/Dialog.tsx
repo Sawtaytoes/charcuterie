@@ -119,7 +119,23 @@ export const Dialog = ({
         ) : null}
       </header>
 
-      <div className="min-h-0 flex-1 overflow-auto p-4">
+      {/*
+        `tabIndex={0}` is load-bearing, not decoration. This region
+        scrolls, and a scrollable region that cannot be focused cannot
+        be scrolled by anyone driving the keyboard — there is nothing
+        to put the caret in and no way to reach the overflow. axe
+        gates it as `scrollable-region-focusable` (serious).
+
+        It only surfaced once the body actually overflowed, which is
+        why it could land green: the rule fires on a region that is
+        scrollable *right now*, so a dialog whose content happened to
+        fit stayed silent.
+      */}
+      <div
+        className="min-h-0 flex-1 overflow-auto p-4"
+        // biome-ignore lint/a11y/noNoninteractiveTabindex: a scroll container must be focusable or a keyboard user can see the pane and cannot scroll it — axe's `scrollable-region-focusable`, which fails this component without the line. Same call, and the same wording, as `LogViewer`'s scroll pane. The rule is right about `<div>`s in general and wrong about scrollers.
+        tabIndex={0}
+      >
         {children}
       </div>
 

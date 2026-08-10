@@ -90,7 +90,12 @@ export const SortableTableHeader = ({
   >
     <button
       className={toClassName(
-        "flex w-full cursor-pointer items-center gap-1.5 bg-transparent px-3 py-2 text-start font-medium text-content-secondary text-xs uppercase tracking-wide transition-colors duration-(--duration-fast) ease-standard",
+        // `text-sm` since 2026-08-10. This was the single most
+        // fragile combination in the package: `text-xs` at 12px,
+        // uppercased and letterspaced, which strips the word shapes
+        // readers use at small sizes. A column header is the label
+        // for everything under it, so it is content.
+        "flex w-full cursor-pointer items-center gap-1.5 bg-transparent px-3 py-2 text-start font-medium text-content-secondary text-sm uppercase tracking-wide transition-colors duration-(--duration-fast) ease-standard",
         "hover:text-content-primary",
         FOCUS_RING_CLASS,
       )}

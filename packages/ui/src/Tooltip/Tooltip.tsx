@@ -168,7 +168,11 @@ export const Tooltip = ({
               // 2.9:1. The `solid`/`on-solid` roles exist precisely to
               // be a guaranteed couple, and the contrast gate checks
               // them as one.
-              "z-[var(--layer-tooltip)] max-w-xs rounded-md bg-intent-neutral-solid px-2 py-1 text-intent-neutral-on-solid text-xs shadow-medium",
+              // `text-sm`, not `text-xs`: a tooltip body is the only
+              // copy explaining the control it points at, so it is
+              // content rather than fine print. It was the whole
+              // tooltip at 12px before 2026-08-10.
+              "z-[var(--layer-tooltip)] max-w-xs rounded-md bg-intent-neutral-solid px-2 py-1 text-intent-neutral-on-solid text-sm shadow-medium",
               className,
             )}
             // Portalled to `document.body`, the same reversal as the

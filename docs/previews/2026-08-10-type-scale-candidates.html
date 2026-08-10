@@ -1,0 +1,504 @@
+<!doctype html>
+<html lang="en" data-scheme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Charcuterie type-scale candidates — view at 100% zoom</title>
+
+<!-- The real shipped faces: Baloo 2 (display), Outfit (sans), Victor Mono (code).
+
+     `packages/tokens/dist` is gitignored, so this link only resolves after a
+     `yarn workspace @charcuterie/tokens build`. Without it the page falls back to
+     the system stacks declared in --font-display/-sans/-mono below — which is the
+     documented behaviour for a consumer that never imports `fonts.css`, so the
+     page still reads correctly, just not in the shipped faces. Build first if you
+     are judging typography rather than size. -->
+<link rel="stylesheet" href="../../packages/tokens/dist/fonts.css">
+
+<style>
+/* ------------------------------------------------------------------
+   Real daylight/dark token values, lifted verbatim from
+   packages/tokens/dist/tokens.json so this compares TYPE ONLY and
+   not palette.
+   ------------------------------------------------------------------ */
+:root {
+  --surface-base:    #131822;
+  --surface-raised:  #1D2430;
+  --surface-sunken:  #0B0F16;
+  --content-primary: #EDF0F5;
+  --content-secondary:#A9B2C1;
+  --content-muted:   #8B94A5;
+  --border-subtle:   #212936;
+  --border-default:  #2E3745;
+  --accent-surface:  #1E1C52;
+  --accent-border:   #332F81;
+  --accent-content:  #B4B0F7;
+  --accent-solid:    #5A54E8;
+  --accent-on-solid: #FFFFFF;
+  --success-surface: #0E2B20;
+  --success-border:  #1C4B36;
+  --success-content: #6FDDA6;
+  --warning-surface: #302512;
+  --warning-border:  #544120;
+  --warning-content: #ECC673;
+  --danger-content:  #F79399;
+
+  --font-display: "Baloo 2", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: Outfit, ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Victor Mono", ui-monospace, Menlo, Consolas, monospace;
+
+  --radius-sm: 4px; --radius-md: 8px; --radius-lg: 10px; --radius-full: 9999px;
+}
+
+* { box-sizing: border-box; }
+
+html { font-size: 16px; }  /* browser default — no override anywhere in the real repo either */
+
+body {
+  margin: 0;
+  background: var(--surface-sunken);
+  color: var(--content-primary);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ==================================================================
+   PAGE CHROME
+   ================================================================== */
+.page-head {
+  padding: 28px 32px 22px;
+  border-bottom: 1px solid var(--border-default);
+  background: var(--surface-base);
+  position: sticky; top: 0; z-index: 10;
+}
+.page-head h1 {
+  font-family: var(--font-display);
+  font-size: 26px; margin: 0 0 6px; font-weight: 700; letter-spacing: -0.01em;
+}
+.page-head p { margin: 0; font-size: 15px; color: var(--content-secondary); max-width: 92ch; line-height: 1.55; }
+.page-head strong { color: var(--content-primary); }
+.zoom-warn {
+  margin-top: 12px; display: inline-block;
+  background: var(--warning-surface); border: 1px solid var(--warning-border);
+  color: var(--warning-content);
+  padding: 7px 13px; border-radius: var(--radius-md);
+  font-size: 14px; font-weight: 600;
+}
+
+.stack { padding: 0 32px 90px; }
+
+/* ==================================================================
+   ONE CANDIDATE PANEL
+   Every panel renders IDENTICAL markup; only the --fs-* / --lh-* /
+   --control-h custom properties below change. That is exactly how
+   the real token layer works.
+   ================================================================== */
+.candidate { margin-top: 34px; }
+
+.candidate-label {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px 16px;
+  padding: 13px 18px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  border-bottom: none;
+}
+.candidate-name { font-family: var(--font-display); font-size: 20px; font-weight: 700; }
+.candidate-tag {
+  font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+  padding: 3px 9px; border-radius: var(--radius-full);
+}
+.tag-current { background: #351920; border: 1px solid #5C2733; color: var(--danger-content); }
+.tag-pick    { background: var(--success-surface); border: 1px solid var(--success-border); color: var(--success-content); }
+.tag-alt     { background: var(--accent-surface); border: 1px solid var(--accent-border); color: var(--accent-content); }
+.candidate-body-note { font-size: 14px; color: var(--content-secondary); }
+.candidate-body-note b { color: var(--content-primary); }
+
+.ramp {
+  display: flex; flex-wrap: wrap; gap: 0;
+  padding: 10px 18px 12px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-default);
+  border-bottom: none;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+}
+.ramp-step {
+  padding: 3px 13px 3px 0; margin-right: 13px;
+  border-right: 1px solid var(--border-default);
+  color: var(--content-secondary); white-space: nowrap;
+}
+.ramp-step:last-child { border-right: none; }
+.ramp-step b { color: var(--content-primary); font-weight: 700; }
+.ramp-step .px { color: var(--accent-content); }
+.ramp-step.is-body { background: rgba(90,84,232,.13); border-radius: var(--radius-sm); padding-inline: 8px 13px; }
+.ramp-meta {
+  width: 100%; padding-top: 9px; margin-top: 4px;
+  border-top: 1px dashed var(--border-default);
+  color: var(--content-muted); font-size: 12.5px;
+}
+
+/* ---- the rendered app surface ---- */
+.surface {
+  background: var(--surface-base);
+  border: 1px solid var(--border-default);
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+  padding: 26px 24px 28px;
+  font-size: var(--fs-md);
+  line-height: var(--lh-normal);
+}
+
+/* ------- mail-sifter "Queues" screen, rebuilt from the screenshot ------- */
+.app-head { margin-bottom: 20px; }
+.app-title {
+  font-family: var(--font-display);
+  font-size: var(--fs-2xl);
+  line-height: var(--lh-tight);
+  font-weight: 700; margin: 0 0 4px; letter-spacing: -0.01em;
+}
+.app-sub {
+  font-size: var(--fs-sm);            /* Charcuterie's real subtitle step */
+  line-height: var(--lh-normal);
+  color: var(--content-secondary); margin: 0;
+}
+
+.queue-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
+
+.queue-card {
+  background: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 15px 16px 16px;
+  display: flex; flex-direction: column; gap: 9px;
+}
+.queue-card-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.queue-name {
+  font-family: var(--font-display);
+  font-size: var(--fs-md);            /* Card.tsx: "font-semibold text-md leading-tight" */
+  line-height: var(--lh-tight);
+  font-weight: 600; margin: 0;
+}
+.badge {                              /* Badge sm: BADGE_SIZE_CLASS.sm === text-xs */
+  font-size: var(--fs-xs);
+  line-height: 1;
+  font-weight: 600;
+  padding: .45em .7em; border-radius: var(--radius-full);
+  white-space: nowrap;
+  background: var(--success-surface); border: 1px solid var(--success-border); color: var(--success-content);
+}
+.badge.is-warn { background: var(--warning-surface); border-color: var(--warning-border); color: var(--warning-content); }
+.badge.is-idle { background: #222A37; border-color: #374152; color: #B7C0CE; }
+
+.queue-count {
+  font-size: var(--fs-lg);
+  line-height: var(--lh-tight);
+  font-weight: 700;
+}
+.queue-count span { font-size: var(--fs-sm); font-weight: 500; color: var(--content-secondary); }
+
+.queue-mode {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-normal);
+  color: var(--content-secondary);
+}
+.queue-mode b { color: var(--content-primary); font-weight: 600; }
+
+/* THE element from his devtools screenshot: div.text-xs.text-content-muted */
+.queue-hint {
+  font-size: var(--fs-xs);
+  line-height: var(--lh-normal);
+  color: var(--content-muted);
+}
+
+/* ------- worst-case strip: the three most legibility-fragile real patterns ------- */
+.worst {
+  margin-top: 22px; padding-top: 18px;
+  border-top: 1px dashed var(--border-default);
+  display: grid; grid-template-columns: 1.1fr 1.25fr 1fr; gap: 24px; align-items: start;
+}
+.worst-h {
+  font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .06em;
+  color: var(--content-muted); font-weight: 700; margin: 0 0 9px;
+}
+
+/* Field.tsx — label text-sm, description text-xs, error text-xs */
+.field-label { font-size: var(--fs-sm); line-height: var(--lh-normal); font-weight: 500; margin-bottom: 5px; }
+.field-input {
+  width: 100%; height: var(--control-h-md);
+  background: var(--surface-sunken); color: var(--content-primary);
+  border: 1px solid var(--border-default); border-radius: var(--radius-md);
+  padding-inline: var(--control-pad-md);
+  font-family: var(--font-sans); font-size: var(--fs-md);
+}
+.field-desc  { font-size: var(--fs-xs); line-height: var(--lh-normal); color: var(--content-secondary); margin-top: 5px; }
+.field-error { font-size: var(--fs-xs); line-height: var(--lh-normal); color: var(--danger-content); margin-top: 3px; }
+
+/* SortableTableHeader.tsx — text-xs uppercase tracking-wide, the most fragile combo */
+.mini-table { width: 100%; border-collapse: collapse; }
+.mini-table th {
+  font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .02em;
+  font-weight: 500; color: var(--content-secondary);
+  text-align: start; padding: 5px 9px 5px 0;
+  border-bottom: 1px solid var(--border-default);
+}
+.mini-table td {
+  font-size: var(--fs-sm); line-height: var(--lh-normal);
+  padding: 6px 9px 6px 0; border-bottom: 1px solid var(--border-subtle);
+  color: var(--content-secondary);
+}
+.mini-table td:first-child { color: var(--content-primary); }
+
+/* Tooltip.tsx — the ENTIRE tooltip body is text-xs */
+.tip {
+  display: inline-block;
+  background: #374152; color: #EDF0F5;
+  font-size: var(--fs-xs); line-height: var(--lh-normal);
+  padding: .5em .75em; border-radius: var(--radius-md);
+  box-shadow: 0 4px 14px rgb(0 0 0 / .48);
+}
+.btn-row { display: flex; gap: 10px; align-items: center; margin-top: 12px; flex-wrap: wrap; }
+.btn {
+  height: var(--control-h-md);
+  padding-inline: var(--control-pad-md);
+  border-radius: var(--radius-md);
+  font-family: var(--font-sans);
+  font-size: var(--fs-md);           /* controlStyles: md control === text-md */
+  font-weight: 500;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid transparent; cursor: pointer;
+}
+.btn-primary { background: var(--accent-solid); color: var(--accent-on-solid); }
+.btn-ghost   { background: transparent; color: var(--content-primary); border-color: var(--border-default); }
+.control-note { font-size: var(--fs-xs); color: var(--content-muted); }
+
+/* ==================================================================
+   THE FOUR CANDIDATES — the only real difference on this page
+   ================================================================== */
+
+/* A — CURRENT: daylight @ comfortable, exactly as shipped today */
+.scale-current {
+  --fs-xs: 0.75rem;    /* 12px */
+  --fs-sm: 0.8125rem;  /* 13px */
+  --fs-md: 0.9375rem;  /* 15px */
+  --fs-lg: 1.0625rem;  /* 17px */
+  --fs-xl: 1.3125rem;  /* 21px */
+  --fs-2xl: 1.625rem;  /* 26px */
+  --lh-tight: 1.3; --lh-normal: 1.6; --lh-relaxed: 1.75;
+  --control-h-md: 2.5rem; --control-pad-md: 1rem;
+}
+
+/* B — 16px BODY: md hits the browser default, xs floored at 14px */
+.scale-16 {
+  --fs-xs: 0.875rem;   /* 14px */
+  --fs-sm: 0.9375rem;  /* 15px */
+  --fs-md: 1rem;       /* 16px */
+  --fs-lg: 1.125rem;   /* 18px */
+  --fs-xl: 1.375rem;   /* 22px */
+  --fs-2xl: 1.75rem;   /* 28px */
+  --lh-tight: 1.3; --lh-normal: 1.55; --lh-relaxed: 1.7;
+  --control-h-md: 2.5rem; --control-pad-md: 1rem;
+}
+
+/* C — 17px BODY (recommended): text-sm, the library's most-used step, lands on 16px */
+.scale-17 {
+  --fs-xs: 0.9375rem;  /* 15px */
+  --fs-sm: 1rem;       /* 16px */
+  --fs-md: 1.0625rem;  /* 17px */
+  --fs-lg: 1.1875rem;  /* 19px */
+  --fs-xl: 1.5rem;     /* 24px */
+  --fs-2xl: 1.875rem;  /* 30px */
+  --lh-tight: 1.28; --lh-normal: 1.55; --lh-relaxed: 1.7;
+  --control-h-md: 2.625rem; --control-pad-md: 1.0625rem;
+}
+
+/* D — 19px BODY: the far end, nothing in the UI below 16px */
+.scale-19 {
+  --fs-xs: 1rem;       /* 16px */
+  --fs-sm: 1.0625rem;  /* 17px */
+  --fs-md: 1.1875rem;  /* 19px */
+  --fs-lg: 1.375rem;   /* 22px */
+  --fs-xl: 1.75rem;    /* 28px */
+  --fs-2xl: 2.25rem;   /* 36px */
+  --lh-tight: 1.25; --lh-normal: 1.5; --lh-relaxed: 1.65;
+  --control-h-md: 2.875rem; --control-pad-md: 1.125rem;
+}
+</style>
+</head>
+<body>
+
+<header class="page-head">
+  <h1>Charcuterie type scale — four candidates</h1>
+  <p>
+    The same mail-sifter <b>Queues</b> screen, rendered four times. Only the type ramp,
+    line height and control height change between panels — palette, spacing, radius and
+    typeface are identical, so what you are judging is <strong>size and nothing else</strong>.
+    Panel A is exactly what ships today. Every ramp is labelled in both rem and px.
+    <br>
+    The muted <em>"Click to open this queue"</em> line in each card is the element from your
+    devtools screenshot (<code>div.text-xs.text-content-muted</code>) — it computes to
+    <strong>12px</strong> in panel A.
+  </p>
+  <div class="zoom-warn">View this at 100% browser zoom — the point is that you should not have to zoom.</div>
+</header>
+
+<div class="stack">
+
+  <!-- ============================ A ============================ -->
+  <section class="candidate">
+    <div class="candidate-label">
+      <span class="candidate-name">A · Current</span>
+      <span class="candidate-tag tag-current">ships today</span>
+      <span class="candidate-body-note">body <b>15px</b> · smallest text <b>12px</b> · this is what you zoom to 200%</span>
+    </div>
+    <div class="ramp">
+      <span class="ramp-step">xs <b>0.75rem</b> <span class="px">12px</span></span>
+      <span class="ramp-step">sm <b>0.8125rem</b> <span class="px">13px</span></span>
+      <span class="ramp-step is-body">md <b>0.9375rem</b> <span class="px">15px</span></span>
+      <span class="ramp-step">lg <b>1.0625rem</b> <span class="px">17px</span></span>
+      <span class="ramp-step">xl <b>1.3125rem</b> <span class="px">21px</span></span>
+      <span class="ramp-step">2xl <b>1.625rem</b> <span class="px">26px</span></span>
+      <span class="ramp-meta">line-height 1.3 / 1.6 / 1.75 &nbsp;·&nbsp; control md 2.5rem (40px) &nbsp;·&nbsp; nothing in the ramp reaches the 16px browser default except lg</span>
+    </div>
+    <div class="surface scale-current" id="panel-a"></div>
+  </section>
+
+  <!-- ============================ B ============================ -->
+  <section class="candidate">
+    <div class="candidate-label">
+      <span class="candidate-name">B · 16px body</span>
+      <span class="candidate-tag tag-alt">conservative</span>
+      <span class="candidate-body-note">body <b>16px</b> · smallest text <b>14px</b> · md matches the browser default</span>
+    </div>
+    <div class="ramp">
+      <span class="ramp-step">xs <b>0.875rem</b> <span class="px">14px</span></span>
+      <span class="ramp-step">sm <b>0.9375rem</b> <span class="px">15px</span></span>
+      <span class="ramp-step is-body">md <b>1rem</b> <span class="px">16px</span></span>
+      <span class="ramp-step">lg <b>1.125rem</b> <span class="px">18px</span></span>
+      <span class="ramp-step">xl <b>1.375rem</b> <span class="px">22px</span></span>
+      <span class="ramp-step">2xl <b>1.75rem</b> <span class="px">28px</span></span>
+      <span class="ramp-meta">line-height 1.3 / 1.55 / 1.7 &nbsp;·&nbsp; control md 2.5rem (40px), unchanged &nbsp;·&nbsp; +2px at the bottom of the ramp, +1px at body</span>
+    </div>
+    <div class="surface scale-16" id="panel-b"></div>
+  </section>
+
+  <!-- ============================ C ============================ -->
+  <section class="candidate">
+    <div class="candidate-label">
+      <span class="candidate-name">C · 17px body</span>
+      <span class="candidate-tag tag-pick">my recommendation</span>
+      <span class="candidate-body-note">body <b>17px</b> · smallest text <b>15px</b> · <b>text-sm lands on 16px</b>, and text-sm is the library's most-used step</span>
+    </div>
+    <div class="ramp">
+      <span class="ramp-step">xs <b>0.9375rem</b> <span class="px">15px</span></span>
+      <span class="ramp-step">sm <b>1rem</b> <span class="px">16px</span></span>
+      <span class="ramp-step is-body">md <b>1.0625rem</b> <span class="px">17px</span></span>
+      <span class="ramp-step">lg <b>1.1875rem</b> <span class="px">19px</span></span>
+      <span class="ramp-step">xl <b>1.5rem</b> <span class="px">24px</span></span>
+      <span class="ramp-step">2xl <b>1.875rem</b> <span class="px">30px</span></span>
+      <span class="ramp-meta">line-height 1.28 / 1.55 / 1.7 &nbsp;·&nbsp; control md 2.625rem (42px) &nbsp;·&nbsp; ≈ Home Assistant at your 125% zoom, without zooming</span>
+    </div>
+    <div class="surface scale-17" id="panel-c"></div>
+  </section>
+
+  <!-- ============================ D ============================ -->
+  <section class="candidate">
+    <div class="candidate-label">
+      <span class="candidate-name">D · 19px body</span>
+      <span class="candidate-tag tag-alt">the far end</span>
+      <span class="candidate-body-note">body <b>19px</b> · smallest text <b>16px</b> · nothing anywhere in the UI below the browser default</span>
+    </div>
+    <div class="ramp">
+      <span class="ramp-step">xs <b>1rem</b> <span class="px">16px</span></span>
+      <span class="ramp-step">sm <b>1.0625rem</b> <span class="px">17px</span></span>
+      <span class="ramp-step is-body">md <b>1.1875rem</b> <span class="px">19px</span></span>
+      <span class="ramp-step">lg <b>1.375rem</b> <span class="px">22px</span></span>
+      <span class="ramp-step">xl <b>1.75rem</b> <span class="px">28px</span></span>
+      <span class="ramp-step">2xl <b>2.25rem</b> <span class="px">36px</span></span>
+      <span class="ramp-meta">line-height 1.25 / 1.5 / 1.65 &nbsp;·&nbsp; control md 2.875rem (46px) &nbsp;·&nbsp; fits ~20% less per row; the 3-up card grid starts to want 2-up on a laptop</span>
+    </div>
+    <div class="surface scale-19" id="panel-d"></div>
+  </section>
+
+</div>
+
+<script>
+// One markup definition, stamped into all four panels, so the panels
+// cannot accidentally drift from each other.
+const QUEUES_SCREEN = `
+  <div class="app-head">
+    <h2 class="app-title">Queues</h2>
+    <p class="app-sub">Three queues configured &middot; 1,284 messages awaiting triage</p>
+  </div>
+
+  <div class="queue-grid">
+    <article class="queue-card">
+      <div class="queue-card-top">
+        <h3 class="queue-name">Inbox &mdash; Primary</h3>
+        <span class="badge">active</span>
+      </div>
+      <div class="queue-count">847 <span>messages</span></div>
+      <div class="queue-mode">Mode: <b>auto-sift</b></div>
+      <div class="queue-hint">Click to open this queue</div>
+    </article>
+
+    <article class="queue-card">
+      <div class="queue-card-top">
+        <h3 class="queue-name">Newsletters</h3>
+        <span class="badge is-warn">backlog</span>
+      </div>
+      <div class="queue-count">392 <span>messages</span></div>
+      <div class="queue-mode">Mode: <b>digest-weekly</b></div>
+      <div class="queue-hint">Click to open this queue</div>
+    </article>
+
+    <article class="queue-card">
+      <div class="queue-card-top">
+        <h3 class="queue-name">Receipts &amp; Orders</h3>
+        <span class="badge is-idle">idle</span>
+      </div>
+      <div class="queue-count">45 <span>messages</span></div>
+      <div class="queue-mode">Mode: <b>archive-only</b></div>
+      <div class="queue-hint">Click to open this queue</div>
+    </article>
+  </div>
+
+  <div class="worst">
+    <div>
+      <p class="worst-h">Field &mdash; label sm, help/error xs</p>
+      <div class="field-label">Sender pattern</div>
+      <input class="field-input" value="*@newsletters.example.com" readonly>
+      <div class="field-desc">Glob or regex. Applied before any rule runs.</div>
+      <div class="field-error">Pattern conflicts with an existing rule.</div>
+    </div>
+
+    <div>
+      <p class="worst-h">SortableTableHeader &mdash; xs uppercase</p>
+      <table class="mini-table">
+        <thead><tr><th>Sender</th><th>Subject</th><th>Age</th></tr></thead>
+        <tbody>
+          <tr><td>billing@acme.io</td><td>Invoice 4471</td><td>2d</td></tr>
+          <tr><td>news@theverge.com</td><td>Daily digest</td><td>6h</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div>
+      <p class="worst-h">Tooltip body &amp; controls</p>
+      <span class="tip">Re-runs every rule against this queue</span>
+      <div class="btn-row">
+        <button class="btn btn-primary">Run sift</button>
+        <button class="btn btn-ghost">Settings</button>
+      </div>
+      <div class="control-note">Control height vs. label size</div>
+    </div>
+  </div>
+`;
+
+for (const id of ["panel-a", "panel-b", "panel-c", "panel-d"]) {
+  document.getElementById(id).innerHTML = QUEUES_SCREEN;
+}
+</script>
+
+</body>
+</html>
