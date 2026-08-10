@@ -181,7 +181,14 @@ export const daylight: Variant = {
           border: "#332F81",
           content: "#B4B0F7",
           solid: "#5A54E8",
-          solidHover: "#6A64F0",
+          // Deeper than `solid`, not brighter — the label here is
+          // white, and this fill brightened to #6A64F0 measured
+          // 4.47:1 against it, so the fleet's default accent
+          // button failed AA for as long as a pointer sat on it.
+          // A hover moves *away* from its own label's lightness;
+          // the dark-text intents below brighten for the same
+          // reason. 5.43:1 at rest → 6.19:1 hovered.
+          solidHover: "#534DD5",
           onSolid: "#FFFFFF",
         },
         success: {
