@@ -63,7 +63,7 @@ export const daylight: Variant = {
       content: {
         primary: "#171D28",
         secondary: "#4E5769",
-        muted: "#616A7C",
+        muted: "#565E6D",
         disabled: "#A3ACBB",
         onAccent: "#FFFFFF",
       },
@@ -155,7 +155,7 @@ export const daylight: Variant = {
       content: {
         primary: "#EDF0F5",
         secondary: "#A9B2C1",
-        muted: "#8B94A5",
+        muted: "#99A1B0",
         disabled: "#5B6474",
         onAccent: "#FFFFFF",
       },
