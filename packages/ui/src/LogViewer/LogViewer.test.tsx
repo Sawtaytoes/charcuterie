@@ -68,6 +68,53 @@ test("a full pane is scrolled to the bottom", async () => {
 })
 
 /**
+ * The browser's own contribution to defect 1, and the reason this is
+ * asserted rather than commented.
+ *
+ * Chromium picks an anchor node inside a scroll container and moves
+ * `scrollTop` to hold it still across a relayout. For a log pane that
+ * is the browser undoing the follow: `@charcuterie/tokens` ships
+ * Victor Mono `font-display: swap`, so a pane mounted before the face
+ * arrives is laid out twice, and the anchor drags a followed pane a
+ * pixel off the end. Measured on this story with the font request
+ * held back — 722 (at the end) with anchoring off, 721 (a pixel
+ * short) with it on.
+ *
+ * Whether the swap beats the mount is a race, so it presented as
+ * visual-regression flake on exactly one story rather than as a bug.
+ * The behavioural assertions above cannot catch it: their four pixels
+ * of slack exist for fractional device pixel ratios, and the drift
+ * fits inside them. So this asserts the opt-out itself — invisible in
+ * a screenshot, invisible in the DOM, and one `--write --unsafe` pass
+ * from being tidied away.
+ */
+test("a following pane opts out of the browser's scroll anchoring", async () => {
+  const { canvas } = await mountStory(Interactive)
+
+  const pane = expectAgentDrivable(canvas, {
+    name: "Bay 8 rip log",
+    role: "log",
+  })
+
+  await expect(getComputedStyle(pane).overflowAnchor).toBe(
+    "none",
+  )
+
+  // And it hands anchoring back when the user takes over. `maxLines`
+  // drops old lines off the top of a live log, and anchoring is what
+  // stops that shoving the line they scrolled up to read.
+  pane.scrollTop = 0
+
+  pane.dispatchEvent(new Event("scroll", { bubbles: true }))
+
+  await waitFor(() => {
+    expect(getComputedStyle(pane).overflowAnchor).toBe(
+      "auto",
+    )
+  })
+})
+
+/**
  * The same defect, rebuilt out of two components that are each
  * individually right — and the reason `LogViewer` watches its own box
  * rather than trusting one mount measurement.

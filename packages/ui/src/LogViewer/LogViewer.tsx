@@ -199,7 +199,41 @@ export const LogViewer = ({
         // `off` unless asked. See the note above; this is the
         // difference between an accessible log and an unusable page.
         aria-live={isAnnounced ? "polite" : "off"}
-        className="max-h-64 overflow-y-auto rounded-md border border-border-subtle bg-surface-sunken p-2 font-mono text-content-secondary text-xs"
+        className={toClassName(
+          "max-h-64 overflow-y-auto rounded-md border border-border-subtle bg-surface-sunken p-2 font-mono text-content-secondary text-xs",
+          // A sixth defect, and this one is nobody's code: scroll
+          // anchoring is the browser quietly *undoing* the follow
+          // above, and only sometimes.
+          //
+          // Chromium picks an anchor node in a scroll container and
+          // adjusts `scrollTop` to hold it still across a relayout.
+          // That is right for an article and wrong for a log: the
+          // whole contract here is "the bottom stays the bottom".
+          // `@charcuterie/tokens` ships Victor Mono `font-display:
+          // swap`, so a pane that mounts before the face arrives is
+          // laid out in the fallback and re-laid-out a moment later —
+          // and the anchor drags a followed pane off the end.
+          // Measured on the 60-line `Interactive` story, holding the
+          // font request back:
+          //
+          //   anchoring on,  font before mount : scrollTop 722, at the end
+          //   anchoring on,  font after mount  : scrollTop 721, a pixel short
+          //   anchoring off, either            : scrollTop 722, at the end
+          //
+          // Whether the swap beats the mount is a race, so the pane
+          // followed correctly on some renders and not others. It
+          // read as visual-regression flake for a week — one story,
+          // `components-logviewer--interactive`, shifted a pixel —
+          // because a race is what it is. The DOM test missed it: its
+          // four pixels of slack are there for fractional device
+          // pixel ratios, and one pixel fits inside them.
+          //
+          // Only while following. A user who scrolled up to read an
+          // error *wants* the anchor — `maxLines` drops old lines off
+          // the top, and anchoring is what stops that shoving the
+          // line they are reading up the pane.
+          isFollowing ? "[overflow-anchor:none]" : null,
+        )}
         onScroll={(scrollEvent) => {
           const pane = scrollEvent.currentTarget
 
