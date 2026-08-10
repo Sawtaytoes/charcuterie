@@ -39,6 +39,7 @@ import { createReadStream } from "node:fs"
 import { mkdir, readFile, rm, stat } from "node:fs/promises"
 import { createServer } from "node:http"
 import { extname, join, normalize } from "node:path"
+import { FREEZE_MOTION_CSS } from "@charcuterie/storybook-config/testing"
 
 import { chromium } from "playwright"
 
@@ -138,16 +139,11 @@ const browser = await chromium.launch()
 
 // Kill motion and the text caret everywhere, so a mid-animation
 // frame or a blinking cursor can never be the pixel that differs.
-const freezeStyle = `
-  *, *::before, *::after {
-    animation-duration: 0s !important;
-    animation-delay: 0s !important;
-    transition-duration: 0s !important;
-    transition-delay: 0s !important;
-    caret-color: transparent !important;
-    scroll-behavior: auto !important;
-  }
-`
+//
+// Shared with the `ui-dom` suite rather than spelled twice: this
+// preamble was learned here, and `ui-dom` flaked for years without
+// it. One definition is what stops the two drifting again.
+const freezeStyle = FREEZE_MOTION_CSS
 
 const failures = []
 
