@@ -68,7 +68,7 @@ export const hairline: Variant = {
       content: {
         primary: "#EAECEF",
         secondary: "#A7ACB4",
-        muted: "#838991",
+        muted: "#8E949B",
         disabled: "#565C64",
         onAccent: "#FFFFFF",
       },
@@ -173,7 +173,7 @@ export const hairline: Variant = {
       content: {
         primary: "#1A1C1F",
         secondary: "#53575D",
-        muted: "#686D74",
+        muted: "#5D6168",
         disabled: "#A9AEB5",
         onAccent: "#FFFFFF",
       },

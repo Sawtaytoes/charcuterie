@@ -116,3 +116,14 @@ highlight past the tint it is supposed to be a hover of.
 It is a real failure and it needs its own change, moving `content.muted` (or the neutral
 tint ramp) with the VRT churn that implies. It is recorded here so that the next person to
 read "the gate is green" knows exactly which pair it is still not being asked about.
+
+> **Closed the same day** by
+> [`content.muted` is strengthened so the highlighted option row clears
+> AA](2026-08-10-content-muted-is-strengthened-so-the-highlighted-option-row-clears-aa.md),
+> which moved `content.muted` — the foreground, as predicted above — in six of the eight
+> combinations. That change also found this section **understated** the hole: extending the
+> audit structurally rather than adding the one pair named here turned up **12** failures,
+> including `content.muted` on the *selected* row (`intent.accent.surface`) and on
+> **`surface.sunken`** at rest, the latter because the surfaces block hand-listed its
+> background roles the same way this file's intent block had hand-listed its states. 48
+> gated pairs per scheme becomes 63.
