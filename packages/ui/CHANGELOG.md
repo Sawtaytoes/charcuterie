@@ -1,5 +1,94 @@
 # @charcuterie/ui
 
+## 2.8.0
+
+### Minor Changes
+
+- a4c9286: Add `AdaptiveGrid` and `useAdaptiveColumns` — a wrapping grid that spends height before it
+  spends width.
+
+  Every wrapping grid in the fleet today is `auto-fill, minmax()`, which takes every column
+  the window allows and lands on seven items strung across an ultrawide with nothing below
+  the fold. Meanwhile the pages around them are one column at a very large max-width, so a
+  1440px monitor renders a 56rem ribbon of content down the middle. This is both halves of
+  that, lifted out of rip-deck's `useLayoutColumns` and made generic.
+
+  A column is added only when the items will **not** stack inside the viewport; the
+  container's inline size can only ever cap that answer, never produce it. The visible
+  consequence is deliberately non-monotonic — 1440x900 takes three columns while a larger
+  1920x1080 takes two, because the taller window stacks the same items in fewer stacks. The
+  content cap then widens with the count (1 column → 56rem, 2 → 72rem, 3 → 106rem), so a page
+  earns its width by having something to fill it with.
+
+  - `chooseColumns` is the rule as a pure fold, checked in Node against the eleven-size spec
+    table it was ported with. Every number rip-deck kept module-private is now a parameter:
+    the column floor, the item block size, the chrome block size, and the caps.
+  - `useAdaptiveColumns` measures its container with a `ResizeObserver` rather than reading
+    `window.innerWidth`, so a grid beside a rail is told the truth about the room it has. The
+    block size stays a viewport question behind an injectable resolver, because a grid in
+    normal flow is exactly as tall as its contents and would always answer "it fits".
+  - `contentInlineSize` joins `@charcuterie/tokens` beside `screen` and `containerQuery`, and
+    emits `--content-inline-size-*`. How far the eye should track across a line is a
+    structural fact about the fleet, not something a visual variant gets to change.
+  - The column floor defaults to `containerQuery.sm` instead of rip-deck's hand-measured
+    380px. A test asserts the two agree on every row of the spec table, so it is a rename
+    rather than a behaviour change.
+
+- 41471aa: `TextLink` and `ButtonLink`, plus a router-agnostic seam.
+
+  Buttons are for on-page actions; links are for navigation. Both new components render a
+  real `<a href>` — so middle-click, ctrl-click, "open in new tab", "copy link address" and
+  the status bar all work — and they differ in paint, not semantics:
+
+  - **`TextLink`** — navigation that looks like a link. `appearance="inline"` (in prose,
+    underlined, inherits the surrounding type) and `appearance="standalone"` (a back-link, a
+    nav item).
+  - **`ButtonLink`** — navigation that looks like a button. Takes `Button`'s `intent` /
+    `appearance` / `size` / `iconStart` / `iconEnd` / `isFullWidth` and paints through the
+    same `getControlClassName`, so the two are the same pixels. No `isLoading`: a navigation
+    has no pending state the component owns.
+
+  Both take `isExternal` (`target="_blank"`, `rel="noopener noreferrer"`, and a
+  visually-hidden "opens in a new tab") and `isDisabled`, which drops `href` and sets
+  `aria-disabled` rather than shipping a focusable anchor that silently does nothing.
+
+  **The router is injected, not depended on.** `RouterLinkProvider` takes the app's link
+  component once at the root; with nothing injected both components render a plain `<a href>`
+  and everything still works. `@charcuterie/ui/react-router` is a new optional subpath export
+  shipping `ReactRouterLink`, with `react-router` as an optional peer dependency — so apps
+  without a router never pay for it. Setup recipe: **Guides/Routing** in Storybook.
+
+  Also newly exported for apps building their own controls: `getControlClassName`,
+  `CONTROL_BASE_CLASS`, `ARIA_DISABLED_CLASS`, `AnchorLink`, `useRouterLink`,
+  `getIsRoutedHref`, and the `RouterLinkComponent` / `RouterLinkProps` types.
+
+### Patch Changes
+
+- 22caa75: `LogViewer` opts a following pane out of the browser's scroll anchoring, so the
+  bottom stays the bottom across a relayout.
+
+  Chromium picks an anchor node inside a scroll container and moves `scrollTop` to
+  hold it still whenever the content is laid out again. For a log pane that is the
+  browser undoing the follow. `@charcuterie/tokens` ships Victor Mono with
+  `font-display: swap`, so a pane that mounts before the face arrives is laid out
+  in the fallback, scrolled to the end, and then laid out a second time in the real
+  face — and the anchor drags it back off the end. Measured on the 60-line
+  `Interactive` story with the font request held back: `scrollTop` 722 (at the end)
+  without anchoring, 721 (a pixel short) with it.
+
+  Whether the font swap beats the mount is a race, so the pane followed correctly on
+  some renders and not others. It surfaced as visual-regression flake on exactly one
+  story rather than as a bug report, and the existing DOM assertions could not catch
+  it — their four pixels of slack are there for fractional device pixel ratios, and
+  the drift fits inside them.
+
+  The opt-out applies **only while following**. A user who has scrolled up keeps
+  anchoring, which is what stops `maxLines` dropping lines off the top from shoving
+  the line they are reading up the pane.
+
+- Updated dependencies [a4c9286]
+  - @charcuterie/tokens@1.2.0
+
 ## 2.7.0
 
 ### Minor Changes
