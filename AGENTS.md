@@ -61,6 +61,13 @@ yarn check:contrast # WCAG 2.2 AA, with numbers
 yarn build:storybook && yarn smoke:storybook
 ```
 
+`check:contrast` audits **interactive** states, not just resting ones — every gated pair has
+its hover twin at the same threshold. It did not until 2026-08-10, and for the library's
+whole life before that it printed *"All variants clear WCAG 2.2 AA"* while every accent
+button in the fleet failed AA **while hovered**
+([decision](docs/decisions/2026-08-10-interactive-states-are-audited-not-just-resting-states.md)).
+A gate that cannot see a state reports its absence as a pass.
+
 **`yarn storybook` and `yarn build:storybook` run `yarn build` first, and that is not
 ceremony — do not strip it.** `packages/docs` resolves `@charcuterie/*` through `exports` to
 `dist`, exactly as a consumer does, so a stale `dist` renders a token that silently does not
