@@ -249,3 +249,65 @@ describe("SPA fallback", () => {
     expect(response.status).toBe(404)
   })
 })
+
+// A mount whose URL prefix is not a real directory: board-games
+// serves `/images/*` out of `$BOARD_GAMES_IMAGES`.
+describe("rewriteRequestPath", () => {
+  const buildImageOrigin = () => {
+    const app = new Hono()
+    app.use(
+      "/images/*",
+      createStaticHandler({
+        hasSpaFallback: false,
+        immutablePathPrefixes: ["/images/"],
+        rewriteRequestPath: (path) =>
+          path.replace(/^\/images/, ""),
+        rootDir: join(rootDir, "assets"),
+      }),
+    )
+    app.notFound((context) =>
+      context.json({ error: "not found" }, 404),
+    )
+    return app
+  }
+
+  test("maps the URL prefix onto the root directory", async () => {
+    const response = await buildImageOrigin().request(
+      "/images/index-D7e1J0tu.js",
+    )
+
+    expect(response.status).toBe(200)
+    expect(await response.text()).toBe(BUNDLE_SOURCE)
+  })
+
+  test("still negotiates the precompressed sibling", async () => {
+    const response = await buildImageOrigin().request(
+      "/images/index-D7e1J0tu.js",
+      { headers: { "Accept-Encoding": "br" } },
+    )
+
+    expect(response.headers.get("content-encoding")).toBe(
+      "br",
+    )
+  })
+
+  // The bucket is decided on the path the *caller* used, not the
+  // rewritten one — `immutablePathPrefixes` names URLs, not disk.
+  test("buckets on the request path, not the rewritten one", async () => {
+    const response = await buildImageOrigin().request(
+      "/images/index-D7e1J0tu.js",
+    )
+
+    expect(response.headers.get("cache-control")).toBe(
+      IMMUTABLE_CACHE_CONTROL,
+    )
+  })
+
+  test("a miss under the prefix is still a 404", async () => {
+    const response = await buildImageOrigin().request(
+      "/images/absent-12345678.js",
+    )
+
+    expect(response.status).toBe(404)
+  })
+})

@@ -46,6 +46,31 @@ export type StaticHandlerOptions = {
    * server that is only an asset origin.
    */
   hasSpaFallback?: boolean
+
+  /**
+   * Map the request path to a path under `rootDir` before the lookup.
+   *
+   * For a mount whose URL prefix is not a real directory —
+   * `board-games` serves `/images/*` out of `$BOARD_GAMES_IMAGES`,
+   * which is somewhere else entirely:
+   *
+   * ```ts
+   * app.use("/images/*", createStaticHandler({
+   *   immutablePathPrefixes: ["/images/"],
+   *   rewriteRequestPath: (path) => path.replace(/^\/images/, ""),
+   *   rootDir: imagesDirectory(),
+   * }))
+   * ```
+   *
+   * **The cache bucket is still decided on the *request* path**, not
+   * the rewritten one, so `immutablePathPrefixes` keeps naming URLs as
+   * a caller sees them. Rewriting is about where bytes live on disk;
+   * caching is about what the browser was promised.
+   *
+   * Does not apply to the SPA fallback — `index` is resolved against
+   * `rootDir` directly, so a rewrite cannot misdirect the shell.
+   */
+  rewriteRequestPath?: (path: string) => string
 }
 
 /**
@@ -90,13 +115,18 @@ export const createStaticHandler = ({
   hasSpaFallback = true,
   immutablePathPrefixes = DEFAULT_IMMUTABLE_PATH_PREFIXES,
   index = "index.html",
+  rewriteRequestPath,
   rootDir,
 }: StaticHandlerOptions): MiddlewareHandler => {
   const serveFile = serveStatic({
     precompressed: true,
     root: rootDir,
+    ...(rewriteRequestPath ? { rewriteRequestPath } : {}),
   })
 
+  // No rewrite here, deliberately: `serveStatic` ignores
+  // `rewriteRequestPath` whenever `path` is set, and the shell should
+  // resolve against `rootDir` regardless of how URLs are mapped.
   const serveIndex = serveStatic({
     path: index,
     precompressed: true,
