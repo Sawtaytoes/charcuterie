@@ -53,7 +53,15 @@ jobs:
           # packages/storybook-config/SEEDING.md. Once 0.1.0 is seeded and its
           # `storybook-config-v0.1.0` tag pushed, this loop skips it until a
           # changeset bumps the version, and by then OIDC must be set up.
-          for pkg in tokens logic ui eslint-config biome-config storybook-config tsconfig vitest-config vite-config playwright-config; do
+          #
+          # `server` is LAST for the same reason, one step earlier in its life:
+          # it has not been seeded yet at all. `set -euo pipefail` aborts the
+          # loop on the first failure, so an unseeded package at the end costs
+          # only itself — at the front it would block every other release. See
+          # packages/server/SEEDING.md; seed 0.1.0 and configure its trusted
+          # publisher BEFORE the Version PR bumps it, or this step fails with
+          # npm's 404 mask for an unconfigured trusted publisher.
+          for pkg in tokens logic ui eslint-config biome-config storybook-config tsconfig vitest-config vite-config playwright-config server; do
             dir="packages/$pkg"
             name="$(node -p "require('./$dir/package.json').name")"
             version="$(node -p "require('./$dir/package.json').version")"

@@ -1,0 +1,60 @@
+{
+  "name": "@charcuterie/server",
+  "version": "0.0.0",
+  "description": "The fleet's Hono static-asset handler — precompressed bytes, honest cache headers, and the Vite plugin that produces them.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./vite": {
+      "source": "./src/vite/index.ts",
+      "types": "./dist/vite/index.d.ts",
+      "default": "./dist/vite/index.js"
+    },
+    "./src/*": "./src/*"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "prepack": "yarn build",
+    "test": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "@hono/node-server": ">=1.13",
+    "hono": ">=4",
+    "vite": ">=5"
+  },
+  "peerDependenciesMeta": {
+    "vite": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@hono/node-server": "^2.0.2",
+    "@types/node": "^25.6.2",
+    "hono": "^4.12.21",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.16",
+    "vitest": "^4.1.8"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Sawtaytoes/charcuterie.git",
+    "directory": "packages/server"
+  }
+}
