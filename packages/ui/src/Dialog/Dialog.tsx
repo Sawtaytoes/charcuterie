@@ -99,7 +99,7 @@ export const Dialog = ({
       isVisible={isVisible}
       onClose={onClose}
     >
-      <header className="flex shrink-0 items-start justify-between gap-3 border-b border-border-subtle p-4">
+      <header className="flex shrink-0 items-center justify-between gap-3 border-b border-border-subtle p-4">
         <Heading
           className="font-semibold text-lg leading-tight"
           id={headingId}
