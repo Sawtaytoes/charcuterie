@@ -91,6 +91,14 @@ export type UseAnchoredOverlayOptions = {
   isVisible: boolean
   /** Clamps the panel to `min(this, available viewport space)`. */
   maxHeightPx?: number
+  /**
+   * Caps the panel's width at `min(this, available viewport space)`,
+   * symmetric with `maxHeightPx`. Without it a picker grows to its
+   * widest content — a long `Combobox` footer sentence or option label
+   * drags the whole panel absurdly wide; the cap lets that content wrap
+   * instead. Omit for width-follows-content (the default).
+   */
+  maxWidthPx?: number
   /** Popover 8, Menu/Listbox/Combobox 4. */
   offsetValue?: number
   onDismiss: () => void
@@ -116,6 +124,7 @@ export const useAnchoredOverlay = ({
   isTriggerWidthMatched = false,
   isVisible,
   maxHeightPx,
+  maxWidthPx,
   offsetValue = 8,
   onDismiss,
   placement = "bottom-start",
@@ -128,17 +137,35 @@ export const useAnchoredOverlay = ({
     shift({ padding: 8 }),
   ]
 
-  if (isTriggerWidthMatched || maxHeightPx !== undefined) {
+  if (
+    isTriggerWidthMatched ||
+    maxHeightPx !== undefined ||
+    maxWidthPx !== undefined
+  ) {
     middleware.push(
       size({
         padding: 8,
-        apply({ availableHeight, elements, rects }) {
-          const cap =
+        apply({
+          availableHeight,
+          availableWidth,
+          elements,
+          rects,
+        }) {
+          const heightCap =
             maxHeightPx === undefined
               ? availableHeight
               : Math.min(maxHeightPx, availableHeight)
 
-          elements.floating.style.maxHeight = `${cap}px`
+          elements.floating.style.maxHeight = `${heightCap}px`
+
+          if (maxWidthPx !== undefined) {
+            const widthCap = Math.min(
+              maxWidthPx,
+              availableWidth,
+            )
+
+            elements.floating.style.maxWidth = `${widthCap}px`
+          }
 
           if (isTriggerWidthMatched) {
             elements.floating.style.width = `${rects.reference.width}px`
