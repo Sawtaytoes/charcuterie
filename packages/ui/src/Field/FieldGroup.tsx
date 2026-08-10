@@ -116,9 +116,11 @@ export const FieldGroup = ({
 
       {children}
 
+      {/* `text-sm` since 2026-08-10, matching `Field` — same reasoning,
+          and the two must not disagree about how big a description is. */}
       {description === undefined ? null : (
         <p
-          className="text-content-secondary text-xs"
+          className="text-content-secondary text-sm"
           id={descriptionId}
         >
           {description}
@@ -127,7 +129,7 @@ export const FieldGroup = ({
 
       {error === undefined ? null : (
         <p
-          className="text-intent-danger-content text-xs"
+          className="text-intent-danger-content text-sm"
           id={errorId}
         >
           {error}

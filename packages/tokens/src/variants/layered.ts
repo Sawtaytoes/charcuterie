@@ -274,13 +274,21 @@ export const layered: Variant = {
 
   typography: {
     ...defaultTypography,
+    /**
+     * Body steps are the shared 2026-08-10 ramp; only the two
+     * display steps stay larger than everyone else's.
+     *
+     * That gap is this variant's character rather than a leftover —
+     * it is the one meant to be read from two or three metres away
+     * on the kiosk Pi, and it buys hierarchy with size where the
+     * others buy it with borders. Keeping the body steps identical
+     * is what makes it a *variant* of the fleet ramp instead of a
+     * second ramp.
+     */
     fontSize: {
-      xs: "0.8125rem",
-      sm: "0.875rem",
-      md: "0.9375rem",
-      lg: "1.0625rem",
-      xl: "1.375rem",
-      "2xl": "1.75rem",
+      ...defaultTypography.fontSize,
+      xl: "1.5625rem",
+      "2xl": "2rem",
     },
     lineHeight: {
       tight: "1.3",
