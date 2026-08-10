@@ -205,3 +205,22 @@ export const FOCUS_RING_CLASS =
  */
 export const DISABLED_CLASS =
   "disabled:cursor-not-allowed disabled:border-border-subtle disabled:bg-surface-sunken disabled:text-content-disabled disabled:shadow-none"
+
+/**
+ * The same treatment for something that cannot *be* disabled.
+ *
+ * **`disabled` is not a thing an `<a>` has.** There is no attribute,
+ * no `:disabled` match, and no browser behaviour to inherit — so a
+ * "disabled link" is entirely something a component has to build, and
+ * the usual build of it is a focusable `<a href>` that silently does
+ * nothing when pressed. `ButtonLink` instead drops `href` (the
+ * platform's own way to make an anchor inert and unfocusable) and
+ * says so with `aria-disabled`, which is what this paints against.
+ *
+ * `pointer-events-none` rather than `cursor-not-allowed`: without a
+ * real `:disabled`, the `hover:` classes still match — CSS `:hover`
+ * fires on disabled elements too — so the hover fill has to be taken
+ * off the table rather than merely overridden.
+ */
+export const ARIA_DISABLED_CLASS =
+  "aria-disabled:pointer-events-none aria-disabled:border-border-subtle aria-disabled:bg-surface-sunken aria-disabled:text-content-disabled aria-disabled:shadow-none"

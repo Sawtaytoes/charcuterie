@@ -67,6 +67,8 @@ export type { BadgeProps } from "./Badge/Badge.tsx"
 export { Badge } from "./Badge/Badge.tsx"
 export type { ButtonProps } from "./Button/Button.tsx"
 export { Button } from "./Button/Button.tsx"
+export type { ButtonLinkProps } from "./ButtonLink/ButtonLink.tsx"
+export { ButtonLink } from "./ButtonLink/ButtonLink.tsx"
 export type {
   CardPadding,
   CardProps,
@@ -87,8 +89,10 @@ export { Combobox } from "./Combobox/Combobox.tsx"
 export type { BadgeSize } from "./controlStyles.ts"
 export {
   BADGE_SIZE_CLASS,
+  CONTROL_BASE_CLASS,
   CONTROL_SIZE_CLASS,
   DOT_SIZE_CLASS,
+  getControlClassName,
   ICON_CONTROL_SIZE_CLASS,
   MIN_TOUCH_TARGET_CLASS,
   SPINNER_SIZE_CLASS,
@@ -113,6 +117,7 @@ export type { IconButtonProps } from "./IconButton/IconButton.tsx"
 export { IconButton } from "./IconButton/IconButton.tsx"
 export type { IntentAppearance } from "./intentStyles.ts"
 export {
+  ARIA_DISABLED_CLASS,
   DISABLED_CLASS,
   FOCUS_RING_CLASS,
   INTENT_APPEARANCE_CLASS,
@@ -169,6 +174,16 @@ export type {
   RadioItem,
 } from "./RadioGroup/RadioGroup.tsx"
 export { RadioGroup } from "./RadioGroup/RadioGroup.tsx"
+export { AnchorLink } from "./RouterLink/AnchorLink.tsx"
+export {
+  RouterLinkProvider,
+  useRouterLink,
+} from "./RouterLink/RouterLinkProvider.tsx"
+export type {
+  RouterLinkComponent,
+  RouterLinkProps,
+} from "./RouterLink/routerLink.ts"
+export { getIsRoutedHref } from "./RouterLink/routerLink.ts"
 export type {
   SegmentedControlProps,
   SegmentedItem,
@@ -217,6 +232,11 @@ export type {
   TabsProps,
 } from "./Tabs/Tabs.tsx"
 export { Tabs } from "./Tabs/Tabs.tsx"
+export type {
+  TextLinkAppearance,
+  TextLinkProps,
+} from "./TextLink/TextLink.tsx"
+export { TextLink } from "./TextLink/TextLink.tsx"
 export type { ToastProps } from "./Toast/Toast.tsx"
 export { Toast } from "./Toast/Toast.tsx"
 export type {
