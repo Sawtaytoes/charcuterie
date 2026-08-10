@@ -100,12 +100,28 @@ export type MainProps = ComponentPropsWithRef<"main"> & {
  * merely the reading cursor — without it, Safari and Firefox scroll
  * to `<main>` and leave the next Tab back in the header.
  *
- * `wrap-break-word` so an unbroken string — a filesystem path, a
- * hash, a URL — wraps instead of widening the page. It is the
- * cheap half of the horizontal-scroll fix; the expensive half is
- * `minmax(0, 1fr)` in `Shell`. A `<table>` is the one thing neither
- * can save: tables do not wrap, so a wide one goes in an
- * `overflow-x-auto` wrapper, which `Main.mdx` shows.
+ * `wrap-anywhere` so an unbroken string — a filesystem path, a
+ * hash, a URL — wraps instead of widening the page.
+ *
+ * **`anywhere`, not `break-word`, and the difference is the whole
+ * point.** Both break a long word onto the next line, so they look
+ * identical in a screenshot. Only `anywhere` also shrinks the
+ * element's **min-content size** — which is what a flex or grid
+ * item's automatic minimum resolves against, and therefore what
+ * decides whether the string can push its own column wider. With
+ * `break-word` the ink wraps while the intrinsic contribution
+ * stays the full length of the token, so the layout above it can
+ * still be forced open. This is the second of the two overflow
+ * sources found in plex-channels, and the nastier one: it produces
+ * **no overflowing element box at all**, so every
+ * `getBoundingClientRect()` in a test reads clean while the page
+ * scrolls sideways.
+ *
+ * It is the cheap half of the horizontal-scroll fix; the other
+ * halves are `minmax(0, 1fr)` and `overflow-x: clip` in `Shell`. A
+ * `<table>` is the one thing none of them can save: tables do not
+ * wrap, so a wide one goes in an `overflow-x-auto` wrapper, which
+ * `Main.mdx` shows.
  */
 export const Main = ({
   children,
@@ -148,7 +164,7 @@ export const Main = ({
         is actually laid out in.
       */}
       <div
-        className="@container mx-auto flex w-full min-w-0 flex-col gap-6 wrap-break-word px-4 py-6 sm:px-6"
+        className="@container mx-auto flex w-full min-w-0 flex-col gap-6 wrap-anywhere px-4 py-6 sm:px-6"
         style={{ maxInlineSize }}
       >
         {children}

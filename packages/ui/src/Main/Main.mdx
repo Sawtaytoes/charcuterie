@@ -96,10 +96,20 @@ halves have consequences:
 
 <Canvas of={MainStories.Responsive} />
 
-`wrap-break-word` on the column handles content that *can* wrap and does not — a filesystem
-path, a hash, a URL, none of which contain a break opportunity. That is the cheap half of
-the horizontal-scroll fix; the expensive half is `minmax(0, 1fr)` on `Shell`'s middle
-track.
+`wrap-anywhere` on the column handles content that *can* wrap and does not — a filesystem
+path, a hash, a URL, none of which contain a break opportunity.
+
+**`anywhere`, not `break-word`.** Both break the long word onto the next line, so the two are
+indistinguishable in a screenshot. Only `anywhere` also shrinks the element's **min-content
+size**, which is what a flex or grid item's automatic minimum resolves against — and
+therefore what decides whether the string can force its own column wider. Under
+`break-word` the ink wraps while the intrinsic contribution stays the full token length, so
+the page can still scroll sideways with **no overflowing element box anywhere in the tree**
+for a `getBoundingClientRect()` assertion to catch. That is why the gate asserts
+`document.documentElement.scrollWidth`, and why `Main.test.tsx` pins the computed value.
+
+That is the cheap half of the horizontal-scroll fix; the other halves are `minmax(0, 1fr)`
+and `overflow-x: clip` on `Shell`.
 
 A `<table>` is the one thing neither can save. Table columns have min-content widths that no
 `overflow-wrap` reaches, so a wide table goes in a scroll container:

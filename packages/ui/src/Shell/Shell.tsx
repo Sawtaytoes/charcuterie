@@ -70,6 +70,56 @@ export type ShellProps = ComponentPropsWithRef<"div"> & {
  * There is no `gap`: an empty `auto` track is 0 wide, but a `gap`
  * beside it is not, so a shell with no rails would carry two
  * mystery gutters. `Rail` and `Main` bring their own padding.
+ *
+ * ## `overflow-x: clip` — the structural guarantee
+ *
+ * `minmax(0, 1fr)` fixes the tracks and `Main`'s `wrap-anywhere`
+ * fixes the text, but neither reaches the shape that actually
+ * broke plex-channels: **a closed panel parked at
+ * `transform: translateX(110%)`**. A transform does not take a box
+ * out of the document's scrollable overflow region — and neither
+ * does `visibility: hidden` — so an off-screen drawer that looks
+ * absent still makes the page scroll to it. It is a favourite
+ * fleet pattern and no amount of `min-width: 0` touches it.
+ *
+ * `clip`, not `hidden`, and the two are not interchangeable here:
+ * `overflow: hidden` creates a **scroll container**, which would
+ * become the sticky containing block for `Header` and freeze it in
+ * place. `overflow-x: clip` creates no scrollport, so `Header`
+ * keeps sticking to the viewport, and `overflow-y` stays `visible`
+ * — a pair that is legal for `clip` and illegal for `hidden`,
+ * which would compute the other axis to `auto`.
+ *
+ * The trade is deliberate: content wider than the frame is
+ * **clipped rather than reachable by scrolling sideways**, which is
+ * exactly the outcome asked for. Content that genuinely needs to
+ * be wider owns a scroll container of its own — the pattern
+ * `Main.mdx` documents for tables.
+ *
+ * ### `relative` is what makes the clip reach anything
+ *
+ * `overflow-x: clip` only clips descendants whose **containing
+ * block chain passes through the clipping element**. An absolutely
+ * positioned element with no positioned ancestor resolves against
+ * the *initial* containing block instead, so it sails straight
+ * past every `overflow` in the tree and lands its overflow on
+ * `documentElement` — where `document.body.scrollWidth` still
+ * reads clean and only `document.documentElement.scrollWidth`
+ * shows it.
+ *
+ * That is not hypothetical: it is measured. Before this
+ * `relative`, the parked-drawer fixture reported `shellScroll:
+ * 390`, `bodyScroll: 390` and `docScroll: 742` at a 390px
+ * viewport — the shell dutifully clipping a box it had no
+ * authority over.
+ *
+ * The obvious candidate to own it, `Main`'s content column, does
+ * **not**: `container-type: inline-size` computes `contain` to
+ * `none` in Chromium and establishes no containing block for
+ * absolute positioning, which is measured too — the drawer's
+ * `offsetParent` was `BODY`. So `Shell` takes the job, which is
+ * also the honest place for it: the frame is what an app's parked
+ * chrome is parked against.
  */
 export const Shell = ({
   children,
@@ -90,7 +140,7 @@ export const Shell = ({
       <div
         {...divProps}
         className={toClassName(
-          "grid min-h-dvh grid-cols-1 grid-rows-[auto_auto_1fr_auto] bg-surface-base text-content-primary md:grid-cols-[auto_minmax(0,1fr)_auto] md:grid-rows-[auto_1fr]",
+          "relative grid min-h-dvh grid-cols-1 grid-rows-[auto_auto_1fr_auto] overflow-x-clip bg-surface-base text-content-primary md:grid-cols-[auto_minmax(0,1fr)_auto] md:grid-rows-[auto_1fr]",
           className,
         )}
       >

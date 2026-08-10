@@ -1,22 +1,22 @@
 import { composeStories } from "@storybook/react"
-import { page } from "@vitest/browser/context"
 import { expect, within } from "storybook/test"
 import { afterAll, test } from "vitest"
 
 import { expectNoAxeViolations } from "../expectNoAxeViolations.testHelpers.ts"
 import { mountStory } from "../mountStory.testHelpers.ts"
 import { expectAgentDrivable } from "../testing/index.ts"
+import {
+  DESKTOP,
+  PHONE,
+  setViewport,
+} from "../viewport.testHelpers.ts"
 import * as stories from "./Rail.stories.tsx"
 
 const { AllVariants, Default, Interactive, Responsive } =
   composeStories(stories)
 
-const PHONE = { height: 844, width: 390 }
-
-const DESKTOP = { height: 900, width: 1440 }
-
 afterAll(async () => {
-  await page.viewport(DESKTOP.width, DESKTOP.height)
+  await setViewport(DESKTOP)
 })
 
 test("landmark decides the element, and both are named", async () => {
@@ -50,7 +50,7 @@ test("landmark decides the element, and both are named", async () => {
  * hidden one.
  */
 test("the same links exist once at both widths", async () => {
-  await page.viewport(PHONE.width, PHONE.height)
+  await setViewport(PHONE)
 
   const phone = await mountStory(Responsive)
 
@@ -71,7 +71,7 @@ test("the same links exist once at both widths", async () => {
     globalThis.getComputedStyle(phoneRail).flexDirection,
   ).toBe("row")
 
-  await page.viewport(DESKTOP.width, DESKTOP.height)
+  await setViewport(DESKTOP)
 
   const desktop = await mountStory(Responsive)
 
@@ -94,7 +94,7 @@ test("the same links exist once at both widths", async () => {
  * widen the page. The strip owns its overflow instead.
  */
 test("a rail too long for a phone scrolls itself, not the page", async () => {
-  await page.viewport(PHONE.width, PHONE.height)
+  await setViewport(PHONE)
 
   const { canvas, canvasElement } =
     await mountStory(Responsive)
@@ -125,7 +125,7 @@ test("a rail too long for a phone scrolls itself, not the page", async () => {
 })
 
 test("the rail scopes its own links away from the header's", async () => {
-  await page.viewport(DESKTOP.width, DESKTOP.height)
+  await setViewport(DESKTOP)
 
   const { canvas, canvasElement } =
     await mountStory(Interactive)

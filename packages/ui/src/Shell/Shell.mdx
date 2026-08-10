@@ -134,11 +134,38 @@ causes are all shell faults: a grid track that ignores `min-width: 0`, a `100vw`
 counts the scrollbar gutter, or a sticky header whose inner container is wider than the
 viewport.
 
-So the middle grid track is `minmax(0, 1fr)` — a track's automatic minimum is
-`min-content`, which is how one long unbroken string widens an entire page — and
-`Shell.test.tsx` asserts `document.documentElement.scrollWidth <= clientWidth` at a real
-390px viewport, against a story containing a 130-character path and a table wider than the
-phone.
+There are **three** shapes of it, and each needs a different answer:
+
+| Shape | Answer |
+| --- | --- |
+| A grid track sized to `min-content` | `minmax(0, 1fr)` on the middle track |
+| Text ink from a long unbroken token | `wrap-anywhere` on `Main`'s column |
+| A box parked off-screen by a transform | `position: relative` + `overflow-x: clip` here |
+
+The third is the one that broke plex-channels: a closed panel at
+`transform: translateX(110%)`. **A transform does not remove a box from the document's
+scrollable overflow region**, and neither does `visibility: hidden` — so a drawer nobody can
+see still makes the page scroll to it.
+
+`clip`, not `hidden`: `overflow: hidden` creates a scroll container, which would become the
+sticky containing block for `Header` and freeze it. `clip` creates no scrollport, and it is
+the one value that may pair with `overflow-y: visible`.
+
+The `relative` is not decoration. `overflow-x: clip` only clips descendants whose containing
+block chain runs through the clipper, and an absolutely positioned box with no positioned
+ancestor resolves against the *initial* containing block instead — sailing past every
+`overflow` in the tree. Measured, before `Shell` took `relative`: `shellScroll: 390`,
+`bodyScroll: 390`, **`docScroll: 742`** at a 390px viewport. The obvious candidate to own it
+— `Main`'s content column — does not, because `container-type: inline-size` computes
+`contain` to `none` in Chromium and establishes no containing block for absolute
+positioning; the drawer's `offsetParent` was `BODY`.
+
+`Shell.test.tsx` and `Main.test.tsx` assert
+`document.documentElement.scrollWidth <= clientWidth` at a real 390px viewport against a
+story carrying all three shapes at once, with each fixture separately asserted to actually
+overflow. **`documentElement`, not `body`** — the parked-drawer case leaves
+`document.body.scrollWidth` reading a clean 390 while the page scrolls, and it leaves no
+overflowing element box for a `getBoundingClientRect()` assertion to catch either.
 
 There is no grid `gap`: an absent rail is a zero-width `auto` track, but a gap beside it is
 not, so a shell with no rails would carry two mystery gutters. `Rail` and `Main` bring

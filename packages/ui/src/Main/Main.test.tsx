@@ -1,26 +1,26 @@
 import { composeStories } from "@storybook/react"
-import { page } from "@vitest/browser/context"
 import { expect, userEvent } from "storybook/test"
 import { afterAll, test } from "vitest"
 
 import { expectNoAxeViolations } from "../expectNoAxeViolations.testHelpers.ts"
 import { mountStory } from "../mountStory.testHelpers.ts"
 import { expectAgentDrivable } from "../testing/index.ts"
+import {
+  DESKTOP,
+  PHONE,
+  setViewport,
+} from "../viewport.testHelpers.ts"
 import * as stories from "./Main.stories.tsx"
 
 const { Default, Interactive, Responsive } =
   composeStories(stories)
 
-const PHONE = { height: 844, width: 390 }
-
-const DESKTOP = { height: 900, width: 1440 }
-
 afterAll(async () => {
-  await page.viewport(DESKTOP.width, DESKTOP.height)
+  await setViewport(DESKTOP)
 })
 
 test("the content column is capped at the token, not at the window", async () => {
-  await page.viewport(DESKTOP.width, DESKTOP.height)
+  await setViewport(DESKTOP)
 
   const { canvas } = await mountStory(Default)
 
@@ -49,7 +49,7 @@ test("the content column is capped at the token, not at the window", async () =>
  * fleet's poster grids look wrong at intermediate widths.
  */
 test("main is the query container its content responds to", async () => {
-  await page.viewport(DESKTOP.width, DESKTOP.height)
+  await setViewport(DESKTOP)
 
   const { canvas } = await mountStory(Default)
 
@@ -78,7 +78,7 @@ test("main is the query container its content responds to", async () => {
 })
 
 test("neither an unbroken path nor a wide table widens the page at 390px", async () => {
-  await page.viewport(PHONE.width, PHONE.height)
+  await setViewport(PHONE)
 
   const { canvas, canvasElement } =
     await mountStory(Responsive)
@@ -87,12 +87,27 @@ test("neither an unbroken path nor a wide table widens the page at 390px", async
     /Some-Very-Long-Show-Name-S01E01/,
   )
 
-  // It wraps rather than overflowing — which is `wrap-break-word`
-  // on the content column doing its one job. Without it the
-  // element is one 1,000px line.
+  // It wraps rather than overflowing. Without it the element is
+  // one 1,000px line.
   await expect(
     path.getBoundingClientRect().width,
   ).toBeLessThanOrEqual(PHONE.width)
+
+  // `anywhere`, not `break-word` — a drift gate, because the two
+  // are indistinguishable in a screenshot and only `anywhere`
+  // shrinks the **min-content size** a flex or grid item's
+  // automatic minimum resolves against. Under `break-word` the ink
+  // wraps while the intrinsic contribution stays the full token
+  // length, so the string can still force a column open with **no
+  // overflowing element box** for a bounding-rect assertion to
+  // see. That is the failure shape found in plex-channels, and
+  // this line is what stops somebody "tidying" the utility back.
+  const column = canvas.getByRole("main")
+    .firstElementChild as HTMLElement
+
+  await expect(
+    globalThis.getComputedStyle(column).overflowWrap,
+  ).toBe("anywhere")
 
   const scroller = canvas.getByRole("region", {
     name: "Transfer log, scrollable",
@@ -119,7 +134,7 @@ test("neither an unbroken path nor a wide table widens the page at 390px", async
  * the tab order, and it must accept focus when sent there.
  */
 test("main takes focus from a skip link without joining the tab order", async () => {
-  await page.viewport(DESKTOP.width, DESKTOP.height)
+  await setViewport(DESKTOP)
 
   const { canvas, canvasElement } =
     await mountStory(Interactive)

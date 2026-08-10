@@ -14,7 +14,8 @@ import {
 /**
  * The furniture the four shell stories share: a rail's worth of
  * links, a page's worth of cards, the scheme control that lives in
- * the header, and the two things that make a page scroll sideways.
+ * the header, and the three things that make a page scroll
+ * sideways.
  *
  * `.storyHelpers.tsx` rather than `.tsx` because `react/no-multi-comp`
  * is switched off for that suffix, and it is excluded from the
@@ -139,11 +140,11 @@ export const ScrollFiller = (): ReactNode => (
 )
 
 /**
- * The two things that actually make a page scroll sideways, and
- * they need different answers.
+ * The three things that actually make a page scroll sideways, and
+ * each needs a different answer.
  *
  * The **path** is content that *can* wrap and does not, because
- * nothing in it is a break opportunity. `Main`'s `wrap-break-word`
+ * nothing in it is a break opportunity. `Main`'s `wrap-anywhere`
  * handles it, so it is dropped in raw on purpose — if the shell
  * regresses, this is the fixture that notices.
  *
@@ -165,6 +166,23 @@ export const ScrollFiller = (): ReactNode => (
  */
 export const OverflowingContent = (): ReactNode => (
   <>
+    {/*
+      The third shape, and the one that broke plex-channels: a
+      closed drawer parked off the inline edge by a transform.
+
+      It is still laid out, still painted, and still part of the
+      document's scrollable overflow region — a transform does not
+      remove a box from it, and neither does `visibility: hidden`.
+      So the page scrolls sideways to reach a panel nobody can see,
+      and every `min-width: 0` in the tree is irrelevant. `Shell`'s
+      `overflow-x: clip` is what actually answers it.
+    */}
+    <div
+      aria-hidden="true"
+      className="pointer-events-none absolute top-0 end-0 h-40 w-80 translate-x-[110%] rounded-lg border border-border-subtle bg-surface-raised"
+      id="parked-drawer"
+    />
+
     <p className="text-content-secondary text-sm">
       /mnt/Bunnies/Family/Media/Television/Some-Very-Long-Show-Name/Season-01/Some-Very-Long-Show-Name-S01E01-Pilot-2160p-HDR-DTS-HD-MA.mkv
     </p>

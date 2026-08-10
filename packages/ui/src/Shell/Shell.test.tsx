@@ -1,11 +1,15 @@
 import { composeStories } from "@storybook/react"
-import { page } from "@vitest/browser/context"
 import { expect, userEvent } from "storybook/test"
 import { afterAll, test } from "vitest"
 
 import { expectNoAxeViolations } from "../expectNoAxeViolations.testHelpers.ts"
 import { mountStory } from "../mountStory.testHelpers.ts"
 import { expectAgentDrivable } from "../testing/index.ts"
+import {
+  DESKTOP,
+  PHONE,
+  setViewport,
+} from "../viewport.testHelpers.ts"
 import * as stories from "./Shell.stories.tsx"
 
 const {
@@ -16,17 +20,8 @@ const {
   WithStartRail,
 } = composeStories(stories)
 
-/**
- * A phone, and the one the fleet's evidence is about: 390px is an
- * iPhone 14/15/16 in portrait, and it is the width Plex Channels'
- * narrow view scrolls left and right at today.
- */
-const PHONE = { height: 844, width: 390 }
-
-const DESKTOP = { height: 900, width: 1440 }
-
 afterAll(async () => {
-  await page.viewport(DESKTOP.width, DESKTOP.height)
+  await setViewport(DESKTOP)
 })
 
 /**
@@ -78,7 +73,7 @@ const expectNoHorizontalScroll = async () => {
 }
 
 test("the shell does not scroll sideways at 390px, with content that tries", async () => {
-  await page.viewport(PHONE.width, PHONE.height)
+  await setViewport(PHONE)
 
   const { canvas, canvasElement } =
     await mountStory(Responsive)
@@ -95,13 +90,46 @@ test("the shell does not scroll sideways at 390px, with content that tries", asy
     canvas.getByRole("table"),
   ).toBeInTheDocument()
 
-  await expectNoHorizontalScroll()
+  // The third fixture: a closed drawer parked at
+  // `translateX(110%)`. It has to be really parked past the
+  // inline edge, because a transform leaves the box in the
+  // document's scrollable overflow region — which is why this
+  // shape survives every `min-width: 0` in the tree, and why the
+  // assertion below is on `documentElement.scrollWidth` rather
+  // than on any element's bounding rect.
+  const parkedDrawer = canvasElement.querySelector(
+    "#parked-drawer",
+  ) as HTMLElement
+
+  await expect(
+    parkedDrawer.getBoundingClientRect().left,
+  ).toBeGreaterThan(PHONE.width)
+
+  const shellRoot =
+    canvasElement.firstElementChild as HTMLElement
+
+  // The drawer resolves against `Shell`, not the initial
+  // containing block — which is the only reason the clip below
+  // reaches it. `overflow-x: clip` clips descendants whose
+  // containing-block chain runs through the clipper, and an
+  // absolutely positioned box with no positioned ancestor has no
+  // such chain: it lands its overflow straight on
+  // `documentElement`, where `document.body.scrollWidth` still
+  // reads clean.
+  //
+  // Measured before `Shell` took `position: relative`:
+  // `shellScroll: 390`, `bodyScroll: 390`, `docScroll: 742`.
+  await expect(parkedDrawer.offsetParent).toBe(shellRoot)
+
+  await expect(
+    globalThis.getComputedStyle(shellRoot).overflowX,
+  ).toBe("clip")
 
   await expectNoAxeViolations(canvasElement)
 })
 
 test("both rails and a full page do not scroll sideways at 390px either", async () => {
-  await page.viewport(PHONE.width, PHONE.height)
+  await setViewport(PHONE)
 
   const { canvasElement } = await mountStory(WithBothRails)
 
@@ -117,7 +145,7 @@ test("both rails and a full page do not scroll sideways at 390px either", async 
  * out at the width it was given.
  */
 test("the shell fills the viewport at desktop width without overflowing it", async () => {
-  await page.viewport(DESKTOP.width, DESKTOP.height)
+  await setViewport(DESKTOP)
 
   await mountStory(WithBothRails)
 
@@ -159,7 +187,7 @@ test("the shell is one banner, one main, and two uniquely-named rails", async ()
  * Four links narrow, four links wide.
  */
 test("collapsing the rail does not duplicate its contents", async () => {
-  await page.viewport(PHONE.width, PHONE.height)
+  await setViewport(PHONE)
 
   const phone = await mountStory(WithStartRail)
 
@@ -167,7 +195,7 @@ test("collapsing the rail does not duplicate its contents", async () => {
     phone.canvas.getAllByRole("link", { name: "Queue" }),
   ).toHaveLength(1)
 
-  await page.viewport(DESKTOP.width, DESKTOP.height)
+  await setViewport(DESKTOP)
 
   const desktop = await mountStory(WithStartRail)
 
@@ -210,7 +238,7 @@ test("the first Tab reaches a skip link that lands focus in main", async () => {
 })
 
 test("header and main are capped at the same width", async () => {
-  await page.viewport(DESKTOP.width, DESKTOP.height)
+  await setViewport(DESKTOP)
 
   const { canvas, canvasElement } =
     await mountStory(Default)
