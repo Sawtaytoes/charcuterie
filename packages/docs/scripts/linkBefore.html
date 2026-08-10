@@ -1,0 +1,243 @@
+<!doctype html>
+<html data-scheme="dark" data-variant="daylight" data-density="comfortable" lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Before — how the fleet navigates today</title>
+    <link rel="stylesheet" href="/variables.css" />
+    <link rel="stylesheet" href="/fonts.css" />
+    <style>
+      /* This page reproduces the fleet's CURRENT navigation controls,
+         from their real source. Each caption names the file it came
+         from. Nothing here is a charcuterie component.
+
+         The two colour systems in the fleet are both represented as
+         they really are: plex-channels and gallery-downloader already
+         read `--color-*` token variables, while mux-magic hardcodes
+         Tailwind's slate/blue palette (993 such utilities across 134
+         files), which is why its links look the same in both schemes
+         below. */
+      body {
+        background: var(--color-surface-base);
+        color: var(--color-content-primary);
+        font-family: var(--font-sans);
+        margin: 0;
+        padding: 24px 28px 32px;
+      }
+
+      h1 {
+        font-size: 1.05rem;
+        font-weight: 600;
+        margin: 0 0 4px;
+      }
+
+      .lede {
+        color: var(--color-content-secondary);
+        font-size: 0.85rem;
+        margin: 0 0 22px;
+        max-inline-size: 62rem;
+      }
+
+      .row {
+        border-block-start: 1px solid var(--color-border-subtle);
+        display: grid;
+        gap: 14px;
+        grid-template-columns: 22rem 1fr;
+        padding-block: 14px;
+      }
+
+      .source {
+        color: var(--color-content-muted);
+        font-family: var(--font-mono);
+        font-size: 0.68rem;
+        line-height: 1.5;
+      }
+
+      .source b {
+        color: var(--color-content-secondary);
+        display: block;
+        font-weight: 500;
+      }
+
+      .demo {
+        align-items: center;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 18px;
+      }
+
+      /* --- plex-channels: web/src/styles/app.css:241 --- */
+      button.ghost {
+        background: var(--color-surface-overlay);
+        border: 1px solid var(--color-border-default);
+        border-radius: 8px;
+        color: var(--color-content-primary);
+        cursor: pointer;
+        font-family: inherit;
+        font-size: 0.95rem;
+        padding: 8px 14px;
+      }
+
+      button.ghost:hover {
+        border-color: var(--color-intent-accent-solid);
+      }
+
+      /* --- mux-magic: raw Tailwind palette, no light mode --- */
+      .mm-tools {
+        color: #94a3b8; /* text-slate-400 */
+        font-size: 0.875rem; /* text-sm */
+        font-weight: 400;
+        margin-inline-end: 0.75rem;
+        text-decoration: none;
+      }
+
+      .mm-blue {
+        color: #60a5fa; /* text-blue-400 */
+        font-size: 0.875rem;
+        text-decoration: none;
+      }
+
+      .mm-title {
+        color: #f1f5f9; /* text-slate-100 */
+        font-size: 1.125rem;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+        text-decoration: none;
+      }
+
+      .mm-back {
+        background: none;
+        border: 1px solid #334155; /* border-slate-700 */
+        border-radius: 0.25rem;
+        color: #94a3b8;
+        cursor: pointer;
+        font-family: inherit;
+        font-size: 0.75rem; /* text-xs */
+        padding: 0.25rem 0.5rem;
+      }
+
+      /* --- gallery-downloader: token-based, already themable --- */
+      .gd-home {
+        color: var(--color-content-muted);
+        font-size: 0.75rem;
+        text-decoration: none;
+      }
+
+      /* --- points-market: a charcuterie Button used to navigate --- */
+      .pm-title {
+        background: transparent;
+        border: 1px solid transparent;
+        border-radius: 0.375rem;
+        color: var(--color-content-primary);
+        cursor: pointer;
+        font-family: inherit;
+        font-size: 1.125rem;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        padding: 0 0.75rem;
+      }
+
+      h2.plex {
+        align-items: center;
+        display: flex;
+        font-size: 1.05rem;
+        gap: 12px;
+        margin: 0;
+      }
+    </style>
+  </head>
+
+  <body>
+    <h1>Before — how the fleet navigates today</h1>
+
+    <p class="lede">
+      Every control below is copied from the repo named beside it. Four of the five are the
+      wrong element for what they do, and the fifth reloads the whole page through an SPA
+      router. None of them agree on a hover rule, and only one has a focus ring.
+    </p>
+
+    <div class="row">
+      <div class="source">
+        <b>plex-channels</b>
+        web/src/views/PlayView.tsx:137<br />
+        &lt;button className="ghost" onClick={() =&gt;<br />
+        &nbsp;&nbsp;navigate("#/channels")}&gt;Configure ›&lt;/button&gt;<br /><br />
+        A <b style="display: inline">&lt;button&gt;</b> that navigates. No middle-click, no
+        ctrl-click, no "open in new tab", no "copy link address", nothing in the status bar.
+        Three identical copies in this one file.
+      </div>
+
+      <div class="demo">
+        <h2 class="plex">
+          Dynamic Channels
+          <button class="ghost" id="gochannels" type="button">Configure ›</button>
+        </h2>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="source">
+        <b>mux-magic</b>
+        packages/web/src/pages/JobsPage/JobsPage.tsx:15<br />
+        &lt;a href="/" className="text-sm font-normal<br />
+        &nbsp;&nbsp;text-slate-400 hover:text-slate-300 mr-3"&gt;← Tools&lt;/a&gt;<br /><br />
+        A real anchor — but one of <b style="display: inline">14</b> raw ones in an app that
+        declares react-router v8 and has zero &lt;Link&gt;, so every one of them reloads the
+        page. Hardcoded slate, so it cannot have a light mode.
+      </div>
+
+      <div class="demo">
+        <a class="mm-tools" href="#">← Tools</a>
+        <a class="mm-blue" href="#">← Jobs</a>
+        <a class="mm-blue" href="#">Sequence Builder ↗</a>
+        <a class="mm-title" href="#">Sequence Builder</a>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="source">
+        <b>mux-magic</b>
+        packages/web/src/components/LookupModal/LookupModal.tsx:91<br />
+        &lt;button onClick={goBack} className="text-slate-400<br />
+        &nbsp;&nbsp;… border border-slate-700 …"&gt;← Back&lt;/button&gt;<br /><br />
+        The same back-arrow again, as a &lt;button&gt; this time, with a fourth spelling of
+        the hover. A test asserts the literal glyph.
+      </div>
+
+      <div class="demo">
+        <button class="mm-back" type="button">← Back</button>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="source">
+        <b>gallery-downloader</b>
+        packages/web/src/pages/JobsPage.tsx:457<br />
+        &lt;a className="text-xs text-content-muted<br />
+        &nbsp;&nbsp;hover:text-content-secondary" href="/"&gt;← Home&lt;/a&gt;<br /><br />
+        A fifth spelling. Token-based, so it themes — but muted grey, unmarked as a link,
+        and with no focus ring at all.
+      </div>
+
+      <div class="demo">
+        <a class="gd-home" href="#">← Home</a>
+        <a class="gd-home" href="#">← Jobs</a>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="source">
+        <b>points-market</b>
+        packages/web/src/components/AppShell.tsx:22<br />
+        &lt;Button appearance="ghost" intent="neutral"<br />
+        &nbsp;&nbsp;onClick={() =&gt; navigate("/")}&gt;{title}&lt;/Button&gt;<br /><br />
+        The app already uses @charcuterie/ui — and reaches for
+        <b style="display: inline">Button</b> for its home link, because there was nothing
+        else to reach for. This is the row ButtonLink exists to make correct.
+      </div>
+
+      <div class="demo">
+        <button class="pm-title" type="button">Points Market</button>
+      </div>
+    </div>
+  </body>
+</html>

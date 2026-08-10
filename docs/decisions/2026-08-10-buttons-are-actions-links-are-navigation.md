@@ -44,7 +44,12 @@ Charcuterie shipped no link component at all, and `Button` is strictly `<button>
   reload through its own SPA router.
 - **plex-channels** navigates entirely with `<button onClick={() => navigate("#/…")}>` —
   including "Configure ›", which is the primary action on a channel card.
-- **points-market**'s header title is a clickable `<div>`.
+- **points-market** already consumes `@charcuterie/ui`, and its header title — a home link
+  — is a `<Button appearance="ghost" intent="neutral" onClick={() => navigate("/")}>`,
+  because there was nothing else to reach for
+  (`packages/web/src/components/AppShell.tsx:22`). This is the clearest evidence for the
+  decision: a consumer that *wants* to be correct still ships a button doing navigation
+  when the library has no link.
 
 So both failure directions are already shipped: buttons doing navigation, and anchors
 bypassing the router. Agents building these apps had nothing correct to reach for, so they

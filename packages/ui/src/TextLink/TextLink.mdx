@@ -12,8 +12,9 @@ page instead, that is a `Button`
 ([decision](https://github.com/Sawtaytoes/charcuterie/blob/master/docs/decisions/2026-08-10-buttons-are-actions-links-are-navigation.md)).
 
 Measured across the fleet before this shipped: **seven repos** hand-roll a back-link with a
-literal `←`, each with its own hover rule and its own idea of whether focus is visible, and
-points-market's header title is a clickable `<div>`. All of them render as an `<a href>`
+literal `←`, each with its own hover rule and its own idea of whether focus is visible — and
+points-market, which already consumes this library, reaches for a ghost `Button` for its
+header home link because there was nothing else to reach for. All of them are an `<a href>`
 here, so middle-click, ctrl-click, "open in new tab", "copy link address", and the browser's
 status bar work without anybody implementing them.
 
