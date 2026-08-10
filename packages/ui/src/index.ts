@@ -178,6 +178,12 @@ export type {
   RadioItem,
 } from "./RadioGroup/RadioGroup.tsx"
 export { RadioGroup } from "./RadioGroup/RadioGroup.tsx"
+export type {
+  RailLandmark,
+  RailProps,
+  RailSide,
+} from "./Rail/Rail.tsx"
+export { Rail } from "./Rail/Rail.tsx"
 export { AnchorLink } from "./RouterLink/AnchorLink.tsx"
 export {
   RouterLinkProvider,
@@ -188,12 +194,6 @@ export type {
   RouterLinkProps,
 } from "./RouterLink/routerLink.ts"
 export { getIsRoutedHref } from "./RouterLink/routerLink.ts"
-export type {
-  RailLandmark,
-  RailProps,
-  RailSide,
-} from "./Rail/Rail.tsx"
-export { Rail } from "./Rail/Rail.tsx"
 export type {
   SegmentedControlProps,
   SegmentedItem,
