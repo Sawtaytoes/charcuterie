@@ -86,24 +86,51 @@ const COMPOSITE_MEMBER_ROLES = new Set([
   "treeitem",
 ])
 
+/**
+ * A toolbar's members are ordinary controls.
+ *
+ * Every other composite here names its members by role — a `tab`, an
+ * `option`, a `menuitem`. A `role="toolbar"` names none of them: the
+ * APG's toolbar holds plain buttons, toggle buttons, a radio group,
+ * a menu button, and it is the *container* that declares the
+ * pattern. So `toolbar` sat in `COMPOSITE_ROLES` from M4 and was
+ * unreachable, because nothing inside one ever carried a member
+ * role — a roving toolbar was rejected outright with "has a negative
+ * tabindex", which is the assertion this helper makes for a
+ * *standalone* button and precisely the wrong one here.
+ */
+const TOOLBAR_MEMBER_SELECTOR =
+  "a[href], button, input, select, textarea, [tabindex]"
+
+const getGroupMembers = (group: Element) =>
+  group.getAttribute("role") === "toolbar"
+    ? Array.from(
+        group.querySelectorAll<HTMLElement>(
+          TOOLBAR_MEMBER_SELECTOR,
+        ),
+      )
+    : Array.from(
+        group.querySelectorAll<HTMLElement>("[role]"),
+      ).filter((member) =>
+        COMPOSITE_MEMBER_ROLES.has(
+          member.getAttribute("role") ?? "",
+        ),
+      )
+
 const getCompositeGroup = (element: Element) => {
-  if (
-    !COMPOSITE_MEMBER_ROLES.has(
-      element.getAttribute("role") ?? "",
-    )
-  ) {
-    return null
-  }
+  const isMemberByRole = COMPOSITE_MEMBER_ROLES.has(
+    element.getAttribute("role") ?? "",
+  )
 
   let current = element.parentElement
 
   while (current) {
-    if (
-      COMPOSITE_ROLES.has(
-        current.getAttribute("role") ?? "",
-      )
-    ) {
-      return current
+    const groupRole = current.getAttribute("role") ?? ""
+
+    if (COMPOSITE_ROLES.has(groupRole)) {
+      return groupRole === "toolbar" || isMemberByRole
+        ? current
+        : null
     }
 
     current = current.parentElement
@@ -225,16 +252,19 @@ export const expectAgentDrivable = (
     // *group* reachable, exactly once". Zero tab stops strands the
     // whole widget; several put every member back in the tab
     // order, which is the pattern not being implemented at all.
-    const tabStops = Array.from(
-      group.querySelectorAll("[role]"),
-    ).filter(
+    const tabStops = getGroupMembers(group).filter(
       (member) =>
-        COMPOSITE_MEMBER_ROLES.has(
-          member.getAttribute("role") ?? "",
-        ) &&
         !member.hasAttribute("disabled") &&
         member.getAttribute("aria-disabled") !== "true" &&
-        (member as HTMLElement).tabIndex >= 0,
+        // floating-ui plants `aria-hidden` focus guards
+        // (`<span tabindex="0">`) either side of an overlay's
+        // reference element, and a toolbar holding an overflow
+        // trigger therefore contains two. They are not members of
+        // anything — a screen reader and an agent both skip them —
+        // and counting them reported a correct roving group as
+        // having three tab stops.
+        !getIsHiddenFromAgents(member) &&
+        member.tabIndex >= 0,
     )
 
     if (tabStops.length !== 1) {

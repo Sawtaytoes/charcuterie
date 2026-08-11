@@ -358,7 +358,13 @@ test("the barrel is the only place components are re-exported", async () => {
   // and `shellContext.ts` are `Shell`'s members and stay out of
   // this count by the `<Name>/<Name>.tsx` rule, exactly as
   // `mediaStatus.ts` does.
-  expect(componentNames.length).toBe(42)
+  // `Toolbar` unifies the fourth-largest duplication — four repos
+  // with a toolbar-and-overflow, three of them collapsing by
+  // rendering every action twice: +1 -> 43. `ToolbarSlot.tsx`,
+  // `useToolbarOverflow.ts` and `chooseVisibleCount.ts` are its
+  // members and stay out of this count by the `<Name>/<Name>.tsx`
+  // rule.
+  expect(componentNames.length).toBe(43)
 
   for (const name of componentNames) {
     expect(barrel).toContain(`export { ${name} }`)

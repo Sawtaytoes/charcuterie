@@ -1,5 +1,7 @@
 /**
- * `@charcuterie/logic/browser` — the DOM defaults for `useColorScheme`.
+ * `@charcuterie/logic/browser` — the DOM defaults for the hooks
+ * whose state the environment owns: `useColorScheme` and
+ * `useMediaQuery`.
  *
  * An optional subpath, isolated exactly like `@charcuterie/logic/jotai`
  * and `@charcuterie/logic/signals`, and for the same reason: the main
@@ -20,6 +22,7 @@ import type {
   ColorSchemeResolver,
   ResolvedColorScheme,
 } from "../core/createColorScheme.ts"
+import type { MediaQueryMatcher } from "../core/createMediaQuery.ts"
 
 /**
  * The default `localStorage` key. Exported so the first-paint inline
@@ -68,6 +71,48 @@ export const matchMediaResolver =
       },
     }
   }
+
+/**
+ * `matchMedia(query)` as a `MediaQueryMatcher`.
+ *
+ * **One `MediaQueryList`, built once.** plex-channels' hook — the
+ * pattern this generalises — calls `window.matchMedia(query)` inside
+ * its `getSnapshot`, which `useSyncExternalStore` runs on every
+ * render, and on every store notification besides. Same answer,
+ * a fresh platform object each time.
+ *
+ * Off the browser (no `window.matchMedia`) it degrades to a static
+ * `false`, so the same code path is safe under SSR — a `Toolbar`
+ * server-renders whole and collapses on the client rather than the
+ * other way round.
+ */
+export const matchMediaMatcher = (
+  query: string,
+): MediaQueryMatcher => {
+  const mediaQueryList =
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function"
+      ? window.matchMedia(query)
+      : null
+
+  return {
+    get: () => mediaQueryList?.matches ?? false,
+    subscribe: (listener) => {
+      if (!mediaQueryList) {
+        return () => {}
+      }
+
+      mediaQueryList.addEventListener("change", listener)
+
+      return () => {
+        mediaQueryList.removeEventListener(
+          "change",
+          listener,
+        )
+      }
+    },
+  }
+}
 
 /**
  * Persist the picked mode in `localStorage`. Reads and writes are
