@@ -1,0 +1,126 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as ToolbarStories from "./Toolbar.stories";
+
+<Meta of={ToolbarStories} />
+
+# Toolbar
+
+A row of controls that collapses into an overflow when it runs out of room — measured, not
+breakpointed, with **exactly one instance** of every control in the document.
+
+<Canvas of={ToolbarStories.Default} />
+
+## Props
+
+<Controls />
+
+## What four repos got wrong
+
+mux-magic's `PageHeader` is the fleet's original, and plex-channels' `Header` names it in
+its own comments as the thing it copied. Both inherit all of this:
+
+| Defect | There | Here |
+| --- | --- | --- |
+| `role="toolbar"`, no toolbar keyboard model | six sequential tab stops | one tab stop, arrow keys, `RovingFocus` |
+| Toggles with no state | `Switch` is an `aria-hidden` `<span>`; Dry Run announces identically on and off | the control is the app's own, and `Switch` carries `role="switch"` |
+| Triggers advertise nothing | zero `aria-expanded` / `aria-haspopup` / `aria-controls` in the file | written by `useRole`, inside `Menu` / `Popover` |
+| No focus management | no focus-on-open, no return-to-trigger | `Menu` seeds the first item; `FloatingFocusManager` returns focus |
+| Collapse by DOM duplication | every action rendered twice, one copy hidden by a documented CSS specificity coin-flip | one instance, relocated |
+| Nothing decides what collapses | two hardcoded media queries at 480/481px, ⋮ shown at every width | measured, priority-ordered, trigger only when something overflowed |
+
+## The overflow's role is a **type**, not a flag
+
+`role="menu"` permits only `menuitem`, `menuitemradio`, `menuitemcheckbox`, `group` and
+`separator`. A header overflow usually is not a menu — it holds toggles — and
+plex-channels puts a `ColorSchemeSwitcher` inside one today, which is invalid ARIA that no
+gate catches.
+
+So the caller cannot get it wrong:
+
+```tsx
+// Every row is an action → a real `role="menu"`.
+<Toolbar overflow="menu" items={[{ key: "retry", label: "Retry", onSelect }]} label="Deck actions" />
+
+// A control in the array → this is a compile error with `overflow="menu"`,
+// and requires `overflow="panel"`, which opens a `Popover`
+// (`role="dialog"`, `aria-haspopup="dialog"`).
+<Toolbar
+  overflow="panel"
+  items={[
+    { key: "retry", label: "Retry", onSelect },
+    { element: <DryRunSwitch />, key: "dry-run", type: "control" },
+  ]}
+  label="Deck controls"
+/>
+```
+
+Same instinct as
+[`Menu`'s items being a discriminated union](../../../docs/decisions/2026-08-05-menu-items-is-a-discriminated-union.md):
+the kinds are told apart by the type system, in the data, rather than by a boolean prop or
+a runtime warning.
+
+<Canvas of={ToolbarStories.AllVariants} />
+
+## Priority is the array order
+
+`items[0]` is the last thing to collapse, and it is also paint order. One axis rather than
+two, because a separate `priority` number beside a separate display order is a pair a
+caller can put out of step.
+
+<Canvas of={ToolbarStories.Responsive} />
+
+## Measured, not breakpointed
+
+There is no `collapseAt` prop. The bar reads the widths its items actually have, so a
+longer label, a different font, or `data-density="kiosk"` moves the collapse point on its
+own — where `480px` is wrong the moment any of those change.
+
+Two consequences worth knowing:
+
+- **The root is `flex-1 min-w-0`, and must stay sized by its container.** A bar that
+  shrink-wraps its items would narrow when one collapsed, which would collapse another —
+  a loop with no error anywhere. `useAdaptiveColumns` documents the same trap from the
+  other end.
+- **A collapsed item's width is remembered, not re-read.** It is not in the DOM to
+  measure. The first paint mounts everything, measures it, and collapses *before paint* in
+  a layout effect.
+
+## The keyboard model
+
+Tab **once** to enter, then:
+
+| Key | Does |
+| --- | --- |
+| `ArrowRight` / `ArrowLeft` | move to the next / previous member |
+| `Home` / `End` | jump to the first / last member |
+| `Tab` | leaves the toolbar entirely |
+
+The overflow trigger is the group's last member, so the arrow keys reach it. Clicking a
+member, or tabbing into the group, makes that member active — so the next arrow key
+continues from where the user is.
+
+A **disabled** action is simply not registered with the roving group, so the arrows skip it
+while it stays in the DOM and stays announced — the same mechanism `Menu` and
+`SegmentedControl` use.
+
+<Canvas of={ToolbarStories.AllStates} />
+
+## Controls the toolbar does not render
+
+A `control` item is the app's own element, and the tab stop is written onto the first
+focusable in its subtree rather than cloned in as a prop: most components in this library
+forward no `tabIndex`, so a clone would compile, do nothing, and leave the bar with one tab
+stop per control.
+
+A control holding **more than one** focusable is a nested composite this component does not
+manage — only the first gets the tab stop. Put a `SegmentedControl` in a toolbar and it
+brings its own arrow-key model; that is the APG's expectation too.
+
+## Relocating is a different job
+
+Progressive collapse answers *what fits*. On a phone the whole bar often wants to leave the
+header, which is a layout decision — `useMediaQuery` from `@charcuterie/logic`, over the
+`matchMediaMatcher` seam, and one instance mounted in one place or the other.
+
+<Canvas of={ToolbarStories.InAppShell} />

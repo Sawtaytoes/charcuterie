@@ -41,6 +41,16 @@ export {
   selectAriaLabelledBy,
 } from "./createLinkedIds.ts"
 export type {
+  MediaQuery,
+  MediaQueryMatcher,
+  MediaQueryOptions,
+  MediaQueryState,
+} from "./createMediaQuery.ts"
+export {
+  createMediaQuery,
+  selectIsMatching,
+} from "./createMediaQuery.ts"
+export type {
   MultiplePicker,
   MultiplePickerOptions,
   MultiplePickerState,
