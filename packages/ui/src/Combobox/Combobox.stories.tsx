@@ -54,6 +54,7 @@ const ComboboxHarness = ({
   isMultiple,
   isVirtualized,
   options,
+  selectedValue,
   triggerLabel,
 }: {
   className?: string
@@ -66,13 +67,20 @@ const ComboboxHarness = ({
   isMultiple?: boolean
   isVirtualized?: boolean
   options: ListboxItem[]
+  selectedValue?: readonly string[] | string
   triggerLabel: string
 }): ReactNode => {
   const { hide, isVisible, toggle } = useVisibility({
     isVisible: isInitiallyVisible,
   })
 
-  const [chosen, setChosen] = useState<string[]>([])
+  const [chosen, setChosen] = useState<string[]>(
+    selectedValue === undefined
+      ? []
+      : typeof selectedValue === "string"
+        ? [selectedValue]
+        : [...selectedValue],
+  )
 
   return (
     <>
@@ -104,6 +112,7 @@ const ComboboxHarness = ({
           })
         }}
         options={options}
+        selectedValue={selectedValue}
         trigger={
           <Button appearance="outline" onClick={toggle}>
             {triggerLabel}
@@ -128,6 +137,76 @@ export const Default: Story = {
   },
   render: () => (
     <ComboboxHarness
+      options={LANGUAGES}
+      triggerLabel="Search languages"
+    />
+  ),
+}
+
+// Rich labels that pin a trailing category tag to the row's right edge:
+// the label is a full-width flex row, so its tag sits just inside the
+// always-reserved ✓ gutter. Selecting a row must not shift the tag — the
+// checkmark is always laid out, only made `invisible` when unselected.
+const TAGGED_LANGUAGES: ListboxItem[] = [
+  { name: "English", tag: "Germanic", value: "eng" },
+  { name: "Spanish", tag: "Romance", value: "spa" },
+  { name: "French", tag: "Romance", value: "fra" },
+  { name: "German", tag: "Germanic", value: "deu" },
+].map(({ name, tag, value }) => ({
+  label: (
+    <span className="flex flex-1 items-center justify-between gap-2">
+      <span>{name}</span>
+
+      <span className="rounded-sm bg-intent-neutral-surface-hover px-1.5 py-0.5 text-content-secondary text-xs">
+        {tag}
+      </span>
+    </span>
+  ),
+  textValue: name,
+  value,
+}))
+
+/**
+ * Rich option rows that pin a **trailing category tag** to the right
+ * edge, with the first option pre-selected. The ✓ gutter is always laid
+ * out (only made `invisible` when a row is unselected), so selecting a
+ * row is a paint-only change and the trailing tag never jumps left.
+ */
+export const TrailingElement: Story = {
+  args: {
+    isVisible: false,
+    onDismiss: () => {},
+    onSelect: () => {},
+    options: TAGGED_LANGUAGES,
+    trigger: <Button>Search languages</Button>,
+  },
+  render: () => (
+    <ComboboxHarness
+      isInitiallyVisible
+      options={TAGGED_LANGUAGES}
+      selectedValue="eng"
+      triggerLabel="Search languages"
+    />
+  ),
+}
+
+/**
+ * A very long, full-sentence `footer`. The panel is width-capped
+ * (`maxWidthPx`), so the footer **wraps** to multiple lines instead of
+ * stretching the popup to the width of the sentence.
+ */
+export const LongFooter: Story = {
+  args: {
+    isVisible: false,
+    onDismiss: () => {},
+    onSelect: () => {},
+    options: LANGUAGES,
+    trigger: <Button>Search languages</Button>,
+  },
+  render: () => (
+    <ComboboxHarness
+      footer="Type a BCP-47 language code and press Enter to add it directly — this hint is a full sentence on purpose, to prove the panel caps its width and wraps the footer instead of stretching to fit it."
+      isInitiallyVisible
       options={LANGUAGES}
       triggerLabel="Search languages"
     />
