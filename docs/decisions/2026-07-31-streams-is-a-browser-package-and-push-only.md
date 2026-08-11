@@ -1,10 +1,10 @@
 # `streams` is a browser package, and push-only
 
-**Status:** Accepted
+**Status:** Accepted (one row revised)
 **Date:** 2026-07-31
 **Type:** Scope
 **Supersedes:** —
-**Superseded by:** —
+**Superseded by:** [Charcuterie owns request/response data-fetching, via `@charcuterie/logic/query`](2026-08-11-charcuterie-owns-data-fetching-via-query.md) — **in part only.** It strikes the "Fetching, caching, request-retry → the consumer's react-query" row of the table below (fetching now has a Charcuterie home). Everything else here — `streams` is browser-only, push-only, RxJS, and a *separate* package from `query` — still stands.
 
 ## Decision
 
