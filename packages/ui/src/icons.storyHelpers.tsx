@@ -168,3 +168,26 @@ export const DotIcon = (): ReactNode => (
     <circle cx="12" cy="12" r="4" />
   </svg>
 )
+
+/**
+ * The overflow glyph — three dots, the ⋮ every header in the fleet
+ * draws as a **character**. Drawn rather than typed, because
+ * `⋮` renders as nothing where the font lacks it: this sandbox's
+ * chromium, the kiosk image, the ePaper build
+ * ([decision](../../../docs/decisions/2026-07-29-ship-no-icons-and-no-symbol-glyphs.md)).
+ * It lives here, in the stories, because the library ships no icons.
+ */
+export const MoreIcon = (): ReactNode => (
+  <svg
+    {...iconProps}
+    aria-hidden="true"
+    fill="currentColor"
+    stroke="none"
+  >
+    <circle cx="12" cy="5" r="1.75" />
+
+    <circle cx="12" cy="12" r="1.75" />
+
+    <circle cx="12" cy="19" r="1.75" />
+  </svg>
+)
