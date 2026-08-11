@@ -9,7 +9,54 @@ bindings. No components — those are `@charcuterie/ui` (M3).
 @charcuterie/logic/preact     Preact binding (no preact/compat)
 @charcuterie/logic/jotai      optional store adapter
 @charcuterie/logic/signals    optional store adapter
+@charcuterie/logic/query      request/response data layer (TanStack Query + openapi-fetch)
 ```
+
+## `@charcuterie/logic/query` — the data layer
+
+The fleet's one way to fetch: TanStack Query for caching, a `paths`-typed
+`openapi-fetch` client for the wire, and the defaults two apps had already tuned
+before this existed.
+
+```tsx
+import {
+  createApiClient,
+  createApiHooks,
+  QueryProvider,
+} from "@charcuterie/logic/query"
+import type { paths } from "./__generated__/api.gen.ts"
+
+const fetchClient = createApiClient<paths>({ baseUrl: "/" })
+export const api = createApiHooks(fetchClient)
+
+const App = () => (
+  <QueryProvider>
+    <Jobs />
+  </QueryProvider>
+)
+
+const Jobs = () => {
+  // path, params, and response are all typed off the OpenAPI spec:
+  const { data } = api.useQuery("get", "/jobs")
+  return <JobList jobs={data ?? []} />
+}
+```
+
+`createQueryClient` keeps react-query's own defaults — **retries stay on**, so
+the layer recovers from a transient blip — and deep-merges any override. A
+polling app that wants a failed request to *not* retry (because backoff would
+keep stale data on screen) opts out explicitly:
+`createQueryClient({ defaultOptions: { queries: { retry: false } } })` — the call
+rip-deck and board-games make. `@tanstack/react-query`, `openapi-fetch`, and
+`openapi-react-query` are **optional** peers: import `./query` and you opt into
+them; don't and you pull none.
+
+The `paths` type is generated from the backend's OpenAPI document by
+`openapi-typescript` and committed as a `.gen.ts` file that Biome and ESLint
+ignore — see [the generated-schemas
+decision](../../docs/decisions/2026-08-11-typed-api-calls-via-openapi-typescript-generated-schemas-committed.md).
+This is the **request/response** layer; the RxJS **push** layer (SSE/WebSocket)
+is the separate, future `@charcuterie/streams`.
 
 ## The five kinds
 
