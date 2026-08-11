@@ -100,14 +100,25 @@ export const ComboboxOption = ({
     >
       {label}
 
-      {isSelected ? (
-        <span
-          aria-hidden="true"
-          className="shrink-0 text-intent-accent-content"
-        >
-          ✓
-        </span>
-      ) : null}
+      {/*
+        The ✓ is rendered **always**, only hidden with `invisible` when
+        the row is unselected — never unmounted. If it appeared only on
+        selection the label's available width would change the instant a
+        row became selected, and a consumer whose label pins a trailing
+        element (a category tag) to the row's right edge would see it jump
+        left. A fixed-width, always-present gutter keeps selection a
+        paint-only change. `aria-hidden` throughout: selection is conveyed
+        by the button's `aria-selected`, so the glyph is decoration.
+      */}
+      <span
+        aria-hidden="true"
+        className={toClassName(
+          "flex w-4 shrink-0 justify-center text-intent-accent-content",
+          !isSelected && "invisible",
+        )}
+      >
+        ✓
+      </span>
     </button>
   )
 }

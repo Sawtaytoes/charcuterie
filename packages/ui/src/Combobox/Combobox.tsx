@@ -195,6 +195,10 @@ export const Combobox = ({
     isEscapeDismissable: false,
     isVisible,
     maxHeightPx: 384,
+    // Cap the width so an overlong footer sentence or option label wraps
+    // instead of dragging the whole panel absurdly wide; the `min-w-64`
+    // floor still holds the low end. Content wider than this wraps.
+    maxWidthPx: 384,
     offsetValue: 4,
     onDismiss,
     role: "listbox",
@@ -716,7 +720,7 @@ export const Combobox = ({
               </div>
 
               {footer ? (
-                <div className="shrink-0 border-border-subtle border-t p-2 text-content-secondary text-xs">
+                <div className="shrink-0 whitespace-normal break-words border-border-subtle border-t p-2 text-content-secondary text-xs [overflow-wrap:anywhere]">
                   {footer}
                 </div>
               ) : null}
