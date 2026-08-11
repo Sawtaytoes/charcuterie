@@ -1,4 +1,5 @@
 import {
+  createGeneratedIgnores,
   createLogicalPropertiesRules,
   createReactRules,
   createStoryOverrides,
@@ -8,6 +9,7 @@ import {
 import { defineConfig } from "eslint/config"
 
 export default defineConfig(
+  createGeneratedIgnores(),
   {
     ignores: [
       "**/dist/**",

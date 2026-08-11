@@ -448,6 +448,17 @@ const ENTRY_POINT_RUNTIMES: Record<
     "./core": [],
     "./jotai": ["jotai"],
     "./preact": ["preact", "preact/hooks"],
+    // The request/response data layer. It reaches react-query, the
+    // two openapi-* primitives it re-exports, and `react` (the
+    // provider's `useState`) — all optional peers, so an app that
+    // never imports `./query` resolves none of them. `react/jsx-runtime`
+    // is added only at emit, so it is not a source specifier here.
+    "./query": [
+      "@tanstack/react-query",
+      "openapi-fetch",
+      "openapi-react-query",
+      "react",
+    ],
     "./signals": ["@preact/signals-core"],
   },
   tokens: {

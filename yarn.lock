@@ -851,12 +851,15 @@ __metadata:
   resolution: "@charcuterie/logic@workspace:packages/logic"
   dependencies:
     "@preact/signals-core": "npm:^1.8.0"
+    "@tanstack/react-query": "npm:^5.100.9"
     "@types/react": "npm:^19.2.14"
     "@types/react-dom": "npm:^19.2.3"
     "@vitest/browser": "npm:^4.1.8"
     "@vitest/browser-playwright": "npm:^4.1.8"
     fast-check: "npm:^4.9.0"
     jotai: "npm:^2.20.0"
+    openapi-fetch: "npm:^0.17.0"
+    openapi-react-query: "npm:^0.5.0"
     playwright: "npm:^1.61.1"
     preact: "npm:^10.28.3"
     react: "npm:^19.2.8"
@@ -865,13 +868,22 @@ __metadata:
     vitest: "npm:^4.1.8"
   peerDependencies:
     "@preact/signals-core": ">=1.8"
+    "@tanstack/react-query": ">=5"
     jotai: ">=2"
+    openapi-fetch: ">=0.17"
+    openapi-react-query: ">=0.5"
     preact: ">=10.11"
     react: ">=18"
   peerDependenciesMeta:
     "@preact/signals-core":
       optional: true
+    "@tanstack/react-query":
+      optional: true
     jotai:
+      optional: true
+    openapi-fetch:
+      optional: true
+    openapi-react-query:
       optional: true
     preact:
       optional: true
@@ -2569,6 +2581,24 @@ __metadata:
   peerDependencies:
     vite: ^5.2.0 || ^6 || ^7 || ^8
   checksum: 10c0/bb1fe12f7a0bb8f6d6142f6bb2e96060ee853902314ef838e8d7f50cf30cc4b07adb7c2c86be2164e0d62eb581b8cc4df2d9aa13b4449f597a67f73c5772d549
+  languageName: node
+  linkType: hard
+
+"@tanstack/query-core@npm:5.101.4":
+  version: 5.101.4
+  resolution: "@tanstack/query-core@npm:5.101.4"
+  checksum: 10c0/a407960303431e6498c6518cf6f8cc7283d3e4a95dbdc5e9fa42c217b9dd7afaffb82a4f2d36b38f578f745e8cf69ff8551abb947f5abcc0a290f3e3e75dc654
+  languageName: node
+  linkType: hard
+
+"@tanstack/react-query@npm:^5.100.9":
+  version: 5.101.4
+  resolution: "@tanstack/react-query@npm:5.101.4"
+  dependencies:
+    "@tanstack/query-core": "npm:5.101.4"
+  peerDependencies:
+    react: ^18 || ^19
+  checksum: 10c0/92e7c5b44740e753b05a6a19c166ea1a000df64c1bf5edb315d08a5b555a9f16a9d35288ac38f650bd38fc3015b135c392749fd6db24d09db42bfaf758d119fa
   languageName: node
   linkType: hard
 
@@ -7591,6 +7621,34 @@ __metadata:
     is-inside-container: "npm:^1.0.0"
     wsl-utils: "npm:^0.1.0"
   checksum: 10c0/5a36d0c1fd2f74ce553beb427ca8b8494b623fc22c6132d0c1688f246a375e24584ea0b44c67133d9ab774fa69be8e12fbe1ff12504b1142bd960fb09671948f
+  languageName: node
+  linkType: hard
+
+"openapi-fetch@npm:^0.17.0":
+  version: 0.17.0
+  resolution: "openapi-fetch@npm:0.17.0"
+  dependencies:
+    openapi-typescript-helpers: "npm:^0.1.0"
+  checksum: 10c0/7e981d28c7839469662a73d44f3a85e05c1a5842a8afd5d6e36c75cbf085aa7f705862871cc7ce07c04605ddc936af3d5850c2cc66d193ee1fea07e7135da192
+  languageName: node
+  linkType: hard
+
+"openapi-react-query@npm:^0.5.0":
+  version: 0.5.4
+  resolution: "openapi-react-query@npm:0.5.4"
+  dependencies:
+    openapi-typescript-helpers: "npm:^0.1.0"
+  peerDependencies:
+    "@tanstack/react-query": ^5.80.0
+    openapi-fetch: ^0.17.0
+  checksum: 10c0/c893049d1246b35516acb70bc359917c3e55f373d6e85d6bab05e2fedf90aa763b890eb15cf3bbf1c5899a2e99d4277aaba94ce81a845c6716ff312952664d7a
+  languageName: node
+  linkType: hard
+
+"openapi-typescript-helpers@npm:^0.1.0":
+  version: 0.1.0
+  resolution: "openapi-typescript-helpers@npm:0.1.0"
+  checksum: 10c0/3a148cf7d6a7f51124966a0fef64c2fbcf1a5a0a1e6320dd627f0733787ac4259877be43f7a7a2910684e3d5d238c6a9655c6f9e1f3adaa9a2a61477e3b8481f
   languageName: node
   linkType: hard
 
