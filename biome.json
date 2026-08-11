@@ -10,7 +10,10 @@
       "!.yarn",
       "!docs/previews",
       "!packages/tokens/preview",
-      "!packages/eslint-config/**/__fixtures__"
+      "!packages/eslint-config/**/__fixtures__",
+      "!**/*.gen.ts",
+      "!**/*.gen.tsx",
+      "!**/__generated__"
     ]
   }
 }

@@ -173,6 +173,39 @@ export const createTestRules = ({
 })
 
 /**
+ * The canonical globs for generated API schemas — the
+ * `openapi-typescript` output a `@charcuterie/logic/query` consumer
+ * commits to the repo. Kept here so Biome (via
+ * `@charcuterie/biome-config`) and ESLint ignore the same paths, and
+ * so a consumer's `tsconfig` `exclude` / editor config can point at
+ * one list.
+ *
+ * `.gen.ts` for a single generated module (`api.gen.ts`) and
+ * `__generated__/` for a directory of them.
+ */
+export const GENERATED_SCHEMA_GLOBS = [
+  "**/*.gen.ts",
+  "**/*.gen.tsx",
+  "**/__generated__/**",
+]
+
+/**
+ * Generated schemas are committed but never linted — hand rules
+ * have no say over machine output, and type-aware linting a 10k-line
+ * `paths` type is pure cost. Spread this into a consumer's flat
+ * config so the type-aware pass skips them:
+ *
+ * ```js
+ * export default defineConfig(createGeneratedIgnores(), ...rest)
+ * ```
+ */
+export const createGeneratedIgnores = ({
+  ignores = GENERATED_SCHEMA_GLOBS,
+} = {}) => ({
+  ignores,
+})
+
+/**
  * Logical properties only. Scoped by the consumer, because the
  * rule is about *shipped component markup* — a one-off script or
  * a preview page has nobody to be RTL-correct for.
