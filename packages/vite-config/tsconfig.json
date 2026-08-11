@@ -9,5 +9,5 @@
     "types": ["node"],
     "noEmit": true
   },
-  "include": ["src/**/*.js", "*.ts"]
+  "include": ["src/**/*.ts", "src/**/*.js", "*.ts"]
 }
