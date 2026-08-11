@@ -1,0 +1,91 @@
+<!doctype html>
+<!-- The three Charcuterie axes on `<html>`.
+
+     `data-scheme` is NO LONGER pinned here — it is written before first paint by
+     the inline first-paint script in the head below, from the saved choice
+     (`localStorage`) or, failing that, the OS. The app now follows the OS
+     light/dark scheme through Charcuterie's colour-scheme switcher (see the
+     title bar's `ColorSchemeControl`), and the default mode is `system`. Pinning
+     `dark` here would flash the wrong theme for a frame on a light-resolved load,
+     which is exactly what the first-paint script exists to prevent. The runtime
+     `useColorScheme` hook keeps writing this same attribute, off the same
+     `localStorage` key (`charcuterie-scheme`), so the pre-paint value and the
+     hydrated state always agree.
+
+     `data-variant` is omitted deliberately: `daylight` is the default and
+     `:root` carries it, so naming it here would be a second place to change if
+     the fleet ever moves.
+
+     `data-density="kiosk"`, as of phase 2. This app is touch-first on a Surface
+     (`docs/decisions/2026-06-03-touch-first-is-the-whole-point.md`), and kiosk
+     is the axis that says so: `--control-min-touch-target` stays 2.75rem at
+     every density, but the control heights go 2.125/2.5/3rem →
+     2.75/3.25/3.75rem and the type ramp scales with them, so a `size="sm"`
+     `IconButton` is a 44px target rather than a 34px one. -->
+<html
+  lang="en"
+  data-density="kiosk"
+>
+  <head>
+    <meta charset="UTF-8" />
+
+    <!-- First-paint colour scheme. PASTED VERBATIM from
+         `@charcuterie/tokens`' `buildFirstPaintScript(daylight)` (its emitted
+         `dist/first-paint-script.html`), so it must run before any stylesheet:
+         it sets `<html data-scheme>` from the saved/OS choice and paints the
+         canvas with a scheme-branched fallback hex, so first paint never flashes
+         the wrong theme. `src/styles/firstPaintColour.test.ts` regenerates the
+         snippet from the package and fails if this copy drifts — the same
+         provenance guard the old single hex had. `KEY` here
+         (`charcuterie-scheme`) is `DEFAULT_COLOR_SCHEME_STORAGE_KEY`, the same
+         key `localStoragePersistence` uses at runtime, so the two agree. It
+         replaces the old hardcoded `data-scheme="dark"` pin and its static
+         anti-flash `<style>`. -->
+<script>
+  (() => {
+    var KEY = "charcuterie-scheme";
+    var stored;
+    try {
+      stored = window.localStorage.getItem(KEY);
+    } catch (_error) {
+      stored = null;
+    }
+    var isDark = stored === "dark" ||
+      ((stored === null || stored === "system") &&
+        window.matchMedia("(prefers-color-scheme: dark)").matches);
+    var scheme = isDark ? "dark" : "light";
+    document.documentElement.setAttribute("data-scheme", scheme);
+    var background = isDark ? "#131822" : "#F5F7FA";
+    var style = document.createElement("style");
+    style.textContent =
+      "html,body{background-color:var(--color-surface-base," +
+      background +
+      ");color-scheme:" + scheme + "}";
+    document.head.appendChild(style);
+  })();
+</script>
+
+    <meta
+      content="max-age=604800"
+      http-equiv="cache-control"
+    />
+
+    <meta
+      content="width=device-width, initial-scale=1"
+      name="viewport"
+    />
+
+    <!-- The Google Fonts `<link>` pair that used to be here is gone. Source
+         Sans Pro is bundled out of `src/fonts/` by `src/styles/tailwind.css`,
+         which is what `docs/decisions/2026-06-30-self-host-fonts-locally.md`
+         asked for and what `startup-speed-is-top-priority` needs — a CDN
+         round-trip on every window open is the cost that decision names, and
+         this app opens several windows. -->
+
+    <title>Image Viewer</title>
+  </head>
+  <body class="bg-surface-base text-content-primary">
+    <div id="reactRoot"></div>
+    <script type="module" src="/src/renderer.tsx"></script>
+  </body>
+</html>
