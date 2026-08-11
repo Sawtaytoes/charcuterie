@@ -174,7 +174,7 @@ export const AllVariants: Story = {
       <StoryCell
         label={`overflow="menu" — every row is an action`}
       >
-        <Frame inlineSize="11rem">
+        <Frame inlineSize="9rem">
           <Toolbar
             items={DECK_ACTIONS}
             label="Deck actions"
