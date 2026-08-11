@@ -13,6 +13,8 @@ const {
   Default,
   DisabledFirstOption,
   Interactive,
+  LongFooter,
+  TrailingElement,
   Virtualized,
 } = composeStories(stories)
 
@@ -386,6 +388,59 @@ test("attached mode: Escape closes the popup outright", async () => {
     "aria-expanded",
     "false",
   )
+})
+
+test("the ✓ gutter is always laid out, only hidden when a row is unselected", async () => {
+  const { body } = await mountStory(TrailingElement)
+
+  const options = body.getAllByRole("option")
+
+  // Every option — selected or not — renders the ✓ span, so the label's
+  // width (and any trailing element it pins) never changes on selection.
+  for (const option of options) {
+    const check = option.querySelector(
+      '[aria-hidden="true"]',
+    )
+
+    expect(check).not.toBeNull()
+    expect(check).toHaveTextContent("✓")
+  }
+
+  // The pre-selected first row (English) shows its ✓; the rest keep the
+  // gutter but mark it `invisible`.
+  const selected = options.find((option: HTMLElement) =>
+    option.textContent?.includes("English"),
+  )
+
+  expect(selected).toHaveAttribute("aria-selected", "true")
+
+  expect(
+    selected?.querySelector('[aria-hidden="true"]'),
+  ).not.toHaveClass("invisible")
+
+  const unselected = options.find((option: HTMLElement) =>
+    option.textContent?.includes("Spanish"),
+  )
+
+  expect(unselected).toHaveAttribute(
+    "aria-selected",
+    "false",
+  )
+
+  expect(
+    unselected?.querySelector('[aria-hidden="true"]'),
+  ).toHaveClass("invisible")
+})
+
+test("a long footer is allowed to wrap rather than force the panel wide", async () => {
+  const { body } = await mountStory(LongFooter)
+
+  const footer = body.getByText(/BCP-47 language code/)
+
+  // The footer container permits wrapping (paired with the panel's
+  // `maxWidthPx` cap) instead of laying the sentence out on one line.
+  expect(footer).toHaveClass("whitespace-normal")
+  expect(footer).toHaveClass("break-words")
 })
 
 test("a windowed list carries aria-setsize and aria-posinset", async () => {
