@@ -98,6 +98,21 @@ Every user-visible change carries a changeset.
 - **Logical properties only** — `ps-`/`pe-`, `ms-`/`me-`, `start-`/`end-`, `text-start`.
   Never `left`/`right` in a `className`. Lint-enforced, scoped to `className` literals and
   template chunks so `getBoundingClientRect().left` stays clean.
+- **A flex row's text child says how it shrinks.** A flex item's automatic minimum
+  resolves against its content's **min-content width**, so one unbreakable token — a URI,
+  a host, a name — becomes the row's floor and pushes its sibling out. `min-w-0` alone is
+  not enough; only `wrap-anywhere` shrinks the min-content size. `truncate` (with the
+  full value in an `href` or `title`) and an explicit width are equally valid. And
+  `shrink-0` beside `flex-wrap` is a contradiction — the item is pinned at max-content,
+  so the wrap can never engage. Lint-enforced, opt-in, by
+  `createFlexOverflowRules` in `@charcuterie/eslint-config`
+  ([decision](docs/decisions/2026-08-11-a-flex-rows-text-child-must-declare-how-it-shrinks.md)).
+- **No literal `<head>`/`<body>` in an `index.html` comment above the real tag.** Vite's
+  injection regexes are comment-blind, so the first literal wins and the react-refresh
+  preamble lands inside the comment: blank dev page, dead HMR, and **every CI job green**
+  because production builds are unaffected. `@charcuterie/vite-config`'s base throws on
+  it at dev-server start
+  ([decision](docs/decisions/2026-08-11-index-html-comments-must-not-shadow-vites-injection-anchors.md)).
 - **Class names are never interpolated.** `` `bg-intent-${intent}-solid` `` generates
   *nothing* and fails silently — that is why `intentStyles.ts` is 48 written-out literals,
   and `tailwindCandidates.test.ts` compiles every literal through the real Tailwind.

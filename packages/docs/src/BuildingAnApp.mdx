@@ -279,7 +279,45 @@ Seven rules, all errors: `charcuterie/no-raw-anchor`, `no-raw-button`, `no-raw-s
 every suppression of the other six carry a `-- reason`. Documentation has existed the whole
 time and moved none of the fleet's numbers; that is the entire argument for a rule.
 
-### 4. Storybook
+### 4. Turn on the flex-overflow lint rules
+
+Also opt-in, also pointed at your own source:
+
+```js
+// eslint.config.js
+import { createFlexOverflowRules } from "@charcuterie/eslint-config"
+
+export default defineConfig(
+  // …the rest of your config…
+  createFlexOverflowRules({
+    files: ["packages/web/**/*.tsx"],
+  }),
+)
+```
+
+A flex item's automatic minimum size resolves against its content's **min-content width**,
+so one long unbreakable token — a URL, a hostname, an item name — becomes the row's floor
+and pushes the thing beside it out of the container. Four repos rediscovered this on the
+same day. `charcuterie/no-unconstrained-flex-text` **warns** when a flex row's text child
+declares nothing about how it may shrink; `charcuterie/no-shrink-0-with-flex-wrap`
+**errors**, because `shrink-0` pins an element at max-content and its own `flex-wrap` can
+then never engage.
+
+Any escape satisfies the first rule — `min-w-0 wrap-anywhere` to wrap mid-token (`min-w-0`
+alone is *not* enough, the text just spills), `truncate` plus a `title` or an `href`
+carrying the full value, or an explicit `w-`/`max-w-`/`basis-`/`shrink-0`. Promote it with
+`severity: "error"` once your app is swept.
+
+### 5. Your `index.html`
+
+If you use `@charcuterie/vite-config`, this one needs nothing from you and is worth knowing
+anyway: **never put a literal `<head>` or `<body>` in a comment above the real tag.** Vite
+finds its script-injection points with comment-blind regexes, so the first literal in the
+file wins — the react-refresh preamble lands *inside* the comment, the dev server serves a
+blank page, and production builds are unaffected so CI stays green. Two apps shipped it six
+days apart. The shared Vite base now throws at dev-server start with the offending line.
+
+### 6. Storybook
 
 `@charcuterie/storybook-config` is a package, not a `.storybook/` to copy — two thin config
 files and the app's Storybook themes exactly like this one. Recipe:
