@@ -21,6 +21,7 @@ import { expect, test } from "vitest"
 
 import {
   createComponentChoiceRules,
+  createFlexOverflowRules,
   createLogicalPropertiesRules,
   createTestRules,
   createTypedRules,
@@ -352,6 +353,184 @@ test("the rules do not reach @charcuterie/ui's own source", async () => {
   // none of them suppressed — the `files` glob is the only thing
   // holding this, which is exactly why it is asserted.
   expect(ruleIds).toEqual([])
+}, 30_000)
+
+// ---------------------------------------------------------------
+// Flex overflow — a long unbreakable token cannot set a row's
+// width
+//
+// The fixtures are the four rows the fleet fixed on 2026-08-11,
+// before and after, verbatim from the shipping commits. A lint
+// rule whose motivating bug is not in its fixtures is a rule
+// nobody can show catches anything.
+// ---------------------------------------------------------------
+
+const createFlexOverflowLinter = () =>
+  new ESLint({
+    cwd: packageRoot,
+    overrideConfigFile: true,
+    overrideConfig: defineConfig(
+      {
+        files: ["**/*.tsx"],
+        languageOptions: {
+          parser: tseslint.parser,
+          parserOptions: {
+            ecmaFeatures: { jsx: true },
+          },
+        },
+      },
+      createFlexOverflowRules({
+        files: ["**/__fixtures__/appPackage/**/*.tsx"],
+      }),
+    ),
+  })
+
+test("the four rows the fleet fixed are each reported", async () => {
+  const ruleIds = await getReportedRuleIds(
+    createFlexOverflowLinter(),
+    "appPackage/unconstrainedFlexText.tsx",
+  )
+
+  expect(countRuleIds(ruleIds)).toEqual({
+    // gallery-downloader's `webtoons:<uri>` source span,
+    // points-market's item-name `<h3>`, and points-market's
+    // recent-buys chip name.
+    "charcuterie/no-unconstrained-flex-text": 3,
+    // rip-deck's control row, which could never wrap.
+    "charcuterie/no-shrink-0-with-flex-wrap": 1,
+  })
+}, 30_000)
+
+test("the heuristic half is a warning and the contradiction is an error", async () => {
+  const [result] =
+    await createFlexOverflowLinter().lintFiles([
+      fixture("appPackage/unconstrainedFlexText.tsx"),
+    ])
+
+  const severityByRuleId = Object.fromEntries(
+    result.messages.map((message) => [
+      message.ruleId,
+      message.severity,
+    ]),
+  )
+
+  // `no-unconstrained-flex-text` cannot know whether `{status}`
+  // is "OK" or a 300-character URL, so it warns. `shrink-0` with
+  // `flex-wrap` is a flat contradiction, so it errors.
+  expect(severityByRuleId).toEqual({
+    "charcuterie/no-shrink-0-with-flex-wrap": 2,
+    "charcuterie/no-unconstrained-flex-text": 1,
+  })
+}, 30_000)
+
+test("every flex message names an escape that would fix it", async () => {
+  const [result] =
+    await createFlexOverflowLinter().lintFiles([
+      fixture("appPackage/unconstrainedFlexText.tsx"),
+    ])
+
+  for (const message of result.messages) {
+    expect(message.message).toMatch(
+      /min-w-0|wrap-anywhere|truncate|shrink-0/,
+    )
+    expect(message.message).toContain(
+      "eslint-disable-next-line",
+    )
+  }
+}, 30_000)
+
+test("the shipped fixes and the near misses are clean", async () => {
+  const ruleIds = await getReportedRuleIds(
+    createFlexOverflowLinter(),
+    "appPackage/constrainedFlexText.tsx",
+  )
+
+  // Four different fixes, all accepted: `min-w-0 wrap-anywhere`,
+  // `flex-wrap` + `shrink-0`, `truncate` + `title`, and removing
+  // `shrink-0`. Plus the near misses — a column container, static
+  // text, `{children}`, a `.map(…)`, and an unreadable className.
+  expect(ruleIds).toEqual([])
+}, 30_000)
+
+test("the flex rules do not reach @charcuterie/ui's own source", async () => {
+  const ruleIds = await getReportedRuleIds(
+    createFlexOverflowLinter(),
+    "uiPackage/rawElements.tsx",
+  )
+
+  expect(ruleIds).toEqual([])
+}, 30_000)
+
+test("both rule families can be enabled side by side", async () => {
+  // The regression this composition exists to prevent: two config
+  // blocks registering the `charcuterie` namespace. ESLint throws
+  // `Cannot redefine plugin` when the objects differ, and the
+  // whole reason both factories hand it the same reference is so
+  // that a consumer can turn on one, the other, or both.
+  const eslint = new ESLint({
+    cwd: packageRoot,
+    overrideConfigFile: true,
+    overrideConfig: defineConfig(
+      {
+        files: ["**/*.tsx"],
+        languageOptions: {
+          parser: tseslint.parser,
+          parserOptions: {
+            ecmaFeatures: { jsx: true },
+          },
+        },
+      },
+      createComponentChoiceRules({
+        files: ["**/__fixtures__/appPackage/**/*.tsx"],
+      }),
+      createFlexOverflowRules({
+        files: ["**/__fixtures__/appPackage/**/*.tsx"],
+      }),
+    ),
+  })
+
+  const ruleIds = await getReportedRuleIds(
+    eslint,
+    "appPackage/unconstrainedFlexText.tsx",
+  )
+
+  expect(countRuleIds(ruleIds)).toEqual({
+    "charcuterie/no-shrink-0-with-flex-wrap": 1,
+    "charcuterie/no-unconstrained-flex-text": 3,
+  })
+}, 30_000)
+
+test("a flex-rule disable with no reason is itself reported", async () => {
+  const ruleIds = await getReportedRuleIds(
+    createFlexOverflowLinter(),
+    "appPackage/unjustifiedFlexSuppression.tsx",
+  )
+
+  // The bare disable owes the same one line a component-choice
+  // one does — the escape hatch is the reason.
+  expect(countRuleIds(ruleIds)).toEqual({
+    "charcuterie/require-suppression-reason": 1,
+  })
+}, 30_000)
+
+test("a flex-rule disable with a reason silences it", async () => {
+  const eslint = createFlexOverflowLinter()
+
+  const reportedRuleIds = await getReportedRuleIds(
+    eslint,
+    "appPackage/justifiedFlexSuppression.tsx",
+  )
+
+  expect(reportedRuleIds).toEqual([])
+
+  const suppressedRuleIds = await getSuppressedRuleIds(
+    eslint,
+    "appPackage/justifiedFlexSuppression.tsx",
+  )
+
+  expect(suppressedRuleIds).toEqual([
+    "charcuterie/no-unconstrained-flex-text",
+  ])
 }, 30_000)
 
 // ---------------------------------------------------------------
