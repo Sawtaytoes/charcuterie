@@ -30,6 +30,35 @@ export type QueryBuilderProps<Combinator, Leaf> = {
   createLeafValue: () => Leaf
   labels?: QueryBuilderLabels
   /**
+   * The group's combinator control, when one `Listbox` over a flat
+   * option list is the wrong shape for it.
+   *
+   * Optional, and the default is the right answer for most consumers:
+   * a combinator that is a plain enum reads as one picker. But a
+   * combinator can be a *composite* — mux-magic's is a quantifier
+   * (ANY/ALL/NO) crossed with a target (a nested group, a style row,
+   * a script-info block), and the legal pairs are asymmetric
+   * (`notAllScriptInfo` exists, `notAllStyle` does not). Flattened
+   * into one list that is nine options where the user is making two
+   * choices, and the illegal pairs are invisible until they are
+   * missing.
+   *
+   * So the combinator is app-ownable for the same reason `renderLeaf`
+   * is: `Combinator` is opaque here, and only the app knows whether
+   * its shape is an enum or a product. `options` and the current
+   * `value` are handed over unchanged; the app calls `onChange` with a
+   * real `Combinator`.
+   */
+  renderCombinator?: (args: {
+    nodeId: string
+    onChange: (combinator: Combinator) => void
+    options: readonly {
+      label: string
+      value: Combinator
+    }[]
+    value: Combinator
+  }) => ReactNode
+  /**
    * The leaf UI, owned by the app. `QueryBuilder` knows nothing about
    * what a condition *is* — a field/operator/value triple, a
    * non-uniform per-kind shape — only that it can be rendered and
@@ -83,6 +112,7 @@ export const QueryBuilder = <Combinator, Leaf>({
   combinatorOptions,
   createLeafValue,
   labels,
+  renderCombinator,
   renderLeaf,
   tree,
 }: QueryBuilderProps<Combinator, Leaf>): ReactNode => {
@@ -97,6 +127,7 @@ export const QueryBuilder = <Combinator, Leaf>({
       depth={0}
       labels={resolvedLabels}
       node={selectRootGroup(state)}
+      renderCombinator={renderCombinator}
       renderLeaf={renderLeaf}
       state={state}
       tree={tree}

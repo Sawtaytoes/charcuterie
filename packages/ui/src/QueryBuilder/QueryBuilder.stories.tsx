@@ -6,6 +6,7 @@ import {
 } from "@charcuterie/logic"
 import type { Meta, StoryObj } from "@storybook/react"
 import type { ReactNode } from "react"
+import { useState } from "react"
 import { Button } from "../Button/Button.tsx"
 import { StorySection } from "../board.storyHelpers.tsx"
 import { Listbox } from "../Listbox/Listbox.tsx"
@@ -295,4 +296,134 @@ export const Interactive: Story = {
       }}
     />
   ),
+}
+
+/**
+ * `renderCombinator` — the group's combinator control, owned by the app.
+ *
+ * The default single picker is right when a combinator is a plain enum.
+ * mux-magic's is not: it is a **quantifier** (ANY/ALL/NO) crossed with a
+ * **target** (these groups, style rows, script-info blocks), and the legal
+ * pairs are asymmetric — the DSL has `notAllScriptInfo` and no
+ * `notAllStyle`. Flattened to one list, that asymmetry is invisible; split
+ * in two, the second picker filters and the illegal pair cannot be built.
+ *
+ * This story is that shape in miniature: pick `NOT ALL` and the target
+ * list collapses to the one target it can legally take.
+ */
+const PAIR_COMBINATORS = {
+  "all:group": "and",
+  "all:row": "and",
+  "any:group": "or",
+  "any:row": "or",
+  "notAll:group": "and",
+} as const
+
+const QUANTIFIER_OPTIONS = [
+  { label: "ALL", value: "all" },
+  { label: "ANY", value: "any" },
+  { label: "NOT ALL", value: "notAll" },
+] as const
+
+const CombinatorPair = ({
+  onChange,
+  value,
+}: {
+  onChange: (combinator: Combinator) => void
+  value: Combinator
+}): ReactNode => {
+  const [quantifier, setQuantifier] =
+    useState<string>("all")
+
+  // "NOT ALL" is legal over groups only here — the same filtered
+  // second picker mux-magic needs, in one line.
+  const targetOptions =
+    quantifier === "notAll"
+      ? [{ label: "of these groups", value: "group" }]
+      : [
+          { label: "of these groups", value: "group" },
+          { label: "matching rows", value: "row" },
+        ]
+
+  const [target, setTarget] = useState<string>("group")
+
+  const resolvedTarget =
+    quantifier === "notAll" ? "group" : target
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="font-medium text-content-primary text-sm">
+        Match
+      </span>
+
+      <div className="flex items-center gap-1.5">
+        <LeafPicker
+          label="Quantifier"
+          onChange={(nextQuantifier) => {
+            setQuantifier(nextQuantifier)
+
+            const nextTarget =
+              nextQuantifier === "notAll"
+                ? "group"
+                : resolvedTarget
+
+            onChange(
+              PAIR_COMBINATORS[
+                `${nextQuantifier}:${nextTarget}` as keyof typeof PAIR_COMBINATORS
+              ],
+            )
+          }}
+          options={QUANTIFIER_OPTIONS}
+          value={quantifier}
+        />
+
+        <LeafPicker
+          label="Target"
+          onChange={(nextTarget) => {
+            setTarget(nextTarget)
+
+            onChange(
+              PAIR_COMBINATORS[
+                `${quantifier}:${nextTarget}` as keyof typeof PAIR_COMBINATORS
+              ],
+            )
+          }}
+          options={targetOptions}
+          value={resolvedTarget}
+        />
+      </div>
+
+      <span className="text-content-muted text-xs">
+        {`Combinator: ${String(value)}`}
+      </span>
+    </div>
+  )
+}
+
+export const CustomCombinator: Story = {
+  render: () => {
+    const CustomCombinatorHarness = (): ReactNode => {
+      const tree = useTree<Combinator, DemoLeaf>({
+        defaultCombinator: "and",
+        initialTree: FLAT_TREE,
+      })
+
+      return (
+        <QueryBuilder
+          combinatorOptions={COMBINATOR_OPTIONS}
+          createLeafValue={createLeafValue}
+          renderCombinator={({ onChange, value }) => (
+            <CombinatorPair
+              onChange={onChange}
+              value={value}
+            />
+          )}
+          renderLeaf={renderLeaf}
+          tree={tree}
+        />
+      )
+    }
+
+    return <CustomCombinatorHarness />
+  },
 }

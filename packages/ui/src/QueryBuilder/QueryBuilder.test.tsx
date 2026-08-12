@@ -7,8 +7,12 @@ import { mountStory } from "../mountStory.testHelpers.ts"
 import { expectAgentDrivable } from "../testing/index.ts"
 import * as stories from "./QueryBuilder.stories.tsx"
 
-const { AllStates, Default, Interactive } =
-  composeStories(stories)
+const {
+  AllStates,
+  CustomCombinator,
+  Default,
+  Interactive,
+} = composeStories(stories)
 
 test("the root group exposes its combinator as a named 'Match' control", async () => {
   const { canvas, canvasElement } =
@@ -144,4 +148,57 @@ test("a nested tree renders every group's combinator and passes axe", async () =
   ).toBeGreaterThanOrEqual(3)
 
   await expectNoAxeViolations(canvasElement)
+})
+
+test("renderCombinator replaces the built-in picker, and its second control filters", async () => {
+  const { body, canvas } = await mountStory(
+    CustomCombinator,
+  )
+
+  // The app's control is rendered instead of the default one — no
+  // "Match: <combinator>" trigger anywhere.
+  await expect(
+    canvas.queryAllByRole("button", { name: /^Match: / }),
+  ).toHaveLength(0)
+
+  const target = expectAgentDrivable(canvas, {
+    name: /^Target: /,
+    role: "button",
+  })
+
+  // Both targets are offered while the quantifier is ALL.
+  await userEvent.click(target)
+
+  await expect(body.getAllByRole("option")).toHaveLength(2)
+
+  await userEvent.keyboard("{Escape}")
+
+  // Switching to NOT ALL collapses the target list to the one legal
+  // pair — the asymmetry this prop exists to express.
+  await userEvent.click(
+    expectAgentDrivable(canvas, {
+      name: /^Quantifier: /,
+      role: "button",
+    }),
+  )
+
+  await userEvent.click(
+    expectAgentDrivable(body, {
+      name: "NOT ALL",
+      role: "option",
+    }),
+  )
+
+  await userEvent.click(
+    expectAgentDrivable(canvas, {
+      name: /^Target: /,
+      role: "button",
+    }),
+  )
+
+  await waitFor(async () => {
+    await expect(body.getAllByRole("option")).toHaveLength(
+      1,
+    )
+  })
 })

@@ -17,3 +17,10 @@ because the trigger's visible text is that value and WCAG 2.5.3 wants the visibl
 contained in the accessible name.
 
 Adds `labels.match` (default `"Match"`) to rename the caption.
+
+Adds `renderCombinator`, so an app can own the group's combinator control the way it already
+owns `renderLeaf`. The default single picker stays right for a combinator that is a plain
+enum; it is the wrong shape for one that is a *product* — mux-magic's is a quantifier
+(ANY/ALL/NO) crossed with a target (nested groups, style rows, script-info blocks), whose
+legal pairs are asymmetric (`notAllScriptInfo` exists, `notAllStyle` does not). Flattened into
+one list that asymmetry is invisible; split into two filtered pickers it cannot be built.

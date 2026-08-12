@@ -24,6 +24,15 @@ export type QueryBuilderGroupProps<Combinator, Leaf> = {
   depth: number
   labels: Required<QueryBuilderLabels>
   node: TreeGroupNode<Combinator>
+  renderCombinator?: (args: {
+    nodeId: string
+    onChange: (combinator: Combinator) => void
+    options: readonly {
+      label: string
+      value: Combinator
+    }[]
+    value: Combinator
+  }) => ReactNode
   renderLeaf: (args: {
     nodeId: string
     onChange: (value: Leaf) => void
@@ -49,11 +58,16 @@ export const QueryBuilderGroup = <Combinator, Leaf>({
   depth,
   labels,
   node,
+  renderCombinator,
   renderLeaf,
   state,
   tree,
 }: QueryBuilderGroupProps<Combinator, Leaf>): ReactNode => {
   const children = selectChildNodes(state, node.id)
+
+  const setCombinator = (nextCombinator: Combinator) => {
+    tree.setCombinator(node.id, nextCombinator)
+  }
 
   const card = (
     <Card
@@ -64,14 +78,21 @@ export const QueryBuilderGroup = <Combinator, Leaf>({
       <div className="flex flex-col gap-3">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-52">
-            <QueryBuilderCombinator
-              label={labels.match}
-              onChange={(nextCombinator) => {
-                tree.setCombinator(node.id, nextCombinator)
-              }}
-              options={combinatorOptions}
-              value={node.combinator}
-            />
+            {renderCombinator ? (
+              renderCombinator({
+                nodeId: node.id,
+                onChange: setCombinator,
+                options: combinatorOptions,
+                value: node.combinator,
+              })
+            ) : (
+              <QueryBuilderCombinator
+                label={labels.match}
+                onChange={setCombinator}
+                options={combinatorOptions}
+                value={node.combinator}
+              />
+            )}
           </div>
 
           {depth === 0 ? null : (
@@ -100,6 +121,7 @@ export const QueryBuilderGroup = <Combinator, Leaf>({
                   key={child.id}
                   labels={labels}
                   node={child}
+                  renderCombinator={renderCombinator}
                   renderLeaf={renderLeaf}
                   state={state}
                   tree={tree}
