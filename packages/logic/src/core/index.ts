@@ -97,6 +97,24 @@ export {
 } from "./createStatus.ts"
 export { createStore } from "./createStore.ts"
 export type {
+  SerializedGroup,
+  SerializedLeaf,
+  SerializedNode,
+  SerializedTree,
+  Tree,
+  TreeGroupNode,
+  TreeLeafNode,
+  TreeNode,
+  TreeOptions,
+  TreeState,
+} from "./createTree.ts"
+export {
+  createTree,
+  selectChildNodes,
+  selectNode,
+  selectRootGroup,
+} from "./createTree.ts"
+export type {
   Visibility,
   VisibilityOptions,
   VisibilityState,

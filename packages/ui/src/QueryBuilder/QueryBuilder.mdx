@@ -1,0 +1,63 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as QueryBuilderStories from "./QueryBuilder.stories";
+
+<Meta of={QueryBuilderStories} />
+
+# QueryBuilder
+
+The generic, nestable **AND/OR — and any-combinator — group editor**. A recursive group of
+conditions, each group carrying a combinator the app owns and each leaf carrying a value the
+app owns. Two apps in the fleet grow the same widget from opposite ends: Mail Sifter's nested
+mail rules (leaf = field/operator/value, combinators AND/OR) and mux-magic's job DSL
+(non-uniform leaves, combinators any/all/none). So both the **leaf value** and the **group
+combinator** are fully opaque here — `Combinator` and `Leaf` only ever pass through to the
+consumer's `renderLeaf` and `combinatorOptions`.
+
+<Canvas of={QueryBuilderStories.Default} />
+
+## Props
+
+<Controls />
+
+## The state is a `Tree`, and the consumer owns it
+
+`QueryBuilder` holds no state of its own. It takes a `Tree` core from
+[`useTree`](?path=/docs/state-usetree--docs) and subscribes to it, the same way a `Listbox`'s
+parent owns `useVisibility` and hands it down. That is what leaves `serialize()` — the
+YAML/DB round-trip — and the initial tree in the consumer's hands.
+
+```tsx
+const tree = useTree<Combinator, Leaf>({
+  defaultCombinator: "and",
+  initialTree,
+})
+
+<QueryBuilder
+  combinatorOptions={COMBINATOR_OPTIONS}
+  createLeafValue={() => ({ field: "subject", operator: "contains", value: "" })}
+  renderLeaf={({ value, onChange }) => <ConditionFields value={value} onChange={onChange} />}
+  tree={tree}
+/>
+```
+
+Because the tree is normalized and addressed by id, a `patchLeaf` deep in the tree re-renders
+only the rows whose node identity changed — the same `useSyncExternalStore` identity
+discipline the whole state layer rests on.
+
+## Nesting, and depth
+
+A group renders leaf rows and nested groups, recursively. The nested group wears a
+semantic-token inline-start rail so depth reads without a raw palette colour, and it moves to
+the sunken surface so it recedes rather than floating at the same level as its parent.
+
+<Canvas of={QueryBuilderStories.AllStates} />
+
+## Driving it
+
+Every control is nameable, not a `data-testid`: the combinator select is named `Match` by the
+field label, the leaf controls by their own labels, and each delete is an `IconButton` whose
+required `label` makes it findable. Add a condition, nest a group, flip a combinator, delete a
+row — all reachable by role and name.
+
+<Canvas of={QueryBuilderStories.Interactive} />
