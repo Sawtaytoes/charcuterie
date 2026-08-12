@@ -174,6 +174,11 @@ export {
   toProgressValue,
 } from "./ProgressBar/progressValue.ts"
 export type {
+  QueryBuilderLabels,
+  QueryBuilderProps,
+} from "./QueryBuilder/QueryBuilder.tsx"
+export { QueryBuilder } from "./QueryBuilder/QueryBuilder.tsx"
+export type {
   RadioGroupProps,
   RadioItem,
 } from "./RadioGroup/RadioGroup.tsx"
@@ -262,6 +267,14 @@ export type {
 export { ToastRegion } from "./Toast/ToastRegion.tsx"
 export type { ToastStatus } from "./Toast/toastLifecycle.ts"
 export { toastTransitions } from "./Toast/toastLifecycle.ts"
+export { chooseVisibleCount } from "./Toolbar/chooseVisibleCount.ts"
+export type {
+  ToolbarAction,
+  ToolbarControl,
+  ToolbarItem,
+  ToolbarProps,
+} from "./Toolbar/Toolbar.tsx"
+export { Toolbar } from "./Toolbar/Toolbar.tsx"
 export type { TooltipProps } from "./Tooltip/Tooltip.tsx"
 export { Tooltip } from "./Tooltip/Tooltip.tsx"
 export { toClassName } from "./toClassName.ts"

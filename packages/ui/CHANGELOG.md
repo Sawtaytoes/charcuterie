@@ -1,5 +1,58 @@
 # @charcuterie/ui
 
+## 2.13.0
+
+### Minor Changes
+
+- e248b99: Add `QueryBuilder` (`@charcuterie/ui`) and `createTree` (`@charcuterie/logic`): a generic, arbitrarily-nestable group editor with an opaque leaf value **and** an opaque group combinator. `createTree` is a headless normalized-tree state core (add/remove/move/patch, stable ids, `serialize`) with React and Preact bindings; `QueryBuilder` renders nestable combinator groups with a `renderLeaf` render-prop. Built to be shared by Mail Sifter's nested mail rules (AND/OR) and mux-magic's job DSL (any/all/none).
+
+### Patch Changes
+
+- Updated dependencies [e248b99]
+  - @charcuterie/logic@1.5.0
+
+## 2.12.1
+
+### Patch Changes
+
+- Updated dependencies [d32f5d3]
+  - @charcuterie/logic@1.4.0
+
+## 2.12.0
+
+### Minor Changes
+
+- 94f97dd: **`Toolbar`, and the `useMediaQuery` it is built beside** — the fleet's
+  toolbar-with-overflow, unified.
+
+  `@charcuterie/ui` gains `Toolbar`: real APG toolbar semantics (one tab stop, arrow-key
+  roving focus through `RovingFocus`), priority-ordered actions, and progressive overflow
+  that is **measured** rather than breakpointed. Exactly one instance of every control is
+  mounted at any width — it moves between the bar and the overflow rather than being
+  rendered twice and hidden by a media query. The overflow trigger exists only when
+  something actually overflowed.
+
+  The overflow's role is a **type, not a flag**: `overflow="menu"` narrows `items` to
+  actions and opens a real `role="menu"`; `overflow="panel"` accepts `control` items too and
+  opens a `Popover` (`role="dialog"`, `aria-haspopup="dialog"`), because `role="menu"`
+  permits only the `menuitem` family and a toggle inside one is invalid ARIA.
+
+  `@charcuterie/logic` gains `useMediaQuery` (React and Preact) over a new
+  `createMediaQuery` core and an injected `MediaQueryMatcher` seam, with
+  `matchMediaMatcher(query)` in `@charcuterie/logic/browser`. Read-only by design: the
+  environment owns the value.
+
+  Also: `expectAgentDrivable` can now see a roving `role="toolbar"`. `toolbar` had been in
+  its composite-role set since M4 and was unreachable, because a toolbar's members are
+  ordinary buttons rather than a `menuitem`-style role — so a correct roving toolbar was
+  rejected outright with "has a negative tabindex". floating-ui's `aria-hidden` focus guards
+  are excluded from the tab-stop count for the same assertion.
+
+### Patch Changes
+
+- Updated dependencies [94f97dd]
+  - @charcuterie/logic@1.3.0
+
 ## 2.11.0
 
 ### Minor Changes

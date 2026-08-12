@@ -358,7 +358,22 @@ test("the barrel is the only place components are re-exported", async () => {
   // and `shellContext.ts` are `Shell`'s members and stay out of
   // this count by the `<Name>/<Name>.tsx` rule, exactly as
   // `mediaStatus.ts` does.
-  expect(componentNames.length).toBe(42)
+  // `Toolbar` unifies the fourth-largest duplication — four repos
+  // with a toolbar-and-overflow, three of them collapsing by
+  // rendering every action twice: +1 -> 43. `ToolbarSlot.tsx`,
+  // `useToolbarOverflow.ts` and `chooseVisibleCount.ts` are its
+  // members and stay out of this count by the `<Name>/<Name>.tsx`
+  // rule.
+  //
+  // `QueryBuilder` — the generic nestable AND/OR (any-combinator) group
+  // editor Mail Sifter's nested rules and mux-magic's job DSL both need
+  // — is the library's first recursive component and its first with a
+  // fully opaque value *and* combinator: +1 -> 44. `QueryBuilderGroup`
+  // and `QueryBuilderRow` are its members — a group renders groups, and
+  // both are rendered inside a `.map` — and stay out of this count and
+  // the barrel by the `<Name>/<Name>.tsx` rule, exactly as
+  // `SegmentedOption` and `ListboxOption` do.
+  expect(componentNames.length).toBe(44)
 
   for (const name of componentNames) {
     expect(barrel).toContain(`export { ${name} }`)
@@ -442,6 +457,17 @@ const ENTRY_POINT_RUNTIMES: Record<
     "./core": [],
     "./jotai": ["jotai"],
     "./preact": ["preact", "preact/hooks"],
+    // The request/response data layer. It reaches react-query, the
+    // two openapi-* primitives it re-exports, and `react` (the
+    // provider's `useState`) — all optional peers, so an app that
+    // never imports `./query` resolves none of them. `react/jsx-runtime`
+    // is added only at emit, so it is not a source specifier here.
+    "./query": [
+      "@tanstack/react-query",
+      "openapi-fetch",
+      "openapi-react-query",
+      "react",
+    ],
     "./signals": ["@preact/signals-core"],
   },
   tokens: {

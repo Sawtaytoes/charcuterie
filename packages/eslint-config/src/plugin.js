@@ -25,8 +25,15 @@ export { CHARCUTERIE_NAMESPACE } from "./namespace.js"
 
 export const charcuteriePlugin = {
   meta: {
+    /**
+     * The **plugin object's** version, not the package's — the
+     * same convention the 1.1.0 `componentChoicePlugin` used, and
+     * the reason it read `1.0.0` while the package was `1.1.0`. A
+     * package version copied in here is a string that silently
+     * goes stale on the next release.
+     */
     name: "@charcuterie/eslint-config",
-    version: "1.2.0",
+    version: "1.0.0",
   },
   rules: {
     ...COMPONENT_CHOICE_RULES,

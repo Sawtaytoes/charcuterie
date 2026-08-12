@@ -41,6 +41,16 @@ export {
   selectAriaLabelledBy,
 } from "./createLinkedIds.ts"
 export type {
+  MediaQuery,
+  MediaQueryMatcher,
+  MediaQueryOptions,
+  MediaQueryState,
+} from "./createMediaQuery.ts"
+export {
+  createMediaQuery,
+  selectIsMatching,
+} from "./createMediaQuery.ts"
+export type {
   MultiplePicker,
   MultiplePickerOptions,
   MultiplePickerState,
@@ -86,6 +96,24 @@ export {
   selectStatus,
 } from "./createStatus.ts"
 export { createStore } from "./createStore.ts"
+export type {
+  SerializedGroup,
+  SerializedLeaf,
+  SerializedNode,
+  SerializedTree,
+  Tree,
+  TreeGroupNode,
+  TreeLeafNode,
+  TreeNode,
+  TreeOptions,
+  TreeState,
+} from "./createTree.ts"
+export {
+  createTree,
+  selectChildNodes,
+  selectNode,
+  selectRootGroup,
+} from "./createTree.ts"
 export type {
   Visibility,
   VisibilityOptions,

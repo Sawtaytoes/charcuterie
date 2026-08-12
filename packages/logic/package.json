@@ -1,6 +1,6 @@
 {
   "name": "@charcuterie/logic",
-  "version": "1.2.0",
+  "version": "1.5.0",
   "description": "The five Charcuterie state kinds — Visibility, VisibilityGroup, SinglePicker, MultiplePicker, RovingFocus, and Status — as framework-free cores with React and Preact bindings.",
   "license": "MIT",
   "type": "module",
@@ -42,6 +42,11 @@
       "types": "./dist/signals/index.d.ts",
       "default": "./dist/signals/index.js"
     },
+    "./query": {
+      "source": "./src/query/index.ts",
+      "types": "./dist/query/index.d.ts",
+      "default": "./dist/query/index.js"
+    },
     "./src/*": "./src/*"
   },
   "files": [
@@ -56,7 +61,10 @@
   },
   "peerDependencies": {
     "@preact/signals-core": ">=1.8",
+    "@tanstack/react-query": ">=5",
     "jotai": ">=2",
+    "openapi-fetch": ">=0.17",
+    "openapi-react-query": ">=0.5",
     "preact": ">=10.11",
     "react": ">=18"
   },
@@ -64,7 +72,16 @@
     "@preact/signals-core": {
       "optional": true
     },
+    "@tanstack/react-query": {
+      "optional": true
+    },
     "jotai": {
+      "optional": true
+    },
+    "openapi-fetch": {
+      "optional": true
+    },
+    "openapi-react-query": {
       "optional": true
     },
     "preact": {
@@ -76,12 +93,15 @@
   },
   "devDependencies": {
     "@preact/signals-core": "^1.8.0",
+    "@tanstack/react-query": "^5.100.9",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitest/browser": "^4.1.8",
     "@vitest/browser-playwright": "^4.1.8",
     "fast-check": "^4.9.0",
     "jotai": "^2.20.0",
+    "openapi-fetch": "^0.17.0",
+    "openapi-react-query": "^0.5.0",
     "playwright": "^1.61.1",
     "preact": "^10.28.3",
     "react": "^19.2.8",
