@@ -105,15 +105,18 @@ image-viewer BEFORE: dev server REFUSED TO START
 image-viewer AFTER : dev server STARTED (no error)
 ```
 
-Swept over all 19 `index.html` files in the fleet's checkouts, **two** repos fail today:
+Swept over every `index.html` on the **live default branch** of thirteen fleet
+repositories (re-measured 2026-08-12, after mux-magic's fix merged), **one** repo fails:
 
-- **mux-magic** `packages/web/index.html` — `<head>` at line 10. The known bug; its fix
-  is already open as [#201](https://github.com/Sawtaytoes/mux-magic/pull/201).
 - **rip-deck** `packages/web/index.html` — `<body>` at line 62, in a comment *inside*
-  `<head>` explaining the first-paint script. **A new finding.** It is latent rather than
-  live: nothing in that app injects at `body-prepend` today, so nothing is visibly broken
-  — but any plugin that ever does would write into the comment. One reworded line.
+  `<head>` explaining the first-paint script. **A new finding, still unfixed.** It is
+  latent rather than live: nothing in that app injects at `body-prepend` today, so
+  nothing is visibly broken — but any plugin that ever does would write into the comment.
+  One reworded line.
 
+mux-magic's `packages/web/index.html` was the second failure when this was first
+measured; [#201](https://github.com/Sawtaytoes/mux-magic/pull/201) has since merged and
+its live file is clean, which is the true-negative half of the check on real code.
 Everything else — gallery-downloader (three entries), points-market, mail-sifter,
 castkit, plex-channels, portly-controllers, ai-usage, image-viewer — is clean.
 

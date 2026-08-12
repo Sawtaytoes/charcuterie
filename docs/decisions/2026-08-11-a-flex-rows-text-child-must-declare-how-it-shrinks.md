@@ -124,6 +124,20 @@ Two residual warnings survive on unrelated rows in gallery-downloader and rip-de
 timestamp, an activity label). They are the heuristic being a heuristic, and they are the
 reason the default is `warn`.
 
+Re-confirmed on 2026-08-12 against each app's **live default branch**, now that all four
+fixes have merged: identical result — every one of the motivating findings is gone, the
+same two residual warnings remain.
+
+**Pointed at Charcuterie's own `packages/ui`, it produces two findings across 155 `.tsx`
+files, and both are in `.stories.tsx`** — `Combobox.stories.tsx:160` (an option label's
+`<span>{name}</span>` beside a tag chip in a `flex flex-1 justify-between` row, which is
+the points-market shape exactly) and `Swatch.stories.tsx:169`. **Zero in any shipped
+component**, including `Toolbar`, `QueryBuilder` and `Shell`. The rules are therefore
+*not* wired into this repo's own `eslint.config.js` — the same scoping decision the
+component-choice block made, and now with a measurement behind it rather than an
+assumption. The two story findings are left standing rather than silenced: a story is a
+demo, and neither is a defect in shipped markup.
+
 ## Related
 
 - [The type ramp is built around a 17px body](2026-08-10-the-type-ramp-is-built-around-a-17px-body.md)

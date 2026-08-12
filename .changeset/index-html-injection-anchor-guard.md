@@ -15,6 +15,6 @@ The base config now ships `charcuterie:no-shadowed-injection-anchors`. It is **n
 
 The condition is Vite's actual failure condition — the first match of an anchor lies inside a comment — not a blanket ban on tag literals. mux-magic's shipped fix keeps the word `<head>` in a comment that now sits *inside* `<head>`, and that file is correct. Open `<html>` is not an anchor and is never reported.
 
-**Adopting this may fail your build until one line of prose is reworded.** Swept over the fleet's checkouts, two repos are affected: mux-magic (`<head>` at line 10 — the known bug, fix already open) and rip-deck (`<body>` at line 62 — latent, nothing injects at `body-prepend` there today).
+**Adopting this may fail your build until one line of prose is reworded.** Swept over every `index.html` on the live default branch of thirteen fleet repositories, one is affected: rip-deck (`<body>` at line 62 — latent, nothing injects at `body-prepend` there today). mux-magic was the other, and its fix has since merged.
 
 `findShadowedInjectionAnchors(html)`, `assertNoShadowedInjectionAnchors(html, fileLabel)` and `createStructuralTagCommentGuard()` are exported for apps that build their Vite config by hand.
