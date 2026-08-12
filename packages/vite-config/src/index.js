@@ -11,7 +11,29 @@
 
 import { defineConfig, mergeConfig } from "vite"
 
+import { createStructuralTagCommentGuard } from "./structuralTagComments.js"
+
+export {
+  assertNoShadowedInjectionAnchors,
+  createStructuralTagCommentGuard,
+  findShadowedInjectionAnchors,
+  formatShadowedAnchorError,
+  getHtmlEntryPaths,
+  STRUCTURAL_INJECTION_ANCHORS,
+} from "./structuralTagComments.js"
+
 const baseConfig = defineConfig({
+  /**
+   * The one plugin the base ships, and it ships here rather than
+   * being opt-in because the bug it catches is invisible: a
+   * literal `<head>` in a comment above the real one sends Vite's
+   * dev-script injection into the comment, and the app serves a
+   * blank page while every CI job stays green. Two repos hit it
+   * six days apart. `mergeConfig` concatenates plugin arrays, so
+   * a caller's own `plugins` are added to this, never instead of
+   * it.
+   */
+  plugins: [createStructuralTagCommentGuard()],
   build: {
     /**
      * NO `target` here, deliberately — do not put it back.

@@ -37,6 +37,9 @@
  * a consumer no `projectService`.
  */
 
+import { FLEX_OVERFLOW_RULE_IDS } from "./flexOverflow.js"
+import { CHARCUTERIE_NAMESPACE } from "./namespace.js"
+
 /**
  * The one import specifier every message points at. Named once
  * so a package rename is a single edit rather than six.
@@ -47,8 +50,14 @@ export const UI_PACKAGE_NAME = "@charcuterie/ui"
  * The plugin namespace. Consumers see it in rule ids
  * (`charcuterie/no-raw-anchor`) and in their disable comments,
  * so it is exported rather than spelled out at the call site.
+ *
+ * Now an alias of the shared `CHARCUTERIE_NAMESPACE` — the flex
+ * rules live under the same namespace, in the same plugin object,
+ * because ESLint's flat config refuses two different objects
+ * registered under one name.
  */
-export const COMPONENT_CHOICE_NAMESPACE = "charcuterie"
+export const COMPONENT_CHOICE_NAMESPACE =
+  CHARCUTERIE_NAMESPACE
 
 /**
  * Elements that carry no interactive semantics. An `onClick` on
@@ -291,259 +300,261 @@ export const COMPONENT_CHOICE_RULE_IDS = [
 )
 
 /**
- * The plugin. Registered inline by
- * `createComponentChoiceRules`, so a consumer installs nothing
- * beyond this package.
+ * Every rule in this package whose escape hatch owes a reason —
+ * the component-choice set plus the flex-overflow set. They share
+ * one namespace and one plugin object, so they share one
+ * suppression policy: a disable with no `-- why` is the loophole
+ * that makes the whole escape-hatch design decorative, whichever
+ * rule it names.
  */
-export const componentChoicePlugin = {
-  meta: {
-    name: "@charcuterie/eslint-config/component-choice",
-    version: "1.0.0",
-  },
-  rules: {
-    "no-raw-anchor": createRawElementRule({
-      description:
-        "Navigate with `TextLink` or `ButtonLink`, not a raw `<a>`.",
-      elementName: "a",
-      messages: { rawAnchor: NO_RAW_ANCHOR_MESSAGE },
-    }),
+export const SUPPRESSION_GUARDED_RULE_IDS = [
+  ...COMPONENT_CHOICE_RULE_IDS,
+  ...FLEX_OVERFLOW_RULE_IDS,
+]
 
-    "no-raw-button": createRawElementRule({
-      description:
-        "Act with `Button` or `IconButton`, not a raw `<button>`.",
-      elementName: "button",
-      messages: { rawButton: NO_RAW_BUTTON_MESSAGE },
-    }),
+/**
+ * The component-choice half of the plugin's rules. Composed with
+ * the flex-overflow half into one plugin object by `plugin.js`;
+ * see `namespace.js` for why the composition cannot happen here.
+ */
+export const COMPONENT_CHOICE_RULES = {
+  "no-raw-anchor": createRawElementRule({
+    description:
+      "Navigate with `TextLink` or `ButtonLink`, not a raw `<a>`.",
+    elementName: "a",
+    messages: { rawAnchor: NO_RAW_ANCHOR_MESSAGE },
+  }),
 
-    "no-raw-select": createRawElementRule({
-      description:
-        "Choose with `Listbox` or `Combobox`, not a raw `<select>`.",
-      elementName: "select",
-      messages: { rawSelect: NO_RAW_SELECT_MESSAGE },
-    }),
+  "no-raw-button": createRawElementRule({
+    description:
+      "Act with `Button` or `IconButton`, not a raw `<button>`.",
+    elementName: "button",
+    messages: { rawButton: NO_RAW_BUTTON_MESSAGE },
+  }),
 
-    "prefer-listbox-over-select": {
-      meta: {
-        type: /** @type {const} */ ("suggestion"),
-        docs: {
-          description:
-            "`Listbox` and `Combobox` are the default; `Select` needs a stated reason.",
-        },
-        messages: {
-          preferListbox: PREFER_LISTBOX_OVER_SELECT_MESSAGE,
-        },
-        schema: [],
+  "no-raw-select": createRawElementRule({
+    description:
+      "Choose with `Listbox` or `Combobox`, not a raw `<select>`.",
+    elementName: "select",
+    messages: { rawSelect: NO_RAW_SELECT_MESSAGE },
+  }),
+
+  "prefer-listbox-over-select": {
+    meta: {
+      type: /** @type {const} */ ("suggestion"),
+      docs: {
+        description:
+          "`Listbox` and `Combobox` are the default; `Select` needs a stated reason.",
       },
-      create: (/** @type {any} */ context) => ({
-        JSXOpeningElement: (/** @type {any} */ node) => {
-          if (getElementName(node) !== "Select") {
-            return
-          }
-
-          context.report({
-            node: node.name,
-            messageId: "preferListbox",
-          })
-        },
-      }),
+      messages: {
+        preferListbox: PREFER_LISTBOX_OVER_SELECT_MESSAGE,
+      },
+      schema: [],
     },
+    create: (/** @type {any} */ context) => ({
+      JSXOpeningElement: (/** @type {any} */ node) => {
+        if (getElementName(node) !== "Select") {
+          return
+        }
 
-    "no-clickable-non-interactive": {
-      meta: {
-        type: /** @type {const} */ ("problem"),
-        docs: {
-          description:
-            "A click target is a `Button` or a link component, never a bare `<div>`.",
-        },
-        messages: {
-          clickableNonInteractive:
-            NO_CLICKABLE_NON_INTERACTIVE_MESSAGE,
-        },
-        schema: [],
+        context.report({
+          node: node.name,
+          messageId: "preferListbox",
+        })
       },
-      create: (/** @type {any} */ context) => ({
-        JSXOpeningElement: (/** @type {any} */ node) => {
-          const elementName = getElementName(node)
+    }),
+  },
 
-          if (
-            !elementName ||
-            !NON_INTERACTIVE_ELEMENTS.has(elementName) ||
-            !hasAttribute(node, "onClick")
-          ) {
-            return
-          }
+  "no-clickable-non-interactive": {
+    meta: {
+      type: /** @type {const} */ ("problem"),
+      docs: {
+        description:
+          "A click target is a `Button` or a link component, never a bare `<div>`.",
+      },
+      messages: {
+        clickableNonInteractive:
+          NO_CLICKABLE_NON_INTERACTIVE_MESSAGE,
+      },
+      schema: [],
+    },
+    create: (/** @type {any} */ context) => ({
+      JSXOpeningElement: (/** @type {any} */ node) => {
+        const elementName = getElementName(node)
 
-          const hasOptOut = [
-            ...INTERACTIVITY_OPT_OUT_ATTRIBUTES,
-          ].some((attributeName) =>
-            hasAttribute(node, attributeName),
+        if (
+          !elementName ||
+          !NON_INTERACTIVE_ELEMENTS.has(elementName) ||
+          !hasAttribute(node, "onClick")
+        ) {
+          return
+        }
+
+        const hasOptOut = [
+          ...INTERACTIVITY_OPT_OUT_ATTRIBUTES,
+        ].some((attributeName) =>
+          hasAttribute(node, attributeName),
+        )
+
+        if (hasOptOut) {
+          return
+        }
+
+        context.report({
+          node: node.name,
+          messageId: "clickableNonInteractive",
+          data: { elementName },
+        })
+      },
+    }),
+  },
+
+  "no-navigation-in-click-handler": {
+    meta: {
+      type: /** @type {const} */ ("problem"),
+      docs: {
+        description:
+          "Navigation is an `<a href>` — `TextLink` or `ButtonLink` — not a click handler.",
+      },
+      messages: {
+        navigationInClickHandler:
+          NO_NAVIGATION_IN_CLICK_HANDLER_MESSAGE,
+      },
+      schema: [],
+    },
+    create: (/** @type {any} */ context) => {
+      /**
+       * Report the attribute once however many navigations
+       * the handler contains — one wrong component is one
+       * problem, and three squiggles on one prop reads as
+       * three separate bugs.
+       *
+       * @type {Set<unknown>}
+       */
+      const reportedAttributes = new Set()
+
+      /** @param {any} node */
+      const reportEnclosingClickHandler = (node) => {
+        const clickHandler = context.sourceCode
+          .getAncestors(node)
+          .find(
+            (/** @type {any} */ ancestor) =>
+              ancestor.type === "JSXAttribute" &&
+              ancestor.name?.name === "onClick",
           )
 
-          if (hasOptOut) {
+        if (
+          !clickHandler ||
+          reportedAttributes.has(clickHandler)
+        ) {
+          return
+        }
+
+        reportedAttributes.add(clickHandler)
+
+        context.report({
+          node: clickHandler,
+          messageId: "navigationInClickHandler",
+        })
+      }
+
+      return {
+        CallExpression: (/** @type {any} */ node) => {
+          const { callee } = node
+
+          const isNavigatorFunction =
+            callee.type === "Identifier" &&
+            NAVIGATOR_FUNCTION_NAMES.has(callee.name)
+
+          const isNavigatorMethod =
+            callee.type === "MemberExpression" &&
+            callee.property?.type === "Identifier" &&
+            NAVIGATOR_METHOD_NAMES.has(
+              callee.property.name,
+            ) &&
+            (NAVIGATOR_OBJECT_NAMES.has(
+              callee.object?.name,
+            ) ||
+              NAVIGATOR_OBJECT_NAMES.has(
+                callee.object?.property?.name,
+              ))
+
+          if (!isNavigatorFunction && !isNavigatorMethod) {
             return
           }
 
-          context.report({
-            node: node.name,
-            messageId: "clickableNonInteractive",
-            data: { elementName },
-          })
+          reportEnclosingClickHandler(node)
         },
-      }),
-    },
 
-    "no-navigation-in-click-handler": {
-      meta: {
-        type: /** @type {const} */ ("problem"),
-        docs: {
-          description:
-            "Navigation is an `<a href>` — `TextLink` or `ButtonLink` — not a click handler.",
-        },
-        messages: {
-          navigationInClickHandler:
-            NO_NAVIGATION_IN_CLICK_HANDLER_MESSAGE,
-        },
-        schema: [],
-      },
-      create: (/** @type {any} */ context) => {
-        /**
-         * Report the attribute once however many navigations
-         * the handler contains — one wrong component is one
-         * problem, and three squiggles on one prop reads as
-         * three separate bugs.
-         *
-         * @type {Set<unknown>}
-         */
-        const reportedAttributes = new Set()
+        AssignmentExpression: (/** @type {any} */ node) => {
+          const { left } = node
 
-        /** @param {any} node */
-        const reportEnclosingClickHandler = (node) => {
-          const clickHandler = context.sourceCode
-            .getAncestors(node)
-            .find(
-              (/** @type {any} */ ancestor) =>
-                ancestor.type === "JSXAttribute" &&
-                ancestor.name?.name === "onClick",
-            )
+          const isHrefAssignment =
+            left.type === "MemberExpression" &&
+            left.property?.type === "Identifier" &&
+            left.property.name === "href"
 
-          if (
-            !clickHandler ||
-            reportedAttributes.has(clickHandler)
-          ) {
+          if (!isHrefAssignment) {
             return
           }
 
-          reportedAttributes.add(clickHandler)
+          reportEnclosingClickHandler(node)
+        },
+      }
+    },
+  },
+
+  "require-suppression-reason": {
+    meta: {
+      type: /** @type {const} */ ("suggestion"),
+      docs: {
+        description:
+          "An escape hatch out of a component-choice rule has to say why.",
+      },
+      messages: {
+        missingReason: REQUIRE_SUPPRESSION_REASON_MESSAGE,
+      },
+      schema: [],
+    },
+    create: (/** @type {any} */ context) => ({
+      Program: () => {
+        const { directives } =
+          context.sourceCode.getDisableDirectives()
+
+        for (const directive of directives) {
+          if (directive.justification) {
+            continue
+          }
+
+          const ruleIds = parseDirectiveRuleIds(
+            directive.value,
+          )
+
+          /**
+           * An empty rule list is a blanket
+           * `// eslint-disable-next-line` — it silences these
+           * rules too, so it owes the same one line.
+           */
+          const suppressedRuleId =
+            ruleIds.length === 0
+              ? `${COMPONENT_CHOICE_NAMESPACE}/<rule>`
+              : ruleIds.find((ruleId) =>
+                  SUPPRESSION_GUARDED_RULE_IDS.includes(
+                    ruleId,
+                  ),
+                )
+
+          if (!suppressedRuleId) {
+            continue
+          }
 
           context.report({
-            node: clickHandler,
-            messageId: "navigationInClickHandler",
+            loc: directive.node.loc,
+            messageId: "missingReason",
+            data: { ruleId: suppressedRuleId },
           })
         }
-
-        return {
-          CallExpression: (/** @type {any} */ node) => {
-            const { callee } = node
-
-            const isNavigatorFunction =
-              callee.type === "Identifier" &&
-              NAVIGATOR_FUNCTION_NAMES.has(callee.name)
-
-            const isNavigatorMethod =
-              callee.type === "MemberExpression" &&
-              callee.property?.type === "Identifier" &&
-              NAVIGATOR_METHOD_NAMES.has(
-                callee.property.name,
-              ) &&
-              (NAVIGATOR_OBJECT_NAMES.has(
-                callee.object?.name,
-              ) ||
-                NAVIGATOR_OBJECT_NAMES.has(
-                  callee.object?.property?.name,
-                ))
-
-            if (
-              !isNavigatorFunction &&
-              !isNavigatorMethod
-            ) {
-              return
-            }
-
-            reportEnclosingClickHandler(node)
-          },
-
-          AssignmentExpression: (
-            /** @type {any} */ node,
-          ) => {
-            const { left } = node
-
-            const isHrefAssignment =
-              left.type === "MemberExpression" &&
-              left.property?.type === "Identifier" &&
-              left.property.name === "href"
-
-            if (!isHrefAssignment) {
-              return
-            }
-
-            reportEnclosingClickHandler(node)
-          },
-        }
       },
-    },
-
-    "require-suppression-reason": {
-      meta: {
-        type: /** @type {const} */ ("suggestion"),
-        docs: {
-          description:
-            "An escape hatch out of a component-choice rule has to say why.",
-        },
-        messages: {
-          missingReason: REQUIRE_SUPPRESSION_REASON_MESSAGE,
-        },
-        schema: [],
-      },
-      create: (/** @type {any} */ context) => ({
-        Program: () => {
-          const { directives } =
-            context.sourceCode.getDisableDirectives()
-
-          for (const directive of directives) {
-            if (directive.justification) {
-              continue
-            }
-
-            const ruleIds = parseDirectiveRuleIds(
-              directive.value,
-            )
-
-            /**
-             * An empty rule list is a blanket
-             * `// eslint-disable-next-line` — it silences these
-             * rules too, so it owes the same one line.
-             */
-            const suppressedRuleId =
-              ruleIds.length === 0
-                ? `${COMPONENT_CHOICE_NAMESPACE}/<rule>`
-                : ruleIds.find((ruleId) =>
-                    COMPONENT_CHOICE_RULE_IDS.includes(
-                      ruleId,
-                    ),
-                  )
-
-            if (!suppressedRuleId) {
-              continue
-            }
-
-            context.report({
-              loc: directive.node.loc,
-              messageId: "missingReason",
-              data: { ruleId: suppressedRuleId },
-            })
-          }
-        },
-      }),
-    },
+    }),
   },
 }

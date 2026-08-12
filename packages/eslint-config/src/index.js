@@ -17,16 +17,14 @@ import vitestPlugin from "@vitest/eslint-plugin"
 import reactPlugin from "eslint-plugin-react"
 import tseslint from "typescript-eslint"
 
-import {
-  COMPONENT_CHOICE_NAMESPACE,
-  componentChoicePlugin,
-} from "./componentChoice.js"
 import { PHYSICAL_DIRECTION_SELECTORS } from "./logicalProperties.js"
+import { CHARCUTERIE_NAMESPACE } from "./namespace.js"
+import { charcuteriePlugin } from "./plugin.js"
 
 export {
   COMPONENT_CHOICE_NAMESPACE,
   COMPONENT_CHOICE_RULE_IDS,
-  componentChoicePlugin,
+  COMPONENT_CHOICE_RULES,
   NO_CLICKABLE_NON_INTERACTIVE_MESSAGE,
   NO_NAVIGATION_IN_CLICK_HANDLER_MESSAGE,
   NO_RAW_ANCHOR_MESSAGE,
@@ -35,13 +33,28 @@ export {
   NON_INTERACTIVE_ELEMENTS,
   PREFER_LISTBOX_OVER_SELECT_MESSAGE,
   REQUIRE_SUPPRESSION_REASON_MESSAGE,
+  SUPPRESSION_GUARDED_RULE_IDS,
   UI_PACKAGE_NAME,
 } from "./componentChoice.js"
+export {
+  FLEX_CONTAINER_PATTERN,
+  FLEX_ESCAPE_PATTERN,
+  FLEX_OVERFLOW_RULE_IDS,
+  FLEX_OVERFLOW_RULES,
+  NO_SHRINK_0_WITH_FLEX_WRAP_MESSAGE,
+  NO_UNCONSTRAINED_FLEX_TEXT_MESSAGE,
+  TEXT_ELEMENTS,
+} from "./flexOverflow.js"
 export {
   PHYSICAL_DIRECTION_MESSAGE,
   PHYSICAL_DIRECTION_PATTERN,
   PHYSICAL_DIRECTION_SELECTORS,
 } from "./logicalProperties.js"
+export { CHARCUTERIE_NAMESPACE } from "./namespace.js"
+export {
+  charcuteriePlugin,
+  componentChoicePlugin,
+} from "./plugin.js"
 
 /**
  * AGENTS.md: booleans start with `is` or `has` — including Home
@@ -243,26 +256,65 @@ export const createComponentChoiceRules = ({
 }) => ({
   files,
   plugins: {
-    [COMPONENT_CHOICE_NAMESPACE]: componentChoicePlugin,
+    [CHARCUTERIE_NAMESPACE]: charcuteriePlugin,
   },
   // `asError()` rather than a bare `"error"` for the reason its
   // own docstring gives: a string literal in an object with a
   // computed key widens to `string`, which every consumer's
   // `defineConfig` then rejects.
   rules: {
-    [`${COMPONENT_CHOICE_NAMESPACE}/no-clickable-non-interactive`]:
+    [`${CHARCUTERIE_NAMESPACE}/no-clickable-non-interactive`]:
       asError(),
-    [`${COMPONENT_CHOICE_NAMESPACE}/no-navigation-in-click-handler`]:
+    [`${CHARCUTERIE_NAMESPACE}/no-navigation-in-click-handler`]:
       asError(),
-    [`${COMPONENT_CHOICE_NAMESPACE}/no-raw-anchor`]:
+    [`${CHARCUTERIE_NAMESPACE}/no-raw-anchor`]: asError(),
+    [`${CHARCUTERIE_NAMESPACE}/no-raw-button`]: asError(),
+    [`${CHARCUTERIE_NAMESPACE}/no-raw-select`]: asError(),
+    [`${CHARCUTERIE_NAMESPACE}/prefer-listbox-over-select`]:
       asError(),
-    [`${COMPONENT_CHOICE_NAMESPACE}/no-raw-button`]:
+    [`${CHARCUTERIE_NAMESPACE}/require-suppression-reason`]:
       asError(),
-    [`${COMPONENT_CHOICE_NAMESPACE}/no-raw-select`]:
+  },
+})
+
+/**
+ * Flex overflow — a long unbreakable token cannot be allowed to
+ * set a row's width.
+ *
+ * **Opt-in, and split across two severities on purpose.**
+ *
+ * `no-unconstrained-flex-text` is a heuristic: it can see that a
+ * flex row's text child renders `{something}` and says nothing
+ * about how it may shrink, but it cannot know whether that
+ * something is `"OK"` or a 300-character URL. It ships as a
+ * **`warn`**, because the four bugs it exists to catch were each
+ * one line of CSS and a rule that turns a repo red over a
+ * judgement call is a rule that gets deleted rather than
+ * satisfied. A consumer that has swept its app can promote it.
+ *
+ * `no-shrink-0-with-flex-wrap` is not a heuristic — the two
+ * classes contradict each other outright — so it is an
+ * **`error`**.
+ *
+ * `require-suppression-reason` is enabled here too, because these
+ * rules' escape hatches owe the same one line the component-choice
+ * ones do. Enabling it in both blocks is harmless: flat config
+ * keys rules by id, so it still runs once.
+ */
+export const createFlexOverflowRules = ({
+  files = ["src/**/*.tsx"],
+  severity = "warn",
+} = {}) => ({
+  files,
+  plugins: {
+    [CHARCUTERIE_NAMESPACE]: charcuteriePlugin,
+  },
+  rules: {
+    [`${CHARCUTERIE_NAMESPACE}/no-unconstrained-flex-text`]:
+      /** @type {["warn" | "error"]} */ ([severity]),
+    [`${CHARCUTERIE_NAMESPACE}/no-shrink-0-with-flex-wrap`]:
       asError(),
-    [`${COMPONENT_CHOICE_NAMESPACE}/prefer-listbox-over-select`]:
-      asError(),
-    [`${COMPONENT_CHOICE_NAMESPACE}/require-suppression-reason`]:
+    [`${CHARCUTERIE_NAMESPACE}/require-suppression-reason`]:
       asError(),
   },
 })

@@ -13,6 +13,7 @@ in this repo, so apps consume one import instead of six copy-pasted config files
 // eslint.config.js
 import {
   createComponentChoiceRules,
+  createFlexOverflowRules,
   createLogicalPropertiesRules,
   createReactRules,
   createStoryOverrides,
@@ -32,6 +33,11 @@ export default defineConfig(
   }),
   // Opt-in, and pointed at app source rather than the library.
   createComponentChoiceRules({
+    files: ["packages/web/**/*.tsx"],
+  }),
+  // Also opt-in. Warns by default; `severity: "error"` once the
+  // app has been swept.
+  createFlexOverflowRules({
     files: ["packages/web/**/*.tsx"],
   }),
   createStoryOverrides({}),
@@ -56,6 +62,15 @@ there is no honest default for where somebody else's tsconfig lives.
 | `vitest/consistent-test-it` (`test`, not `it`) | auto-fixable, which is the only reason a rule this cosmetic earns a slot |
 | `no-restricted-syntax` (logical properties only) | **new here** — see below |
 | `charcuterie/*` (component choice) | **new here, and opt-in** — see below |
+| `charcuterie/*` (flex overflow) | **new here, and opt-in** — see below |
+
+All the `charcuterie/*` rules live in **one plugin object under one namespace**, composed
+in `src/plugin.js`. Flat config throws `Cannot redefine plugin` when two blocks register
+a namespace with two different objects, and the two blocks below are meant to be enabled
+independently — so both factories hand ESLint the same reference. A second namespace
+(`charcuterie-layout`) was the alternative and was rejected: you would have to remember
+which prefix each rule takes when writing a disable comment, and a wrong prefix in an
+`eslint-disable` is silently a no-op.
 
 ## Logical properties only
 
@@ -146,6 +161,84 @@ too). Other people's disable comments are left alone. Without the reason the rul
 firing, nobody learns why the native element was the right call, and the next agent copies
 the pattern — which is the failure this whole block exists to fix.
 
+## Flex overflow — opt-in
+
+**Four independent rediscoveries of one CSS rule in one day** (2026-08-11), during the
+fleet-wide bump onto `@charcuterie/ui@2.11.0`. The 17px type ramp consumed the slack that
+had been hiding a latent layout bug in five of eleven repos, and four were the same
+shape: a flex row containing one long unbreakable token.
+
+A flex item's automatic minimum size resolves against its content's **min-content
+width**, so a token with no break opportunity becomes the row's floor and shoves its
+sibling out of the container. `min-width: 0` lets the *item* shrink but does nothing to
+the *text*, which then spills; only `overflow-wrap: anywhere` shrinks the min-content
+size itself.
+
+| Rule | Fires on | Default | Where it came from |
+| --- | --- | --- | --- |
+| `charcuterie/no-unconstrained-flex-text` | a text element (`span`, `h1`–`h6`, `p`, `label`, …) rendering `{dynamic}` text as a direct child of a flex **row**, with no escape in its `className` | **`warn`** | gallery-downloader `ErrorRow`, points-market `ShopPage` (heading + recent-buys chip) |
+| `charcuterie/no-shrink-0-with-flex-wrap` | `shrink-0` and `flex-wrap` on the same element, inside a flex row | **`error`** | rip-deck `RipCard` — and it found the identical bug uncaught in `HeldBayCard` and `QuarantinedBayCard` |
+
+**Any escape counts, because the four shipped fixes were four different fixes.**
+`min-w-0 wrap-anywhere` (gallery-downloader, points-market's heading), `flex-wrap` +
+`shrink-0` (points-market's price row), `truncate` + `title` (mail-sifter's host), and
+*removing* `shrink-0` (rip-deck). A rule demanding one of them would be wrong about the
+other three. Accepted: `min-w-*`, `truncate`, `text-ellipsis`, `line-clamp-*`,
+`overflow-hidden`, `wrap-anywhere`, `break-all`, `break-anywhere`, `w-*`, `max-w-*`,
+`basis-*`, `size-*`, `shrink-0`, `flex-none`, `absolute`, `fixed`.
+
+### Two severities, on purpose
+
+`no-unconstrained-flex-text` is a **heuristic**. It can see that a row's text child says
+nothing about how it shrinks; it cannot know whether `{status}` is `"OK"` or a
+300-character URL. Measured across the fleet it fires on 6/49 files in
+gallery-downloader, 5/11 in points-market, 8/12 in mail-sifter, 6/36 in rip-deck and
+33/341 in mux-magic — low volume, but a judgement call every time, so it **warns**. A
+rule that turns a repo red over a judgement call is a rule that gets deleted rather than
+satisfied. Promote it once the app is swept:
+
+```js
+createFlexOverflowRules({
+  files: ["packages/web/**/*.tsx"],
+  severity: "error",
+})
+```
+
+`no-shrink-0-with-flex-wrap` is not a heuristic — `shrink-0` pins the item at
+max-content, so the `flex-wrap` beside it can never engage — so it **errors**.
+
+### What it deliberately does not do
+
+- **`<div>` is not a text element.** It is the generic box and the most common child of a
+  flex row by a wide margin; including it turns the rule into a noise generator.
+- **Static text is skipped.** `Cancel` is never 300 characters. The bug arrives with
+  data, so only `{…}` children count — and not `{children}` or `{rows.map(…)}`, which
+  render somebody else's markup rather than a text run.
+- **`tabular-nums` is skipped.** It is the fleet's marker for a bounded digit run.
+  Without the exclusion the rule warns on rip-deck's three-character `{percentText}` even
+  *after* the shipped fix.
+- **A column container is out of scope**, and so is any container carrying a `flex-col`
+  variant: the shape is conditional and a conditional shape is not a confident finding.
+- **A `className` it cannot read statically** (a `clsx(…)` call, a variable) is skipped —
+  the escape may well be in there, and reporting on what it cannot read is the fastest
+  way to get switched off.
+- **`shrink-0` + `flex-wrap` needs a flex-row parent.** Inside a `flex-col`, `shrink-0`
+  resists shrinking down the *block* axis and has no bearing on the element's own wrap.
+  mux-magic's `FileExplorerModal` title bar is exactly that, and would have been the
+  rule's first false positive on the first real file it saw.
+
+**The one case it does not catch, stated plainly:** mail-sifter's `LinkCard` host. Its
+overflowing element is a block inside a grid column, not a flex item — the flex row above
+it was already correctly constrained — so no flex rule can see it. That one stays a
+`truncate` learned by reading.
+
+Escape hatch, same as everywhere else, and it owes a reason:
+
+```tsx
+{/* eslint-disable-next-line charcuterie/no-unconstrained-flex-text -- a closed enum, never longer than "running" */}
+<span className="text-xs uppercase">{status}</span>
+```
+
 ## Tests
 
 `src/houseRules.test.ts` runs the real `ESLint` class over `src/__fixtures__/`,
@@ -158,3 +251,9 @@ indistinguishable from "clean" in CI.
 `src/__fixtures__/` has its own `tsconfig.json` so the type-aware rules can resolve
 it, and is excluded from the package's own typecheck — the fixtures are lint input,
 not source.
+
+`__fixtures__/appPackage/unconstrainedFlexText.tsx` and its `constrained…` twin are the
+four rows the fleet actually fixed on 2026-08-11, copied from the shipping commits
+(gallery-downloader `81e2c2a`, points-market `e6438b7`, mail-sifter `8ed11f4`, rip-deck
+`ce66aab`) — before and after. A lint rule whose motivating bug is not in its fixtures is
+a rule nobody can show catches anything.

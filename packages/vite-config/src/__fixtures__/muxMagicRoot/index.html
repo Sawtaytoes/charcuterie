@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<!--
+  `data-scheme` is what makes `@charcuterie/tokens` publish a colour at all —
+  every `--color-*` is scoped under `[data-scheme="light"]` or
+  `[data-scheme="dark"]`, so an app that forgets the attribute gets no
+  variables rather than a default set, and every token-coloured component
+  renders transparent with no error anywhere.
+
+  No longer pinned to `dark`. The scheme is now resolved before first paint by
+  the `@charcuterie/tokens` `buildFirstPaintScript` snippet in <head> below,
+  and switched at runtime by the `<ColorSchemeSwitcher>` in the page header
+  (which wires `@charcuterie/logic`'s `useColorScheme` to matchMedia +
+  localStorage + `data-scheme` on <html>). Default mode is `system`, so the
+  app now follows the OS light/dark preference. The attribute must be true
+  before the first paint — it is read by CSS, not observed by React — which
+  is exactly why the resolution runs in the head script rather than in React.
+-->
+<html lang="en" data-variant="daylight" data-density="comfortable">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mux Magic</title>
+    <!--
+      First-paint scheme resolution — the inline snippet emitted by
+      `@charcuterie/tokens`' `buildFirstPaintScript(daylight)`. It reads the
+      persisted mode from localStorage under the SHARED key
+      `charcuterie-scheme` (the same key `localStoragePersistence` /
+      `<ColorSchemeSwitcher>` write, so the pre-paint attribute and the
+      hydrated hook agree — no flash-of-wrong-theme on reload), falls back to
+      the OS `prefers-color-scheme` media query when nothing is stored or the
+      mode is `system`, sets `data-scheme` on <html>, and injects an UNLAYERED
+      `html,body` background rule branched on the resolved scheme.
+
+      **The `var()` fallback is load-bearing, not decoration.** The injected
+      `<style>` is UNLAYERED, and unlayered author CSS beats every `@layer`
+      regardless of specificity, so it out-ranks Tailwind's layered `base`
+      body rule and the canvas can never be repainted mid-load. Written as a
+      FALLBACK (`var(--color-surface-base, #hex)`) the literal applies only
+      until the tokens stylesheet lands, then the token takes over — no white
+      (or wrong-scheme) flash either way.
+
+      Regenerate if the `daylight` variant's surface colours change:
+        node --input-type=module -e 'import {buildFirstPaintScript, daylight}
+          from "@charcuterie/tokens"; console.log(buildFirstPaintScript(daylight))'
+    -->
+    <script>
+      (() => {
+        var KEY = "charcuterie-scheme";
+        var stored;
+        try {
+          stored = window.localStorage.getItem(KEY);
+        } catch (_error) {
+          stored = null;
+        }
+        var isDark = stored === "dark" ||
+          ((stored === null || stored === "system") &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches);
+        var scheme = isDark ? "dark" : "light";
+        document.documentElement.setAttribute("data-scheme", scheme);
+        var background = isDark ? "#131822" : "#F5F7FA";
+        var style = document.createElement("style");
+        style.textContent =
+          "html,body{background-color:var(--color-surface-base," +
+          background +
+          ");color-scheme:" + scheme + "}";
+        document.head.appendChild(style);
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <!--
+      Loads window.getCommandFieldDescription / getCommandSummary /
+      commandDescriptions, all generated at prebuild time from the
+      .describe(...) calls in src/api/schemas.ts. Must load BEFORE the
+      React bundle so CommandFieldEntry and FieldTooltip can read it.
+      Source: packages/api/scripts/build-command-descriptions.ts.
+    -->
+    <script src="/command-descriptions.js"></script>
+    <script type="module" src="/src/app.tsx"></script>
+  </body>
+</html>
