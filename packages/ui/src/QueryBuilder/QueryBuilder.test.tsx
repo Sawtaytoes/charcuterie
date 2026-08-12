@@ -14,12 +14,19 @@ test("the root group exposes its combinator as a named 'Match' control", async (
   const { canvas, canvasElement } =
     await mountStory(Default)
 
-  // One root group, so exactly one combinator select — findable by
-  // the label `Field` wires, not a testid.
-  expectAgentDrivable(canvas, {
-    name: "Match",
-    role: "combobox",
+  // One root group, so exactly one combinator picker. It is a
+  // `Listbox` trigger, so the control is a button that opens a
+  // listbox — named "Match: <current>", which keeps the button's
+  // visible text (the combinator) inside its accessible name.
+  const combinator = expectAgentDrivable(canvas, {
+    name: /^Match: /,
+    role: "button",
   })
+
+  await expect(combinator).toHaveAttribute(
+    "aria-haspopup",
+    "listbox",
+  )
 
   await expectNoAxeViolations(canvasElement)
 })
@@ -55,7 +62,7 @@ test("'+ Add group' nests a second group with its own combinator", async () => {
     await mountStory(Interactive)
 
   await expect(
-    canvas.getAllByRole("combobox", { name: "Match" }),
+    canvas.getAllByRole("button", { name: /^Match: / }),
   ).toHaveLength(1)
 
   await userEvent.click(
@@ -67,7 +74,7 @@ test("'+ Add group' nests a second group with its own combinator", async () => {
 
   await waitFor(() => {
     expect(
-      canvas.getAllByRole("combobox", { name: "Match" }),
+      canvas.getAllByRole("button", { name: /^Match: / }),
     ).toHaveLength(2)
   })
 
@@ -80,23 +87,31 @@ test("'+ Add group' nests a second group with its own combinator", async () => {
   await expectNoAxeViolations(canvasElement)
 })
 
-test("changing the combinator select updates its value", async () => {
-  const { canvas } = await mountStory(Interactive)
+test("choosing a combinator from the listbox updates the group", async () => {
+  const { body, canvas } = await mountStory(Interactive)
 
-  const combinator = expectAgentDrivable(canvas, {
-    name: "Match",
-    role: "combobox",
-  })
+  // The trigger's label IS the current combinator, so the change is
+  // asserted on its accessible name rather than a form value — a
+  // `Listbox` trigger is a button and holds none.
+  await userEvent.click(
+    expectAgentDrivable(canvas, {
+      name: "Match: ALL — every condition",
+      role: "button",
+    }),
+  )
 
-  await expect(combinator).toHaveValue("and")
-
-  await userEvent.selectOptions(
-    combinator,
-    "ANY — one condition",
+  await userEvent.click(
+    expectAgentDrivable(body, {
+      name: "ANY — one condition",
+      role: "option",
+    }),
   )
 
   await waitFor(() => {
-    expect(combinator).toHaveValue("or")
+    expectAgentDrivable(canvas, {
+      name: "Match: ANY — one condition",
+      role: "button",
+    })
   })
 })
 
@@ -122,9 +137,9 @@ test("a nested tree renders every group's combinator and passes axe", async () =
     await mountStory(AllStates)
 
   // Flat harness (1 group) + nested harness (root + one sub-group) =
-  // three combinator selects, which is the nesting rendering.
+  // three combinator pickers, which is the nesting rendering.
   await expect(
-    canvas.getAllByRole("combobox", { name: "Match" })
+    canvas.getAllByRole("button", { name: /^Match: / })
       .length,
   ).toBeGreaterThanOrEqual(3)
 

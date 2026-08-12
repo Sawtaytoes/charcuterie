@@ -10,6 +10,8 @@ import { QueryBuilderGroup } from "./QueryBuilderGroup.tsx"
 export type QueryBuilderLabels = {
   addGroup?: string
   addLeaf?: string
+  /** The caption over each group's combinator picker. */
+  match?: string
   removeGroup?: string
   removeLeaf?: string
 }
@@ -50,6 +52,7 @@ export type QueryBuilderProps<Combinator, Leaf> = {
 const DEFAULT_LABELS = {
   addGroup: "Add group",
   addLeaf: "Add condition",
+  match: "Match",
   removeGroup: "Remove group",
   removeLeaf: "Remove condition",
 } satisfies Required<QueryBuilderLabels>
