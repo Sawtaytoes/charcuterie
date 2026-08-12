@@ -364,7 +364,16 @@ test("the barrel is the only place components are re-exported", async () => {
   // `useToolbarOverflow.ts` and `chooseVisibleCount.ts` are its
   // members and stay out of this count by the `<Name>/<Name>.tsx`
   // rule.
-  expect(componentNames.length).toBe(43)
+  //
+  // `QueryBuilder` — the generic nestable AND/OR (any-combinator) group
+  // editor Mail Sifter's nested rules and mux-magic's job DSL both need
+  // — is the library's first recursive component and its first with a
+  // fully opaque value *and* combinator: +1 -> 44. `QueryBuilderGroup`
+  // and `QueryBuilderRow` are its members — a group renders groups, and
+  // both are rendered inside a `.map` — and stay out of this count and
+  // the barrel by the `<Name>/<Name>.tsx` rule, exactly as
+  // `SegmentedOption` and `ListboxOption` do.
+  expect(componentNames.length).toBe(44)
 
   for (const name of componentNames) {
     expect(barrel).toContain(`export { ${name} }`)
