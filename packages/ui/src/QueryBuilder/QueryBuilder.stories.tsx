@@ -1,15 +1,10 @@
 import type { SerializedTree } from "@charcuterie/logic"
-import {
-  createTree,
-  useTree,
-  useVisibility,
-} from "@charcuterie/logic"
+import { createTree, useTree } from "@charcuterie/logic"
 import type { Meta, StoryObj } from "@storybook/react"
 import type { ReactNode } from "react"
 import { useState } from "react"
-import { Button } from "../Button/Button.tsx"
 import { StorySection } from "../board.storyHelpers.tsx"
-import { Listbox } from "../Listbox/Listbox.tsx"
+import { Picker } from "../Picker/Picker.tsx"
 import { QueryBuilder } from "./QueryBuilder.tsx"
 
 /**
@@ -52,58 +47,6 @@ const createLeafValue = (): DemoLeaf => ({
   value: "",
 })
 
-/**
- * A leaf's own picker — a `Listbox`, like the combinator above it,
- * because [the 2026-08-10 demotion](../../../../docs/decisions/2026-08-10-listbox-and-combobox-are-the-default-and-select-is-demoted.md)
- * applies to an app's leaf UI exactly as it does to this component's
- * own controls. This story is the example apps copy, so it must not
- * teach the native `Select` the record demoted.
- *
- * It is a component rather than inline JSX for the same reason
- * `QueryBuilderCombinator` is: `Listbox` needs a visibility state, and
- * a leaf is rendered inside a `.map` where a hook cannot be called.
- * An app adopting `QueryBuilder` writes this same small wrapper — see
- * the note in `QueryBuilder.mdx`.
- */
-const LeafPicker = ({
-  label,
-  onChange,
-  options,
-  value,
-}: {
-  label: string
-  onChange: (value: string) => void
-  options: readonly { label: string; value: string }[]
-  value: string
-}): ReactNode => {
-  const { hide, isVisible, toggle } = useVisibility()
-
-  const currentLabel =
-    options.find((option) => option.value === value)
-      ?.label ?? ""
-
-  return (
-    <Listbox
-      isVisible={isVisible}
-      onDismiss={hide}
-      onSelect={onChange}
-      options={options}
-      selectedValue={value}
-      trigger={
-        <Button
-          appearance="outline"
-          aria-label={`${label}: ${currentLabel}`}
-          intent="neutral"
-          onClick={toggle}
-          size="sm"
-        >
-          {currentLabel}
-        </Button>
-      }
-    />
-  )
-}
-
 const renderLeaf = ({
   onChange,
   value,
@@ -113,7 +56,7 @@ const renderLeaf = ({
   value: DemoLeaf
 }): ReactNode => (
   <div className="flex flex-wrap items-center gap-2">
-    <LeafPicker
+    <Picker
       label="Field"
       onChange={(field) => {
         onChange({ ...value, field })
@@ -122,7 +65,7 @@ const renderLeaf = ({
       value={value.field}
     />
 
-    <LeafPicker
+    <Picker
       label="Operator"
       onChange={(operator) => {
         onChange({ ...value, operator })
@@ -357,7 +300,7 @@ const CombinatorPair = ({
       </span>
 
       <div className="flex items-center gap-1.5">
-        <LeafPicker
+        <Picker
           label="Quantifier"
           onChange={(nextQuantifier) => {
             setQuantifier(nextQuantifier)
@@ -377,7 +320,7 @@ const CombinatorPair = ({
           value={quantifier}
         />
 
-        <LeafPicker
+        <Picker
           label="Target"
           onChange={(nextTarget) => {
             setTarget(nextTarget)

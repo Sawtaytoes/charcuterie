@@ -1,0 +1,63 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks"
+
+import * as PickerStories from "./Picker.stories.tsx"
+
+<Meta of={PickerStories} />
+
+# Picker
+
+A `Listbox` with its trigger already attached — the shape an app reaches for when it wants
+"a select, but ours".
+
+<Canvas of={PickerStories.Default} />
+
+## Why this exists when `Listbox` already does
+
+`Listbox` is deliberately trigger-agnostic. It takes a `trigger` element and owns none of the
+open state, which is what lets it hang off a button, a tile, or a table header. The cost is
+that the *common* case — a button showing the current value, with a chevron — is about thirty
+lines, and the fleet wrote those lines **four separate times**: plex-channels'
+`SelectListbox`, board-games' `SelectMenu` (on `useState` rather than `useVisibility`),
+mux-magic's `ListboxPicker`, and twice inside this package (`QueryBuilderCombinator` and
+`QueryBuilder`'s own story). Each hand-rolled the same chevron.
+
+`Listbox` is unchanged. `Picker` is the assembled default; reach for `Listbox` directly when
+the trigger is not a button.
+
+## The accessible name carries the current value
+
+`"Language: English"`, not `"Language"`. The trigger's visible text **is** the value, and
+WCAG 2.5.3 requires the visible text to be contained in the accessible name — a bare
+`aria-label={label}` fails it. It also keeps each control uniquely findable when a form has
+several:
+
+```tsx
+getByRole("button", { name: /^Language: / })
+```
+
+<Canvas of={PickerStories.Interactive} />
+
+## Rich options need a `textValue`
+
+`label` takes a `ReactNode` — a flag, a badge, two lines. When it is not a plain string, give
+the option a `textValue`: it is the type-ahead target, and it is what the trigger and the
+accessible name read, so the button says `Audio track: English` rather than the flattened
+text of the whole node.
+
+<Canvas of={PickerStories.AllStates} />
+
+## `id` does not survive; `data-testid` does
+
+`useAnchoredOverlay` overwrites the trigger's `id` with a generated one so the portalled
+listbox can point `aria-labelledby` across at it. An `id` passed to `Picker` is therefore
+silently replaced — plex-channels found this the hard way and moved its e2e handles to
+`data-testid`, which nothing injects. Every other button prop (`data-*`, `onClick`, `form`,
+…) passes straight through; an `onClick` you pass runs before the panel toggles, which is how
+a picker inside a clickable row stops the event reaching its parent.
+
+## Not the component of `useSinglePicker`
+
+The state layer has `useSinglePicker` and `useMultiplePicker`, and the name invites the
+question. `useSinglePicker` is a **state kind** that `Listbox`, `Combobox` and `Tabs` all
+compose; it has no component of its own. `Picker` owns a `useVisibility` and delegates
+selection to `Listbox`, which is where that state actually lives.
