@@ -160,6 +160,11 @@ export type {
 export { Menu } from "./Menu/Menu.tsx"
 export type { ModalProps } from "./Modal/Modal.tsx"
 export { Modal } from "./Modal/Modal.tsx"
+export type {
+  PickerOption,
+  PickerProps,
+} from "./Picker/Picker.tsx"
+export { Picker } from "./Picker/Picker.tsx"
 export type { PopoverProps } from "./Popover/Popover.tsx"
 export { Popover } from "./Popover/Popover.tsx"
 export type {
