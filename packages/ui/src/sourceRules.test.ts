@@ -373,7 +373,13 @@ test("the barrel is the only place components are re-exported", async () => {
   // both are rendered inside a `.map` — and stay out of this count and
   // the barrel by the `<Name>/<Name>.tsx` rule, exactly as
   // `SegmentedOption` and `ListboxOption` do.
-  expect(componentNames.length).toBe(44)
+  //
+  // `Picker` — a `Listbox` with its trigger already attached — is +1 ->
+  // 45. It is a component rather than a recipe in the docs because the
+  // fleet wrote it four separate times (plex-channels' `SelectListbox`,
+  // board-games' `SelectMenu`, mux-magic's `ListboxPicker`, and twice
+  // inside this package), each with its own hand-rolled chevron.
+  expect(componentNames.length).toBe(45)
 
   for (const name of componentNames) {
     expect(barrel).toContain(`export { ${name} }`)
