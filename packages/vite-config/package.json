@@ -1,6 +1,6 @@
 {
   "name": "@charcuterie/vite-config",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "description": "A shared Vite config factory for the Charcuterie fleet — call createViteConfig(overrides) and add your own plugins.",
   "license": "MIT",
   "type": "module",
