@@ -8,11 +8,10 @@ import type { ReactNode } from "react"
 
 import { Button } from "../Button/Button.tsx"
 import { Card } from "../Card/Card.tsx"
-import { Field } from "../Field/Field.tsx"
 import { IconButton } from "../IconButton/IconButton.tsx"
-import { Select } from "../Select/Select.tsx"
 import { toClassName } from "../toClassName.ts"
 import type { QueryBuilderLabels } from "./QueryBuilder.tsx"
+import { QueryBuilderCombinator } from "./QueryBuilderCombinator.tsx"
 import { QueryBuilderRow } from "./QueryBuilderRow.tsx"
 
 export type QueryBuilderGroupProps<Combinator, Leaf> = {
@@ -25,6 +24,15 @@ export type QueryBuilderGroupProps<Combinator, Leaf> = {
   depth: number
   labels: Required<QueryBuilderLabels>
   node: TreeGroupNode<Combinator>
+  renderCombinator?: (args: {
+    nodeId: string
+    onChange: (combinator: Combinator) => void
+    options: readonly {
+      label: string
+      value: Combinator
+    }[]
+    value: Combinator
+  }) => ReactNode
   renderLeaf: (args: {
     nodeId: string
     onChange: (value: Leaf) => void
@@ -35,18 +43,14 @@ export type QueryBuilderGroupProps<Combinator, Leaf> = {
 }
 
 /**
- * One match group: a "Match" combinator select, its children (leaf
+ * One match group: a "Match" combinator picker, its children (leaf
  * rows and nested groups), and a toolbar to add either. Its own file
  * because it renders itself recursively for nested groups and is
  * itself rendered inside the parent's `.map` — the member-file case.
  *
- * The combinator is opaque, so the native `Select` (which speaks
- * strings) is bridged by `String(value)`: options carry the
- * stringified combinator, and a change is mapped back to the real
- * `Combinator` before it reaches `setCombinator`. That keeps
- * `Combinator` fully generic while still using the platform control
- * that brings type-ahead, the mobile wheel, and form semantics for
- * free.
+ * The picker is `QueryBuilderCombinator`, a `Listbox` rather than the
+ * native `Select` this shipped with — see that file for why it is a
+ * component and how it stays generic over an opaque `Combinator`.
  */
 export const QueryBuilderGroup = <Combinator, Leaf>({
   combinatorOptions,
@@ -54,16 +58,16 @@ export const QueryBuilderGroup = <Combinator, Leaf>({
   depth,
   labels,
   node,
+  renderCombinator,
   renderLeaf,
   state,
   tree,
 }: QueryBuilderGroupProps<Combinator, Leaf>): ReactNode => {
   const children = selectChildNodes(state, node.id)
 
-  const selectOptions = combinatorOptions.map((option) => ({
-    label: option.label,
-    value: String(option.value),
-  }))
+  const setCombinator = (nextCombinator: Combinator) => {
+    tree.setCombinator(node.id, nextCombinator)
+  }
 
   const card = (
     <Card
@@ -74,22 +78,21 @@ export const QueryBuilderGroup = <Combinator, Leaf>({
       <div className="flex flex-col gap-3">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-52">
-            <Field label="Match">
-              <Select
-                onChange={(nextValue) => {
-                  const match = combinatorOptions.find(
-                    (option) =>
-                      String(option.value) === nextValue,
-                  )
-
-                  if (match) {
-                    tree.setCombinator(node.id, match.value)
-                  }
-                }}
-                options={selectOptions}
-                value={String(node.combinator)}
+            {renderCombinator ? (
+              renderCombinator({
+                nodeId: node.id,
+                onChange: setCombinator,
+                options: combinatorOptions,
+                value: node.combinator,
+              })
+            ) : (
+              <QueryBuilderCombinator
+                label={labels.match}
+                onChange={setCombinator}
+                options={combinatorOptions}
+                value={node.combinator}
               />
-            </Field>
+            )}
           </div>
 
           {depth === 0 ? null : (
@@ -118,6 +121,7 @@ export const QueryBuilderGroup = <Combinator, Leaf>({
                   key={child.id}
                   labels={labels}
                   node={child}
+                  renderCombinator={renderCombinator}
                   renderLeaf={renderLeaf}
                   state={state}
                   tree={tree}

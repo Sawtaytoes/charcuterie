@@ -55,9 +55,16 @@ the sunken surface so it recedes rather than floating at the same level as its p
 
 ## Driving it
 
-Every control is nameable, not a `data-testid`: the combinator select is named `Match` by the
-field label, the leaf controls by their own labels, and each delete is an `IconButton` whose
-required `label` makes it findable. Add a condition, nest a group, flip a combinator, delete a
-row — all reachable by role and name.
+Every control is nameable, not a `data-testid`: the combinator picker is a `Listbox` whose
+trigger is named `Match: <current combinator>`, the leaf controls by their own labels, and each
+delete is an `IconButton` whose required `label` makes it findable. Add a condition, nest a
+group, flip a combinator, delete a row — all reachable by role and name.
+
+The picker is a `Listbox` rather than a native `Select`, per
+[the 2026-08-10 demotion](../../../../docs/decisions/2026-08-10-listbox-and-combobox-are-the-default-and-select-is-demoted.md).
+Its name carries the current value because the trigger's visible text *is* that value, and
+WCAG 2.5.3 wants the visible text contained in the accessible name — so query it with
+`getByRole("button", { name: /^Match: / })`, not by the bare caption. Rename the caption with
+`labels.match`.
 
 <Canvas of={QueryBuilderStories.Interactive} />
