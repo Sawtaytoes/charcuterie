@@ -16,7 +16,7 @@ A `Listbox` with its trigger already attached — the shape an app reaches for w
 `Listbox` is deliberately trigger-agnostic. It takes a `trigger` element and owns none of the
 open state, which is what lets it hang off a button, a tile, or a table header. The cost is
 that the *common* case — a button showing the current value, with a chevron — is about thirty
-lines, and the fleet wrote those lines **four separate times**: plex-channels'
+lines, and the fleet wrote those lines **four separate times**: queuepilot's
 `SelectListbox`, board-games' `SelectMenu` (on `useState` rather than `useVisibility`),
 mux-magic's `ListboxPicker`, and twice inside this package (`QueryBuilderCombinator` and
 `QueryBuilder`'s own story). Each hand-rolled the same chevron.
@@ -50,7 +50,7 @@ text of the whole node.
 
 `useAnchoredOverlay` overwrites the trigger's `id` with a generated one so the portalled
 listbox can point `aria-labelledby` across at it. An `id` passed to `Picker` is therefore
-silently replaced — plex-channels found this the hard way and moved its e2e handles to
+silently replaced — queuepilot found this the hard way and moved its e2e handles to
 `data-testid`, which nothing injects. Every other button prop (`data-*`, `onClick`, `form`,
 …) passes straight through; an `onClick` you pass runs before the panel toggles, which is how
 a picker inside a clickable row stops the event reaching its parent.

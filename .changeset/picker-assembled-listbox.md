@@ -5,7 +5,7 @@
 `Picker` — a `Listbox` with its trigger already attached
 
 The fleet wrote this same wrapper four separate times after `Listbox` became the default
-picker: plex-channels' `SelectListbox`, board-games' `SelectMenu` (on `useState` rather than
+picker: queuepilot's `SelectListbox`, board-games' `SelectMenu` (on `useState` rather than
 the state layer), mux-magic's `ListboxPicker`, and twice inside this package
 (`QueryBuilderCombinator` and `QueryBuilder`'s own story), each with its own hand-rolled
 chevron.

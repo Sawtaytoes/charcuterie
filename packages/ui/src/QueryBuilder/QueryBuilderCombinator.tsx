@@ -44,6 +44,11 @@ export const QueryBuilderCombinator = <Combinator,>({
     </span>
 
     <Picker
+      // No chevron: this is a refactor onto the shared component, and
+      // the trigger that shipped in 2.14.0 had none. Adding the
+      // affordance here is a visual change and belongs in its own PR,
+      // not smuggled in under an extraction.
+      iconEnd={null}
       label={label}
       onChange={(nextValue) => {
         const match = options.find(

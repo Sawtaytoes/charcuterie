@@ -57,20 +57,24 @@ const renderLeaf = ({
 }): ReactNode => (
   <div className="flex flex-wrap items-center gap-2">
     <Picker
+      iconEnd={null}
       label="Field"
       onChange={(field) => {
         onChange({ ...value, field })
       }}
       options={FIELD_OPTIONS}
+      size="sm"
       value={value.field}
     />
 
     <Picker
+      iconEnd={null}
       label="Operator"
       onChange={(operator) => {
         onChange({ ...value, operator })
       }}
       options={OPERATOR_OPTIONS}
+      size="sm"
       value={value.operator}
     />
 
@@ -301,6 +305,7 @@ const CombinatorPair = ({
 
       <div className="flex items-center gap-1.5">
         <Picker
+          iconEnd={null}
           label="Quantifier"
           onChange={(nextQuantifier) => {
             setQuantifier(nextQuantifier)
@@ -317,10 +322,12 @@ const CombinatorPair = ({
             )
           }}
           options={QUANTIFIER_OPTIONS}
+          size="sm"
           value={quantifier}
         />
 
         <Picker
+          iconEnd={null}
           label="Target"
           onChange={(nextTarget) => {
             setTarget(nextTarget)
@@ -332,6 +339,7 @@ const CombinatorPair = ({
             )
           }}
           options={targetOptions}
+          size="sm"
           value={resolvedTarget}
         />
       </div>

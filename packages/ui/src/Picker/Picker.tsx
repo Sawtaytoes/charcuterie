@@ -16,6 +16,28 @@ import { Listbox } from "../Listbox/Listbox.tsx"
 
 export type PickerOption = ListboxItem
 
+/**
+ * A constant element rather than a component, for the same reason
+ * `Select` inlines its own: a second component in this file trips the
+ * house rule, and this never varies.
+ */
+const CHEVRON_DOWN = (
+  <svg
+    aria-hidden="true"
+    className="size-4"
+    fill="none"
+    focusable={false}
+    stroke="currentColor"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={1.75}
+    viewBox="0 0 24 24"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path d="m6 9 6 6 6-6" />
+  </svg>
+)
+
 export type PickerProps = Omit<
   ComponentPropsWithRef<"button">,
   "disabled" | "onChange" | "value"
@@ -29,6 +51,14 @@ export type PickerProps = Omit<
    * Not the current value; that is read off `options`.
    */
   label: string
+  /**
+   * Defaults to a chevron. Pass `null` to drop it — a picker rendered
+   * inside a denser control row may not want the affordance, and a
+   * refactor moving an existing hand-rolled trigger onto `Picker`
+   * stays pixel-identical by passing `null` rather than re-baselining
+   * every screenshot that contains it.
+   */
+  iconEnd?: ReactNode
   onChange: (value: string) => void
   options: readonly PickerOption[]
   placement?: Placement
@@ -48,7 +78,7 @@ export type PickerProps = Omit<
  * element and owns none of the open state, which is what lets it hang
  * off a button, a tile, a table header. The cost is that the *common*
  * case — a button showing the current value — is about thirty lines,
- * and the fleet wrote them four times: plex-channels' `SelectListbox`,
+ * and the fleet wrote them four times: queuepilot's `SelectListbox`,
  * board-games' `SelectMenu` (on `useState` rather than
  * `useVisibility`), mux-magic's `ListboxPicker`, and — the tell —
  * **twice inside this package**, in `QueryBuilderCombinator` and in
@@ -82,7 +112,7 @@ export type PickerProps = Omit<
  *
  * `useAnchoredOverlay` overwrites the trigger's `id` with a generated
  * one, so the portalled listbox can point `aria-labelledby` across at
- * it. An `id` passed here is therefore silently replaced — plex-channels
+ * it. An `id` passed here is therefore silently replaced — queuepilot
  * found this the hard way and switched its e2e handles to
  * `data-testid`, which nothing injects. Everything else on the button
  * (`data-*`, `onClick`, `form`, …) passes straight through.
@@ -90,6 +120,7 @@ export type PickerProps = Omit<
 export const Picker = ({
   appearance = "outline",
   className,
+  iconEnd = CHEVRON_DOWN,
   intent = "neutral",
   isDisabled = false,
   label,
@@ -134,25 +165,7 @@ export const Picker = ({
           appearance={appearance}
           aria-label={`${label}: ${triggerText}`}
           className={className}
-          iconEnd={
-            // Inlined rather than declared as a component, the way
-            // `Select` does it: one JSX expression is not a second
-            // component, and the house rule is one per file.
-            <svg
-              aria-hidden="true"
-              className="size-4"
-              fill="none"
-              focusable={false}
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={1.75}
-              viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path d="m6 9 6 6 6-6" />
-            </svg>
-          }
+          iconEnd={iconEnd}
           intent={intent}
           isDisabled={isDisabled}
           onClick={(clickEvent) => {
