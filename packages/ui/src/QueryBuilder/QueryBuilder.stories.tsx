@@ -1,9 +1,15 @@
 import type { SerializedTree } from "@charcuterie/logic"
-import { createTree, useTree } from "@charcuterie/logic"
+import {
+  createTree,
+  useTree,
+  useVisibility,
+} from "@charcuterie/logic"
 import type { Meta, StoryObj } from "@storybook/react"
 import type { ReactNode } from "react"
+import { useState } from "react"
+import { Button } from "../Button/Button.tsx"
 import { StorySection } from "../board.storyHelpers.tsx"
-import { Select } from "../Select/Select.tsx"
+import { Listbox } from "../Listbox/Listbox.tsx"
 import { QueryBuilder } from "./QueryBuilder.tsx"
 
 /**
@@ -46,6 +52,58 @@ const createLeafValue = (): DemoLeaf => ({
   value: "",
 })
 
+/**
+ * A leaf's own picker — a `Listbox`, like the combinator above it,
+ * because [the 2026-08-10 demotion](../../../../docs/decisions/2026-08-10-listbox-and-combobox-are-the-default-and-select-is-demoted.md)
+ * applies to an app's leaf UI exactly as it does to this component's
+ * own controls. This story is the example apps copy, so it must not
+ * teach the native `Select` the record demoted.
+ *
+ * It is a component rather than inline JSX for the same reason
+ * `QueryBuilderCombinator` is: `Listbox` needs a visibility state, and
+ * a leaf is rendered inside a `.map` where a hook cannot be called.
+ * An app adopting `QueryBuilder` writes this same small wrapper — see
+ * the note in `QueryBuilder.mdx`.
+ */
+const LeafPicker = ({
+  label,
+  onChange,
+  options,
+  value,
+}: {
+  label: string
+  onChange: (value: string) => void
+  options: readonly { label: string; value: string }[]
+  value: string
+}): ReactNode => {
+  const { hide, isVisible, toggle } = useVisibility()
+
+  const currentLabel =
+    options.find((option) => option.value === value)
+      ?.label ?? ""
+
+  return (
+    <Listbox
+      isVisible={isVisible}
+      onDismiss={hide}
+      onSelect={onChange}
+      options={options}
+      selectedValue={value}
+      trigger={
+        <Button
+          appearance="outline"
+          aria-label={`${label}: ${currentLabel}`}
+          intent="neutral"
+          onClick={toggle}
+          size="sm"
+        >
+          {currentLabel}
+        </Button>
+      }
+    />
+  )
+}
+
 const renderLeaf = ({
   onChange,
   value,
@@ -55,23 +113,21 @@ const renderLeaf = ({
   value: DemoLeaf
 }): ReactNode => (
   <div className="flex flex-wrap items-center gap-2">
-    <Select
+    <LeafPicker
       label="Field"
       onChange={(field) => {
         onChange({ ...value, field })
       }}
       options={FIELD_OPTIONS}
-      size="sm"
       value={value.field}
     />
 
-    <Select
+    <LeafPicker
       label="Operator"
       onChange={(operator) => {
         onChange({ ...value, operator })
       }}
       options={OPERATOR_OPTIONS}
-      size="sm"
       value={value.operator}
     />
 
@@ -240,4 +296,134 @@ export const Interactive: Story = {
       }}
     />
   ),
+}
+
+/**
+ * `renderCombinator` — the group's combinator control, owned by the app.
+ *
+ * The default single picker is right when a combinator is a plain enum.
+ * mux-magic's is not: it is a **quantifier** (ANY/ALL/NO) crossed with a
+ * **target** (these groups, style rows, script-info blocks), and the legal
+ * pairs are asymmetric — the DSL has `notAllScriptInfo` and no
+ * `notAllStyle`. Flattened to one list, that asymmetry is invisible; split
+ * in two, the second picker filters and the illegal pair cannot be built.
+ *
+ * This story is that shape in miniature: pick `NOT ALL` and the target
+ * list collapses to the one target it can legally take.
+ */
+const PAIR_COMBINATORS = {
+  "all:group": "and",
+  "all:row": "and",
+  "any:group": "or",
+  "any:row": "or",
+  "notAll:group": "and",
+} as const
+
+const QUANTIFIER_OPTIONS = [
+  { label: "ALL", value: "all" },
+  { label: "ANY", value: "any" },
+  { label: "NOT ALL", value: "notAll" },
+] as const
+
+const CombinatorPair = ({
+  onChange,
+  value,
+}: {
+  onChange: (combinator: Combinator) => void
+  value: Combinator
+}): ReactNode => {
+  const [quantifier, setQuantifier] =
+    useState<string>("all")
+
+  // "NOT ALL" is legal over groups only here — the same filtered
+  // second picker mux-magic needs, in one line.
+  const targetOptions =
+    quantifier === "notAll"
+      ? [{ label: "of these groups", value: "group" }]
+      : [
+          { label: "of these groups", value: "group" },
+          { label: "matching rows", value: "row" },
+        ]
+
+  const [target, setTarget] = useState<string>("group")
+
+  const resolvedTarget =
+    quantifier === "notAll" ? "group" : target
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="font-medium text-content-primary text-sm">
+        Match
+      </span>
+
+      <div className="flex items-center gap-1.5">
+        <LeafPicker
+          label="Quantifier"
+          onChange={(nextQuantifier) => {
+            setQuantifier(nextQuantifier)
+
+            const nextTarget =
+              nextQuantifier === "notAll"
+                ? "group"
+                : resolvedTarget
+
+            onChange(
+              PAIR_COMBINATORS[
+                `${nextQuantifier}:${nextTarget}` as keyof typeof PAIR_COMBINATORS
+              ],
+            )
+          }}
+          options={QUANTIFIER_OPTIONS}
+          value={quantifier}
+        />
+
+        <LeafPicker
+          label="Target"
+          onChange={(nextTarget) => {
+            setTarget(nextTarget)
+
+            onChange(
+              PAIR_COMBINATORS[
+                `${quantifier}:${nextTarget}` as keyof typeof PAIR_COMBINATORS
+              ],
+            )
+          }}
+          options={targetOptions}
+          value={resolvedTarget}
+        />
+      </div>
+
+      <span className="text-content-muted text-xs">
+        {`Combinator: ${String(value)}`}
+      </span>
+    </div>
+  )
+}
+
+export const CustomCombinator: Story = {
+  render: () => {
+    const CustomCombinatorHarness = (): ReactNode => {
+      const tree = useTree<Combinator, DemoLeaf>({
+        defaultCombinator: "and",
+        initialTree: FLAT_TREE,
+      })
+
+      return (
+        <QueryBuilder
+          combinatorOptions={COMBINATOR_OPTIONS}
+          createLeafValue={createLeafValue}
+          renderCombinator={({ onChange, value }) => (
+            <CombinatorPair
+              onChange={onChange}
+              value={value}
+            />
+          )}
+          renderLeaf={renderLeaf}
+          tree={tree}
+        />
+      )
+    }
+
+    return <CustomCombinatorHarness />
+  },
 }
