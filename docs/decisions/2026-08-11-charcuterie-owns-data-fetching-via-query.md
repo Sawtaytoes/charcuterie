@@ -4,7 +4,7 @@
 **Date:** 2026-08-11
 **Type:** Scope
 **Supersedes:** the "Fetching, caching, request-retry → the consumer's react-query" row of [`streams` is a browser package, and push-only](2026-07-31-streams-is-a-browser-package-and-push-only.md) (that decision otherwise stands)
-**Superseded by:** —
+**Superseded by:** the packaging only — [the OpenAPI seam is its own subpath](2026-08-13-the-openapi-seam-is-its-own-subpath-not-part-of-query.md) moved `createApiClient`/`createApiHooks` out of `./query` and onto `./openapi` in `@charcuterie/logic@2.0.0`. Everything else here — including which defaults the client carries and that retries stay on — stands.
 
 ## Decision
 
