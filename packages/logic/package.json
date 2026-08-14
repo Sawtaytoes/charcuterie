@@ -47,6 +47,11 @@
       "types": "./dist/query/index.d.ts",
       "default": "./dist/query/index.js"
     },
+    "./openapi": {
+      "source": "./src/openapi/index.ts",
+      "types": "./dist/openapi/index.d.ts",
+      "default": "./dist/openapi/index.js"
+    },
     "./src/*": "./src/*"
   },
   "files": [
