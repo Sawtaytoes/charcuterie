@@ -16,7 +16,7 @@ import createQueryHooks from "openapi-react-query"
  * import {
  *   createApiClient,
  *   createApiHooks,
- * } from "@charcuterie/logic/query"
+ * } from "@charcuterie/logic/openapi"
  * import type { paths } from "./__generated__/api.gen.ts"
  *
  * const fetchClient = createApiClient<paths>({ baseUrl: "/" })

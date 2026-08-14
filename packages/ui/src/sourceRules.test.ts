@@ -463,17 +463,22 @@ const ENTRY_POINT_RUNTIMES: Record<
     "./core": [],
     "./jotai": ["jotai"],
     "./preact": ["preact", "preact/hooks"],
-    // The request/response data layer. It reaches react-query, the
-    // two openapi-* primitives it re-exports, and `react` (the
-    // provider's `useState`) — all optional peers, so an app that
-    // never imports `./query` resolves none of them. `react/jsx-runtime`
-    // is added only at emit, so it is not a source specifier here.
-    "./query": [
-      "@tanstack/react-query",
-      "openapi-fetch",
-      "openapi-react-query",
-      "react",
-    ],
+    // The typed OpenAPI seam, split out of `./query` so that only an
+    // app whose backend publishes a spec resolves these two. This
+    // table is the thing that makes that split legible: what the row
+    // costs is the whole argument for it being its own entry point.
+    // See the [split
+    // decision](../../../docs/decisions/2026-08-13-the-openapi-seam-is-its-own-subpath-not-part-of-query.md).
+    "./openapi": ["openapi-fetch", "openapi-react-query"],
+    // The request/response data layer: react-query and `react` (the
+    // provider's `useState`), both optional peers, so an app that
+    // never imports `./query` resolves neither. It deliberately does
+    // NOT reach the openapi-* packages — when it did (via the
+    // re-export this row used to list), the type-only edge above was
+    // enough to force every non-OpenAPI consumer to install both.
+    // `react/jsx-runtime` is added only at emit, so it is not a
+    // source specifier here.
+    "./query": ["@tanstack/react-query", "react"],
     "./signals": ["@preact/signals-core"],
   },
   tokens: {
