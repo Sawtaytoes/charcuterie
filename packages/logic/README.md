@@ -9,21 +9,21 @@ bindings. No components — those are `@charcuterie/ui` (M3).
 @charcuterie/logic/preact     Preact binding (no preact/compat)
 @charcuterie/logic/jotai      optional store adapter
 @charcuterie/logic/signals    optional store adapter
-@charcuterie/logic/query      request/response data layer (TanStack Query + openapi-fetch)
+@charcuterie/logic/query      request/response data layer (TanStack Query)
+@charcuterie/logic/openapi    the typed HTTP seam, for a backend with an OpenAPI spec
 ```
 
 ## `@charcuterie/logic/query` — the data layer
 
-The fleet's one way to fetch: TanStack Query for caching, a `paths`-typed
-`openapi-fetch` client for the wire, and the defaults two apps had already tuned
-before this existed.
+The fleet's one way to fetch: TanStack Query for caching, and the defaults two
+apps had already tuned before this existed.
 
 ```tsx
+import { QueryProvider } from "@charcuterie/logic/query"
 import {
   createApiClient,
   createApiHooks,
-  QueryProvider,
-} from "@charcuterie/logic/query"
+} from "@charcuterie/logic/openapi"
 import type { paths } from "./__generated__/api.gen.ts"
 
 const fetchClient = createApiClient<paths>({ baseUrl: "/" })
@@ -47,9 +47,12 @@ the layer recovers from a transient blip — and deep-merges any override. A
 polling app that wants a failed request to *not* retry (because backoff would
 keep stale data on screen) opts out explicitly:
 `createQueryClient({ defaultOptions: { queries: { retry: false } } })` — the call
-rip-deck and board-games make. `@tanstack/react-query`, `openapi-fetch`, and
-`openapi-react-query` are **optional** peers: import `./query` and you opt into
-them; don't and you pull none.
+rip-deck and board-games make. All three libraries are **optional** peers, and
+the two subpaths opt into different ones: `./query` needs only
+`@tanstack/react-query`, and `./openapi` adds `openapi-fetch` +
+`openapi-react-query`. An app with no OpenAPI document imports `./query` alone
+and installs neither — [why they are separate
+subpaths](../../docs/decisions/2026-08-13-the-openapi-seam-is-its-own-subpath-not-part-of-query.md).
 
 The `paths` type is generated from the backend's OpenAPI document by
 `openapi-typescript` and committed as a `.gen.ts` file that Biome and ESLint
