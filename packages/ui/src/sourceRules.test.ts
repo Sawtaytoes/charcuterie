@@ -499,6 +499,16 @@ const ENTRY_POINT_RUNTIMES: Record<
       // tree-shakeable, ~4 KB gz.
       "@tanstack/react-virtual",
       "react",
+      // `toClassName`'s conflict resolution — the third runtime
+      // dependency this package has ever taken. MIT, German origin
+      // (Dany Castillo), ~7 KB gz, no transitive deps.
+      //
+      // It earns the entry: without it `className` is not an escape
+      // hatch. A caller's `hidden` and the base `inline-flex` are
+      // display utilities at equal specificity, so the winner came
+      // from stylesheet source order and the caller could not win —
+      // silently, which is how it shipped broken in three repos.
+      "tailwind-merge",
     ],
     // The router seam's one shipped adapter, and the reason it is a
     // subpath rather than part of the barrel: `react-router` appears

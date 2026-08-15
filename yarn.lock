@@ -992,6 +992,7 @@ __metadata:
     react-dom: "npm:^19.2.8"
     react-router: "npm:^8.3.0"
     storybook: "npm:^10.3.6"
+    tailwind-merge: "npm:^3.6.0"
     tailwindcss: "npm:^4.3.0"
     typescript: "npm:^6.0.3"
     vitest: "npm:^4.1.8"
@@ -9315,6 +9316,13 @@ __metadata:
   version: 6.5.0
   resolution: "tabbable@npm:6.5.0"
   checksum: 10c0/7d778af05a3093800265831198cad9d0024f3d65cdd4405007490f7430b42ff4e80060b4679f45281fb96ddbddc5fb895e8ea36e3ebdc811051e14acc9c7c02c
+  languageName: node
+  linkType: hard
+
+"tailwind-merge@npm:^3.6.0":
+  version: 3.6.0
+  resolution: "tailwind-merge@npm:3.6.0"
+  checksum: 10c0/a728d929f4786bcb48641db4228cc8c006a7545491783a658fb4d24d177dab960620991d17805a047309228de50ab949ca8d9e112c30183da0432367796ae186
   languageName: node
   linkType: hard
 
