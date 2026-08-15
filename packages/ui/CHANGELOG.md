@@ -1,5 +1,70 @@
 # @charcuterie/ui
 
+## 2.16.0
+
+### Minor Changes
+
+- 4e958fc: `className` can now override a component's base utilities. It could not before,
+  and failed silently when it did not.
+
+  `toClassName` was a filter-and-join with no conflict resolution, so
+  `getControlClassName(CONTROL_BASE_CLASS, …, className)` emitted both classes and
+  let the generated stylesheet's source order pick a winner. A caller writing
+  `<Button className="hidden lg:inline-flex" />` got
+  `class="inline-flex … hidden lg:inline-flex"`, where `.hidden` and `.inline-flex`
+  sit at equal specificity — so the caller could not win, whatever they wrote. The
+  same applied to every base-class category a consumer might reasonably override:
+  display, `rounded-md`, `border`, `whitespace-nowrap`, `font-medium`, and the
+  `h-`/`px-`/`text-` triplet from `CONTROL_SIZE_CLASS`.
+
+  It failed invisibly. mail-sifter used exactly that class to hide a duplicate
+  header button below `lg`; it never hid, and went unnoticed for weeks because the
+  header happened to fit anyway — surfacing only when an unrelated type-ramp change
+  pushed it 37px wider and scrolled the page sideways. Two other repos hit the same
+  shape independently.
+
+  `toClassName` now resolves conflicts with `tailwind-merge` — the third runtime
+  dependency this package has taken (MIT, ~7 KB gz, no transitive deps). The
+  docblock's standing argument against a dependency was about `clsx`'s object and
+  nested-array forms hurting static scanning; that does not transfer, since the
+  _input_ shape here is unchanged and every call site stays statically scannable.
+
+  **Nothing this package emits changes.** That was measured, not assumed: the merge
+  is a no-op across all 358 class-string literals in `src` and all 288 strings
+  `getControlClassName` composes, and both checks are now tests. So this only ever
+  acts on a genuine caller conflict.
+
+  `ease-standard` is registered explicitly in the merge config — it is ours, from
+  the motion tokens, and would otherwise land in no class group and fail to merge.
+
+  Fixes #81.
+
+### Patch Changes
+
+- 95f973f: `useAnchoredOverlay` now prefers the trigger's own `id` instead of cloning a
+  generated one over it.
+
+  It minted an id so the portalled panel could point `aria-labelledby` across at
+  the trigger. That is still needed — a bare `role="listbox"` is an ARIA input
+  field and must be named — but any id serves, including the caller's, and
+  overwriting had a consequence nobody traced: `Field` clones a `controlId` onto
+  its child and renders `<label htmlFor={controlId}>`, so for every
+  `Picker`/`Listbox`/`Combobox`/`Menu` inside a `Field` the label pointed at an
+  element that did not exist.
+
+  It failed silently. A dangling `htmlFor` throws nothing and renders nothing —
+  the only way to see it was to look up the id in the DOM and find zero nodes.
+  That is the same defect `Field`'s own docstring calls "precisely the defect this
+  component was built to make impossible", arriving by a different route.
+
+  Found while migrating points-market onto `Picker`, where it reproduced
+  identically before and after the migration — so it is long-standing, not new.
+  Two rediscoveries of the overwrite were already in the fleet: queuepilot and
+  mux-magic both moved their e2e handles to `data-testid` because `id` "did not
+  survive". `data-testid` remains the sturdier handle; `id` is no longer a trap.
+
+  Fixes #99.
+
 ## 2.15.1
 
 ### Patch Changes
