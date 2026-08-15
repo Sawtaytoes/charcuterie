@@ -51,7 +51,8 @@
     "@charcuterie/logic": "workspace:*",
     "@charcuterie/tokens": "workspace:*",
     "@floating-ui/react": "^0.27.20",
-    "@tanstack/react-virtual": "^3.13.12"
+    "@tanstack/react-virtual": "^3.13.12",
+    "tailwind-merge": "^3.6.0"
   },
   "peerDependencies": {
     "react": ">=19",
