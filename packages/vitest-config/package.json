@@ -1,7 +1,7 @@
 {
   "name": "@charcuterie/vitest-config",
   "version": "1.0.1",
-  "description": "A shared Vitest config factory for the Charcuterie fleet — call createVitestConfig(overrides) instead of hand-rolling vitest.config.ts.",
+  "description": "A shared Vitest config factory for the Charcuterie fleet \u2014 call createVitestConfig(overrides) instead of hand-rolling vitest.config.ts.",
   "license": "MIT",
   "type": "module",
   "main": "./src/index.js",
@@ -10,6 +10,10 @@
     ".": {
       "types": "./src/index.d.ts",
       "default": "./src/index.js"
+    },
+    "./check-optimize-deps": {
+      "types": "./src/checkOptimizeDeps.d.ts",
+      "default": "./src/checkOptimizeDeps.js"
     },
     "./*": "./src/*"
   },
@@ -35,5 +39,8 @@
     "type": "git",
     "url": "git+https://github.com/Sawtaytoes/charcuterie.git",
     "directory": "packages/vitest-config"
+  },
+  "bin": {
+    "charcuterie-check-optimize-deps": "./src/cli/checkOptimizeDeps.js"
   }
 }
