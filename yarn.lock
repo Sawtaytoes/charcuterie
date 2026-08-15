@@ -1025,6 +1025,8 @@ __metadata:
     vitest: "npm:^4.1.8"
   peerDependencies:
     vitest: ">=3"
+  bin:
+    charcuterie-check-optimize-deps: ./src/cli/checkOptimizeDeps.js
   languageName: unknown
   linkType: soft
 

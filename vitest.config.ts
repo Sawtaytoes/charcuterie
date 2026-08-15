@@ -13,6 +13,7 @@ export default defineConfig({
       "packages/logic/vitest.browser.config.ts",
       "packages/eslint-config/vitest.config.ts",
       "packages/vite-config/vitest.config.ts",
+      "packages/vitest-config/vitest.config.ts",
       "packages/server/vitest.config.ts",
       "packages/storybook-config/vitest.config.ts",
       "packages/ui/vitest.config.ts",
