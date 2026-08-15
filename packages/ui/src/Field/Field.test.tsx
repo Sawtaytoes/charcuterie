@@ -9,6 +9,7 @@ import * as stories from "./Field.stories.tsx"
 
 const {
   AdoptsChildId,
+  AdoptsOverlayTriggerId,
   AllStates,
   AllVariants,
   Default,
@@ -34,6 +35,43 @@ test("a control's own id is adopted, not overwritten", async () => {
     "id",
     "rename-pattern",
   )
+
+  await expectNoAxeViolations(canvasElement)
+})
+
+test("an overlay trigger keeps the id the label points at", async () => {
+  const { canvas, canvasElement } = await mountStory(
+    AdoptsOverlayTriggerId,
+  )
+
+  // The regression this exists for: `useAnchoredOverlay` minted its own
+  // trigger id and cloned it over the Field's, so the `<label htmlFor>`
+  // named an element that was not in the document. Nothing threw and
+  // nothing looked wrong — the only way to see it was to go looking for
+  // the id.
+  const label = canvasElement.querySelector("label")
+
+  await expect(label).not.toBeNull()
+
+  const htmlFor = label?.getAttribute("for")
+
+  await expect(htmlFor).toBeTruthy()
+
+  // The assertion that fails on the old behaviour: the id the label
+  // names must actually exist, and must BE the trigger.
+  const target = canvasElement.ownerDocument.getElementById(
+    htmlFor as string,
+  )
+
+  await expect(target).not.toBeNull()
+  await expect(target?.tagName).toBe("BUTTON")
+
+  // And the round trip callers actually rely on: findable by the
+  // label's own text.
+  expectAgentDrivable(canvas, {
+    name: /^Language: /,
+    role: "button",
+  })
 
   await expectNoAxeViolations(canvasElement)
 })

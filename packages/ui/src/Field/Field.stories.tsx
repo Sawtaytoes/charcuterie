@@ -4,6 +4,7 @@ import {
   StoryCell,
   StoryGrid,
 } from "../board.storyHelpers.tsx"
+import { Picker } from "../Picker/Picker.tsx"
 import { Select } from "../Select/Select.tsx"
 import { Tooltip } from "../Tooltip/Tooltip.tsx"
 import { Field } from "./Field.tsx"
@@ -52,6 +53,33 @@ export const AdoptsChildId: Story = {
       />
     ),
     label: "Rename pattern",
+  },
+}
+
+/**
+ * An overlay-triggered control — `Picker`, and by the same route
+ * `Listbox`, `Combobox` and `Menu` — is the case that used to break.
+ *
+ * `useAnchoredOverlay` minted its own trigger id and cloned it over
+ * whatever was there, so the `<label htmlFor>` above pointed at an
+ * element that did not exist. It failed silently: a dangling `htmlFor`
+ * throws nothing, renders nothing, and only shows up if you go looking
+ * for the id in the DOM. The hook now prefers the trigger's own id.
+ */
+export const AdoptsOverlayTriggerId: Story = {
+  args: {
+    children: (
+      <Picker
+        label="Language"
+        onChange={() => {}}
+        options={[
+          { label: "English", value: "en" },
+          { label: "Japanese", value: "ja" },
+        ]}
+        value="en"
+      />
+    ),
+    label: "Language",
   },
 }
 
