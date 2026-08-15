@@ -225,7 +225,39 @@ export const useAnchoredOverlay = ({
   // input field and must be named.
   const generatedTriggerId = useUniqueId()
 
+  /**
+   * The trigger's OWN id wins over both.
+   *
+   * This hook used to mint an id and clone it over whatever the
+   * trigger already had, on the reasoning that the panel needs a
+   * stable target for `aria-labelledby`. It does — but any id serves
+   * that purpose, including the caller's, and overwriting had a
+   * consequence nobody traced: `Field` clones a `controlId` onto its
+   * child and renders `<label htmlFor={controlId}>`, so for every
+   * `Picker`/`Listbox`/`Combobox`/`Menu` inside a `Field` the label
+   * pointed at an element that did not exist. Measured in a real
+   * browser: zero nodes carried the id the `<label>` named.
+   *
+   * That is the exact defect `Field`'s docstring calls "precisely the
+   * defect this component was built to make impossible" — arriving by
+   * a different route, and silent, because a dangling `htmlFor`
+   * throws nothing and shows nothing.
+   *
+   * Preferring the child's id fixes the label without weakening the
+   * panel: `aria-labelledby` now points at the caller's id instead of
+   * a generated one, which is the same element either way.
+   *
+   * Two rediscoveries of the overwrite are already in the fleet —
+   * queuepilot and mux-magic both moved their e2e handles to
+   * `data-testid` because `id` "did not survive". `data-testid` is
+   * still the more robust handle, but `id` is no longer a trap.
+   */
+  const triggerOwnId = (
+    trigger?.props as { id?: string } | undefined
+  )?.id
+
   const triggerId =
+    triggerOwnId ??
     (referenceProps.id as string | undefined) ??
     generatedTriggerId
 

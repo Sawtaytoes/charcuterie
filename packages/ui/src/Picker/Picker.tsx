@@ -108,14 +108,20 @@ export type PickerProps = Omit<
  *
  * Query it as `getByRole("button", { name: /^Language: / })`.
  *
- * ### `id` does not survive; `data-testid` does
+ * ### `id` survives — it did not always
  *
- * `useAnchoredOverlay` overwrites the trigger's `id` with a generated
- * one, so the portalled listbox can point `aria-labelledby` across at
- * it. An `id` passed here is therefore silently replaced — queuepilot
- * found this the hard way and switched its e2e handles to
- * `data-testid`, which nothing injects. Everything else on the button
- * (`data-*`, `onClick`, `form`, …) passes straight through.
+ * `useAnchoredOverlay` used to overwrite the trigger's `id` with a
+ * generated one so the portalled listbox could point `aria-labelledby`
+ * across at it. That silently broke `Field`, which renders
+ * `<label htmlFor>` against an id it clones onto its child: the label
+ * pointed at nothing for every overlay control in a `Field`. The hook
+ * now prefers the trigger's own id and mints one only when absent, so
+ * both the label and the panel name the same element.
+ *
+ * `data-testid` remains the sturdier e2e handle — queuepilot and
+ * mux-magic both moved to it while `id` was still being replaced — but
+ * `id` is no longer a trap. Everything else on the button (`data-*`,
+ * `onClick`, `form`, …) passes straight through.
  */
 export const Picker = ({
   appearance = "outline",
