@@ -209,3 +209,17 @@ export const Interactive: Story = {
     title: "Blade Runner",
   },
 }
+
+/**
+ * Same chrome as the link — pointer, hover fade, focus ring —
+ * as a button. Wrapping the tile in a bare `<button>` is how a
+ * Collection thumbnail ended up with a text cursor.
+ */
+export const InteractiveButton: Story = {
+  args: {
+    alt: "Change cover for Blade Runner",
+    onClick: () => undefined,
+    src: toPosterSrc("Blade Runner"),
+    title: "",
+  },
+}

@@ -40,10 +40,15 @@ carries, and for the same reason.
 
 ## Names
 
-`alt` is required. When `href` is set, the link carries `aria-label={title}` and the image
-goes `alt=""` — an agent writing `getByRole("link", { name: "Blade Runner" })` should not
-have to know whether a subtitle happened to be rendered, and two names for one link is a
-screen reader reading it twice.
+`alt` is required. When `href` or `onClick` is set, the control carries
+`aria-label={title}` (or `alt` if `title` is empty) and the image goes `alt=""` — an agent
+writing `getByRole("link", { name: "Blade Runner" })` or `getByRole("button", { name: "Change cover for Blade Runner" })`
+should not have to know whether a subtitle happened to be rendered, and two names for one
+control is a screen reader reading it twice.
+
+`onClick` is the button form of that same chrome: pointer cursor, hover fade, focus-visible
+ring. Do not wrap `MediaTile` in a bare `<button>` — Tailwind's preflight leaves a text
+cursor and no hover, which is how a Collection thumbnail looked inert.
 
 The caption's type steps up past `--cq-sm`, so a tile in a dense 8-across grid and the same
 tile in a 3-across one are both legible.
