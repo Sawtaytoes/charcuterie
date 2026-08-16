@@ -1,7 +1,7 @@
 {
   "name": "@charcuterie/server",
   "version": "0.2.0",
-  "description": "The fleet's Hono static-asset handler — precompressed bytes, honest cache headers, and the Vite plugin that produces them.",
+  "description": "The fleet's Node server kit — Hono static-asset handler, and MQTT cmd/resp.",
   "license": "MIT",
   "type": "module",
   "sideEffects": false,
@@ -22,6 +22,11 @@
       "types": "./dist/vite/index.d.ts",
       "default": "./dist/vite/index.js"
     },
+    "./mqtt": {
+      "source": "./src/mqtt/index.ts",
+      "types": "./dist/mqtt/index.d.ts",
+      "default": "./dist/mqtt/index.js"
+    },
     "./src/*": "./src/*"
   },
   "files": [
@@ -37,9 +42,13 @@
   "peerDependencies": {
     "@hono/node-server": ">=1.13",
     "hono": ">=4",
+    "mqtt": ">=5",
     "vite": ">=5"
   },
   "peerDependenciesMeta": {
+    "mqtt": {
+      "optional": true
+    },
     "vite": {
       "optional": true
     }
@@ -48,6 +57,7 @@
     "@hono/node-server": "^2.0.2",
     "@types/node": "^25.6.2",
     "hono": "^4.12.21",
+    "mqtt": "^5.15.2",
     "typescript": "^6.0.3",
     "vite": "^8.0.16",
     "vitest": "^4.1.8"
