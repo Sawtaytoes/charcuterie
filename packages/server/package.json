@@ -1,6 +1,6 @@
 {
   "name": "@charcuterie/server",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "The fleet's Node server kit — Hono static-asset handler, and MQTT cmd/resp.",
   "license": "MIT",
   "type": "module",
