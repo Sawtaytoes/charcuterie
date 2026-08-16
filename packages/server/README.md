@@ -1,8 +1,10 @@
 # @charcuterie/server
 
-The fleet's Hono static-asset handler: **precompressed bytes, honest cache headers, and
-one 304 where it helps.** Plus the Vite plugin that produces the compressed bytes, because
-the two halves are one contract and shipping them apart is how they drift.
+The fleet's Node server kit: **precompressed bytes, honest cache headers, and
+one 304 where it helps**, plus MQTT `cmd/*` / `resp/*` for talking to Home Assistant.
+The Vite plugin that produces the compressed bytes lives beside the static handler
+because the two halves are one contract and shipping them apart is how they drift.
+MQTT is a separate subpath so a static-only app never resolves `mqtt`.
 
 ## Why this exists
 
@@ -42,6 +44,34 @@ app.use("*", createStaticHandler({ rootDir: webDistDir }))
 
 Adopting them in either order is safe: with no `.br`/`.gz` siblings on disk the handler
 serves the originals, and the siblings are inert until something looks for them.
+
+## MQTT cmd/resp
+
+Node-only. Import `@charcuterie/server/mqtt`, not the main barrel, and add `mqtt` as a
+dependency of the app. Command and response topics are **never retained** — a broker
+replay must not re-run a nightly. Overlapping commands for the same action are rejected
+with `{ ok: false, reason: "already-running" }`.
+
+```ts
+import { createMqttService } from "@charcuterie/server/mqtt"
+
+const mqtt = await createMqttService({
+  base: "board-game-picker",
+  host: process.env.MQTT_HOST,
+  password: process.env.MQTT_PASS,
+  username: process.env.MQTT_USER,
+})
+
+mqtt.handleCommand("sync", async (payload) => {
+  // run the work
+  return { ok: true, payload }
+})
+// board-game-picker/cmd/sync  →  board-game-picker/resp/sync
+```
+
+TLS defaults on when the port is `8883` (`mqtt.octen.dev`). Pass `isTls` to override.
+`truenas-mqtt`'s `trigger`/`status` tree is a legacy special case — new apps use
+`cmd`/`resp`. This does **not** belong in `@charcuterie/streams` (browser, push-only).
 
 ## What you get
 
@@ -157,4 +187,5 @@ Set headers in a middleware *before* `serveStatic`, which is what this package d
 
 `hono` and `@hono/node-server` are required peers — the app owns the versions. `vite` is
 an **optional** peer needed only by the `/vite` entry point, so a server never resolves
-Vite and a build never resolves Hono.
+Vite and a build never resolves Hono. `mqtt` is an **optional** peer needed only by the
+`/mqtt` entry point, so a static-only app never resolves a broker client.
