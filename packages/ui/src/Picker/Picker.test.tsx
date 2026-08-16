@@ -7,7 +7,7 @@ import { mountStory } from "../mountStory.testHelpers.ts"
 import { expectAgentDrivable } from "../testing/index.ts"
 import * as stories from "./Picker.stories.tsx"
 
-const { AllStates, Default, Interactive } =
+const { AllStates, Default, Interactive, NextToText } =
   composeStories(stories)
 
 test("the trigger's accessible name carries the current value", async () => {
@@ -81,6 +81,18 @@ test("a disabled picker does not open", async () => {
   await expect(body.queryAllByRole("listbox")).toHaveLength(
     0,
   )
+})
+
+test("an inline picker next to a label is still named and has no axe issues", async () => {
+  const { canvas, canvasElement } =
+    await mountStory(NextToText)
+
+  expectAgentDrivable(canvas, {
+    name: "Inline count: 2 Default",
+    role: "button",
+  })
+
+  await expectNoAxeViolations(canvasElement)
 })
 
 test("a rich option label keeps a plain-string trigger via textValue", async () => {

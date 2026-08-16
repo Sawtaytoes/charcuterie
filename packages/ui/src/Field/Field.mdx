@@ -27,6 +27,12 @@ in one place and cannot be spelled twice.
 
 <Canvas of={FieldStories.Default} />
 
+`Field` is also how a `Picker` (or `Button`, or `Select`) sits next to
+its label **without butting against the last word**. Those controls are
+flush — no outer margin — on purpose. The stacked `gap-1.5` here is the
+gutter. An inline label + trigger is a row with `gap-*`, not a margin
+on the control. See [Picker](../Picker/Picker.mdx#the-trigger-is-flush--the-parent-owns-the-gap).
+
 ## Props
 
 <Controls />
