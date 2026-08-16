@@ -5,8 +5,10 @@
 **Type:** Scope
 **Supersedes:** the "MQTT, in any form → Node, still one implementation" row of
 [`streams` is a browser package, and push-only](2026-07-31-streams-is-a-browser-package-and-push-only.md)
-(that decision otherwise stands: MQTT is still **not** in `streams`, still Node-only)
-**Superseded by:** —
+(that decision otherwise stands for the browser/push default export; MQTT as a Node export of `streams` is allowed — see the 2026-08-16 streams-may-export record)
+**Superseded by:** [streams may export MQTT as a Node entry](2026-08-16-streams-may-export-mqtt-as-a-node-entry.md)
+  for the "MQTT is still not in `streams`" clause only. `@charcuterie/server/mqtt`
+  remains the published client until `streams` exists.
 **Related:** [prefer an existing package over a new one](2026-08-11-unify-app-shared-logic-into-charcuterie.md),
 [HA MQTT is the scheduler](https://forgejo.octen.dev/sawtaytoes/agentic/src/branch/main/docs/decisions/2026-08-16-ha-mqtt-schedules-over-truenas-cron.md)
 

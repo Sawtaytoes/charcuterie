@@ -6,7 +6,8 @@
 **Supersedes:** —
 **Superseded by:**
 - [Charcuterie owns request/response data-fetching, via `@charcuterie/logic/query`](2026-08-11-charcuterie-owns-data-fetching-via-query.md) — **in part only.** It strikes the "Fetching, caching, request-retry → the consumer's react-query" row of the table below (fetching now has a Charcuterie home).
-- [MQTT cmd/resp lives at `@charcuterie/server/mqtt`](2026-08-16-mqtt-cmd-resp-is-charcuterie-server-mqtt.md) — **in part only.** It names the Node home for the MQTT row. MQTT is still not in `streams`.
+- [MQTT cmd/resp lives at `@charcuterie/server/mqtt`](2026-08-16-mqtt-cmd-resp-is-charcuterie-server-mqtt.md) — **in part only.** It names today's published Node client.
+- [`streams` may export MQTT as a Node entry](2026-08-16-streams-may-export-mqtt-as-a-node-entry.md) — **in part only.** It strikes the "MQTT, in any form, not now or later" row. A Node export (`./mqtt`) is allowed; the browser/push default export is unchanged.
 
 Everything else here — `streams` is browser-only, push-only, RxJS, and a *separate* package from `query` — still stands.
 
