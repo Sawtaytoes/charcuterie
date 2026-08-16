@@ -27,10 +27,26 @@ export type MediaTileProps = Omit<
   /** Shown in place of the image when it fails. */
   fallback?: ReactNode
   href?: string
+  /**
+   * Makes the tile a button. Hover, focus-visible and
+   * `cursor-pointer` come with it — wrapping `MediaTile` in a
+   * bare `<button>` is how a poster ends up with a text cursor
+   * and no hover at all. `href` wins if both are set.
+   */
+  isDisabled?: boolean
+  onClick?: ComponentPropsWithRef<"button">["onClick"]
   src?: string
   subtitle?: ReactNode
   title: string
 }
+
+/**
+ * Shared by the link and the button. A wrapped `<button
+ * className="block">` does not get these, which is why a
+ * Collection thumbnail looked inert under the pointer.
+ */
+const INTERACTIVE_CLASS =
+  "group flex cursor-pointer flex-col rounded-md outline-offset-2 hover:opacity-90 focus-visible:outline-solid focus-visible:outline-(length:--focus-ring-width) focus-visible:outline-focus-ring"
 
 const RATIO_CLASS: Record<MediaTileRatio, string> = {
   // 2:3 is the standard poster trim, which is what Plex, Kavita, and
@@ -72,6 +88,8 @@ export const MediaTile = ({
   className,
   fallback,
   href,
+  isDisabled = false,
+  onClick,
   src,
   subtitle,
   title,
@@ -144,7 +162,7 @@ export const MediaTile = ({
           ) : null}
 
           <img
-            alt={href ? "" : alt}
+            alt={href || onClick ? "" : alt}
             className={toClassName(
               "size-full object-cover transition-opacity duration-(--duration-normal) ease-standard",
               status === "loaded"
@@ -177,19 +195,27 @@ export const MediaTile = ({
     </div>
   )
 
-  const caption = (
-    <figcaption className="flex flex-col gap-0.5 pt-2">
-      <span className="truncate font-medium text-content-primary text-sm cq-sm:text-md">
-        {title}
-      </span>
-
-      {subtitle ? (
-        <span className="truncate text-content-muted text-xs">
-          {subtitle}
+  const caption =
+    title === "" ? null : (
+      <figcaption className="flex flex-col gap-0.5 pt-2">
+        <span className="truncate font-medium text-content-primary text-sm cq-sm:text-md">
+          {title}
         </span>
-      ) : null}
-    </figcaption>
-  )
+
+        {subtitle ? (
+          <span className="truncate text-content-muted text-xs">
+            {subtitle}
+          </span>
+        ) : null}
+      </figcaption>
+    )
+
+  // An empty `title` is how a tile sits next to a name the
+  // parent already printed. The control still needs a name, so
+  // the alt is the fallback — wrapping it in a nameless
+  // `<button>` was how Collection's cover thumbnail became
+  // unfindable as well as un-hoverable.
+  const accessibleName = title === "" ? alt : title
 
   return (
     <figure
@@ -207,14 +233,29 @@ export const MediaTile = ({
         // The `<img>` inside goes `alt=""` for the same reason: two
         // names for one link is a screen reader reading it twice.
         <a
-          aria-label={title}
-          className="group flex flex-col rounded-md outline-offset-2 hover:opacity-90 focus-visible:outline-solid focus-visible:outline-(length:--focus-ring-width) focus-visible:outline-focus-ring"
+          aria-label={accessibleName}
+          className={INTERACTIVE_CLASS}
           href={href}
         >
           {media}
 
           {caption}
         </a>
+      ) : onClick ? (
+        <button
+          aria-label={accessibleName}
+          className={toClassName(
+            INTERACTIVE_CLASS,
+            "w-full border-0 bg-transparent p-0 text-start disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:opacity-50",
+          )}
+          disabled={isDisabled}
+          onClick={onClick}
+          type="button"
+        >
+          {media}
+
+          {caption}
+        </button>
       ) : (
         <>
           {media}
