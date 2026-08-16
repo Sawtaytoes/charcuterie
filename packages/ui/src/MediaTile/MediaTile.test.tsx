@@ -6,7 +6,8 @@ import { mountStory } from "../mountStory.testHelpers.ts"
 import { expectAgentDrivable } from "../testing/index.ts"
 import * as stories from "./MediaTile.stories.tsx"
 
-const { Default, Interactive } = composeStories(stories)
+const { Default, Interactive, InteractiveButton } =
+  composeStories(stories)
 
 test("an unlinked tile's poster carries the name", async () => {
   const { canvas } = await mountStory(Default)
@@ -38,4 +39,19 @@ test("a linked tile is one link named for its title", async () => {
   // The image inside a linked tile is `alt=""` on purpose: two names
   // for one link is a screen reader reading it twice.
   await expect(canvas.queryAllByRole("img")).toHaveLength(0)
+})
+
+test("a clickable tile is one button with a pointer cursor", async () => {
+  const { canvas } = await mountStory(InteractiveButton)
+
+  const button = expectAgentDrivable(canvas, {
+    name: "Change cover for Blade Runner",
+    role: "button",
+  })
+
+  await expect(button).toHaveStyle({ cursor: "pointer" })
+
+  await userEvent.tab()
+
+  await expect(button).toHaveFocus()
 })
