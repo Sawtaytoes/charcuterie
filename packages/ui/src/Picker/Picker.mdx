@@ -46,6 +46,37 @@ text of the whole node.
 
 <Canvas of={PickerStories.AllStates} />
 
+## The trigger is flush — the parent owns the gap
+
+`Picker` is a `Button`. It has **no outer margin**. Next to a text
+label it sits hard against the last word, which is how queuepilot's
+"Chapters queued per turn" landed flush on the `[2 Default]` trigger,
+and why that same app already had a one-off `#setmodal .fieldselect {
+margin-left: 10px }` for the *other* inline pickers.
+
+Do not put the gutter on `Picker`. A control that ships its own
+margin is a control that fights `Field` (`flex flex-col gap-1.5`) and
+every toolbar row. The parent that decided to sit text next to a
+trigger also owns the space:
+
+```tsx
+{/* stacked — this is Field's job */}
+<Field label="Chapters queued per turn" description="…">
+  <Picker label="Chapters queued per turn" … />
+</Field>
+
+{/* inline — the row owns the gap */}
+<span className="inline-flex items-center gap-2.5">
+  Chapters queued per turn
+  <Picker label="Chapters queued per turn" … />
+</span>
+```
+
+The same rule is `Button`, `Select`, and a `Listbox` trigger. They are
+all flush; they are all the same trap.
+
+<Canvas of={PickerStories.NextToText} />
+
 ## `id` does not survive; `data-testid` does
 
 `useAnchoredOverlay` overwrites the trigger's `id` with a generated one so the portalled

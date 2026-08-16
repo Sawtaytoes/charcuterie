@@ -12,6 +12,7 @@ import {
   StoryRow,
   StorySection,
 } from "../board.storyHelpers.tsx"
+import { Field } from "../Field/Field.tsx"
 import type { PickerOption } from "./Picker.tsx"
 import { Picker } from "./Picker.tsx"
 
@@ -180,5 +181,78 @@ export const Interactive: Story = {
       label="Language"
       options={LANGUAGES}
     />
+  ),
+}
+
+const COUNTS: PickerOption[] = [
+  { label: "1", value: "1" },
+  {
+    label: (
+      <span className="flex items-center gap-2">
+        <span>2</span>
+        <Badge intent="neutral" size="sm">
+          Default
+        </Badge>
+      </span>
+    ),
+    textValue: "2 Default",
+    value: "2",
+  },
+  { label: "Custom…", value: "custom" },
+]
+
+/**
+ * The trigger has no outer margin. Sitting it next to a label without
+ * a parent gap is the flush-against-the-word bug; `Field` or an
+ * `inline-flex gap-*` row is the parent owning the gutter.
+ */
+export const NextToText: Story = {
+  render: () => (
+    <div className="flex flex-col gap-8">
+      <StorySection title="Flush — the parent gave it no gap">
+        <StoryRow>
+          <span>
+            Chapters queued per turn{" "}
+            <Picker
+              label="Flush count"
+              onChange={() => undefined}
+              options={COUNTS}
+              size="sm"
+              value="2"
+            />
+          </span>
+        </StoryRow>
+      </StorySection>
+      <StorySection title="Inline — the row owns the gap">
+        <StoryRow>
+          <span className="inline-flex items-center gap-2.5">
+            Chapters queued per turn
+            <Picker
+              label="Inline count"
+              onChange={() => undefined}
+              options={COUNTS}
+              size="sm"
+              value="2"
+            />
+          </span>
+        </StoryRow>
+      </StorySection>
+      <StorySection title="Stacked — Field owns the gap">
+        <StoryRow>
+          <Field
+            description="How long this entry’s turn is when the queue reaches it."
+            label="Chapters queued per turn"
+          >
+            <Picker
+              label="Stacked count"
+              onChange={() => undefined}
+              options={COUNTS}
+              size="sm"
+              value="2"
+            />
+          </Field>
+        </StoryRow>
+      </StorySection>
+    </div>
   ),
 }
