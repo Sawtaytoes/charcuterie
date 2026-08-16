@@ -88,7 +88,7 @@ test("an inline picker next to a label is still named and has no axe issues", as
     await mountStory(NextToText)
 
   expectAgentDrivable(canvas, {
-    name: "Chapters queued per turn: 2 Default",
+    name: "Inline count: 2 Default",
     role: "button",
   })
 

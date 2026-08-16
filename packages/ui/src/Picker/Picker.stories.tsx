@@ -8,11 +8,11 @@ import {
   placementArgType,
 } from "../argTypes.storyHelpers.ts"
 import { Badge } from "../Badge/Badge.tsx"
-import { Field } from "../Field/Field.tsx"
 import {
   StoryRow,
   StorySection,
 } from "../board.storyHelpers.tsx"
+import { Field } from "../Field/Field.tsx"
 import type { PickerOption } from "./Picker.tsx"
 import { Picker } from "./Picker.tsx"
 
@@ -214,7 +214,7 @@ export const NextToText: Story = {
           <span>
             Chapters queued per turn{" "}
             <Picker
-              label="Chapters queued per turn"
+              label="Flush count"
               onChange={() => undefined}
               options={COUNTS}
               size="sm"
@@ -228,7 +228,7 @@ export const NextToText: Story = {
           <span className="inline-flex items-center gap-2.5">
             Chapters queued per turn
             <Picker
-              label="Chapters queued per turn"
+              label="Inline count"
               onChange={() => undefined}
               options={COUNTS}
               size="sm"
@@ -244,7 +244,7 @@ export const NextToText: Story = {
             label="Chapters queued per turn"
           >
             <Picker
-              label="Chapters queued per turn"
+              label="Stacked count"
               onChange={() => undefined}
               options={COUNTS}
               size="sm"
