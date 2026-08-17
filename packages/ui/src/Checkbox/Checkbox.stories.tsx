@@ -120,3 +120,45 @@ export const AllStates: Story = {
 export const Interactive: Story = {
   args: { label: "Delete originals after import" },
 }
+
+/**
+ * `value` names which member of a group a box IS — not whether it is
+ * ticked. It matters as soon as there is more than one box: a group is
+ * read back with a single query over its container, and without a
+ * `value` every box in it answers `"on"`.
+ *
+ * ```ts
+ * const chosen = [...group.querySelectorAll("input")]
+ *   .filter((input) => input.checked)
+ *   .map((input) => input.value)
+ * ```
+ *
+ * A lone boolean needs none of this and should omit the prop.
+ */
+export const WithValues: Story = {
+  args: { label: "Anime" },
+  render: (controlProps) => (
+    <StorySection title="A library picker: each box carries the id the caller will read back, and the checked ones are the answer.">
+      <StoryGrid columns={2}>
+        {[
+          { id: "11", isChosen: true, title: "Anime" },
+          { id: "1", isChosen: false, title: "Movies" },
+          { id: "15", isChosen: true, title: "Shorts" },
+          { id: "2", isChosen: false, title: "Shows" },
+        ].map((library) => (
+          <StoryCell
+            key={library.id}
+            label={`value="${library.id}"`}
+          >
+            <Checkbox
+              {...controlProps}
+              isChecked={library.isChosen}
+              label={library.title}
+              value={library.id}
+            />
+          </StoryCell>
+        ))}
+      </StoryGrid>
+    </StorySection>
+  ),
+}

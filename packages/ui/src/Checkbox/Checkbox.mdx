@@ -62,6 +62,30 @@ is a control every consumer has to hold it for.
   here and change elsewhere, not an actionable accent. It announces `aria-readonly`, and
   the toggle is blocked on both pointer and `Space`.
 
+## A group of boxes needs `value`
+
+`value` is the `<input>`'s `value` attribute: **which member of a group** this box is, as
+opposed to whether it is ticked. A lone boolean should omit it.
+
+A group needs it, because a group is read back with one query over its container rather
+than by keeping a callback's worth of state per box:
+
+```ts
+const chosen = [...group.querySelectorAll<HTMLInputElement>("input[type=checkbox]")]
+  .filter((input) => input.checked)
+  .map((input) => input.value)
+```
+
+Without a `value` every box in the group answers the UA default `"on"`, so that read
+returns N copies of one meaningless string. This is why queuepilot's library and ratings
+pickers were still hand-rolling a raw `<input type="checkbox">` instead of using this
+component — the component was correct and simply could not express the case.
+
+It is passed straight through and is otherwise inert: it is **not** the checked state and
+does not become one. `isChecked` still seeds the box, `onChange` still reports a boolean.
+
+<Canvas of={CheckboxStories.WithValues} />
+
 ## Checkbox or `Switch`
 
 Same state kind, different meaning. A checkbox is a value you **submit** — "delete

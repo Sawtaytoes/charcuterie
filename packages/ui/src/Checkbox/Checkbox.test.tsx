@@ -7,7 +7,7 @@ import { mountStory } from "../mountStory.testHelpers.ts"
 import { expectAgentDrivable } from "../testing/index.ts"
 import * as stories from "./Checkbox.stories.tsx"
 
-const { AllStates, Default, Interactive } =
+const { AllStates, Default, Interactive, WithValues } =
   composeStories(stories)
 
 test("it is a checkbox a screen reader can name", async () => {
@@ -106,4 +106,55 @@ test("a read-only box is announced and cannot be toggled", async () => {
   await expect(readOnly).not.toBeChecked()
 
   await expectNoAxeViolations(canvasElement)
+})
+
+test("value names the member, and a group reads back the ticked ones", async () => {
+  const { canvas, canvasElement } =
+    await mountStory(WithValues)
+
+  // The prop is the `<input>`'s `value` and nothing else — it must not
+  // touch the checked state, which `isChecked` still owns alone.
+  await expect(
+    expectAgentDrivable(canvas, {
+      name: "Anime",
+      role: "checkbox",
+    }),
+  ).toHaveAttribute("value", "11")
+
+  await expect(
+    expectAgentDrivable(canvas, {
+      name: "Movies",
+      role: "checkbox",
+    }),
+  ).not.toBeChecked()
+
+  // The read this prop exists for. Without a `value` every box here
+  // answers the UA default `"on"` and the result is four copies of one
+  // meaningless string, which is why a group could not use this
+  // component at all before.
+  const chosen = [
+    ...canvasElement.querySelectorAll<HTMLInputElement>(
+      "input[type=checkbox]",
+    ),
+  ]
+    .filter((input) => input.checked)
+    .map((input) => input.value)
+
+  await expect(chosen).toEqual(["11", "15"])
+
+  await expectNoAxeViolations(canvasElement)
+})
+
+test("a box with no value stays out of the way", async () => {
+  const { canvas } = await mountStory(Default)
+
+  // `value` is optional and a lone boolean should omit it. React drops
+  // an `undefined` attribute entirely rather than writing an empty
+  // string, so the DOM looks exactly as it did before the prop existed.
+  await expect(
+    expectAgentDrivable(canvas, {
+      name: "Delete originals after import",
+      role: "checkbox",
+    }),
+  ).not.toHaveAttribute("value")
 })
