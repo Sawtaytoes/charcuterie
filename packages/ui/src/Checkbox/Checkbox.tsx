@@ -38,6 +38,25 @@ export type CheckboxProps = {
   label: ReactNode
   onChange?: (isChecked: boolean) => void
   size?: ControlSize
+  /**
+   * The `<input>`'s `value` attribute — which member of a group this
+   * box IS, as opposed to whether it is ticked.
+   *
+   * A lone boolean does not need this. A GROUP does: the browser
+   * submits `name=value` for each ticked box in a form, and, more
+   * relevantly here, a group is normally read back with one query —
+   * `[...root.querySelectorAll("input")].filter(i => i.checked)
+   * .map(i => i.value)`. Without a `value` every box in the group
+   * reports the string `"on"` and the read is useless, which is why
+   * queuepilot's library and ratings pickers were still hand-rolling
+   * a raw `<input type="checkbox">` rather than adopting this
+   * component.
+   *
+   * Passed straight through and otherwise inert. It is NOT the
+   * checked state and does not become one: `isChecked` still seeds
+   * the box, and `onChange` still reports a boolean.
+   */
+  value?: string
 }
 
 const BOX_SIZE_CLASS: Record<ControlSize, string> = {
@@ -96,6 +115,7 @@ export const Checkbox = ({
   label,
   onChange,
   size = "md",
+  value,
 }: CheckboxProps): ReactNode => (
   <label
     className={toClassName(
@@ -176,6 +196,7 @@ export const Checkbox = ({
           }
         }}
         type="checkbox"
+        value={value}
       />
 
       <svg
