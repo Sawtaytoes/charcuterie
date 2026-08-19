@@ -42,7 +42,23 @@ export type SelectProps = Omit<
   ComponentPropsWithRef<"select">,
   "disabled" | "onChange" | "size" | "value"
 > & {
+  /**
+   * Goes on the **wrapper**, which is the box a caller means when
+   * they size a control. See the component docblock — the chevron
+   * is positioned against that wrapper, so a width anywhere else
+   * leaves it behind.
+   */
   className?: string
+  /**
+   * The escape hatch for the inner `<select>` itself, for the
+   * things that genuinely are not the outer box: `font-mono` on the
+   * option text, a `text-*` override, a `bg-*`.
+   *
+   * Sizing does **not** belong here. The inner element is `w-full`
+   * and a width on it desynchronises it from the wrapper the
+   * chevron is pinned to, which is the whole of #112.
+   */
+  controlClassName?: string
   isDisabled?: boolean
   /**
    * The accessible name, when this is **not** inside a `Field`. A
@@ -82,6 +98,25 @@ const getIsGroup = (
  * A styled native `<select>`, and the fleet's fourteen hand-rolled
  * ones collapse onto it.
  *
+ * ### Sizing: `className` is the wrapper, `controlClassName` is the select
+ *
+ * This renders a wrapper around the native `<select>` because the
+ * chevron has to live somewhere, and the chevron is positioned
+ * against that wrapper. `className` therefore lands on the wrapper
+ * and the `<select>` stays `w-full` inside it, so
+ * `className="w-44"` means "this control is 176px" — chevron
+ * included — which is what a caller writing a width already assumes.
+ *
+ * Before this, `className` went to the inner element only. The
+ * wrapper stayed `w-full`, the chevron stayed at *its* edge, and
+ * mux-magic's rules builder measured the gap at **869.6px** with the
+ * control's own text clipping beside it. The width never worked;
+ * `ui@2.16.0`'s `tailwind-merge` only made half of it work and made
+ * the other half visible.
+ *
+ * For the genuinely-inner things — `font-mono` on the option text, a
+ * `bg-*` — there is `controlClassName`.
+ *
  * ### There is no state kind here, and that is the finding
  *
  * Every other interactive component in this package owns its state
@@ -116,6 +151,7 @@ const getIsGroup = (
  */
 export const Select = ({
   className,
+  controlClassName,
   isDisabled = false,
   label,
   onChange,
@@ -125,7 +161,24 @@ export const Select = ({
   value,
   ...selectProps
 }: SelectProps): ReactNode => (
-  <div className="relative inline-grid w-full items-center">
+  <div
+    className={toClassName(
+      "relative inline-grid w-full items-center",
+      // `className` lands HERE, not on the `<select>`, and that is
+      // the fix for #112 rather than a stylistic choice. The chevron
+      // below is `absolute end-3` against this element, so a width
+      // that reaches only the inner control moves the control and
+      // leaves the chevron pinned to the old edge — measured at
+      // 869.6px adrift in mux-magic's rules builder, with the
+      // control's own text clipping at the same time.
+      //
+      // It also matches every other component in this package:
+      // `className` is the outermost box. `ms-auto` — which mux-magic
+      // passes and which did nothing on a `w-full` inner select — is
+      // the tell that callers already believed this.
+      className,
+    )}
+  >
     <select
       {...selectProps}
       aria-label={label}
@@ -145,7 +198,10 @@ export const Select = ({
         "hover:border-border-strong",
         FOCUS_RING_CLASS,
         DISABLED_CLASS,
-        className,
+        // Inner-only, and deliberately not `className`. `w-full`
+        // above keeps this element the same width as the wrapper the
+        // chevron is measured from, so the two can never drift.
+        controlClassName,
       )}
       defaultValue={
         value ??
