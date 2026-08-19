@@ -209,8 +209,16 @@ test("a container-query component is never storied in a shrink-to-fit cell", () 
   // `Main.tsx` and `Main.mdx`, because it makes `<main>` the
   // containing block for any `position: fixed` an app renders
   // inside it.
+  // `Board` declares **two** containers and neither is the element
+  // that queries it: the board's own box decides how many lanes are
+  // on screen, and each lane's list — in `BoardLaneList.tsx`, which
+  // is a member rather than a component by the `<Name>/<Name>.tsx`
+  // rule — decides what shape a card is. Only the first of those is
+  // in this list, and that is enough: it is `<Board` a story renders,
+  // so `<Board` is what a shrink-to-fit `StoryCell` would collapse.
   expect(containerComponents).toEqual([
     "Alert",
+    "Board",
     "Card",
     "EmptyState",
     "Main",
@@ -379,7 +387,16 @@ test("the barrel is the only place components are re-exported", async () => {
   // fleet wrote it four separate times (plex-channels' `SelectListbox`,
   // board-games' `SelectMenu`, mux-magic's `ListboxPicker`, and twice
   // inside this package), each with its own hand-rolled chevron.
-  expect(componentNames.length).toBe(45)
+  //
+  // `Board` — lanes of cards, sized by their container and moved by
+  // keyboard or by pointer — is +1 -> 46. It is the library's first
+  // component whose own operation is a **write** rather than a
+  // selection, and the first to declare two nested containers.
+  // `BoardCard.tsx`, `BoardLaneList.tsx`, `boardMove.ts` and
+  // `useBoardDrag.ts` are its members and stay out of this count and
+  // the barrel by the `<Name>/<Name>.tsx` rule, exactly as
+  // `ToolbarSlot` and `QueryBuilderRow` do.
+  expect(componentNames.length).toBe(46)
 
   for (const name of componentNames) {
     expect(barrel).toContain(`export { ${name} }`)
