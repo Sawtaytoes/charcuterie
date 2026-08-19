@@ -25,6 +25,13 @@
  *
  * ### What it does not do
  *
+ * **Ten colours, so collisions are certain.** Past ten rows two
+ * labels share an index, and at twenty it is near-guaranteed —
+ * which is a property of the palette rather than of the hash, and
+ * would be true of any assignment. The colour is an aid to
+ * *scanning* a list, not an identifier: the text is what says which
+ * label it is. An app that needs uniqueness stores a pick.
+ *
  * **No normalization.** `"Homelab"` and `"homelab"` are different
  * names and get different colours, because case-folding, trimming
  * and unicode normalization are all policy the consumer owns and

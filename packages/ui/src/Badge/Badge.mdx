@@ -65,7 +65,9 @@ different colour on every reload. It is a **fallback**, never an override:
 ```
 
 Hash the row's **id** where one exists. The function deliberately does not normalize, so
-renaming a label renames its colour too.
+renaming a label renames its colour too — and with ten colours, two labels in twelve will
+share one. That is a property of the palette, not of the hash: the colour helps you scan a
+list, the text is what says which label it is.
 
 <Canvas of={BadgeStories.CategoricalLabels} />
 
