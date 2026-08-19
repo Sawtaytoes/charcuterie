@@ -132,3 +132,58 @@ export const AllStates: Story = {
     </StoryGrid>
   ),
 }
+
+/**
+ * `className` sizes the **control**, chevron included, because it
+ * lands on the wrapper the chevron is positioned against.
+ *
+ * The first cell is the shape that broke: before this, `w-44`
+ * reached only the inner `<select>` while the wrapper stayed
+ * `w-full`, so the chevron sat at the *row's* right edge — 869.6px
+ * away in mux-magic's rules builder. `controlClassName` is the
+ * inner element, for the things that are not the outer box, and
+ * `font-mono` is the one every caller reaches for.
+ *
+ * The width is still the caller's to get right: `w-44` is narrower
+ * than the longest option here, and a `<select>` clips rather than
+ * wraps. That is why mux-magic measured its widths rather than
+ * guessing them.
+ */
+export const Sized: Story = {
+  args: { label: "Rip profile", options: PROFILES },
+  render: () => (
+    <StoryGrid columns={1}>
+      <StoryCell label="w-44, in a wide row">
+        <Select
+          className="w-44"
+          label="Profile sized"
+          options={PROFILES}
+        />
+      </StoryCell>
+
+      <StoryCell label="w-64, monospaced option text">
+        <Select
+          className="w-64"
+          controlClassName="font-mono"
+          label="Profile monospaced"
+          options={PROFILES}
+        />
+      </StoryCell>
+
+      <StoryCell label="ms-auto, pushed to the end">
+        <Select
+          className="ms-auto w-56"
+          label="Profile pushed"
+          options={PROFILES}
+        />
+      </StoryCell>
+
+      <StoryCell label="default: fills its parent">
+        <Select
+          label="Profile full width"
+          options={PROFILES}
+        />
+      </StoryCell>
+    </StoryGrid>
+  ),
+}
