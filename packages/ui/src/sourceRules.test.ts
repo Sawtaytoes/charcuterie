@@ -209,9 +209,15 @@ test("a container-query component is never storied in a shrink-to-fit cell", () 
   // `Main.tsx` and `Main.mdx`, because it makes `<main>` the
   // containing block for any `position: fixed` an app renders
   // inside it.
+  //
+  // `DataTable` joins them as the first component whose *layout*
+  // is the container query rather than its padding: below `--cq-md`
+  // a row stops being a row and becomes a labelled block, so the
+  // whole point of the component is a query it declares itself.
   expect(containerComponents).toEqual([
     "Alert",
     "Card",
+    "DataTable",
     "EmptyState",
     "Main",
     "MediaTile",
@@ -379,7 +385,14 @@ test("the barrel is the only place components are re-exported", async () => {
   // fleet wrote it four separate times (plex-channels' `SelectListbox`,
   // board-games' `SelectMenu`, mux-magic's `ListboxPicker`, and twice
   // inside this package), each with its own hand-rolled chevron.
-  expect(componentNames.length).toBe(45)
+  //
+  // `DataTable` — the reflowing table Docket's task lists, backlog and
+  // search results need — is +1 -> 46. It **composes**
+  // `SortableTableHeader` rather than subsuming it: that component is
+  // already in a published 1.0.0 with a consumer of its own, so
+  // removing it would be a breaking change bought for nothing, and
+  // both stay in this count.
+  expect(componentNames.length).toBe(46)
 
   for (const name of componentNames) {
     expect(barrel).toContain(`export { ${name} }`)

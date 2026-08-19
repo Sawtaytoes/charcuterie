@@ -98,6 +98,13 @@ export {
   SPINNER_SIZE_CLASS,
 } from "./controlStyles.ts"
 export type {
+  DataTableColumn,
+  DataTableProps,
+  DataTableSelection,
+  DataTableSort,
+} from "./DataTable/DataTable.tsx"
+export { DataTable } from "./DataTable/DataTable.tsx"
+export type {
   DialogProps,
   DialogSize,
 } from "./Dialog/Dialog.tsx"
