@@ -32,6 +32,50 @@ compile error here rather than a blank pill in production.
 
 <Canvas of={BadgeStories.Interactive} />
 
+## Colour a user picked: `categorical`
+
+`intent` is six colours that each **mean** something, and that is exactly wrong for a
+label somebody named "Homelab". So there is a second family — numbered, not named:
+
+```tsx
+<Badge categorical={4}>Homelab</Badge>
+```
+
+Ten indexes, each with the same seven roles an intent has, generated per variant and
+contrast-gated in **both** schemes. The point of the gating is that the choice is safe:
+a user picking from this palette cannot pick one that is unreadable.
+
+<Canvas of={BadgeStories.Categorical} />
+
+`intent` and `categorical` are **mutually exclusive in the type**. A badge is one colour,
+and `<Badge intent="danger" categorical={3}>` is a question with no answer rather than a
+precedence rule to remember.
+
+### Rows that predate the feature
+
+`getCategoricalIndex(key)` from `@charcuterie/tokens` is a pure function from a string to
+an index — stable across runs, machines and a server-rendered copy — so a hundred existing
+labels get colours with no migration and no `Math.random()` handing the same row a
+different colour on every reload. It is a **fallback**, never an override:
+
+```tsx
+<Badge categorical={label.categorical ?? getCategoricalIndex(label.id)}>
+  {label.name}
+</Badge>
+```
+
+Hash the row's **id** where one exists. The function deliberately does not normalize, so
+renaming a label renames its colour too.
+
+<Canvas of={BadgeStories.CategoricalLabels} />
+
+### When it is `Swatch` instead
+
+`Swatch` takes a colour arriving from the world — a physical sticker on a controller, an
+accent extracted off an album — which is arbitrary, unthemeable and uncheckable. This
+family is a curated set the design system owns and re-themes. Ungoverned colour is
+`Swatch`; a choice from a palette is `categorical`.
+
 ## No implicit role
 
 A badge is a word about something else. It is not a live region, and `role="status"` would
