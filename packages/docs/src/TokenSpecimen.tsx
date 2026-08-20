@@ -95,6 +95,81 @@ const headingStyle = {
 }
 
 /**
+ * The numbered family, written out for the same reason
+ * `INTENT_STYLES` above is: Tailwind scans for **complete** class
+ * strings, so `` `bg-categorical-${index}-solid` `` generates
+ * nothing at all and the specimen would show ten unstyled pills
+ * with no error to explain them.
+ *
+ * On the board because a token family nobody can see is a token
+ * family nobody checks. This is also the one panel where a variant
+ * swap is worth watching: the ring is *generated* per variant, so
+ * flipping `data-variant` moves ten hues at once.
+ */
+const CATEGORICAL_STYLES = [
+  {
+    index: 1,
+    pill: "bg-categorical-1-surface text-categorical-1-content border-categorical-1-border",
+    solid:
+      "bg-categorical-1-solid text-categorical-1-on-solid",
+  },
+  {
+    index: 2,
+    pill: "bg-categorical-2-surface text-categorical-2-content border-categorical-2-border",
+    solid:
+      "bg-categorical-2-solid text-categorical-2-on-solid",
+  },
+  {
+    index: 3,
+    pill: "bg-categorical-3-surface text-categorical-3-content border-categorical-3-border",
+    solid:
+      "bg-categorical-3-solid text-categorical-3-on-solid",
+  },
+  {
+    index: 4,
+    pill: "bg-categorical-4-surface text-categorical-4-content border-categorical-4-border",
+    solid:
+      "bg-categorical-4-solid text-categorical-4-on-solid",
+  },
+  {
+    index: 5,
+    pill: "bg-categorical-5-surface text-categorical-5-content border-categorical-5-border",
+    solid:
+      "bg-categorical-5-solid text-categorical-5-on-solid",
+  },
+  {
+    index: 6,
+    pill: "bg-categorical-6-surface text-categorical-6-content border-categorical-6-border",
+    solid:
+      "bg-categorical-6-solid text-categorical-6-on-solid",
+  },
+  {
+    index: 7,
+    pill: "bg-categorical-7-surface text-categorical-7-content border-categorical-7-border",
+    solid:
+      "bg-categorical-7-solid text-categorical-7-on-solid",
+  },
+  {
+    index: 8,
+    pill: "bg-categorical-8-surface text-categorical-8-content border-categorical-8-border",
+    solid:
+      "bg-categorical-8-solid text-categorical-8-on-solid",
+  },
+  {
+    index: 9,
+    pill: "bg-categorical-9-surface text-categorical-9-content border-categorical-9-border",
+    solid:
+      "bg-categorical-9-solid text-categorical-9-on-solid",
+  },
+  {
+    index: 10,
+    pill: "bg-categorical-10-surface text-categorical-10-content border-categorical-10-border",
+    solid:
+      "bg-categorical-10-solid text-categorical-10-on-solid",
+  },
+]
+
+/**
  * The throwaway component M1's Storybook shell is built against.
  *
  * Deliberately **not** a library component and not a candidate to
@@ -249,6 +324,77 @@ export const TokenSpecimen = ({
         >
           disabled
         </button>
+      </div>
+    </section>
+
+    <section
+      className="bg-surface-raised border-border-subtle"
+      style={panelStyle}
+    >
+      <h2 style={headingStyle}>
+        Categorical — ten hues that mean nothing
+      </h2>
+
+      <p
+        className="text-content-secondary"
+        style={{
+          fontSize: "var(--font-size-sm)",
+          marginBlockEnd: "var(--space-4)",
+        }}
+      >
+        Numbered rather than named, for colour a user picks:
+        a label, a project, a chart series. Contrast-gated
+        in both schemes, and gated against each other so
+        adjacent indexes stay tellable apart.
+      </p>
+
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          gap: "var(--space-2)",
+          marginBlockEnd: "var(--space-4)",
+        }}
+      >
+        {CATEGORICAL_STYLES.map((categorical) => (
+          <span
+            key={categorical.index}
+            className={categorical.pill}
+            style={{
+              borderWidth: "1px",
+              borderRadius: "var(--radius-full)",
+              paddingInline: "var(--space-3)",
+              paddingBlock: "var(--space-1)",
+              fontSize: "var(--font-size-sm)",
+            }}
+          >
+            {categorical.index}
+          </span>
+        ))}
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          gap: "var(--space-2)",
+        }}
+      >
+        {CATEGORICAL_STYLES.map((categorical) => (
+          <span
+            key={categorical.index}
+            className={categorical.solid}
+            style={{
+              borderRadius: "var(--radius-full)",
+              paddingInline: "var(--space-3)",
+              paddingBlock: "var(--space-1)",
+              fontSize: "var(--font-size-sm)",
+              fontWeight: "var(--font-weight-medium)",
+            }}
+          >
+            {categorical.index}
+          </span>
+        ))}
       </div>
     </section>
 
