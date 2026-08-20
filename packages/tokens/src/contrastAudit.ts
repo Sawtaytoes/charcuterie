@@ -42,6 +42,10 @@
  * ([decision](../../../docs/decisions/2026-08-10-content-muted-is-strengthened-so-the-highlighted-option-row-clears-aa.md)).
  */
 
+import {
+  CATEGORICAL_BORDER_THRESHOLD,
+  CATEGORICAL_INDEXES,
+} from "./categorical.ts"
 import type { ContrastResult } from "./contrast.ts"
 import { getContrast } from "./contrast.ts"
 import type {
@@ -311,6 +315,56 @@ export const auditScheme = (
       }),
     ),
   ),
+
+  // --- The categorical family --------------------------------
+  //
+  // Enrolled exactly as the intents are, pair for pair, because it
+  // is the same seven roles doing the same jobs — and enrolled
+  // *derived from `CATEGORICAL_INDEXES`* rather than typed out, for
+  // the reason every other list in this file is derived: an
+  // eleventh index has to be measured the day it is added, not the
+  // day somebody notices.
+  //
+  // One deliberate difference, and it makes this family **stricter**
+  // than `intent`: its `border` is not exempt. The intent exemption
+  // reads "a badge outline is decorative — the meaning is carried by
+  // its text", which is true of a pill that says `failed` and false
+  // of one that says "Homelab". A categorical badge's whole
+  // information content is which of ten it is, so its boundary is
+  // doing the identification 1.4.11 is about
+  // ([decision](../../../docs/decisions/2026-08-19-categorical-borders-are-gated-where-intent-borders-are-exempt.md)).
+  ...CATEGORICAL_INDEXES.flatMap((index) => [
+    check({
+      label: `categorical.${index}.content on categorical.${index}.surface`,
+      foreground: colour.categorical[index].content,
+      background: colour.categorical[index].surface,
+      threshold: 4.5,
+    }),
+    check({
+      label: `categorical.${index}.content on categorical.${index}.surfaceHover`,
+      foreground: colour.categorical[index].content,
+      background: colour.categorical[index].surfaceHover,
+      threshold: 4.5,
+    }),
+    check({
+      label: `categorical.${index}.onSolid on categorical.${index}.solid`,
+      foreground: colour.categorical[index].onSolid,
+      background: colour.categorical[index].solid,
+      threshold: 4.5,
+    }),
+    check({
+      label: `categorical.${index}.onSolid on categorical.${index}.solidHover`,
+      foreground: colour.categorical[index].onSolid,
+      background: colour.categorical[index].solidHover,
+      threshold: 4.5,
+    }),
+    check({
+      label: `categorical.${index}.border on surface.raised`,
+      foreground: colour.categorical[index].border,
+      background: colour.surface.raised,
+      threshold: CATEGORICAL_BORDER_THRESHOLD,
+    }),
+  ]),
 
   check({
     label: "content.disabled on surface.base",
