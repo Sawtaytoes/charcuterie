@@ -1,5 +1,266 @@
 # @charcuterie/ui
 
+## 3.1.0
+
+### Minor Changes
+
+- da6879f: `Board` — lanes of cards, sized by their container, moved by keyboard or by pointer
+
+  The library's first component whose own operation is a **write**. Three lanes with honest
+  counts, priority bars, metadata chips, a per-card footer for a live run line, real empty
+  states, and a `+ n more` overflow that tells the truth about what it is not painting.
+
+  **Everything is a container query; there is no media query in it.** Two facts make window
+  width useless here and they compound: a lane in a three-up board is ~500px on a maximised
+  1600px window, and a browser at 175% zoom reports ~860 effective CSS pixels for a 1500px
+  window. So two nested containers do the work — the board's own box decides whether the lanes
+  are three-up or one-at-a-time behind a segmented control, and each **lane's** box decides
+  whether a card is two lines, one line, or a card of its own. The `Responsive` story is three
+  fixed widths inside one browser window that never moves, which is the only honest way to show
+  it.
+
+  **Moving a card takes no drag-and-drop dependency.** Every card carries one handle with two
+  drivers: pressing it opens a `Menu` of the other lanes, dragging it moves the card directly,
+  and both commit through the same `onMove`. The menu is the primary path rather than an
+  accessible alternative — it is the only one that works from the keyboard, the only one a
+  screen reader can drive, and the only one available in the Narrow View where the other lanes
+  are not on screen to drop onto. The pointer half is Pointer Events (mouse, touch and pen in
+  one code path) at **1.4 KB gzipped**, against 7.0 KB for the smallest library candidate and
+  31.6 KB for the most popular one — measured, not estimated
+  ([decision](https://github.com/Sawtaytoes/charcuterie/blob/master/docs/decisions/2026-08-19-the-board-owns-the-move-and-takes-no-drag-and-drop-dependency.md)).
+
+  Every move is announced in a `role="status"` region naming the destination **and the position
+  within it**, and `onMove`'s `toIndex` arrives already corrected for the card's own removal — so
+  a consumer's handler is a splice out and a splice in with no arithmetic.
+
+  ```tsx
+  <Board
+    headingLevel={2}
+    label="Today"
+    lanes={[
+      { items: todo, key: "todo", label: "Todo" },
+      { items: doing, key: "doing", label: "In Progress" },
+      {
+        itemCount: 19,
+        items: review.slice(0, 8),
+        key: "review",
+        label: "Needs Review",
+      },
+    ]}
+    moveIcon={<GripIcon />}
+    onMove={applyMove}
+  />
+  ```
+
+  Deliberately **not** in scope, each with a reason on the docs page: data, sorting and
+  filtering (operations on the array you pass in); virtualisation (a lane truncates by
+  construction, so there is nothing left to window); and the cross-lane "needs attention" panel,
+  which is an `Alert` above the board rather than a fourth lane inside it. The `InBoardScreen`
+  story is the copy-wholesale template for that composition.
+
+  Two things worth knowing before you use it. A lane is a `role="group"`, not a landmark — a
+  board with four `region`s buries a page's real ones — so query it with
+  `getByRole("group", { name: "Todo" })`. And `accentIntent` is typed as `IntentName` on
+  purpose: the colour families are `--color-intent-<intent>-<role>` and there is no numeric
+  scale, so a Radix-style `danger-9` is a compile error here rather than a bar that renders
+  transparent while every "is it rendered" assertion passes.
+
+- 3487599: A numbered, non-semantic colour family: `--color-categorical-1…10-<role>`, and `Badge` takes it
+
+  Every member of `intent` **means** something — `danger` is not a colour, it is a claim
+  about what happens if you press the thing — which is exactly right for a status pill and a
+  lie when the colour was chosen by a user. Docket's labels and projects are user-coloured, and
+  a "Homelab" label is not a `danger`.
+
+  So there is a second family, numbered because there is nothing to name:
+
+  ```tsx
+  <Badge categorical={4}>Homelab</Badge>
+  ```
+
+  Ten indexes, each with the same seven roles an intent has (`surface`, `surfaceHover`,
+  `border`, `content`, `solid`, `solidHover`, `onSolid`), in **all four variants and both
+  schemes**, published as Tailwind utilities (`bg-categorical-4-surface`,
+  `text-categorical-4-content`, …) exactly as the intents are.
+
+  `intent` and `categorical` are **mutually exclusive in the type**. A badge is one colour,
+  and `<Badge intent="danger" categorical={3}>` is a question with no answer rather than a
+  precedence rule to remember. Everything else about `Badge` — `appearance`, `size`,
+  `overflow`, the clipped-text `title` readout — is unchanged.
+
+  **Gated twice.** Every categorical pair joins `contrastAudit.ts` alongside the intents
+  (`content` on `surface` and `onSolid` on `solid` at 4.5:1; `border` at 3:1, and unlike an
+  intent border it is **not** exempt, because a categorical pill's colour is the only thing
+  identifying it). 63 gated pairs per scheme becomes 113, all passing.
+
+  The second gate is the one a contrast audit structurally cannot be: two indexes can both
+  clear 4.5:1 against the same surface and be _the same colour as each other_, with every
+  number on the board green. `getCategoricalDistinctnessFailures` measures every pair against
+  every other in OKLab. The tightest `solid` pair in the whole fleet is **ΔEok 0.0893**, which
+  clears the **0.0835** that Tableau 10 achieves for itself.
+
+  **New in `@charcuterie/tokens`:**
+
+  - `CATEGORICAL_INDEXES`, `CategoricalIndex`, `CategoricalRole`, `CATEGORICAL_HUES` (each
+    index has a `label` — a picker showing ten dots owes each of them a name).
+  - `buildCategoricalScheme` and `CategoricalTuning`, so a variant states its _character_ and
+    never a hex.
+  - `getCategoricalDistinctnessFailures`, `CATEGORICAL_PAIRS`,
+    `CATEGORICAL_ADJACENT_PAIRS`, `CATEGORICAL_DISTINCTNESS_FLOOR`.
+  - `getCategoricalIndex(key)` — a pure, stable string → index hash, so rows that predate the
+    feature get colours with no migration and no `Math.random()` handing the same label a
+    different colour on every reload. A **fallback**, never an override:
+
+    ```tsx
+    <Badge categorical={label.categorical ?? getCategoricalIndex(label.id)}>
+      {label.name}
+    </Badge>
+    ```
+
+  - `toHex`, `toGamut`, `getColourDistance`, `OkLch`, `OkLab` — OKLab/OKLCh, zero-dependency,
+    which is what the family is generated in.
+
+  **New in `@charcuterie/ui`:** `CATEGORICAL_APPEARANCE_CLASS`, `CATEGORICAL_HOVER_CLASS`,
+  `CATEGORICAL_SOLID_FILL_CLASS`, `CATEGORICAL_CONTENT_CLASS` — the twins of the `INTENT_*`
+  maps, every class name written out in full for the reason `intentStyles.ts` gives.
+
+  Additive throughout: no existing token, prop or class changes value. On ePaper all ten
+  indexes collapse to black on purpose — four chromatic inks cannot carry ten of anything, and
+  round-robin would make index 1 and index 6 identical.
+
+- 28cbd1c: `DataTable` — a table that reflows instead of scrolling, sized by its container
+
+  The fleet's tables are hand-rolled, and the three in `bambuddy`/`spoolbuddy` convey sort
+  direction with a bare glyph, put `onClick` on the `<th>`, and have no keyboard path at all.
+  `SortableTableHeader` fixed the header cell in 1.0.0; this is the rest of the table.
+
+  ```tsx
+  <DataTable
+    columns={columns}
+    getRowKey={(task) => task.id}
+    label="Tasks"
+    onSortChange={setSort}
+    rows={sortedTasks}
+    selection={{ getRowLabel, onSelectionChange, selectedRowKeys }}
+    sort={sort}
+  />
+  ```
+
+  **`SortableTableHeader` is composed, not replaced.** It keeps its export, its API and its
+  docs page, and every sortable column renders it — so this release is a minor and there is
+  **no migration**. It is also why the component is a real `<table>`: a `<div role="row">`
+  grid cannot host a `<th>`.
+
+  **Narrow means reflow.** Below `--cq-md` (32rem) of its own **container** — not the window,
+  which is a different number entirely at 175% zoom or inside a board lane — each row becomes
+  a labelled block and the header row wraps into a strip of sort controls, so sorting survives
+  the layout that has no header row. No horizontal scroll, and no columns dropped.
+
+  **What it does not own:** sorting the data (comparison is per-column — `priority` is not
+  alphabetical), the selected set (nothing owns "these five rows"; `selectedRowKeys` is the
+  consumer's), column widths (`column.className`, over the browser's own auto layout), and
+  virtualisation (measured usable to ~1,000 rows; past that, filter or page). Reasons and
+  numbers: `docs/decisions/2026-08-19-the-data-table-composes-sortabletableheader-reflows-and-does-not-virtualise.md`.
+
+  `Checkbox` also paints `:indeterminate` now — the mixed state a select-all box is in when
+  some rows are ticked. It painted **nothing** before: the DOM property was set, screen
+  readers announced "mixed", and the `appearance-none` box was indistinguishable from empty.
+
+- febbe29: `DatePicker` — a date field you can type into, over a calendar dialog
+
+  The component Docket needs for due dates, scheduled dates and phase ranges, and the fleet's
+  first date control of any kind. It composes what already exists — `Field`'s slot contract,
+  `Button`/`IconButton`, the `Overlay` anchoring hook, and the panel surface `Popover`,
+  `Menu`, `Listbox` and `Combobox` already share.
+
+  **The value is a calendar date, never an instant.** `onChange` reports an ISO
+  `YYYY-MM-DD` string — the same format `<input type="date">` uses — and never a `Date`. A
+  `Date` is a count of milliseconds, so reading one back always goes through the browser's
+  timezone: pick the 19th at 23:30 in Denver and it comes back as the 18th in London. The
+  arithmetic underneath uses integer day numbers rather than `Date`, so one month after 31
+  January is 28 February and a fortnight across a DST boundary is 14 days rather than
+  13.958 — which is exactly the subtraction a staleness threshold is. The suite runs under
+  UTC, `America/Denver`, UTC+14 and UTC-11 and asserts nothing moves.
+
+  No date library was added. `Temporal.PlainDate` is this type done properly and is not used
+  yet only because the polyfill is ~50 KB gz; the API is ISO strings so that swap will be
+  invisible.
+
+  **Typing is the feature, and nothing guesses in silence.** `tomorrow`, `next fri`, `+14d`,
+  `in 2 weeks`, `19 aug`, `8/19`, `2026-08-19` and a bare `19` all resolve, in the active
+  locale, against an injected `today`. The resolution is echoed in full beneath the field, in
+  a live region, **before** anything commits — and an ambiguous prefix is a named failure
+  rather than a pick: `ju 19` comes back as _"ju" could be June or July_, not as June. A
+  refused value leaves the typed text exactly as it is.
+
+  ```tsx
+  <Field label="Due" description="tomorrow, next fri, +14d, 8/19…">
+    <DatePicker label="Due" onChange={setDueDate} today={todayIso} value={dueDate} />
+  </Field>
+
+  <DatePicker isRange label="Phase" onChange={setPhase} today={todayIso} />
+  // → { end: "2026-09-04", start: "2026-08-24" }
+  ```
+
+  Range is `isRange`, a **mode** rather than a `DateRangePicker` sibling — the same call
+  `Combobox` made about `isMultiple`, and for the same reason: a range picker has no ARIA
+  role of its own to be named after.
+
+  Also exported, because a consumer needs the calendar without the field: `parseDateInput`,
+  `parseIsoDate`, `toIsoDate`, `formatPlainDate`, `getDaysBetween`, `addDays`, `addMonths`,
+  `clampPlainDate`, `getLocalPlainDate`, `getFirstDayOfWeek` and friends. They reach nothing
+  but `Intl`.
+
+- 82653d0: `MarkdownEditor` — a live hybrid markdown editor whose stored value is markdown and only markdown
+
+  Docket asked for this one, and its requirement is unusually sharp: the tracker it replaces
+  destroyed data by storing HTML in a field it later read back as text. So the constraint is
+  not "prefer markdown" — it is that an HTML tag must not be **able** to reach the stored
+  string.
+
+  ```tsx
+  <Field description="Markdown is what gets stored." label="Description">
+    <MarkdownEditor
+      defaultValue={task.description}
+      onChange={setDescription}
+      onUploadImage={async (file) => ({
+        alt: file.name,
+        url: await uploadToBlobStore(file),
+      })}
+    />
+  </Field>
+  ```
+
+  **It adds no dependency.** The surface is a real `<textarea>` with a painted layer behind it
+  in the same grid cell; the tokenizer is ~300 lines in this package. Measured, React external,
+  `gzip -9`: TipTap 238 KB, CodeMirror 6 206 KB, Lexical 148 KB — against **4.4 KB gz of new
+  code and zero new packages**
+  ([decision](https://github.com/Sawtaytoes/charcuterie/blob/master/docs/decisions/2026-08-19-the-markdown-editor-is-a-textarea-with-a-painted-layer.md)).
+
+  Four things worth knowing before you use it:
+
+  - **It is uncontrolled** — `defaultValue` in, `onChange` out, the same contract as `Select`.
+    A controlled `<textarea>` wipes the browser's undo stack on every programmatic write; every
+    edit here goes through `document.execCommand("insertText")` instead, as the smallest range
+    replacement. To swap the whole document, remount with a `key`.
+  - **Markers are dimmed, not hidden.** "Raw syntax on the cursor's line" is a contrast change,
+    because concealing `**` would change the line's width and move the text out from under the
+    caret. Every span style is metric-neutral, and a test measures it.
+  - **It owns no storage.** `onUploadImage` hands you a `File` and inserts the URL you return
+    as `![alt](url)` at the caret, with a markdown placeholder holding the spot meanwhile. Omit
+    it and image paste is simply not offered.
+  - **`Tab` is never captured** — it moves focus, always. Indent and outdent are `Ctrl+]` and
+    `Ctrl+[`; `Ctrl+B`/`I`/`E`/`K` are bold, italic, code and link; `Enter` continues a list and
+    clears an empty item.
+
+  The toolbar is this package's `Toolbar`, so it collapses into a menu by measurement rather
+  than at a breakpoint. Pass `icons` to make it compact — the package still ships none.
+
+### Patch Changes
+
+- Updated dependencies [3487599]
+  - @charcuterie/tokens@1.6.0
+
 ## 3.0.0
 
 ### Major Changes
