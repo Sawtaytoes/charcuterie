@@ -220,6 +220,11 @@ test("a container-query component is never storied in a shrink-to-fit cell", () 
     // so `<Board` is what a shrink-to-fit `StoryCell` would collapse.
     "Board",
     "Card",
+    // `DataTable` joins them as the first component whose *layout*
+    // is the container query rather than its padding: below `--cq-md`
+    // a row stops being a row and becomes a labelled block, so the
+    // whole point of the component is a query it declares itself.
+    "DataTable",
     // `DatePicker`'s panel is the container, and it is the first one
     // here whose container is *not* the element a caller sized. A
     // portalled panel is clamped to the space floating-ui found for
@@ -410,15 +415,22 @@ test("the barrel is the only place components are re-exported", async () => {
   // *outside* the field (Docket counts staleness in days), and they
   // reach nothing but `Intl`.
   //
+  // `DataTable` — the reflowing table Docket's task lists, backlog and
+  // search results need — is +1 -> 48. It **composes**
+  // `SortableTableHeader` rather than subsuming it: that component is
+  // already in a published 1.0.0 with a consumer of its own, so
+  // removing it would be a breaking change bought for nothing, and
+  // both stay in this count.
+  //
   // `Board` — lanes of cards, sized by their container and moved by
-  // keyboard or by pointer — is +1 -> 48. It is the library's first
+  // keyboard or by pointer — is +1 -> 49. It is the library's first
   // component whose own operation is a **write** rather than a
   // selection, and the first to declare two nested containers.
   // `BoardCard.tsx`, `BoardLaneList.tsx`, `boardMove.ts` and
   // `useBoardDrag.ts` are its members and stay out of this count and
   // the barrel by the `<Name>/<Name>.tsx` rule, exactly as
   // `ToolbarSlot` and `QueryBuilderRow` do.
-  expect(componentNames.length).toBe(48)
+  expect(componentNames.length).toBe(49)
 
   for (const name of componentNames) {
     expect(barrel).toContain(`export { ${name} }`)
