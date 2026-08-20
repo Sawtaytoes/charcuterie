@@ -15,6 +15,8 @@
  * (layer, breakpoints, container sizes) live in `scales.ts`.
  */
 
+import type { CategoricalIndex } from "./categorical.ts"
+
 export type Scheme = "light" | "dark"
 
 export type Density = "comfortable" | "compact" | "kiosk"
@@ -99,6 +101,32 @@ export type SchemeColours = {
   content: Record<ContentRole, string>
   border: Record<BorderRole, string>
   intent: Record<IntentName, Record<IntentRole, string>>
+  /**
+   * The numbered, non-semantic family — `categorical.1` …
+   * `categorical.10`, each with the same seven roles an intent has.
+   *
+   * Separate from `intent` and not a seventh member of it, because
+   * the two answer different questions and only one of them has an
+   * answer in English. An intent is a *claim*: `danger` says what
+   * happens if you press the thing, and a component may reasonably
+   * switch on it. A categorical index says nothing at all — it is a
+   * user's pick for a label or a project, or the third series on a
+   * chart, and the only thing anyone may do with it is paint it.
+   * Folding a `label7` into `IntentName` would put a value with no
+   * meaning inside the union every `getAsyncIntent`-style
+   * exhaustive switch in the fleet is written over.
+   *
+   * The index union comes back from `categorical.ts` as a
+   * **type-only** import. That is a cycle on paper and none at
+   * runtime — `import type` is erased entirely — and it is worth it
+   * to keep `Record<CategoricalIndex, …>` exact here rather than
+   * degrading to `Record<number, …>`, which would let a variant
+   * ship an eleventh entry or omit the tenth with no complaint.
+   */
+  categorical: Record<
+    CategoricalIndex,
+    Record<IntentRole, string>
+  >
   focus: {
     ring: string
     ringOffset: string

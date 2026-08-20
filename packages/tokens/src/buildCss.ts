@@ -15,6 +15,7 @@
  * Tailwind.
  */
 
+import { CATEGORICAL_INDEXES } from "./categorical.ts"
 import { INTENT_NAMES } from "./contrastAudit.ts"
 import {
   containerQuery,
@@ -65,6 +66,22 @@ export const buildColourProperties = (
       ([role, value]) =>
         declare(
           `--color-intent-${intent}-${role.replace(
+            /[A-Z]/g,
+            (character) => `-${character.toLowerCase()}`,
+          )}`,
+          value,
+        ),
+    ),
+  ),
+  // `--color-categorical-3-solid-hover`, and its nine siblings x
+  // seven roles. Same `role.replace` as the intents above, because
+  // it is the same seven roles — `CategoricalRole` *is*
+  // `IntentRole`, aliased rather than restated.
+  ...CATEGORICAL_INDEXES.flatMap((index) =>
+    Object.entries(colour.categorical[index]).map(
+      ([role, value]) =>
+        declare(
+          `--color-categorical-${index}-${role.replace(
             /[A-Z]/g,
             (character) => `-${character.toLowerCase()}`,
           )}`,
@@ -583,6 +600,22 @@ export const THEME_BRIDGES = {
   "--font-display": "--font-display",
 } as const
 
+/**
+ * The seven roles both colour families publish, kebab-cased for
+ * CSS. Written once because `intent` and `categorical` have the
+ * same seven by design, and a family that quietly published six of
+ * them would fail only at the call site that used the seventh.
+ */
+const COLOUR_FAMILY_ROLES = [
+  "surface",
+  "surface-hover",
+  "border",
+  "content",
+  "solid",
+  "solid-hover",
+  "on-solid",
+] as const
+
 const FONT_SIZE_STEPS = [
   "xs",
   "sm",
@@ -721,17 +754,21 @@ export const buildThemeCss = () =>
       (name) => `  --color-${name}: var(--color-${name});`,
     ),
     ...INTENT_NAMES.flatMap((intent) =>
-      [
-        "surface",
-        "surface-hover",
-        "border",
-        "content",
-        "solid",
-        "solid-hover",
-        "on-solid",
-      ].map(
+      COLOUR_FAMILY_ROLES.map(
         (role) =>
           `  --color-intent-${intent}-${role}: var(--color-intent-${intent}-${role});`,
+      ),
+    ),
+    // Without these seventy lines the variables exist and the
+    // utilities do not: `bg-categorical-3-surface` would generate
+    // nothing, silently, and the badge would render unstyled. That
+    // is the `--font-display` trap in `buildThemeBridges` and the
+    // `--color-danger-9` one Docket shipped, and it is why
+    // `tailwindCandidates.test.ts` compiles every literal.
+    ...CATEGORICAL_INDEXES.flatMap((index) =>
+      COLOUR_FAMILY_ROLES.map(
+        (role) =>
+          `  --color-categorical-${index}-${role}: var(--color-categorical-${index}-${role});`,
       ),
     ),
     "",
