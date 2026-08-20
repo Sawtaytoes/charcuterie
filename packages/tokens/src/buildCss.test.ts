@@ -14,6 +14,7 @@ import {
   buildThemeCss,
   buildVariablesCss,
 } from "./buildCss.ts"
+import { CATEGORICAL_INDEXES } from "./categorical.ts"
 import { INTENT_NAMES } from "./contrastAudit.ts"
 import {
   variants,
@@ -251,22 +252,50 @@ test("camelCase roles are kebab-cased on the way into CSS", () => {
   )
 })
 
+const COLOUR_FAMILY_ROLES = [
+  "surface",
+  "surface-hover",
+  "border",
+  "content",
+  "solid",
+  "solid-hover",
+  "on-solid",
+]
+
 test("every intent and role reaches the Tailwind theme", () => {
   for (const intent of INTENT_NAMES) {
-    for (const role of [
-      "surface",
-      "surface-hover",
-      "border",
-      "content",
-      "solid",
-      "solid-hover",
-      "on-solid",
-    ]) {
+    for (const role of COLOUR_FAMILY_ROLES) {
       expect(themeCss).toContain(
         `--color-intent-${intent}-${role}:`,
       )
     }
   }
+})
+
+test("every categorical index and role reaches the Tailwind theme", () => {
+  // A variable with no `@theme` entry exists and generates no
+  // utility: `bg-categorical-3-surface` would emit nothing, with no
+  // error, and the badge would render unstyled. That is the
+  // `--color-danger-9` failure Docket shipped — a name that
+  // resolved to nothing, painted transparent, and passed every "is
+  // it rendered" assertion.
+  for (const index of CATEGORICAL_INDEXES) {
+    for (const role of COLOUR_FAMILY_ROLES) {
+      expect(themeCss).toContain(
+        `--color-categorical-${index}-${role}:`,
+      )
+    }
+  }
+})
+
+test("the categorical family is emitted for every variant and scheme", () => {
+  // 4 variants x 2 schemes x 10 indexes x 7 roles. A generator that
+  // quietly stopped at the default variant would leave three
+  // `data-variant` values painting a badge with nothing at all.
+  expect(
+    (variablesCss.match(/--color-categorical-\d+-/g) ?? [])
+      .length,
+  ).toBe(4 * 2 * 10 * 7)
 })
 
 // ---------------------------------------------------------------

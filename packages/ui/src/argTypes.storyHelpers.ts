@@ -1,4 +1,8 @@
 import { connectionTransitions } from "@charcuterie/logic"
+import {
+  CATEGORICAL_HUES,
+  CATEGORICAL_INDEXES,
+} from "@charcuterie/tokens"
 import type { InputType } from "storybook/internal/types"
 
 import { CONTROL_SIZE_CLASS } from "./controlStyles.ts"
@@ -94,6 +98,41 @@ export const PLACEMENT_OPTIONS = [
 ] as const
 
 export const intentArgType = toChoiceArgType(INTENT_OPTIONS)
+
+/**
+ * `categorical` is the one enumerable prop in the package whose
+ * values are **numbers**, so it cannot go through `toOptions` —
+ * `Object.keys` on a numerically-keyed record returns
+ * `["1", "2", …]`, and a control handing the component `"3"` where
+ * it wants `3` indexes a `Record<CategoricalIndex, …>` with a
+ * string and paints nothing. Reading `CATEGORICAL_INDEXES` keeps
+ * the type and the control agreeing.
+ *
+ * `undefined` leads the list because it is the real default: a
+ * badge with no `categorical` is an `intent` badge, and a control
+ * with no way back to that would make the two props look like a
+ * choice the reader cannot undo.
+ */
+export const CATEGORICAL_OPTIONS = [...CATEGORICAL_INDEXES]
+
+export const categoricalArgType: InputType = {
+  control: { type: "select" },
+  options: [undefined, ...CATEGORICAL_OPTIONS],
+  // The names are `CATEGORICAL_HUES`', not invented here — a picker
+  // that says "3" tells a reader nothing, and `Swatch` already
+  // settled that a colour needs a word attached.
+  mapping: Object.fromEntries(
+    CATEGORICAL_OPTIONS.map((index) => [index, index]),
+  ),
+  table: {
+    type: {
+      summary: CATEGORICAL_OPTIONS.map(
+        (index) =>
+          `${index} (${CATEGORICAL_HUES[index].label})`,
+      ).join(" | "),
+    },
+  },
+}
 
 export const controlSizeArgType = toChoiceArgType(
   CONTROL_SIZE_OPTIONS,
