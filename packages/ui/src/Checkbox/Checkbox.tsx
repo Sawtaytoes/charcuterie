@@ -157,9 +157,18 @@ export const Checkbox = ({
           // No `disabled:` colour override; the wrapper's `opacity-60`
           // does the dimming, and doubling it on the box is what made a
           // disabled checkbox vanish.
+          // `indeterminate:` wears the same fill as `checked:`. It is
+          // the state a *group* box is in when some of its members are
+          // ticked, and it cannot be written in markup at all —
+          // `indeterminate` is a DOM property with no HTML attribute —
+          // so the only way to reach it is a consumer writing to the
+          // input. `DataTable`'s select-all box does exactly that, and
+          // before this line it painted **nothing**: the property was
+          // set, screen readers announced "mixed", and the box on
+          // screen was indistinguishable from empty.
           isReadOnly
-            ? "border-border-default checked:border-intent-neutral-solid checked:bg-intent-neutral-solid"
-            : "border-border-strong checked:border-intent-accent-solid checked:bg-intent-accent-solid",
+            ? "border-border-default checked:border-intent-neutral-solid checked:bg-intent-neutral-solid indeterminate:border-intent-neutral-solid indeterminate:bg-intent-neutral-solid"
+            : "border-border-strong checked:border-intent-accent-solid checked:bg-intent-accent-solid indeterminate:border-intent-accent-solid indeterminate:bg-intent-accent-solid",
           isDisabled
             ? "cursor-not-allowed"
             : isReadOnly
@@ -202,7 +211,7 @@ export const Checkbox = ({
       <svg
         aria-hidden="true"
         className={toClassName(
-          "pointer-events-none invisible absolute peer-checked:visible",
+          "pointer-events-none invisible absolute peer-checked:visible peer-indeterminate:invisible",
           // Matches whichever fill the box wears, so the tick keeps its
           // guaranteed on-solid contrast in either intent.
           isReadOnly
@@ -218,6 +227,28 @@ export const Checkbox = ({
         viewBox="0 0 24 24"
       >
         <path d="M20 6 9 17l-5-5" />
+      </svg>
+
+      {/* The mixed mark — a dash, not a tick. Its own element rather
+          than a second `<path>` in the tick's `<svg>`, because the
+          two states have to be able to hide independently and a
+          `<path>` cannot carry a `peer-*` variant of its own. */}
+      <svg
+        aria-hidden="true"
+        className={toClassName(
+          "pointer-events-none invisible absolute peer-indeterminate:visible",
+          isReadOnly
+            ? "text-intent-neutral-on-solid"
+            : "text-intent-accent-on-solid",
+          CHECK_SIZE_CLASS[size],
+        )}
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth={3}
+        viewBox="0 0 24 24"
+      >
+        <path d="M6 12h12" />
       </svg>
     </span>
 
