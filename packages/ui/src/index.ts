@@ -103,6 +103,46 @@ export {
   MIN_TOUCH_TARGET_CLASS,
   SPINNER_SIZE_CLASS,
 } from "./controlStyles.ts"
+export type { DatePickerProps } from "./DatePicker/DatePicker.tsx"
+export { DatePicker } from "./DatePicker/DatePicker.tsx"
+export type { DatePreset } from "./DatePicker/datePresets.ts"
+export { DEFAULT_DATE_PRESETS } from "./DatePicker/datePresets.ts"
+export type {
+  DateInputKeywords,
+  DateInputResult,
+  ParseDateInputOptions,
+} from "./DatePicker/parseDateInput.ts"
+export {
+  DEFAULT_DATE_INPUT_KEYWORDS,
+  parseDateInput,
+} from "./DatePicker/parseDateInput.ts"
+export type {
+  DateRange,
+  PlainDate,
+  PlainDateFormatOptions,
+} from "./DatePicker/plainDate.ts"
+export {
+  addDays,
+  addMonths,
+  clampPlainDate,
+  comparePlainDates,
+  formatPlainDate,
+  getDayNumber,
+  getDaysBetween,
+  getDaysInMonth,
+  getFirstDayOfWeek,
+  getIsLeapYear,
+  getIsSameDay,
+  getIsValidPlainDate,
+  getIsWithinRange,
+  getLocalPlainDate,
+  getMonthNames,
+  getPlainDateFromDayNumber,
+  getWeekday,
+  getWeekdayNames,
+  parseIsoDate,
+  toIsoDate,
+} from "./DatePicker/plainDate.ts"
 export type {
   DataTableColumn,
   DataTableProps,
