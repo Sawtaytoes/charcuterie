@@ -20,6 +20,7 @@
  * `Tokens/Overview`.
  */
 
+import { buildCategoricalScheme } from "../categorical.ts"
 import type { Variant } from "../types.ts"
 import {
   defaultControl,
@@ -144,6 +145,22 @@ export const hairline: Variant = {
           onSolid: "#04141A",
         },
       },
+      /**
+       * A shade quieter, because this direction's bet is that
+       * nothing decorative should compete with the colour that
+       * carries meaning. Only a shade, though — here the
+       * categorical colour **is** the meaning, so quietening it the
+       * way a decorative accent gets quietened would be reading the
+       * premise backwards. Most of the ring is gamut-bound anyway,
+       * so this moves the reds, blues and purples and leaves the
+       * greens where the gamut already put them.
+       */
+      categorical: buildCategoricalScheme({
+        raisedSurface: "#15171A",
+        scheme: "dark",
+        tuning: { chromaScale: 0.95 },
+      }),
+
       focus: {
         ring: "#7C8AF0",
         ringOffset: "#0D0E10",
@@ -239,6 +256,22 @@ export const hairline: Variant = {
           onSolid: "#FFFFFF",
         },
       },
+      /**
+       * A shade quieter, because this direction's bet is that
+       * nothing decorative should compete with the colour that
+       * carries meaning. Only a shade, though — here the
+       * categorical colour **is** the meaning, so quietening it the
+       * way a decorative accent gets quietened would be reading the
+       * premise backwards. Most of the ring is gamut-bound anyway,
+       * so this moves the reds, blues and purples and leaves the
+       * greens where the gamut already put them.
+       */
+      categorical: buildCategoricalScheme({
+        raisedSurface: "#FFFFFF",
+        scheme: "light",
+        tuning: { chromaScale: 0.95 },
+      }),
+
       focus: {
         ring: "#4A56C8",
         ringOffset: "#F6F4F1",
