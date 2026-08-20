@@ -1,0 +1,123 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as DataTableStories from "./DataTable.stories";
+
+<Meta of={DataTableStories} />
+
+# DataTable
+
+**A table that reflows instead of scrolling, sized by its container.** Columns, rows, an
+optional selection column, and the sort *announcement* — the data itself stays the
+consumer's.
+
+<Canvas of={DataTableStories.Default} />
+
+## Props
+
+<Controls />
+
+## It composes `SortableTableHeader`
+
+Every sortable column renders [`SortableTableHeader`](?path=/docs/components-sortabletableheader--docs),
+which shipped first and stays shipped. It is in a published `1.0.0` with a consumer of its
+own, so subsuming it would have been a breaking change bought for nothing — and there is
+value in exactly one place in the fleet knowing that `aria-sort` belongs on the `<th>` while
+the click target is a `<button>` inside it.
+
+That composition is also why this is a **real `<table>`** rather than a grid of
+`<div role="row">`s: a div grid cannot host a `<th>` at all, so it would have meant either
+duplicating the header component or breaking it.
+
+| | `<table>` | `<div role="grid">` |
+| --- | --- | --- |
+| Hosts `SortableTableHeader` | yes | no |
+| Column widths | the browser's auto layout, free | you write the track list |
+| Screen-reader table mode | native | depends on the roles being complete |
+| Keyboard model | ordinary controls in document order | a roving focus you now own |
+
+A `grid` is the right answer for a spreadsheet — cell-by-cell arrow navigation, editable
+cells. This is a **table**: rows of data with the odd control in them.
+
+## Narrow means reflow, never a sideways scroll
+
+<Canvas of={DataTableStories.Responsive} />
+
+Below `--cq-md` (32rem) each row becomes a labelled block — the column name beside its
+value — and the header row wraps into a strip of sort controls that stays reachable. Above
+it, an ordinary table.
+
+The two alternatives, and why neither:
+
+- **Horizontal scroll.** WCAG 2.2 SC 1.4.10 (Reflow) exists because of it, and the consumer
+  this was built for bans it outright: *"No horizontal scroll, ever."* A pan surface also
+  hides the *existence* of the off-screen columns.
+- **Dropping low-priority columns.** Cheapest to build, and the only option that loses data:
+  the assignee column does not come back, and no gesture asks for it.
+
+## Container queries, never a media query
+
+The width that decides the layout is **this element's**, not the window's. A table in a
+three-up board lane is narrow on a 4K monitor, and a reader browsing at 175% zoom has ~860
+effective pixels in a 1500px window — so a `@media (max-width: …)` here is measuring
+something that is not the question.
+
+The `@container` is declared on the wrapper and queried by its descendants, because
+[a container query never matches the element that declares it](?path=/docs/guides-building-an-app--docs).
+`Responsive` is the only honest way to see it: three widths, one window, no viewport change
+at all.
+
+## What it does not own
+
+<Canvas of={DataTableStories.AllVariants} />
+
+**Sorting the data.** `sort` says which column is sorted; `onSortChange` asks for a
+different one; the rows arrive already ordered. Comparing two values is per-column app logic
+— `priority` in the stories sorts high → medium → low, which is not its alphabetical order —
+and a table that sorted itself would need a comparator per column to do it, which is the
+same code in a worse place.
+
+**The selected set.** `selection.selectedRowKeys` is authoritative and lives with the
+consumer, because every *use* of a selection — the count in a toolbar, the bulk action, the
+undo — is outside this component. That is the opposite of
+[`Checkbox`](?path=/docs/components-checkbox--docs), and for a stated reason: the platform
+owns one checkbox's checkedness, and nothing at all owns "these five rows".
+
+**Column widths.** No drag handle and no measured layout. The browser's own auto table
+layout sizes columns to their content, and `column.className` overrides it — `w-32` on a
+column lands on that column's `<th>` and every one of its `<td>`s. Drag-to-resize is a
+*persistence* question (whose widths, stored where, keyed on what) that a component cannot
+answer for its consumer.
+
+**Virtualisation.** Deliberately absent. Every row is in the DOM, which is what keeps the
+accessibility tree honest and the auto column layout possible; the measurements and the
+cliff are in
+[the decision record](https://github.com/Sawtaytoes/charcuterie/blob/master/docs/decisions/2026-08-19-the-data-table-composes-sortabletableheader-reflows-and-does-not-virtualise.md).
+Past a few thousand rows, filter or page — a virtualised table is a different component,
+because it has to fix row heights and column widths to work at all.
+
+## Selection is written to the input, not re-mounted
+
+<Canvas of={DataTableStories.AllStates} />
+
+`Checkbox` is uncontrolled by design — `isChecked` seeds the first paint and the `<input>`
+is the store from then on. Keeping a controlled `selectedRowKeys` authoritative therefore
+means **writing to the store**: an effect sets `input.checked` on every render. The
+alternative, a state-bearing `key` that re-mounts the box, throws the focus away one row
+into a keyboard pass down the column.
+
+It is also the only way to express the header box's third state: `indeterminate` is a DOM
+property with **no HTML attribute at all**, so no markup could have set it.
+
+The row carries `data-is-selected` for the paint, and **not** `aria-selected`: that property
+belongs to `grid` and `treegrid` rows. In a `table`, the row's own checkbox is what states
+the fact — and it is a control that can also change it.
+
+## Keyboard
+
+<Canvas of={DataTableStories.Interactive} />
+
+There is no custom key handling, and that is the design. `Tab` reaches each sortable
+header's button and each row's checkbox in document order; `Enter`/`Space` sorts; `Space`
+ticks. A table is not a `grid`, so there is no roving focus and no arrow-key cell
+navigation — a screen reader's own table mode moves through the data, and everything
+interactive is a real control the browser already knows how to reach.
