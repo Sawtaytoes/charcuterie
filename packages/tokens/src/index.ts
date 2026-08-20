@@ -18,6 +18,30 @@ export {
   buildVariablesCss,
   DEFAULT_COLOR_SCHEME_STORAGE_KEY,
 } from "./buildCss.ts"
+export type {
+  CategoricalDistinctnessFailure,
+  CategoricalIndex,
+  CategoricalRole,
+  CategoricalTuning,
+} from "./categorical.ts"
+export {
+  buildCategoricalScheme,
+  CATEGORICAL_ADJACENT_PAIRS,
+  CATEGORICAL_BORDER_THRESHOLD,
+  CATEGORICAL_DISTINCTNESS_FLOOR,
+  CATEGORICAL_HUES,
+  CATEGORICAL_INDEX_COUNT,
+  CATEGORICAL_INDEXES,
+  CATEGORICAL_PAIRS,
+  getCategoricalDistinctnessFailures,
+  TABLEAU_10_MINIMUM_DISTANCE,
+} from "./categorical.ts"
+export type { OkLab, OkLch } from "./colourSpace.ts"
+export {
+  getColourDistance,
+  toGamut,
+  toHex,
+} from "./colourSpace.ts"
 export type { ContrastResult } from "./contrast.ts"
 export {
   getApcaLc,
@@ -31,6 +55,7 @@ export {
   getFailures,
   INTENT_NAMES,
 } from "./contrastAudit.ts"
+export { getCategoricalIndex } from "./getCategoricalIndex.ts"
 export type { ResolvedTokens } from "./resolveTokens.ts"
 export { resolveTokens } from "./resolveTokens.ts"
 

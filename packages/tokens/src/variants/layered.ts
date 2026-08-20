@@ -19,6 +19,7 @@
  * `Tokens/Overview`.
  */
 
+import { buildCategoricalScheme } from "../categorical.ts"
 import type { Variant } from "../types.ts"
 import {
   defaultControl,
@@ -139,6 +140,17 @@ export const layered: Variant = {
           onSolid: "#04141B",
         },
       },
+      /**
+       * A touch richer, matching a direction whose separation comes
+       * from soft surfaces rather than borders and which is read
+       * from two or three metres away.
+       */
+      categorical: buildCategoricalScheme({
+        raisedSurface: "#1E1C28",
+        scheme: "dark",
+        tuning: { chromaScale: 1.02 },
+      }),
+
       focus: {
         ring: "#F0836E",
         ringOffset: "#131118",
@@ -231,6 +243,17 @@ export const layered: Variant = {
           onSolid: "#FFFFFF",
         },
       },
+      /**
+       * A touch richer, matching a direction whose separation comes
+       * from soft surfaces rather than borders and which is read
+       * from two or three metres away.
+       */
+      categorical: buildCategoricalScheme({
+        raisedSurface: "#FFFFFF",
+        scheme: "light",
+        tuning: { chromaScale: 1.02 },
+      }),
+
       focus: {
         ring: "#B03A28",
         ringOffset: "#F4F1F5",

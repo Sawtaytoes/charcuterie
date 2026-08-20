@@ -7,6 +7,7 @@
 
 import { describe, expect, test } from "vitest"
 
+import { CATEGORICAL_INDEXES } from "./categorical.ts"
 import { INTENT_NAMES } from "./contrastAudit.ts"
 import type {
   EpaperFixedInkPanel,
@@ -79,6 +80,13 @@ const listSwatches = (palette: EpaperPalette) => {
     ...INTENT_NAMES.flatMap((name) =>
       Object.values(colour.intent[name]),
     ),
+    // The categorical family is held to the same bar, and it is the
+    // family most likely to arrive with a hue this panel has never
+    // heard of — it is generated in OKLCh against an sRGB gamut,
+    // and ePaper has neither.
+    ...CATEGORICAL_INDEXES.flatMap((index) =>
+      Object.values(colour.categorical[index]),
+    ),
     colour.focus.ring,
     colour.focus.ringOffset,
   ]
@@ -138,6 +146,29 @@ test("mono collapses every intent to black", () => {
     expect(intent[name].solid).toBe("#000000")
     expect(intent[name].content).toBe("#000000")
     expect(intent[name].border).toBe("#000000")
+  }
+})
+
+test("every categorical index collapses to one ink, on both panels", () => {
+  // Deliberate, and the opposite of what the sibling test asks of
+  // the intents. Spectra 6 has four chromatic inks; ten indexes
+  // spread round-robin across them would make index 1 and index 6
+  // *identical*, and a reader would trust a colour that is lying.
+  // Uniform black is the honest answer — on ePaper a categorical
+  // badge is told apart by its label, the same trade
+  // `content.secondary` already makes on these panels.
+  for (const palette of PALETTES) {
+    const { categorical } = epaperColours[palette]
+
+    const inks = new Set(
+      CATEGORICAL_INDEXES.flatMap((index) => [
+        categorical[index].solid,
+        categorical[index].content,
+        categorical[index].border,
+      ]),
+    )
+
+    expect([...inks]).toEqual(["#000000"])
   }
 })
 
