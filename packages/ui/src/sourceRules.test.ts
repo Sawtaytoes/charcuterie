@@ -212,6 +212,11 @@ test("a container-query component is never storied in a shrink-to-fit cell", () 
   expect(containerComponents).toEqual([
     "Alert",
     "Card",
+    // `DataTable` joins them as the first component whose *layout*
+    // is the container query rather than its padding: below `--cq-md`
+    // a row stops being a row and becomes a labelled block, so the
+    // whole point of the component is a query it declares itself.
+    "DataTable",
     // `DatePicker`'s panel is the container, and it is the first one
     // here whose container is *not* the element a caller sized. A
     // portalled panel is clamped to the space floating-ui found for
@@ -401,7 +406,14 @@ test("the barrel is the only place components are re-exported", async () => {
   // arithmetic and the input grammar are the parts a consumer needs
   // *outside* the field (Docket counts staleness in days), and they
   // reach nothing but `Intl`.
-  expect(componentNames.length).toBe(47)
+  //
+  // `DataTable` — the reflowing table Docket's task lists, backlog and
+  // search results need — is +1 -> 48. It **composes**
+  // `SortableTableHeader` rather than subsuming it: that component is
+  // already in a published 1.0.0 with a consumer of its own, so
+  // removing it would be a breaking change bought for nothing, and
+  // both stay in this count.
+  expect(componentNames.length).toBe(48)
 
   for (const name of componentNames) {
     expect(barrel).toContain(`export { ${name} }`)
