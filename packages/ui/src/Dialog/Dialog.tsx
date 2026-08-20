@@ -1,5 +1,5 @@
 import { useUniqueId } from "@charcuterie/logic"
-import type { ReactNode } from "react"
+import type { ReactNode, RefObject } from "react"
 
 import { Button } from "../Button/Button.tsx"
 import { Modal } from "../Modal/Modal.tsx"
@@ -24,6 +24,16 @@ export type DialogProps = {
    * Escape and a backdrop press both close. Off for the one honest
    * case — a destructive confirm the user has to answer.
    */
+  /**
+   * Which element takes the caret when the dialog opens.
+   *
+   * A dialog wrapping a form wants its first field, not the Close
+   * button the focus manager would otherwise pick — and a consumer
+   * cannot fix that from outside, because focusing in its own
+   * effect races the manager and loses. Docket's capture dialog is
+   * the case: every keystroke landed on "Close".
+   */
+  initialFocus?: RefObject<HTMLElement | null>
   isDismissable?: boolean
   isVisible: boolean
   /**
@@ -82,6 +92,7 @@ export const Dialog = ({
   footer,
   heading,
   headingLevel = 2,
+  initialFocus,
   isDismissable = true,
   isVisible,
   onClose,
@@ -95,6 +106,7 @@ export const Dialog = ({
     <Modal
       aria-labelledby={headingId}
       className={toClassName(SIZE_CLASS[size], className)}
+      initialFocus={initialFocus}
       isDismissable={isDismissable}
       isVisible={isVisible}
       onClose={onClose}
