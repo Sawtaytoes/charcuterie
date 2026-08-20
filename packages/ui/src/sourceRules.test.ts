@@ -222,6 +222,7 @@ test("a container-query component is never storied in a shrink-to-fit cell", () 
     "Card",
     "EmptyState",
     "Main",
+    "MarkdownEditor",
     "MediaTile",
   ])
 
@@ -396,6 +397,11 @@ test("the barrel is the only place components are re-exported", async () => {
   // `useBoardDrag.ts` are its members and stay out of this count and
   // the barrel by the `<Name>/<Name>.tsx` rule, exactly as
   // `ToolbarSlot` and `QueryBuilderRow` do.
+  // `MarkdownEditor` — Docket's live hybrid editor, a real
+  // `<textarea>` with a painted layer behind it — is +1 -> 46. Its
+  // `markdownSpans.ts` and `markdownCommands.ts` are pure modules
+  // rather than components and stay out of this count by the
+  // `<Name>/<Name>.tsx` rule.
   expect(componentNames.length).toBe(46)
 
   for (const name of componentNames) {

@@ -1,0 +1,189 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as MarkdownEditorStories from "./MarkdownEditor.stories";
+
+<Meta of={MarkdownEditorStories} />
+
+# MarkdownEditor
+
+A live hybrid markdown editor whose stored value is markdown and **only** markdown.
+
+Docket asked for this one and its requirement is unusually sharp, because the tracker it
+replaces destroyed data by storing HTML in a field it later read back as text. So the
+constraint is not "prefer markdown" — it is that an HTML tag must not be *able* to reach the
+stored string.
+
+<Canvas of={MarkdownEditorStories.Default} />
+
+## Props
+
+<Controls />
+
+## No HTML can reach the value, by construction
+
+Four properties, and none of them is a rule somebody has to remember:
+
+- the editing surface is a `<textarea>`, which takes **`text/plain`** off the clipboard and
+  nothing else. Copy a styled paragraph out of a browser and the `text/html` flavour is
+  simply never read;
+- every command in `markdownCommands.ts` returns markdown. There is no serialiser and no
+  intermediate document model anywhere in the component;
+- the painted layer emits `{ kind, text }` spans that React renders as **text nodes**. No
+  `innerHTML`, no sanitiser, and nothing to get wrong — a `<script>` in the source is a
+  handful of coloured characters on screen;
+- image insertion escapes its alt text and brackets a dirty URL, so a filename with a `]` in
+  it cannot end the construct early.
+
+`markdownCommands.test.ts` runs every command over a value full of tags and entities and
+asserts each fragment survives **verbatim** — not "contains no `&lt;`", because the fixture
+deliberately contains `&lt;` as literal text and a naive absence check would pass on an
+escaped value and fail on a correct one.
+
+<Canvas of={MarkdownEditorStories.AllVariants} />
+
+## Why a `<textarea>` and not an editor core
+
+Charcuterie is published, so a dependency here is a permanent cost to every consumer.
+Measured on this machine — `esbuild --bundle --minify`, React external, gzip -9:
+
+| Candidate | minified | gzipped |
+| --- | --- | --- |
+| TipTap 3.30 + starter kit + `tiptap-markdown` | 720 KB | **238 KB** |
+| CodeMirror 6 (`basicSetup` + `lang-markdown`) | 609 KB | **206 KB** |
+| CodeMirror 6, hand-assembled minimum | 512 KB | **176 KB** |
+| Lexical 0.49 + markdown/list/link/code nodes | 449 KB | **148 KB** |
+| **This component** | — | **0 KB added** |
+
+The full argument, including what the choice gives up and what would justify reversing it,
+is in
+[`docs/decisions/2026-08-19-the-markdown-editor-is-a-textarea-with-a-painted-layer.md`](https://github.com/Sawtaytoes/charcuterie/blob/master/docs/decisions/2026-08-19-the-markdown-editor-is-a-textarea-with-a-painted-layer.md).
+
+The accessibility half of it is the half that is hard to buy back later. A `<textarea>`
+arrives with caret movement, word-wise selection, `Home`/`End`, IME composition, spellcheck,
+autocorrect, the platform's own undo stack, `role="textbox"` and `aria-multiline="true"` —
+all of it, in every browser, tested by the vendors. A `contenteditable` starts with none of
+those and re-earns each one, and the ones it never fully re-earns are IME and undo.
+
+## The painted layer, and the geometry that constrains it
+
+The surface is a real `<textarea>` with a painted layer behind it in the **same grid cell**.
+The textarea owns the caret, the selection, the undo stack and the IME; the layer owns the
+colour. Its text is transparent and its `caret-color` is not, which is what `caret-color`
+exists for.
+
+That only works while the two layers **lay out identically**, so:
+
+- the tokenizer keeps **every character**. It never trims, never normalises a tab, never
+  drops an unterminated marker. `markdownSpans.test.ts` joins every span back together and
+  asserts it reproduces the source byte for byte;
+- every span style is **metric-neutral**. Bold is faux bold — `text-shadow` at ±0.02em paints
+  the glyph twice, a hair apart, which thickens it and moves nothing. Italic is real, because
+  the surface is monospaced and a monospaced italic keeps the advance width by definition.
+  Headings get weight and colour rather than size. `MarkdownEditor.test.tsx` **measures** each
+  one against plain text and fails if any of them is wider.
+
+The honest limit follows from the same constraint: **markers are dimmed, not hidden.**
+Concealing `**` would change the line's width and there is no way to do it in this medium.
+So "raw syntax on the cursor's line" becomes a contrast change — muted markers everywhere,
+accent markers on the line the caret is on — and true concealment is the staged follow-up,
+which needs a decoration-capable surface (CodeMirror 6) and would arrive as an **optional
+subpath** so consumers that do not use it keep paying nothing.
+
+<Canvas of={MarkdownEditorStories.NoUpload} />
+
+## Uncontrolled, and that is not a shortcut
+
+`defaultValue` in, `onChange` out — the same contract as `Select`, and here it protects
+something specific. A controlled React `<textarea>` round-trips every keystroke through
+render, and any programmatic `value` assignment **wipes the browser's undo stack**: Ctrl+Z
+after a toolbar click then skips the paragraph you typed before it, or does nothing at all.
+
+So the textarea is never handed a `value`. Its text is mirrored into state for *painting*
+only, and every programmatic edit is applied as a range replacement through
+`document.execCommand("insertText")` — deprecated, and still the only API that appends to
+the native undo stack. `getMinimalEdit` is what turns a command's whole-string result back
+into that range, so a bold toggle is **one** undo step over four characters rather than a
+document-sized one.
+
+A consumer that must swap the whole document — Docket opening a different task — remounts
+with a `key`. That is one line, and it is honest about the fact that the old undo history
+belonged to the old document.
+
+## Paste an image at the cursor
+
+```tsx
+<MarkdownEditor
+  label="Description"
+  onUploadImage={async (file) => {
+    const { url } = await uploadToBlobStore(file)
+
+    return { alt: file.name, url }
+  }}
+/>
+```
+
+**The component owns no storage.** It hands you a `File`, waits, and inserts the URL you
+return as `![alt](url)` at the caret. Docket keeps its own blob storage precisely so the URL
+stays stable and theirs.
+
+While the request is in flight the document holds a **markdown placeholder** —
+`![Uploading rack.png](#uploading-1)` — rather than an overlay, because the user keeps typing
+during an upload and the insertion point has to move with what they type. It carries a
+counter so two files of the same name do not resolve into each other's slot, and a failed
+upload leaves a document the user can read and fix rather than a dangling widget.
+
+Omit `onUploadImage` and image paste is simply not offered. A `<textarea>` ignores a pasted
+image on its own, which is the correct fallback rather than a broken one.
+
+## Composition, and the one component that did not fit
+
+The toolbar is this package's `Toolbar`, so the row collapses into a **menu by measurement**
+rather than at a breakpoint — which is what the Narrow View actually needs, since a lane in a
+three-up board is narrow on a 4K display. `Field` wraps it through `SlotProps`, so a label, a
+description and an error wire themselves to the `<textarea>` rather than stopping at this
+component.
+
+`FileDropZone` does **not** wrap it, and that is the interesting one. That component is a
+`<label>` around a file input covering its whole area — correct for "drop a disc image here",
+and wrong for a text surface, where the drop has to land *at a character offset* and the area
+has to keep taking clicks as caret placement. So the editor handles its own drop, and
+`FileDropZone` stays the right answer for the attachment list beside it.
+
+<Canvas of={MarkdownEditorStories.Responsive} />
+
+## Keyboard
+
+| Key | Does |
+| --- | --- |
+| `Ctrl`/`Cmd` + `B` | Bold, and un-bold |
+| `Ctrl`/`Cmd` + `I` | Italic |
+| `Ctrl`/`Cmd` + `E` | Inline code |
+| `Ctrl`/`Cmd` + `K` | Link, caret parked in the destination |
+| `Ctrl`/`Cmd` + `]` / `[` | Indent / outdent the selected lines |
+| `Enter` | Continues a list, a task list or a quote — and **clears** an empty item |
+| `Tab` | Moves focus. Always. |
+
+**`Tab` is never captured**, at any time. Indenting with Tab is the convention in editors
+that own the whole page, and inside a form it is a keyboard trap: WCAG 2.1.2 wants focus to
+be able to leave every component with the standard gesture, and a multi-line field on a task
+form is exactly where somebody tabs onward.
+
+Enter returns *nothing to do* rather than an unchanged state when the caret is not in a list,
+so the keypress falls through to the browser and lands on the native undo stack as an
+ordinary typing step.
+
+<Canvas of={MarkdownEditorStories.AllStates} />
+
+## What this deliberately does not parse
+
+The tokenizer resolves **one line at a time**, carrying exactly one bit of cross-line state:
+whether we are inside a fenced code block. Painting re-runs on every keystroke, so the cost
+has to be linear in the line rather than in the document — and a mis-coloured marker is
+cosmetic while a mis-*placed* one is a broken editor.
+
+So these colour as plain text: setext headings (`Title` over `=====`), indented four-space
+code blocks, reference links (`[a][b]`), autolinks in angle brackets, and emphasis that spans
+a line break. They all still **store** correctly, because the stored value is the textarea's
+and not the tokenizer's.
+
+<Canvas of={MarkdownEditorStories.Interactive} />

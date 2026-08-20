@@ -173,6 +173,22 @@ export { LogViewer } from "./LogViewer/LogViewer.tsx"
 export type { MainProps } from "./Main/Main.tsx"
 export { Main } from "./Main/Main.tsx"
 export type {
+  MarkdownEditorProps,
+  MarkdownImageUpload,
+} from "./MarkdownEditor/MarkdownEditor.tsx"
+export { MarkdownEditor } from "./MarkdownEditor/MarkdownEditor.tsx"
+export { toMarkdownImage } from "./MarkdownEditor/markdownCommands.ts"
+export type {
+  MarkdownLine,
+  MarkdownLineKind,
+  MarkdownSpan,
+  MarkdownSpanKind,
+} from "./MarkdownEditor/markdownSpans.ts"
+export {
+  toLineIndex,
+  toMarkdownLines,
+} from "./MarkdownEditor/markdownSpans.ts"
+export type {
   MediaTileProps,
   MediaTileRatio,
 } from "./MediaTile/MediaTile.tsx"
