@@ -103,6 +103,13 @@ export {
   MIN_TOUCH_TARGET_CLASS,
   SPINNER_SIZE_CLASS,
 } from "./controlStyles.ts"
+export type {
+  DataTableColumn,
+  DataTableProps,
+  DataTableSelection,
+  DataTableSort,
+} from "./DataTable/DataTable.tsx"
+export { DataTable } from "./DataTable/DataTable.tsx"
 export type { DatePickerProps } from "./DatePicker/DatePicker.tsx"
 export { DatePicker } from "./DatePicker/DatePicker.tsx"
 export type { DatePreset } from "./DatePicker/datePresets.ts"
