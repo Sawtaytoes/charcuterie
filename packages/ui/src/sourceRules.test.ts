@@ -389,20 +389,21 @@ test("the barrel is the only place components are re-exported", async () => {
   // board-games' `SelectMenu`, mux-magic's `ListboxPicker`, and twice
   // inside this package), each with its own hand-rolled chevron.
   //
+  // `MarkdownEditor` — Docket's live hybrid editor, a real
+  // `<textarea>` with a painted layer behind it — is +1 -> 46. Its
+  // `markdownSpans.ts` and `markdownCommands.ts` are pure modules
+  // rather than components and stay out of this count by the
+  // `<Name>/<Name>.tsx` rule.
+  //
   // `Board` — lanes of cards, sized by their container and moved by
-  // keyboard or by pointer — is +1 -> 46. It is the library's first
+  // keyboard or by pointer — is +1 -> 47. It is the library's first
   // component whose own operation is a **write** rather than a
   // selection, and the first to declare two nested containers.
   // `BoardCard.tsx`, `BoardLaneList.tsx`, `boardMove.ts` and
   // `useBoardDrag.ts` are its members and stay out of this count and
   // the barrel by the `<Name>/<Name>.tsx` rule, exactly as
   // `ToolbarSlot` and `QueryBuilderRow` do.
-  // `MarkdownEditor` — Docket's live hybrid editor, a real
-  // `<textarea>` with a painted layer behind it — is +1 -> 46. Its
-  // `markdownSpans.ts` and `markdownCommands.ts` are pure modules
-  // rather than components and stay out of this count by the
-  // `<Name>/<Name>.tsx` rule.
-  expect(componentNames.length).toBe(46)
+  expect(componentNames.length).toBe(47)
 
   for (const name of componentNames) {
     expect(barrel).toContain(`export { ${name} }`)
