@@ -38,6 +38,16 @@ The router is **injected** rather than depended on — `RouterLinkProvider` at t
 with `@charcuterie/ui/react-router` as an optional subpath adapter and a plain `<a>` when
 nothing is provided. Recipe: **Guides/Routing** in Storybook.
 
+**`Board` is the first component whose own operation is a write**, and the first to declare
+two nested containers. Lanes with honest counts, priority bars, per-card footers for a live
+run line, real empty states and a `+ n more` overflow — the board's own box decides how many
+lanes are on screen, each lane's box decides whether a card is two lines, one line, or a card.
+There is **no media query in it**, because a lane in a three-up board is ~500px on a maximised
+1600px window and a browser at 175% zoom reports ~860 effective pixels for a 1500px one.
+Moving a card takes **no drag-and-drop dependency**: one handle per card, a `Menu` of the
+other lanes as the primary path, Pointer-Event dragging at 1.4 KB gzip beside it
+([decision](../../docs/decisions/2026-08-19-the-board-owns-the-move-and-takes-no-drag-and-drop-dependency.md)).
+
 **The unified app shell adds four**: `Shell`, `Header`, `Rail`, `Main` — the fleet's largest
 single duplication, where ten of twelve UI repos hand-roll the page chrome and three of them
 have a file named `AppShell.tsx` (two of those headers are a *byte-identical* class string,

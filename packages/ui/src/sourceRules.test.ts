@@ -211,6 +211,14 @@ test("a container-query component is never storied in a shrink-to-fit cell", () 
   // inside it.
   expect(containerComponents).toEqual([
     "Alert",
+    // `Board` declares **two** containers and neither is the element
+    // that queries it: the board's own box decides how many lanes are
+    // on screen, and each lane's list — in `BoardLaneList.tsx`, which
+    // is a member rather than a component by the `<Name>/<Name>.tsx`
+    // rule — decides what shape a card is. Only the first of those is
+    // in this list, and that is enough: it is `<Board` a story renders,
+    // so `<Board` is what a shrink-to-fit `StoryCell` would collapse.
+    "Board",
     "Card",
     // `DataTable` joins them as the first component whose *layout*
     // is the container query rather than its padding: below `--cq-md`
@@ -413,7 +421,16 @@ test("the barrel is the only place components are re-exported", async () => {
   // already in a published 1.0.0 with a consumer of its own, so
   // removing it would be a breaking change bought for nothing, and
   // both stay in this count.
-  expect(componentNames.length).toBe(48)
+  //
+  // `Board` — lanes of cards, sized by their container and moved by
+  // keyboard or by pointer — is +1 -> 49. It is the library's first
+  // component whose own operation is a **write** rather than a
+  // selection, and the first to declare two nested containers.
+  // `BoardCard.tsx`, `BoardLaneList.tsx`, `boardMove.ts` and
+  // `useBoardDrag.ts` are its members and stay out of this count and
+  // the barrel by the `<Name>/<Name>.tsx` rule, exactly as
+  // `ToolbarSlot` and `QueryBuilderRow` do.
+  expect(componentNames.length).toBe(49)
 
   for (const name of componentNames) {
     expect(barrel).toContain(`export { ${name} }`)

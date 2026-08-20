@@ -1,0 +1,199 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as BoardStories from "./Board.stories";
+
+<Meta of={BoardStories} />
+
+# Board
+
+Lanes of cards, sized by their **container**, moved by keyboard or by pointer — and with
+**no drag-and-drop dependency**.
+
+<Canvas of={BoardStories.Default} />
+
+## Props
+
+<Controls />
+
+## The container rule, and why it is the whole component
+
+There is no media query anywhere in `Board`, `BoardCard` or `BoardLaneList`, and adding one
+would be a defect rather than a shortcut. Two facts make window width useless here, and they
+compound:
+
+- **A lane in a three-up board is narrow on any monitor.** Three lanes across a 1600px window
+  is ~500px each — a phone's worth of room, on a 4K display, maximised.
+- **A zoomed browser lies about pixels.** A 1500px window at 175% zoom is ~860 effective CSS
+  pixels, so the number a `@media` query reads is not the number of pixels anything has.
+
+So there are **two nested containers**, answering two different questions:
+
+| Container | Decides |
+| --- | --- |
+| the board's own box | how many lanes are on screen — three-up at `cq-lg`, otherwise one lane and a segmented control |
+| each lane's wrapper | what shape a card is — two lines, one line, or its own card |
+
+`Responsive` is the only honest way to show it: three fixed-width panels inside one browser
+window that never moves. Resizing the viewport would prove nothing, because the thing that
+changed is the component's container, not the window.
+
+<Canvas of={BoardStories.Responsive} />
+
+The narrow panel there is **not a phone**. It is the same board in a sidebar, in a split
+window, or on a display somebody has zoomed to 175% — and a media query cannot tell any of
+those apart from a maximised 4K window.
+
+### The three card shapes
+
+Straight from the consumer requirement, which is specific because the owner answered *"which
+row style?"* with **"all three, depending"**:
+
+| The lane is | The card is |
+| --- | --- |
+| narrower than `cq-sm` (24rem) | **two lines** — title clamped to two, metadata underneath, trailing slot beside it |
+| `cq-sm` to `cq-lg` | **one line** — title ellipsised, metadata right-aligned |
+| `cq-lg` (48rem) and wider | **a card** — its own border, surface and elevation instead of a divider in a list |
+
+It dissolved a bug rather than only satisfying a taste: a *fixed* two-line row collapsed its
+title to `a…` inside a narrow lane, because the metadata beside it could not shrink. A card
+sized by its container has no such state to be in.
+
+### The wrappers are load-bearing
+
+A container query matches **descendants only**, never the element that declares the
+container. So the lane's panel cannot be the container *and* take its own frame off at
+`cq-lg`; the `@container` sits on a wrapper `<div>` and the panel inside it does the
+querying. Same reason `EmptyState` has one. Written on one element it compiles, generates
+real CSS, and silently never fires — which is why `sourceRules.test.ts` fails on it.
+
+## Moving a card, and the drag-and-drop decision
+
+**No DnD library is taken as a dependency.** The full reasoning — licence, provenance, bundle
+cost, and what a general DnD library would actually be buying for one card going into one
+lane — is in
+[the decision record](https://github.com/Sawtaytoes/charcuterie/blob/master/docs/decisions/2026-08-19-the-board-owns-the-move-and-takes-no-drag-and-drop-dependency.md).
+
+The move is one control with two drivers, and they commit through the same `onMove`:
+
+1. **A `Menu` on every card**, listing the other lanes. This is the **primary** path, not an
+   accessible alternative to a real one. It is the only one that works from the keyboard, the
+   only one a screen reader can drive, the only one that works on touch without a long-press
+   convention nobody discovers — and the only one available in the Narrow View, where the
+   other lanes are not on screen to drop onto.
+2. **Pointer dragging from the same handle.** Pointer Events, so mouse, touch and pen are one
+   code path, with `setPointerCapture` so the drag survives the pointer leaving the card.
+   Escape abandons it.
+
+<Canvas of={BoardStories.Interactive} />
+
+Every move is announced in a `role="status"` region that names the **destination and the
+position** — "Moved *X* to In Progress, position 3 of 6." That is the feedback a sighted user
+gets free from watching the card land, and the thing almost every drag implementation forgets
+to say out loud.
+
+### Why not `draggable="true"`
+
+The zero-dependency instinct, and the wrong one. HTML5 drag-and-drop does not fire on touch at
+all, its drag image is a browser-drawn ghost with no styling hook worth using, and
+`dataTransfer` is readable only inside a real `drop` — which makes a live drop indicator
+awkward. Pointer Events cost the same (nothing) and cover every input.
+
+### The move handle is a word by default
+
+`Board` ships **no icon**, because a `⋮` renders as nothing where the font lacks it — this
+sandbox's chromium, the kiosk image, the ePaper build
+([decision](https://github.com/Sawtaytoes/charcuterie/blob/master/docs/decisions/2026-07-29-ship-no-icons-and-no-symbol-glyphs.md)).
+An app that already owns a glyph set passes `moveIcon` and buys back ~55px a row, which in a
+500px lane is the difference between twenty characters of title and thirty.
+
+<Canvas of={BoardStories.AllVariants} />
+
+**No `onMove` means read-only**, all or nothing: no handles, no menus, no drag. A per-card
+`isMovable` would put the decision in the data, where a card that cannot move looks identical
+to one nobody has thought about.
+
+## Where the line is drawn
+
+`Board` owns lanes, counts, truncation, empty states and the move. It does **not** own:
+
+| Not here | Because |
+| --- | --- |
+| **Data** | It is a view of a list the consumer owns. `onMove` hands back a `fromIndex`/`toIndex` pair; the consumer splices. |
+| **Virtualisation** | A lane truncates by construction — `itemCount` is the true total, `items` is what you chose to paint, and the difference becomes "+ n more". *"Long lanes truncate with an honest `+ n more` rather than scrolling forever."* There is nothing left to window. |
+| **The cross-lane "needs attention" panel** | It reaches across every lane, so it is not a lane; it is absent when empty, so the board cannot reserve room for it; and it is already `Alert`. Composing it keeps `Board` about lanes and keeps the banner reusable above a list that is not a board. |
+| **Sorting and filtering** | Both are operations on the array you pass in. |
+
+<Canvas of={BoardStories.InBoardScreen} />
+
+That story is the copy-wholesale template: a page heading, an `Alert` for what needs
+attention, and the board under it with `headingLevel={2}` so the outline stays whole.
+
+## `toIndex` is already corrected for the removal
+
+The most common bug in a hand-rolled board, folded into the component instead:
+
+```tsx
+<Board
+  label="Today"
+  lanes={lanes}
+  onMove={(move) => {
+    setLanes((current) =>
+      current.map((lane) => {
+        const kept =
+          lane.key === move.fromLaneKey
+            ? lane.items.filter((item) => item.key !== move.itemKey)
+            : lane.items
+
+        if (lane.key !== move.toLaneKey) {
+          return { ...lane, items: kept }
+        }
+
+        return {
+          ...lane,
+          items: [
+            ...kept.slice(0, move.toIndex),
+            moved,
+            ...kept.slice(move.toIndex),
+          ],
+        }
+      }),
+    )
+  }}
+/>
+```
+
+No arithmetic. A within-lane move quoted against the un-spliced list is one too high for every
+position below the origin, so the component subtracts it once, in
+[`toSettledIndex`](https://github.com/Sawtaytoes/charcuterie/blob/master/packages/ui/src/Board/boardMove.ts),
+which is unit-tested in Node against fixtures — including the tie where a card dropped back on
+its own midpoint must be **no move at all**.
+
+## Accessibility
+
+- The board is a **named landmark**; each lane is a `role="group"`, not a second landmark. A
+  board with four `region`s buries the page's real ones, and two boards on one page put two
+  landmarks called "Todo" in the document. Same call the
+  [accordion panel](https://github.com/Sawtaytoes/charcuterie/blob/master/docs/decisions/2026-07-31-an-accordion-panel-is-a-group-not-a-landmark.md)
+  made. It is a `<div role="group">` rather than a `<section role="group">` because axe's
+  `landmark-unique` matches `section[aria-labelledby]` on the element and audits it as a
+  landmark even after the role is overridden.
+- **The priority bar's meaning is in words.** `accentIntent` paints it; `accentLabel` puts the
+  same fact in a `VisuallyHidden`, because colour alone fails WCAG 1.4.1 and is invisible to
+  every screen reader. Do the same for anything you put in `marks` — a bare coloured dot is
+  the identical failure.
+- **`headingLevel` is yours.** Only the caller knows what the board sits under; an `<h3>`
+  directly below the page `<h1>` is an axe `heading-order` failure.
+- Every move handle's accessible name says *which* card and *where it is now*. Thirty controls
+  named "Move" are thirty indistinguishable buttons to a screen reader and to
+  `getByRole("button", { name })`.
+
+<Canvas of={BoardStories.AllStates} />
+
+## Never invent a token name
+
+The colour families here are `--color-intent-<intent>-<role>`, plus `surface`, `content` and
+`border`. **There is no numeric scale.** Docket's first board painted every priority bar with
+`--color-danger-9`, a Radix-style name this token set has never had, so every bar was
+transparent — while every "is it rendered" assertion passed and only looking at the image
+caught it. `accentIntent` is typed as `IntentName` for exactly that reason: a wrong value is a
+compile error rather than an invisible rectangle.
