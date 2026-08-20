@@ -1,0 +1,170 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as DatePickerStories from "./DatePicker.stories";
+
+<Meta of={DatePickerStories} />
+
+# DatePicker
+
+A date field: a text input you can actually type into, and a calendar dialog hanging off
+it. The consumer that shaped it is **Docket** — due dates, scheduled dates, phase start/end
+ranges, and a staleness threshold counted in days
+([decision](../../../docs/decisions/2026-08-19-a-date-is-a-calendar-date-not-an-instant.md)).
+
+<Canvas of={DatePickerStories.Default} />
+
+## Props
+
+<Controls />
+
+## The value is a calendar date, never an instant
+
+`onChange` reports an ISO **`YYYY-MM-DD`** string — the same format `<input type="date">`
+uses — and never a `Date`.
+
+A `Date` is a count of milliseconds, so every read of one goes through the browser's
+timezone. Pick the 19th at 23:30 in Denver, store `new Date("2026-08-19").toISOString()`,
+and the server, the next device, and the same device after a flight disagree about which
+day you meant. It is a one-day error, it only appears near midnight or after travel, and it
+is invisible in every test written at noon. `plainDate.test.ts` runs the whole arithmetic
+suite under UTC, `America/Denver`, UTC+14 and UTC-11 and asserts every answer is identical.
+
+There is **no `Date` arithmetic** underneath: every operation is integer maths on a day
+number (Hinnant's `days_from_civil`, the algorithm C++20's `<chrono>` uses), so adding a day
+is `+ 1` and there is no DST to make a fortnight 13.958 days. A `Date` appears in exactly two
+fenced places — `getLocalPlainDate`, the one instant-to-date conversion, which makes you name
+the zone; and `Intl`, which is always handed a UTC-midnight instant and `timeZone: "UTC"`.
+
+`Temporal.PlainDate` is this type done properly and it is **not** used: the polyfill is
+~50 KB gz, an order of magnitude more than this whole component. The public API is ISO
+strings precisely so that swap is invisible when `Temporal` is baseline.
+
+```tsx
+<DatePicker
+  label="Due"
+  onChange={(value) => { setDueDate(value) }}   // "2026-08-19" | null
+  today={todayIso}                              // inject the clock
+  value={dueDate}                               // seeds; Charcuterie owns it from then on
+/>
+```
+
+## Typing is the feature, and nothing guesses in silence
+
+The grid is the fallback. All of these resolve, in the active locale, against the injected
+`today`:
+
+| Typed | Resolves to (today = Wed 19 Aug 2026) |
+| --- | --- |
+| `2026-08-19` | 19 Aug 2026 — ISO is tried first, so it is never read as a d-m-y |
+| `tomorrow`, `yesterday`, `today` | 20 / 18 / 19 Aug |
+| `+14d`, `+14`, `-7d`, `+2w`, `+1m`, `in 3 days` | 2 Sep / 2 Sep / 12 Aug / 2 Sep / 19 Sep / 22 Aug |
+| `next week`, `next month`, `last week` | 26 Aug / 19 Sep / 12 Aug |
+| `fri`, `next friday`, `last fri` | 21 Aug / 21 Aug / 14 Aug — always the **next** one, never today |
+| `aug 19`, `19 aug`, `August 19, 2027` | 19 Aug 2026 / 19 Aug 2026 / 19 Aug 2027 |
+| `8/19`, `3/4`, `19/8` | locale order; see below |
+| `19` | the 19th of the month on screen |
+
+Three mechanisms keep that from being dangerous, and they are the whole design:
+
+1. **The grammar is ordered and total.** Each rule is anchored on the *whole* input, the
+   first match wins, and if none does the answer is a stated failure. `8/` is not the first
+   of August.
+2. **Ambiguity is a named failure, not a coin flip.** `ju 19` comes back as *"ju" could be
+   June or July — type more of it*, not as June. Every library that "just works" takes the
+   first match, which is how a July task lands in June and nothing ever says so.
+3. **Nothing commits without an echo.** The resolved date is rendered in full underneath the
+   field, in a `role="status"` live region, wired into the input's `aria-describedby`.
+   Commit is Enter or blur; a keystroke never commits.
+
+A value that will not parse leaves the text **exactly as typed**, marks the field invalid,
+and says why. Clearing it would throw away what the user has to edit; rewriting it to the
+last good value would discard what they meant.
+
+### `3/4`, and the one place a reading is swapped
+
+Field order comes from `Intl.DateTimeFormat().formatToParts` — not a country table — so
+`3/4` is 4 March in `en-US` and 3 April in `en-GB`, and the echo says which. `19/8` in
+`en-US` has no month-first reading at all, so the swapped one is taken: **swap only when
+exactly one arrangement is a real date**, which is deduction rather than preference. Two
+digit years use the POSIX `%y` window (00-68 → 2000s, 69-99 → 1900s) rather than a
+boundary of our own. A yearless input is **this** year, always — "the nearest occurrence"
+would make the same keystrokes mean different years depending on the day you typed them.
+
+Month names, weekday names and the first day of the week all come from `Intl`; the only
+English in the parser is the relative-word table, which is the `keywords` prop.
+
+<Canvas of={DatePickerStories.AllVariants} />
+
+## Range is a mode, not a sibling component
+
+`isRange` gives you two inputs, two months, and a band between them. It follows
+[Combobox's `isMultiple`](?path=/docs/components-combobox--docs) for the same three reasons,
+which hold harder here:
+
+- **No distinct ARIA role.** The family is named by role. A range picker is the same
+  `role="dialog"` over the same `role="grid"` — there is no `daterange` role for a
+  `DateRangePicker` to be named after, so the name would describe a presentation.
+- **The delta is small and the shared part is everything** — parser, locale plumbing,
+  min/max clamp, keyboard grid, panel, presets, echo line.
+- **`Combobox` already set the value shape.** Its `selectedValue` is
+  `readonly string[] | string`; this one is `DateRange | string`, and `onChange` reports
+  `{ end, start }`. A discriminated props union types better and was rejected for that
+  consistency — and because Storybook's docgen renders a union props type as an untyped
+  object control.
+
+Picking an end before the start **swaps** rather than refusing: throwing the pair away
+would discard the day just clicked.
+
+<Canvas of={DatePickerStories.AllStates} />
+
+## Keyboard, and the ARIA a date grid actually needs
+
+The input is `role="combobox"` with `aria-haspopup="dialog"`; the panel is a
+`role="dialog"` (named, because a dialog takes no name from its content) over a real
+`<table role="grid">` with `columnheader`s. Focus **stays in the input** until you ask for
+the grid — a calendar that steals the caret on open is a calendar you cannot type into.
+
+| Key | In the input | In the grid |
+| --- | --- | --- |
+| ArrowDown | opens and moves focus into the grid | + 1 week |
+| ArrowUp / ArrowLeft / ArrowRight | — | − 1 week / − 1 day / + 1 day |
+| PageUp / PageDown | — | ∓ 1 month (Shift: ∓ 1 year) |
+| Home / End | — | first / last day of that week |
+| Enter | commits the typed text | selects the focused day |
+| Escape | — | closes and returns the caret to the input |
+
+The roving tabindex is **arithmetic, not registration**: `useRovingFocus` is a registration
+kind whose `next`/`previous` walk a member list, and ArrowRight on 31 August has to land on
+1 September — a day this grid has not rendered and no member has registered. So the focused
+*date* is the state and the DOM follows it. Exactly one cell is in the tab order, and each
+cell's accessible name is the whole date ("Wednesday, August 19, 2026"), not `19`.
+
+## The panel is a container, and it is queried as one
+
+`@container` sits on the panel, so everything inside sizes to the **panel's own inline
+size** rather than to the window: one-letter weekday headers and 32px cells below
+`--cq-xs`, two letters and 36px above it, 40px above `--cq-sm`, and in range mode the two
+months stack below `--cq-sm` and sit side by side above it.
+
+That is not the question a media query asks. The panel is portalled and clamped by
+floating-ui's `size` middleware to the space actually available, so a 390px phone and a
+desktop window at 200% zoom are the same measurement — and the window's width is not it.
+
+<Canvas of={DatePickerStories.Responsive} />
+
+## Inside a `Field`, and the clock
+
+`Field` clones `id`, `aria-describedby`, `aria-invalid` and `required` onto this component,
+and they are forwarded to the input — pass the **same** `label` text as the `Field`'s, since
+they are the same name (WCAG 2.5.3).
+
+`today` is the injected clock, as an ISO date. Every relative form, the `aria-current="date"`
+marker and the preset row resolve against it. Omit it and it is read **once**, at mount, from
+`timeZone` or the device. Supply it in every test and story: a date component tested against
+the real "today" passes on the day it was written and fails silently afterwards.
+
+`getDaysBetween`, `addDays`, `parseIsoDate`, `toIsoDate`, `formatPlainDate` and
+`parseDateInput` are exported from the barrel too — Docket counts staleness in days, and it
+should not have to reimplement the subtraction this component already got right.
+
+<Canvas of={DatePickerStories.Interactive} />
