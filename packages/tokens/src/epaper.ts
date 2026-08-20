@@ -53,6 +53,8 @@
  * evaluate `var()` — so this exports resolved literals only.
  */
 
+import type { CategoricalIndex } from "./categorical.ts"
+import { CATEGORICAL_INDEXES } from "./categorical.ts"
 import type {
   IntentName,
   IntentRole,
@@ -602,6 +604,41 @@ const buildIntent = ({
   onSolid: paper,
 })
 
+/**
+ * The categorical family on a panel that cannot carry it.
+ *
+ * Every index collapses to the same ink, and that is the honest
+ * answer rather than a shortfall to apologise for. Spectra 6 has
+ * four chromatic inks; a ten-index family mapped round-robin onto
+ * them would make index 1 and index 6 **identical**, which is worse
+ * than uniform — a reader would trust a colour that is lying. The
+ * blend tier does not rescue it either: the small-geometry row of
+ * the table above is exactly a badge outline, and a dithered
+ * boundary is a smeared grey line.
+ *
+ * So on ePaper a categorical badge is distinguished by its **label**
+ * and nothing else, which is the same trade `content.secondary`
+ * already makes here — *"there is no grey; 'secondary' has to be
+ * carried by weight and size, not by lightness."* It is also why
+ * `docs/decisions/2026-07-31-epaper-is-exempt-from-the-contrast-gate.md`
+ * has a sibling: the distinctness gate skips these palettes too,
+ * because measuring ten identical inks against each other would
+ * only ever report the failure the hardware already stated.
+ */
+const buildEpaperCategorical = ({
+  colour,
+  paper,
+}: {
+  colour: string
+  paper: string
+}) =>
+  Object.fromEntries(
+    CATEGORICAL_INDEXES.map((index) => [
+      index,
+      buildIntent({ colour, paper }),
+    ]),
+  ) as Record<CategoricalIndex, Record<IntentRole, string>>
+
 export const epaperColours: Record<
   EpaperPalette,
   SchemeColours
@@ -663,6 +700,10 @@ export const epaperColours: Record<
         paper: SPECTRA_6.white,
       }),
     },
+    categorical: buildEpaperCategorical({
+      colour: SPECTRA_6.black,
+      paper: SPECTRA_6.white,
+    }),
     focus: {
       ring: SPECTRA_6.blue,
       ringOffset: SPECTRA_6.white,
@@ -719,6 +760,10 @@ export const epaperColours: Record<
         }),
       ]),
     ) as Record<IntentName, Record<IntentRole, string>>,
+    categorical: buildEpaperCategorical({
+      colour: MONO.black,
+      paper: MONO.white,
+    }),
     focus: {
       ring: MONO.black,
       ringOffset: MONO.white,

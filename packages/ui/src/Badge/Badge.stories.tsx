@@ -2,8 +2,16 @@ import {
   asyncTransitions,
   useStatus,
 } from "@charcuterie/logic"
+import {
+  CATEGORICAL_HUES,
+  CATEGORICAL_INDEXES,
+  getCategoricalIndex,
+} from "@charcuterie/tokens"
 import type { Meta, StoryObj } from "@storybook/react"
-import { intentArgType } from "../argTypes.storyHelpers.ts"
+import {
+  categoricalArgType,
+  intentArgType,
+} from "../argTypes.storyHelpers.ts"
 import { Button } from "../Button/Button.tsx"
 import {
   ContainerBoard,
@@ -32,7 +40,10 @@ const meta = {
   title: "Components/Badge",
   component: Badge,
   parameters: { layout: "padded" },
-  argTypes: { intent: intentArgType },
+  argTypes: {
+    categorical: categoricalArgType,
+    intent: intentArgType,
+  },
   // The component's own defaults, restated — Storybook does not
   // seed `args` from docgen, so an unstated default shows in the
   // props table with nothing selected in its control.
@@ -59,7 +70,10 @@ export const Default: Story = {
 
 export const AllVariants: Story = {
   args: { children: "running" },
-  render: (badgeProps) => (
+  // `categorical` is destructured out rather than spread: this board
+  // is about intents, and the type refuses a badge holding both — a
+  // badge is one colour.
+  render: ({ categorical, ...badgeProps }) => (
     <StorySection title="Six intents x three appearances. rip-deck declares this map twice, in two files, with hardcoded hexes.">
       <StoryGrid columns={6}>
         {(["soft", "solid", "outline"] as const).flatMap(
@@ -86,7 +100,7 @@ export const AllVariants: Story = {
 
 export const AllStates: Story = {
   args: { children: "running" },
-  render: (badgeProps) => (
+  render: ({ categorical, ...badgeProps }) => (
     <StorySection title="A badge is static — no hover, no focus, no disabled. What varies is size, an optional glyph, and how it sits in a real row.">
       <StoryGrid columns={2}>
         <StoryCell label="sm">
@@ -119,6 +133,86 @@ export const AllStates: Story = {
           </div>
         </StoryCell>
       </StoryGrid>
+    </StorySection>
+  ),
+}
+
+/**
+ * The numbered family, which means nothing on purpose.
+ *
+ * Ten hues, contrast-gated in both schemes and both directions, so
+ * a user picking a colour for a label cannot pick one that is
+ * unreadable. That is the whole difference between this and
+ * `Swatch`: `Swatch` takes a colour arriving from the world — a
+ * physical sticker, an accent pulled off an album cover — and can
+ * make no promises about it at all.
+ *
+ * Flip the scheme in the toolbar. Every pill here holds its ratio
+ * on both sides, and the ring stays separable on both.
+ */
+export const Categorical: Story = {
+  args: { children: "label" },
+  render: ({ intent, ...badgeProps }) => (
+    <StorySection title="Ten indexes x three appearances. Numbered, not named — a user's label is not a status.">
+      <StoryGrid columns={5}>
+        {(["soft", "solid", "outline"] as const).flatMap(
+          (appearance) =>
+            CATEGORICAL_INDEXES.map((index) => (
+              <StoryCell
+                key={`${appearance}-${index}`}
+                label={`${appearance} · ${index} ${CATEGORICAL_HUES[index].label}`}
+              >
+                <Badge
+                  {...badgeProps}
+                  appearance={appearance}
+                  categorical={index}
+                >
+                  {CATEGORICAL_HUES[index].label}
+                </Badge>
+              </StoryCell>
+            )),
+        )}
+      </StoryGrid>
+    </StorySection>
+  ),
+}
+
+/**
+ * Invented labels, coloured by `getCategoricalIndex(name)` — the
+ * deterministic fallback for the rows that existed before anybody
+ * thought about colour.
+ *
+ * The point of the row is what it looks like *as a row*: this is
+ * how a task list reads when a dozen labels are on screen at once,
+ * which is the only place a categorical palette is really tested.
+ * Nobody compares two swatches in a specimen board; they scan a
+ * list for the green one.
+ */
+export const CategoricalLabels: Story = {
+  args: { children: "label" },
+  render: () => (
+    <StorySection title="Colour from the name, so a hundred pre-existing rows need no migration — and a stored pick still wins.">
+      <div className="flex flex-wrap gap-2">
+        {[
+          "Homelab",
+          "Errands",
+          "Anime backlog",
+          "Garage",
+          "Kitchen",
+          "Reading",
+          "Music library",
+          "Firmware",
+          "Bikes",
+          "Prints",
+        ].map((label) => (
+          <Badge
+            categorical={getCategoricalIndex(label)}
+            key={label}
+          >
+            {label}
+          </Badge>
+        ))}
+      </div>
     </StorySection>
   ),
 }

@@ -7,6 +7,10 @@
 
 import { describe, expect, test } from "vitest"
 
+import {
+  CATEGORICAL_INDEXES,
+  getCategoricalDistinctnessFailures,
+} from "./categorical.ts"
 import { INTENT_NAMES } from "./contrastAudit.ts"
 import type { Scheme } from "./types.ts"
 import {
@@ -75,6 +79,61 @@ describe.each(variants)("$name", (variant) => {
   )
 
   test.each(SCHEMES)(
+    "%s defines every categorical index with every role",
+    (scheme) => {
+      const { categorical } = variant.schemes[scheme]
+
+      // Every index, and the *same seven roles an intent has* —
+      // `CategoricalRole` is `IntentRole`, so a variant that
+      // generated six of them would be a variant whose badges have
+      // no hover.
+      expect(
+        Object.keys(categorical)
+          .map(Number)
+          .sort((first, second) => first - second),
+      ).toEqual([...CATEGORICAL_INDEXES])
+
+      for (const index of CATEGORICAL_INDEXES) {
+        expect(
+          Object.keys(categorical[index]).sort(),
+        ).toEqual([
+          "border",
+          "content",
+          "onSolid",
+          "solid",
+          "solidHover",
+          "surface",
+          "surfaceHover",
+        ])
+      }
+    },
+  )
+
+  test.each(SCHEMES)(
+    "%s keeps every categorical index distinguishable from every other",
+    (scheme) => {
+      // The gate a contrast audit structurally cannot be. Two
+      // indexes can both clear 4.5:1 against the same surface and
+      // be the same colour as each other, and every number on the
+      // board stays green — while the only job this family has,
+      // telling label 3 from label 4, has quietly stopped being
+      // done.
+      const failures = getCategoricalDistinctnessFailures(
+        variant.schemes[scheme].categorical,
+      )
+
+      expect(
+        failures.map(
+          (failure) =>
+            `${failure.role} ${failure.first}/${failure.second}: ΔEok ${failure.distance.toFixed(
+              4,
+            )} needs ${failure.floor}`,
+        ),
+      ).toEqual([])
+    },
+  )
+
+  test.each(SCHEMES)(
     "%s dims behind a modal, and does it translucently",
     (scheme) => {
       // The scrim is the one colour in the set that must *not* be
@@ -100,6 +159,9 @@ describe.each(variants)("$name", (variant) => {
         ...Object.values(colour.border),
         ...INTENT_NAMES.flatMap((name) =>
           Object.values(colour.intent[name]),
+        ),
+        ...CATEGORICAL_INDEXES.flatMap((index) =>
+          Object.values(colour.categorical[index]),
         ),
         colour.focus.ring,
         colour.focus.ringOffset,
