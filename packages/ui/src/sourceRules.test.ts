@@ -209,17 +209,24 @@ test("a container-query component is never storied in a shrink-to-fit cell", () 
   // `Main.tsx` and `Main.mdx`, because it makes `<main>` the
   // containing block for any `position: fixed` an app renders
   // inside it.
-  // `Board` declares **two** containers and neither is the element
-  // that queries it: the board's own box decides how many lanes are
-  // on screen, and each lane's list — in `BoardLaneList.tsx`, which
-  // is a member rather than a component by the `<Name>/<Name>.tsx`
-  // rule — decides what shape a card is. Only the first of those is
-  // in this list, and that is enough: it is `<Board` a story renders,
-  // so `<Board` is what a shrink-to-fit `StoryCell` would collapse.
   expect(containerComponents).toEqual([
     "Alert",
+    // `Board` declares **two** containers and neither is the element
+    // that queries it: the board's own box decides how many lanes are
+    // on screen, and each lane's list — in `BoardLaneList.tsx`, which
+    // is a member rather than a component by the `<Name>/<Name>.tsx`
+    // rule — decides what shape a card is. Only the first of those is
+    // in this list, and that is enough: it is `<Board` a story renders,
+    // so `<Board` is what a shrink-to-fit `StoryCell` would collapse.
     "Board",
     "Card",
+    // `DatePicker`'s panel is the container, and it is the first one
+    // here whose container is *not* the element a caller sized. A
+    // portalled panel is clamped to the space floating-ui found for
+    // it, so the calendar reads that and not the window — which is
+    // the case a media query cannot express at all, and the case the
+    // owner is in whenever he browses zoomed in.
+    "DatePicker",
     "EmptyState",
     "Main",
     "MarkdownEditor",
@@ -383,27 +390,35 @@ test("the barrel is the only place components are re-exported", async () => {
   // the barrel by the `<Name>/<Name>.tsx` rule, exactly as
   // `SegmentedOption` and `ListboxOption` do.
   //
-  // `Picker` — a `Listbox` with its trigger already attached — is +1 ->
-  // 45. It is a component rather than a recipe in the docs because the
-  // fleet wrote it four separate times (plex-channels' `SelectListbox`,
-  // board-games' `SelectMenu`, mux-magic's `ListboxPicker`, and twice
-  // inside this package), each with its own hand-rolled chevron.
-  //
   // `MarkdownEditor` — Docket's live hybrid editor, a real
   // `<textarea>` with a painted layer behind it — is +1 -> 46. Its
   // `markdownSpans.ts` and `markdownCommands.ts` are pure modules
   // rather than components and stay out of this count by the
   // `<Name>/<Name>.tsx` rule.
   //
+  // `Picker` — a `Listbox` with its trigger already attached — is +1 ->
+  // 45. It is a component rather than a recipe in the docs because the
+  // fleet wrote it four separate times (plex-channels' `SelectListbox`,
+  // board-games' `SelectMenu`, mux-magic's `ListboxPicker`, and twice
+  // inside this package), each with its own hand-rolled chevron.
+  // `DatePicker` — a typed date field with a calendar dialog — is +1
+  // -> 47. `DateGrid.tsx`, `plainDate.ts` and `parseDateInput.ts` are
+  // its members and stay out of this count by the `<Name>/<Name>.tsx`
+  // rule, exactly as `SegmentedOption` and `ListboxOption` do. The
+  // two `.ts` ones are still exported from the barrel: the calendar
+  // arithmetic and the input grammar are the parts a consumer needs
+  // *outside* the field (Docket counts staleness in days), and they
+  // reach nothing but `Intl`.
+  //
   // `Board` — lanes of cards, sized by their container and moved by
-  // keyboard or by pointer — is +1 -> 47. It is the library's first
+  // keyboard or by pointer — is +1 -> 48. It is the library's first
   // component whose own operation is a **write** rather than a
   // selection, and the first to declare two nested containers.
   // `BoardCard.tsx`, `BoardLaneList.tsx`, `boardMove.ts` and
   // `useBoardDrag.ts` are its members and stay out of this count and
   // the barrel by the `<Name>/<Name>.tsx` rule, exactly as
   // `ToolbarSlot` and `QueryBuilderRow` do.
-  expect(componentNames.length).toBe(47)
+  expect(componentNames.length).toBe(48)
 
   for (const name of componentNames) {
     expect(barrel).toContain(`export { ${name} }`)
