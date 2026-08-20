@@ -382,26 +382,26 @@ test("the barrel is the only place components are re-exported", async () => {
   // the barrel by the `<Name>/<Name>.tsx` rule, exactly as
   // `SegmentedOption` and `ListboxOption` do.
   //
+  // `MarkdownEditor` — Docket's live hybrid editor, a real
+  // `<textarea>` with a painted layer behind it — is +1 -> 46. Its
+  // `markdownSpans.ts` and `markdownCommands.ts` are pure modules
+  // rather than components and stay out of this count by the
+  // `<Name>/<Name>.tsx` rule.
+  //
   // `Picker` — a `Listbox` with its trigger already attached — is +1 ->
   // 45. It is a component rather than a recipe in the docs because the
   // fleet wrote it four separate times (plex-channels' `SelectListbox`,
   // board-games' `SelectMenu`, mux-magic's `ListboxPicker`, and twice
   // inside this package), each with its own hand-rolled chevron.
   // `DatePicker` — a typed date field with a calendar dialog — is +1
-  // -> 46. `DateGrid.tsx`, `plainDate.ts` and `parseDateInput.ts` are
+  // -> 47. `DateGrid.tsx`, `plainDate.ts` and `parseDateInput.ts` are
   // its members and stay out of this count by the `<Name>/<Name>.tsx`
   // rule, exactly as `SegmentedOption` and `ListboxOption` do. The
   // two `.ts` ones are still exported from the barrel: the calendar
   // arithmetic and the input grammar are the parts a consumer needs
   // *outside* the field (Docket counts staleness in days), and they
   // reach nothing but `Intl`.
-  //
-  // `MarkdownEditor` — Docket's live hybrid editor, a real
-  // `<textarea>` with a painted layer behind it — is +1 -> 46. Its
-  // `markdownSpans.ts` and `markdownCommands.ts` are pure modules
-  // rather than components and stay out of this count by the
-  // `<Name>/<Name>.tsx` rule.
-  expect(componentNames.length).toBe(46)
+  expect(componentNames.length).toBe(47)
 
   for (const name of componentNames) {
     expect(barrel).toContain(`export { ${name} }`)
