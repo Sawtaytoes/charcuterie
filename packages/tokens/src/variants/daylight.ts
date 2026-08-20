@@ -15,6 +15,7 @@
  * wants, and a light kiosk in a dark room is a lamp.
  */
 
+import { buildCategoricalScheme } from "../categorical.ts"
 import type { Variant } from "../types.ts"
 import {
   defaultControl,
@@ -129,6 +130,17 @@ export const daylight: Variant = {
           onSolid: "#FFFFFF",
         },
       },
+      /**
+       * The fleet default, and the baseline the other three read as
+       * differences from: full chroma, and the shared 7:1 generator
+       * target that matches where this variant's own hand-made
+       * intent tints already sit (6.6:1 to 8.8:1).
+       */
+      categorical: buildCategoricalScheme({
+        raisedSurface: "#FFFFFF",
+        scheme: "light",
+      }),
+
       focus: {
         ring: "#3E38C4",
         ringOffset: "#F5F7FA",
@@ -228,6 +240,17 @@ export const daylight: Variant = {
           onSolid: "#04141B",
         },
       },
+      /**
+       * The fleet default, and the baseline the other three read as
+       * differences from: full chroma, and the shared 7:1 generator
+       * target that matches where this variant's own hand-made
+       * intent tints already sit (6.6:1 to 8.8:1).
+       */
+      categorical: buildCategoricalScheme({
+        raisedSurface: "#1D2430",
+        scheme: "dark",
+      }),
+
       focus: {
         ring: "#8C88F2",
         ringOffset: "#131822",

@@ -81,10 +81,39 @@ exist so a variant author has something to build tier 2 out of.
 | `content` | `primary`, `secondary`, `muted`, `disabled`, `onAccent` |
 | `border` | `subtle`, `default`, `strong`, `focus` |
 | `intent` | `{neutral, accent, success, warning, danger, info}` × `{surface, surfaceHover, border, content, solid, solidHover, onSolid}` |
+| `categorical` | `{1 … 10}` × the same seven roles |
 | `focus` | `ring`, `ringOffset`, and `focusRing.width` / `.offset` |
 
 `intent` is the generalization of ripdeck's `TONE_CLASS` map — the one it currently
 declares identically in both `VerdictBadge.tsx` and `TowerAlerts.tsx`.
+
+### `intent` means something; `categorical` deliberately does not
+
+Every member of `intent` is a **claim**: `danger` is not a colour, it is a statement about
+what happens if you press the thing, and components switch on it. `categorical` is the
+family for colour a **user chose** — a Docket label, a project, a chart series — where a
+semantic name would be a lie the design system told on their behalf. Numbered, because
+there is nothing to name.
+
+It is generated rather than hand-picked: `CATEGORICAL_HUES` states a hue angle and
+`buildCategoricalScheme` solves each role against a contrast target, per variant, per
+scheme. A variant states its *character* (`chromaScale`, `contentContrast`) and never a
+hex.
+
+Two gates, not one. Every categorical pair is enrolled in `contrastAudit.ts` beside the
+intents — and additionally **gated against each other**, because two indexes can both clear
+4.5:1 on the same surface and be the same colour as each other with every number on the
+board green. `getCategoricalDistinctnessFailures` measures every pair in OKLab; the
+tightest `solid` pair in the fleet is ΔEok 0.0893, against the 0.0835 Tableau 10 achieves
+for itself.
+
+`getCategoricalIndex(key)` is the stable string → index fallback for rows that predate the
+feature. It is a fallback, never an override — a stored pick wins.
+
+Boundary with `Swatch`: `Swatch` takes colour **arriving from the world** (a physical
+sticker, an album accent) and can promise nothing about it; `categorical` is a curated set
+the user picks *from*, so it can promise everything.
+[Decision](../../docs/decisions/2026-08-19-categorical-is-a-curated-palette-not-ungoverned-colour.md).
 
 ### Why intents carry a *solid* as well as a *surface*
 
@@ -233,10 +262,12 @@ Two categories are reported but never gated, each with a stated reason:
 
 - `content.disabled`, because WCAG explicitly exempts inactive controls, and gating it
   would force disabled text to look enabled.
-- Decorative lines — `border.subtle`, `border.default`, and badge outlines. 1.4.11 covers
-  boundaries *required to identify a control*, not every line on screen. `border.strong`
-  **is** gated, because that is the role a text input, checkbox, and switch track draw
-  themselves with.
+- Decorative lines — `border.subtle`, `border.default`, and **intent** badge outlines.
+  1.4.11 covers boundaries *required to identify a control*, not every line on screen.
+  `border.strong` **is** gated, because that is the role a text input, checkbox, and switch
+  track draw themselves with — and so is a **categorical** border, because a pill reading
+  "Homelab" is identified by its colour and by nothing else
+  ([decision](../../docs/decisions/2026-08-19-categorical-borders-are-gated-where-intent-borders-are-exempt.md)).
 
 Getting that scoping wrong is not harmless: gating decoration at 3:1 produced 65 "failures"
 on the first run, which is precisely how a contrast gate gets switched off.
@@ -253,8 +284,9 @@ at it. Both steps are required — the gate proves it is *readable*, not that it
 
 `src/variants.test.ts` also holds the properties a new direction is most likely to
 break: light mode is not pure white, `raised` and `sunken` are actually separated from
-`base`, every intent carries all seven roles, every swatch is opaque 6-digit hex, and
-the focus ring has a non-zero width. Update the roster assertion in that file when you
+`base`, every intent *and every categorical index* carries all seven roles, every swatch is
+opaque 6-digit hex, the ten categorical hues stay tellable apart, and the focus ring has a
+non-zero width. Update the roster assertion in that file when you
 add one; that assertion exists so a variant cannot be added *silently*.
 
 ## Closed at M3: the structural namespaces now reach Tailwind too

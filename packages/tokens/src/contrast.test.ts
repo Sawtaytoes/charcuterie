@@ -10,7 +10,7 @@
  */
 
 import { describe, expect, test } from "vitest"
-
+import { CATEGORICAL_INDEXES } from "./categorical.ts"
 import {
   getApcaLc,
   getContrast,
@@ -127,6 +127,62 @@ describe.each(variants)("$name", (variant) => {
         )
 
       expect(unaudited).toEqual([])
+    },
+  )
+
+  test.each(SCHEMES)(
+    "%s measures every categorical index, in every pair an intent gets",
+    (scheme) => {
+      // The count test above cannot catch a family dropping out: 113
+      // pairs falling back to 63 is still "non-trivial". This names
+      // the pairs, so an index that stops being enumerated — or an
+      // eleventh that is never enumerated at all — fails here rather
+      // than shipping ungated.
+      const labels = auditScheme(
+        variant.schemes[scheme],
+      ).map((entry) => entry.label)
+
+      const unaudited = CATEGORICAL_INDEXES.flatMap(
+        (index) =>
+          [
+            `categorical.${index}.content on categorical.${index}.surface`,
+            `categorical.${index}.content on categorical.${index}.surfaceHover`,
+            `categorical.${index}.onSolid on categorical.${index}.solid`,
+            `categorical.${index}.onSolid on categorical.${index}.solidHover`,
+            `categorical.${index}.border on surface.raised`,
+          ].filter((pair) => !labels.includes(pair)),
+      )
+
+      expect(unaudited).toEqual([])
+    },
+  )
+
+  test.each(SCHEMES)(
+    "%s gates a categorical border where it exempts an intent border",
+    (scheme) => {
+      // The one place this family is stricter than `intent`, and it
+      // is a decision rather than an oversight — so it is asserted
+      // in both directions. An intent pill says `failed` and its
+      // outline is a second copy of that; a categorical pill says
+      // "Homelab" and its colour is the only thing that identifies
+      // it, which is what 1.4.11 is about.
+      const checks = auditScheme(variant.schemes[scheme])
+
+      const categoricalBorder = checks.find(
+        (entry) =>
+          entry.label ===
+          "categorical.1.border on surface.raised",
+      )
+
+      const intentBorder = checks.find(
+        (entry) =>
+          entry.label ===
+          "intent.accent.border on surface.raised",
+      )
+
+      expect(categoricalBorder?.isExempt).toBe(false)
+
+      expect(intentBorder?.isExempt).toBe(true)
     },
   )
 

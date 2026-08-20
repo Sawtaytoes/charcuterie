@@ -24,6 +24,7 @@
  * `Tokens/Overview`.
  */
 
+import { buildCategoricalScheme } from "../categorical.ts"
 import type { Variant } from "../types.ts"
 import {
   defaultControl,
@@ -138,6 +139,24 @@ export const legible: Variant = {
           onSolid: "#02141A",
         },
       },
+      /**
+       * The upper bound, as everywhere else in this file: the most
+       * saturated ring in the fleet, with its tint text solved past
+       * AAA rather than to it. That costs separation — pushing
+       * `content` further down the lightness range narrows the
+       * gamut it has to be different inside — and this is the one
+       * variant where that is the right trade, because the premise
+       * is a garage at 2am rather than a picker.
+       */
+      categorical: buildCategoricalScheme({
+        raisedSurface: "#171613",
+        scheme: "dark",
+        tuning: {
+          chromaScale: 1.15,
+          contentContrast: 7.5,
+        },
+      }),
+
       focus: {
         ring: "#FFD24A",
         ringOffset: "#0B0B09",
@@ -231,6 +250,24 @@ export const legible: Variant = {
           onSolid: "#FFFFFF",
         },
       },
+      /**
+       * The upper bound, as everywhere else in this file: the most
+       * saturated ring in the fleet, with its tint text solved past
+       * AAA rather than to it. That costs separation — pushing
+       * `content` further down the lightness range narrows the
+       * gamut it has to be different inside — and this is the one
+       * variant where that is the right trade, because the premise
+       * is a garage at 2am rather than a picker.
+       */
+      categorical: buildCategoricalScheme({
+        raisedSurface: "#FAF9F7",
+        scheme: "light",
+        tuning: {
+          chromaScale: 1.15,
+          contentContrast: 7.5,
+        },
+      }),
+
       focus: {
         ring: "#8A4B00",
         ringOffset: "#F0EEEA",
