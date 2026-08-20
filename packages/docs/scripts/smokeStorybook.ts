@@ -473,10 +473,28 @@ for (const entry of entries) {
   // paragraph of pipes. Checking the *rendered* text rather than the
   // config means a future MDX pipeline change cannot quietly undo it.
   if (entry.type === "docs") {
+    // Prose only. The page also contains every story it embeds, and
+    // a component whose whole job is *showing markdown source* —
+    // `MarkdownEditor` — puts a real delimiter row on the page as
+    // content. Stripping the code surfaces before the read is what
+    // separates "the pipeline stopped rendering tables" from "a demo
+    // is displaying one". `pre`/`code` were always a latent false
+    // positive here for the same reason: an MDX example *of* a
+    // markdown table would have tripped it.
     const renderedText =
       (await preview
         .locator("body")
-        .innerText()
+        .evaluate((body) => {
+          const prose = body.cloneNode(true) as HTMLElement
+
+          for (const surface of prose.querySelectorAll(
+            'textarea, pre, code, [aria-hidden="true"]',
+          )) {
+            surface.remove()
+          }
+
+          return prose.innerText
+        })
         .catch(() => "")) ?? ""
 
     if (/\|\s*-{3,}\s*\|/.test(renderedText)) {
