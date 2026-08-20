@@ -1,6 +1,7 @@
 import { useVisibility } from "@charcuterie/logic"
 import type { Meta, StoryObj } from "@storybook/react"
 import type { ReactNode } from "react"
+import { useRef } from "react"
 
 import { toStoryChoice } from "../argTypes.storyHelpers.ts"
 import { Button } from "../Button/Button.tsx"
@@ -87,6 +88,34 @@ const DialogDemo = ({
             completed.
           </p>
         )}
+      </Dialog>
+    </>
+  )
+}
+
+const InitialFocusDemo = (): ReactNode => {
+  const { hide, isVisible, show } = useVisibility()
+  const titleRef = useRef<HTMLInputElement>(null)
+
+  return (
+    <>
+      <Button appearance="soft" onClick={show} size="sm">
+        Add a title
+      </Button>
+
+      <Dialog
+        heading="Add a title"
+        initialFocus={titleRef}
+        isVisible={isVisible}
+        onClose={hide}
+      >
+        <label className="flex flex-col gap-1 text-sm">
+          Title
+          <input
+            className="rounded-md border border-border-subtle bg-surface-base px-3 py-2"
+            ref={titleRef}
+          />
+        </label>
       </Dialog>
     </>
   )
@@ -364,6 +393,25 @@ export const NoBody: Story = {
     onClose: () => {},
   },
   render: () => <NoBodyDemo />,
+}
+
+/**
+ * A dialog that wraps a FORM wants the caret in its first field,
+ * not on the Close button the focus manager would otherwise pick.
+ *
+ * This is not a nicety: a capture dialog exists to be typed into
+ * the moment it opens, and without `initialFocus` the first thing
+ * typed goes to a button and vanishes. A consumer cannot fix it
+ * from outside — focusing in its own effect races the focus
+ * manager, and the manager wins.
+ */
+export const InitialFocus: Story = {
+  args: {
+    heading: "Bay 3",
+    isVisible: false,
+    onClose: () => {},
+  },
+  render: () => <InitialFocusDemo />,
 }
 
 export const Interactive: Story = {

@@ -10,7 +10,7 @@ import {
   useInteractions,
   useRole,
 } from "@floating-ui/react"
-import type { ReactNode } from "react"
+import type { ReactNode, RefObject } from "react"
 import { useCallback, useEffect } from "react"
 
 import { lockScrollBehind } from "./lockScrollBehind.ts"
@@ -58,6 +58,17 @@ export type OverlayPanelProps = {
   "aria-labelledby"?: string
   children: ReactNode
   className?: string
+  /**
+   * Which element takes the caret when the panel opens.
+   *
+   * Without it the focus manager takes the first tabbable element,
+   * which for anything with chrome is the **Close button** — so a
+   * panel wrapping a form opens with the caret on "Close" and the
+   * first thing typed goes nowhere. A consumer cannot fix that from
+   * outside: focusing in its own effect races the manager, and the
+   * manager wins, which reads as the app ignoring you.
+   */
+  initialFocus?: RefObject<HTMLElement | null>
   /** Escape and an outside press both close. */
   isDismissable?: boolean
   isVisible: boolean
@@ -70,6 +81,7 @@ export const OverlayPanel = ({
   "aria-labelledby": ariaLabelledBy,
   children,
   className,
+  initialFocus,
   isDismissable = true,
   isVisible,
   onClose,
@@ -160,6 +172,10 @@ export const OverlayPanel = ({
         <div className="fixed inset-0 z-[var(--layer-modal)] flex items-center justify-center">
           <FloatingFocusManager
             context={context}
+            // `undefined` keeps the manager's own default (the first
+            // tabbable), so nothing changes for a panel that does not
+            // ask.
+            initialFocus={initialFocus ?? undefined}
             // Only the top traps focus; a lower panel is `inert`
             // anyway, and two live traps fight over one caret.
             disabled={!isTop}

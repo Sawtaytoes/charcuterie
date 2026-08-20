@@ -1,4 +1,4 @@
-import type { ReactNode } from "react"
+import type { ReactNode, RefObject } from "react"
 
 import { OverlayPanel } from "../Overlay/OverlayPanel.tsx"
 import { toClassName } from "../toClassName.ts"
@@ -8,6 +8,10 @@ export type ModalProps = {
   "aria-labelledby"?: string
   children: ReactNode
   className?: string
+  /** Which element takes the caret when the modal opens. Without
+   * it the focus manager takes the first tabbable element — the
+   * Close button on anything with chrome. */
+  initialFocus?: RefObject<HTMLElement | null>
   /** Escape and a backdrop press both close. */
   isDismissable?: boolean
   isVisible: boolean
@@ -59,6 +63,7 @@ export const Modal = ({
   "aria-labelledby": ariaLabelledBy,
   children,
   className,
+  initialFocus,
   isDismissable = true,
   isVisible,
   onClose,
@@ -68,6 +73,7 @@ export const Modal = ({
     aria-label={ariaLabel}
     aria-labelledby={ariaLabelledBy}
     className={toClassName(MODAL_BOX_CLASS, className)}
+    initialFocus={initialFocus}
     isDismissable={isDismissable}
     isVisible={isVisible}
     onClose={onClose}

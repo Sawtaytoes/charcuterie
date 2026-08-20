@@ -14,6 +14,7 @@ const {
   AllStates,
   AllVariants,
   Default,
+  InitialFocus,
   Interactive,
   NoBody,
   Responsive,
@@ -337,4 +338,33 @@ test("stacked dialogs share one scrim and dismiss top-first", async () => {
   await expect(
     document.body.querySelector(".bg-scrim"),
   ).toBeNull()
+})
+
+test("initialFocus puts the caret in the field, not on Close", async () => {
+  // Without it the focus manager takes the first tabbable element,
+  // which is the Close button — so a dialog wrapping a form eats
+  // whatever is typed first. The consumer cannot fix that from
+  // outside: focusing in its own effect races the manager and
+  // loses, which reads as the app ignoring you.
+  const { body, canvas } = await mountStory(InitialFocus)
+
+  await userEvent.click(
+    expectAgentDrivable(canvas, {
+      name: "Add a title",
+      role: "button",
+    }),
+  )
+
+  const field = expectAgentDrivable(body, {
+    name: "Title",
+    role: "textbox",
+  })
+
+  await waitFor(async () => {
+    await expect(field).toHaveFocus()
+  })
+
+  await userEvent.keyboard("Sharpen the chisels")
+
+  await expect(field).toHaveValue("Sharpen the chisels")
 })
