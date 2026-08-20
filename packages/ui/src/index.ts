@@ -65,6 +65,26 @@ export type {
 export { Alert } from "./Alert/Alert.tsx"
 export type { BadgeProps } from "./Badge/Badge.tsx"
 export { Badge } from "./Badge/Badge.tsx"
+export type {
+  BoardMove,
+  BoardProps,
+} from "./Board/Board.tsx"
+export { Board } from "./Board/Board.tsx"
+export type { BoardItem } from "./Board/BoardCard.tsx"
+export type { BoardLane } from "./Board/BoardLaneList.tsx"
+export type {
+  BoardDropLane,
+  BoardDropTarget,
+  BoardPoint,
+  BoardRect,
+} from "./Board/boardMove.ts"
+export {
+  chooseDropIndex,
+  chooseDropTarget,
+  describeMove,
+  getIsMoveMeaningful,
+  toSettledIndex,
+} from "./Board/boardMove.ts"
 export type { ButtonProps } from "./Button/Button.tsx"
 export { Button } from "./Button/Button.tsx"
 export type { ButtonLinkProps } from "./ButtonLink/ButtonLink.tsx"
