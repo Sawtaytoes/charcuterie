@@ -12,20 +12,36 @@ import {
 } from "../intentStyles.ts"
 import { toClassName } from "../toClassName.ts"
 
+/**
+ * @deprecated Part of the deprecated native `Select`. The
+ * replacement shape is `PickerOption` / `ListboxItem`, whose
+ * `label` is a `ReactNode` rather than a `string`.
+ */
 export type SelectOption = {
   isDisabled?: boolean
   label: string
   value: string
 }
 
+/**
+ * @deprecated Part of the deprecated native `Select`. `Listbox`
+ * has **no `<optgroup>` equivalent**, so a grouped picker is the
+ * one shape this deprecation has no replacement for — an app that
+ * needs one is a change to `Listbox`, not a reason to keep
+ * reaching for the native control.
+ */
 export type SelectOptionGroup = {
   label: string
   options: readonly SelectOption[]
 }
 
+/** @deprecated Part of the deprecated native `Select`. */
 export type SelectItem = SelectOption | SelectOptionGroup
 
 /**
+ * @deprecated Part of the deprecated native `Select` — see the
+ * component's docblock. `PickerProps` is the replacement.
+ *
  * The HTML attributes are passed through, and that is not
  * convenience — it is what makes the `Field` slot work at all.
  *
@@ -95,8 +111,33 @@ const getIsGroup = (
 ): item is SelectOptionGroup => "options" in item
 
 /**
- * A styled native `<select>`, and the fleet's fourteen hand-rolled
- * ones collapse onto it.
+ * @deprecated Reach for `Picker` — a `Listbox` with the trigger
+ * already attached, and a near drop-in for this component
+ * (`label`, `options`, `value`, `onChange`) — or `Combobox` when
+ * the list is long enough to want typing.
+ *
+ * A styled native `<select>`, kept only so the call sites that
+ * already have one keep compiling while they are converted.
+ *
+ * ### Deprecated 2026-08-20, and the platform hatch is closed
+ *
+ * The 2026-08-10 record demoted this to a stated-reason exception
+ * and named four cases where the platform behaviour is the
+ * feature: the mobile wheel picker, autofill, `:invalid`, and a
+ * form that posts with no JS. **None of them has ever applied to
+ * an app in this fleet**, and the exception is what agents kept
+ * reading as permission — so the exception is gone. A new native
+ * `Select` is a new decision with the reason written down, not a
+ * call-site choice.
+ *
+ * The objection is that the popup is painted by the OS. No token,
+ * no class and no amount of `appearance-none` reaches inside it,
+ * so a fleet with any of these in it has two focus treatments, two
+ * hover treatments and two keyboard feels — which is the thing the
+ * library exists to stop.
+ *
+ * Everything below is how the component works, for the call sites
+ * still on it. It is not a reason to add one.
  *
  * ### Sizing: `className` is the wrapper, `controlClassName` is the select
  *
