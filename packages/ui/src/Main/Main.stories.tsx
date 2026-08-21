@@ -24,7 +24,7 @@ const CONTENT_WIDTH_OPTIONS = [
 ] as const
 
 const meta = {
-  title: "Components/Main",
+  title: "Components/Layout/Main",
   component: Main,
   parameters: { layout: "fullscreen" },
   argTypes: {

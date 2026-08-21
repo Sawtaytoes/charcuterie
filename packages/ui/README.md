@@ -176,6 +176,14 @@ rename breaks only the rendered page).
 
 1. `src/<Name>/<Name>.tsx`, `.stories.tsx`, `.mdx`, `.test.tsx` — siblings, matching
    mux-magic. The story shows it; the test drives it. Neither does the other's job.
+   **The story's `title` is `Components/<Group>/<Name>`**, and the group is one of
+   `Actions` (it does something), `Controls` (it takes a value), `Overlays` (it renders
+   over the page), `Layout` (it arranges other things), `Data` (it shows a set) or
+   `Feedback` (it reports state). Nothing composable goes at the top level; a helper that
+   is not a component — `VisuallyHidden`, `Scrollbar` — is `Utilities/<Name>`. Group order
+   in the sidebar comes from `packages/docs/.storybook/preview.tsx`, and an unlisted group
+   sorts last instead of silently displacing `Actions`
+   ([decision](../../docs/decisions/2026-08-21-a-deprecation-is-a-badge-in-place-and-the-sidebar-has-groups.md)).
 2. Colours from `intentStyles.ts`, sizes from `controlStyles.ts`. No hex, no `*-slate-*`
    (a test checks).
 3. The five stories: `Default`, `AllVariants`, `AllStates`, `Responsive` (three container

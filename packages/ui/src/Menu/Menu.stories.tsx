@@ -141,7 +141,7 @@ const TooltipTriggerHarness = ({
 }
 
 const meta = {
-  title: "Components/Menu",
+  title: "Components/Actions/Menu",
   component: Menu,
   parameters: { layout: "centered" },
   argTypes: { placement: placementArgType },

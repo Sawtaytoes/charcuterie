@@ -23,7 +23,7 @@ const INTENTS = [
 ] as const
 
 const meta = {
-  title: "Components/Alert",
+  title: "Components/Feedback/Alert",
   component: Alert,
   parameters: { layout: "padded" },
   argTypes: {

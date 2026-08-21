@@ -244,7 +244,7 @@ const TaskTable = ({
 }
 
 const meta = {
-  title: "Components/DataTable",
+  title: "Components/Data/DataTable",
   component: DataTable,
   parameters: { layout: "padded" },
   args: {
