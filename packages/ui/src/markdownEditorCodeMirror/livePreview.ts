@@ -26,8 +26,16 @@
  */
 
 import { syntaxTree } from "@codemirror/language"
-import type { Extension, Range } from "@codemirror/state"
-import { StateEffect, StateField } from "@codemirror/state"
+import type {
+  EditorState,
+  Extension,
+  Range,
+} from "@codemirror/state"
+import {
+  Prec,
+  StateEffect,
+  StateField,
+} from "@codemirror/state"
 import type {
   DecorationSet,
   ViewUpdate,
@@ -35,6 +43,7 @@ import type {
 import {
   Decoration,
   EditorView,
+  keymap,
   ViewPlugin,
   WidgetType,
 } from "@codemirror/view"
@@ -42,11 +51,30 @@ import {
 import type {
   LivePreviewLineKind,
   LivePreviewMarkKind,
+  LivePreviewTableRow,
+  LivePreviewTableSegment,
 } from "./livePreviewRanges.ts"
-import { toLivePreviewRanges } from "./livePreviewRanges.ts"
+import {
+  toLivePreviewRanges,
+  toLivePreviewTableRanges,
+} from "./livePreviewRanges.ts"
 
 /** Marks a rendered link so the click handler can find its target. */
 const URL_ATTRIBUTE = "data-charcuterie-url"
+
+/**
+ * A rendered cell's offset into its own table, so a click can put
+ * the caret back in the markdown it was drawn from.
+ *
+ * Relative, not absolute, and for the same reason `TaskWidget` reads
+ * its position back from the DOM: a widget outlives the offsets it
+ * was built at. Editing a paragraph *above* a table moves every
+ * offset in it without changing a character of the table, and the
+ * widget is reused — `eq` compares the markdown, which did not
+ * change. Relative plus `posAtDOM` at click time is correct in both
+ * cases; a captured absolute offset silently is not.
+ */
+const CELL_OFFSET_ATTRIBUTE = "data-charcuterie-cell-offset"
 
 /** Toggle the "edit Markdown" mode. */
 export const setLivePreviewRawMode =
@@ -74,6 +102,41 @@ export const livePreviewRawModeField =
       return isNextRawMode
     },
   })
+
+const setIsEditorFocused = StateEffect.define<boolean>()
+
+/**
+ * Focus, as editor state.
+ *
+ * The plugin can read `view.hasFocus` directly; the block pass is a
+ * `StateField` and has no view to ask. It still needs the answer,
+ * because an unfocused editor reveals nothing — without it the
+ * caret's default resting place, offset 0, counts as "inside" a
+ * table that opens the document, and a description that starts with
+ * a table loads showing pipes.
+ */
+const isEditorFocusedField = StateField.define<boolean>({
+  create: () => false,
+  update: (isFocused, transaction) => {
+    let isNextFocused = isFocused
+
+    for (const effect of transaction.effects) {
+      if (effect.is(setIsEditorFocused)) {
+        isNextFocused = effect.value
+      }
+    }
+
+    return isNextFocused
+  },
+})
+
+/**
+ * The facet CodeMirror provides for exactly this: turn a focus
+ * change into an effect, so state can depend on it.
+ */
+const focusTracker = EditorView.focusChangeEffect.of(
+  (_state, isFocusing) => setIsEditorFocused.of(isFocusing),
+)
 
 const LINE_CLASSES: Record<LivePreviewLineKind, string> = {
   blockquote: "cm-md-blockquote",
@@ -212,6 +275,183 @@ class TaskWidget extends WidgetType {
   }
 }
 
+/**
+ * A cell's content run, as DOM.
+ *
+ * A plain text node when there is nothing to say about it — the
+ * common case, and one fewer element per cell in a table that might
+ * have a hundred.
+ */
+const toSegmentNode = (
+  segment: LivePreviewTableSegment,
+  view: EditorView,
+) => {
+  if (segment.type === "image") {
+    const image = document.createElement("img")
+
+    image.setAttribute("src", segment.url)
+
+    image.setAttribute("alt", segment.alt)
+
+    image.className = "cm-md-image"
+
+    image.addEventListener("load", () => {
+      view.requestMeasure()
+    })
+
+    return image
+  }
+
+  if (segment.markKinds.length === 0 && !segment.url) {
+    return document.createTextNode(segment.text)
+  }
+
+  const span = document.createElement("span")
+
+  span.className = segment.markKinds
+    .map((markKind) => MARK_CLASSES[markKind])
+    .join(" ")
+
+  if (segment.url) {
+    span.setAttribute(URL_ATTRIBUTE, segment.url)
+  }
+
+  span.textContent = segment.text
+
+  return span
+}
+
+/**
+ * A table, standing in for its own pipes.
+ *
+ * This is the one widget here that replaces *lines* rather than a
+ * span, and the only construct in the language whose meaning is
+ * geometry: a column is not a decoration you can hang on the text,
+ * because the text of column two is on four different lines. So the
+ * markdown stops being drawn and this draws instead — and the way
+ * back is the caret, exactly as it is for a link or an image.
+ * Clicking a cell dispatches a selection into that cell, the
+ * decoration drops on the next update, and the pipes are back with
+ * the caret already in the right one.
+ *
+ * `eq` compares the table's markdown source. Two identical tables
+ * never share a widget instance — `eq` is only ever consulted for
+ * the same position — so the slice is a complete identity, and it
+ * is stable under edits elsewhere in the document, which is what
+ * stops every keystroke in a long description from rebuilding every
+ * table below it.
+ */
+class TableWidget extends WidgetType {
+  constructor(
+    private readonly source: string,
+    private readonly rows: readonly LivePreviewTableRow[],
+    private readonly tableFrom: number,
+  ) {
+    super()
+  }
+
+  eq(other: TableWidget) {
+    return other.source === this.source
+  }
+
+  toDOM(view: EditorView) {
+    const scroll = document.createElement("div")
+
+    scroll.className = "cm-md-table-scroll"
+
+    const table = document.createElement("table")
+
+    table.className = "cm-md-table-rendered"
+
+    const head = document.createElement("thead")
+
+    const body = document.createElement("tbody")
+
+    for (const row of this.rows) {
+      const rowElement = document.createElement("tr")
+
+      for (const cell of row.cells) {
+        const cellElement = document.createElement(
+          row.isHeader ? "th" : "td",
+        )
+
+        cellElement.style.textAlign = cell.alignment
+
+        cellElement.setAttribute(
+          CELL_OFFSET_ATTRIBUTE,
+          String(cell.from - this.tableFrom),
+        )
+
+        for (const segment of cell.segments) {
+          cellElement.append(toSegmentNode(segment, view))
+        }
+
+        rowElement.append(cellElement)
+      }
+
+      ;(row.isHeader ? head : body).append(rowElement)
+    }
+
+    if (head.childElementCount > 0) {
+      table.append(head)
+    }
+
+    table.append(body)
+
+    scroll.append(table)
+
+    scroll.addEventListener("mousedown", (event) => {
+      const target = event.target
+
+      if (!(target instanceof HTMLElement)) {
+        return
+      }
+
+      // A link in a cell is still a link; `openLinkOnClick` gets it
+      // on the way up.
+      if (target.closest(`[${URL_ATTRIBUTE}]`)) {
+        return
+      }
+
+      const cellElement = target.closest(
+        `[${CELL_OFFSET_ATTRIBUTE}]`,
+      )
+
+      if (!cellElement) {
+        return
+      }
+
+      event.preventDefault()
+
+      const offset = Number(
+        cellElement.getAttribute(CELL_OFFSET_ATTRIBUTE),
+      )
+
+      view.focus()
+
+      view.dispatch({
+        selection: {
+          anchor: view.posAtDOM(scroll) + offset,
+        },
+      })
+    })
+
+    return scroll
+  }
+
+  /**
+   * The widget handles its own events.
+   *
+   * Without this CodeMirror also treats the click as a caret
+   * placement and lands wherever the coordinates map to — which for
+   * a block widget is its first or last position, never the cell
+   * that was clicked.
+   */
+  ignoreEvent() {
+    return true
+  }
+}
+
 const toDecorations = (view: EditorView): DecorationSet => {
   const isRawMode = view.state.field(
     livePreviewRawModeField,
@@ -319,6 +559,86 @@ const toDecorations = (view: EditorView): DecorationSet => {
   return Decoration.set(decorations, true)
 }
 
+/**
+ * The block pass: tables, from a `StateField`.
+ *
+ * `EditorView.decorations.from` a field rather than a plugin, and
+ * that is not a style choice — CodeMirror throws
+ * `Block decorations may not be specified via plugins` if you try
+ * it the other way, because replacing four lines with one element
+ * changes the block structure the viewport is measured against.
+ * The whole document is scanned every time, which is what the
+ * plugin's `visibleRanges` optimisation buys back for everything
+ * else.
+ */
+const toTableDecorations = (state: EditorState) => {
+  const isRawMode = state.field(
+    livePreviewRawModeField,
+    false,
+  )
+
+  const selections = state.field(
+    isEditorFocusedField,
+    false,
+  )
+    ? state.selection.ranges.map((range) => ({
+        from: range.from,
+        to: range.to,
+      }))
+    : []
+
+  const text = state.doc.toString()
+
+  return Decoration.set(
+    toLivePreviewTableRanges({
+      isRawMode: isRawMode ?? false,
+      selections,
+      text,
+      tree: syntaxTree(state),
+    }).map((range) =>
+      Decoration.replace({
+        // Whole lines, which is what `block` requires — and also
+        // what makes the table a paragraph in the flow rather than
+        // a very tall character.
+        block: true,
+        widget: new TableWidget(
+          text.slice(range.from, range.to),
+          range.rows,
+          range.from,
+        ),
+      }).range(range.from, range.to),
+    ),
+    true,
+  )
+}
+
+const livePreviewTableField =
+  StateField.define<DecorationSet>({
+    create: toTableDecorations,
+    update: (decorations, transaction) => {
+      if (
+        transaction.docChanged ||
+        transaction.selection !== undefined ||
+        transaction.effects.some(
+          (effect) =>
+            effect.is(setLivePreviewRawMode) ||
+            effect.is(setIsEditorFocused),
+        ) ||
+        // Parsing is incremental and time-sliced, so a long
+        // document's tables arrive over several transactions that
+        // change nothing else. Comparing the tree by identity is
+        // the cheap way to notice.
+        syntaxTree(transaction.state) !==
+          syntaxTree(transaction.startState)
+      ) {
+        return toTableDecorations(transaction.state)
+      }
+
+      return decorations
+    },
+    provide: (field) => EditorView.decorations.from(field),
+  })
+
 const livePreviewPlugin = ViewPlugin.fromClass(
   class {
     decorations: DecorationSet
@@ -350,6 +670,80 @@ const livePreviewPlugin = ViewPlugin.fromClass(
   {
     decorations: (plugin) => plugin.decorations,
   },
+)
+
+/**
+ * Step *into* a table with the arrow keys.
+ *
+ * CodeMirror moves the caret over a block widget, not through it:
+ * pressing Down on the line above a rendered table lands on the
+ * line below it, and the table's markdown is unreachable without a
+ * mouse. That is fine for a widget with nothing to edit inside;
+ * this one is four lines of the user's own text.
+ *
+ * So the vertical move is inspected before it happens, and when it
+ * would jump a table, the caret is put at that table's edge
+ * instead — the near edge, so Down enters at the top and Up enters
+ * at the bottom. The table stands down on the next update and the
+ * pipes are there with the caret already in them.
+ *
+ * Only for a collapsed selection: Shift+Down is *selecting* across
+ * the table, where jumping it is right — the text is still in the
+ * document and still in the selection.
+ */
+const toTableStep =
+  (isForward: boolean) => (view: EditorView) => {
+    const { main } = view.state.selection
+
+    if (!main.empty) {
+      return false
+    }
+
+    const destination = view.moveVertically(
+      main,
+      isForward,
+    ).head
+
+    const from = Math.min(main.head, destination)
+
+    const to = Math.max(main.head, destination)
+
+    if (from === to) {
+      return false
+    }
+
+    let target: number | null = null
+
+    view.state
+      .field(livePreviewTableField)
+      .between(from, to, (rangeFrom, rangeTo) => {
+        target = isForward ? rangeFrom : rangeTo
+
+        return false
+      })
+
+    if (target === null) {
+      return false
+    }
+
+    view.dispatch({
+      scrollIntoView: true,
+      selection: { anchor: target },
+    })
+
+    return true
+  }
+
+/**
+ * `Prec.high` because the default keymap also binds these, and the
+ * first handler that returns `true` wins. Registration order in the
+ * extension array is not a promise about precedence.
+ */
+const tableStepKeymap = Prec.high(
+  keymap.of([
+    { key: "ArrowDown", run: toTableStep(true) },
+    { key: "ArrowUp", run: toTableStep(false) },
+  ]),
 )
 
 /**
@@ -496,8 +890,57 @@ const livePreviewTheme = EditorView.theme({
   ".cm-md-strong": {
     fontWeight: "700",
   },
+  /**
+   * The *editing* view of a table: the pipes, monospaced so the
+   * columns line up as typed. This is what the caret reveals, and
+   * what raw mode shows.
+   */
   ".cm-md-table": {
     fontFamily: "var(--font-mono)",
+  },
+  ".cm-md-table-rendered": {
+    borderCollapse: "collapse",
+  },
+  ".cm-md-table-rendered td, .cm-md-table-rendered th": {
+    border: "1px solid var(--color-border-subtle)",
+    cursor: "text",
+    padding: "var(--space-1) var(--space-2)",
+    verticalAlign: "top",
+  },
+  /**
+   * A blank cell still owns a row's worth of height.
+   *
+   * Without it a row whose cells are all empty collapses to its
+   * padding and the table looks like it lost a row — which, in a
+   * surface where a blank cell is how you say "nothing here yet",
+   * is the wrong answer to a legitimate table.
+   */
+  ".cm-md-table-rendered td:empty::after, .cm-md-table-rendered th:empty::after":
+    {
+      content: '"\\200b"',
+    },
+  /**
+   * No `text-align` here: the delimiter row aligns the header cell
+   * along with its column, and that is set inline per cell. A rule
+   * would be dead code that looks like it is doing the work.
+   */
+  ".cm-md-table-rendered th": {
+    backgroundColor: "var(--color-surface-sunken)",
+    fontWeight: "var(--font-weight-semibold)",
+  },
+  /**
+   * The scroll box, not the table.
+   *
+   * A table wider than the editor has to go somewhere. Letting it
+   * overflow puts columns under the gutter or off the edge of a
+   * wrapped line; scrolling the block is the same answer every
+   * document renderer lands on, and it keeps the *editor* from
+   * scrolling sideways as a whole.
+   */
+  ".cm-md-table-scroll": {
+    margin: "var(--space-2) 0",
+    maxWidth: "100%",
+    overflowX: "auto",
   },
   ".cm-md-task": {
     accentColor: "var(--color-intent-accent-solid)",
@@ -528,8 +971,15 @@ const rawModeClass = EditorView.editorAttributes.of(
 
 export const livePreview = (): Extension => [
   livePreviewRawModeField,
+  isEditorFocusedField,
+  focusTracker,
+  // The block pass, before the plugin: a field's decorations are
+  // resolved first anyway, but declaring it first keeps the reading
+  // order the same as the drawing order.
+  livePreviewTableField,
   livePreviewPlugin,
   livePreviewTheme,
   openLinkOnClick,
+  tableStepKeymap,
   rawModeClass,
 ]
