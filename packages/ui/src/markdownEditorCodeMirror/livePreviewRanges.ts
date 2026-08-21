@@ -43,7 +43,11 @@
  * having a serialiser at all.
  */
 
-import type { SyntaxNode, Tree } from "@lezer/common"
+import type {
+  SyntaxNode,
+  SyntaxNodeRef,
+  Tree,
+} from "@lezer/common"
 
 /**
  * A block-level treatment applied to a whole line.
@@ -71,6 +75,62 @@ export type LivePreviewMarkKind =
   | "strikethrough"
   | "strong"
   | "url"
+
+/**
+ * A column's alignment, as the delimiter row spells it.
+ *
+ * Logical rather than left/right, because everything else in this
+ * fleet is: a table in an RTL locale should flip with the text, and
+ * `text-align: start` is the property that does it for free.
+ */
+export type LivePreviewTableAlignment =
+  | "center"
+  | "end"
+  | "start"
+
+/**
+ * A run of cell content that shares one treatment.
+ *
+ * A rendered table cell is built from these rather than from the
+ * raw slice, so a cell keeps everything the rest of the surface
+ * gives a line: `**bold**` is bold, a link is a link, `` `code` ``
+ * is monospaced, and the markers that said so are gone.
+ */
+export type LivePreviewTableSegment =
+  | {
+      alt: string
+      type: "image"
+      url: string
+    }
+  | {
+      markKinds: readonly LivePreviewMarkKind[]
+      text: string
+      type: "text"
+      /** Present when the run is link text; the click target. */
+      url?: string
+    }
+
+export type LivePreviewTableCell = {
+  alignment: LivePreviewTableAlignment
+  /**
+   * Where a click in this cell puts the caret.
+   *
+   * The rendered table is a view, so the only way back into the
+   * markdown is to move the caret into it — and landing in the cell
+   * the reader aimed at is the difference between "editable" and
+   * "editable somewhere in there".
+   */
+  from: number
+  segments: readonly LivePreviewTableSegment[]
+  to: number
+}
+
+export type LivePreviewTableRow = {
+  cells: readonly LivePreviewTableCell[]
+  from: number
+  isHeader: boolean
+  to: number
+}
 
 export type LivePreviewRange = {
   from: number
@@ -117,6 +177,26 @@ export type LivePreviewRange = {
       url?: string
     }
 )
+
+/**
+ * A whole table, rendered — header row first, every row padded to
+ * the same width so the widget has no geometry decisions left.
+ *
+ * Its own type, and its own pass, because of a hard CodeMirror
+ * rule: **a block decoration may not come from a `ViewPlugin`.**
+ * Replacing four lines with one element changes the document's
+ * block structure, which the view has to know before it can decide
+ * what the viewport even contains — so it has to come from a
+ * `StateField`, which sees the whole document and no viewport.
+ * Everything else here is viewport-limited and stays in the plugin.
+ * The split is CodeMirror's, not ours.
+ */
+export type LivePreviewTableRange = {
+  from: number
+  rows: readonly LivePreviewTableRow[]
+  to: number
+  type: "table"
+}
 
 /** A selection range, in the two fields this module needs. */
 export type LivePreviewSelection = {
@@ -272,44 +352,478 @@ const toHeaderMarkEnd = (text: string, to: number) => {
   return end
 }
 
-/**
- * Every decoration the document wants, in tree order.
- *
- * Order is not sorted here on purpose — `Decoration.set(ranges,
- * true)` sorts, and doing it twice is the sort of thing that looks
- * free until a document is long.
- */
-export const toLivePreviewRanges = ({
-  from,
-  isRawMode = false,
-  selections,
-  text,
-  to,
-  tree,
-}: ToLivePreviewRangesOptions): LivePreviewRange[] => {
-  const ranges: LivePreviewRange[] = []
+/** A cell region with its surrounding padding removed. */
+const toTrimmedBounds = (
+  text: string,
+  from: number,
+  to: number,
+) => {
+  let start = from
 
-  const pushMarker = (
-    from: number,
-    to: number,
-    isRevealed: boolean,
-  ) => {
-    if (from >= to) {
-      return
+  let end = to
+
+  while (
+    start < end &&
+    (text[start] === " " || text[start] === "\t")
+  ) {
+    start += 1
+  }
+
+  while (
+    end > start &&
+    (text[end - 1] === " " || text[end - 1] === "\t")
+  ) {
+    end -= 1
+  }
+
+  return { from: start, to: end }
+}
+
+const toAlignment = (
+  spec: string,
+): LivePreviewTableAlignment => {
+  if (spec.startsWith(":") && spec.endsWith(":")) {
+    return "center"
+  }
+
+  if (spec.endsWith(":")) {
+    return "end"
+  }
+
+  return "start"
+}
+
+/**
+ * The delimiter row, read as alignment.
+ *
+ * It is the one row a rendered table does not show — `| :--- | ---: |`
+ * is not content, it is the column spec — so this is where it goes
+ * instead of on screen. The parser hands the whole row back as a
+ * single `TableDelimiter` child of `Table`, which is what separates
+ * it from the `|` between two cells: those are children of the row.
+ */
+const toColumnAlignments = (
+  text: string,
+  node: SyntaxNode,
+): LivePreviewTableAlignment[] => {
+  for (
+    let child = node.firstChild;
+    child;
+    child = child.nextSibling
+  ) {
+    if (child.name !== "TableDelimiter") {
+      continue
     }
 
-    ranges.push({
-      from,
-      isConcealed: !isRawMode && !isRevealed,
-      to,
-      type: "marker",
+    return text
+      .slice(child.from, child.to)
+      .split("|")
+      .map((spec) => spec.trim())
+      .filter(
+        (spec, index, specs) =>
+          spec !== "" ||
+          (index !== 0 && index !== specs.length - 1),
+      )
+      .map(toAlignment)
+  }
+
+  return []
+}
+
+/**
+ * A row's columns, as offset ranges — including the empty ones.
+ *
+ * Splitting on the `TableCell` children alone would lose them: the
+ * parser emits no cell node for `| |`, so a table with a blank cell
+ * would render with its remaining cells shifted one column left,
+ * which is a data-corrupting kind of wrong even though nothing was
+ * written. The `|` positions are the truth, so the gaps between
+ * them are the columns, cell node or not.
+ */
+const toRowRegions = (row: SyntaxNode, text: string) => {
+  const regions: { from: number; to: number }[] = []
+
+  let start = row.from
+
+  for (
+    let child = row.firstChild;
+    child;
+    child = child.nextSibling
+  ) {
+    if (child.name !== "TableDelimiter") {
+      continue
+    }
+
+    // The leading `|`, which opens no column of its own.
+    if (child.from === start) {
+      start = child.to
+
+      continue
+    }
+
+    regions.push({ from: start, to: child.from })
+
+    start = child.to
+  }
+
+  // What is left after the last `|`. Only a column if it holds
+  // something: a row that ends with a pipe and then trailing spaces
+  // has no final column, and counting one gives every table an
+  // empty extra column that nothing in the markdown asked for.
+  if (
+    start < row.to &&
+    text.slice(start, row.to).trim() !== ""
+  ) {
+    regions.push({ from: start, to: row.to })
+  }
+
+  return regions
+}
+
+const toCellNodeIn = (
+  row: SyntaxNode,
+  from: number,
+  to: number,
+): SyntaxNode | null => {
+  for (
+    let child = row.firstChild;
+    child;
+    child = child.nextSibling
+  ) {
+    if (
+      child.name === "TableCell" &&
+      child.from >= from &&
+      child.to <= to
+    ) {
+      return child
+    }
+  }
+
+  return null
+}
+
+/**
+ * Inline ranges over a slice → the runs a renderer can build DOM
+ * from, flattened.
+ *
+ * Everywhere else in this module a decoration is *applied* to text
+ * CodeMirror is already drawing, so overlapping ranges are free —
+ * the browser composes them. A widget draws its own text, so they
+ * are not: `**a [b](c) d**` is one strong run overlapping one link
+ * run, and something has to decide where the spans break. That is
+ * this function, and the answer is per character, which is the only
+ * version that cannot be defeated by a nesting nobody predicted.
+ *
+ * Concealed markers are dropped rather than split around, so a run
+ * of bold text stays a single segment with its `**` gone from both
+ * ends.
+ */
+export const toInlineSegments = ({
+  from,
+  ranges,
+  text,
+  to,
+}: {
+  from: number
+  ranges: readonly LivePreviewRange[]
+  text: string
+  to: number
+}): LivePreviewTableSegment[] => {
+  const isHidden = new Array<boolean>(
+    Math.max(to - from, 0),
+  ).fill(false)
+
+  const marks: {
+    from: number
+    markKind: LivePreviewMarkKind
+    to: number
+    url?: string
+  }[] = []
+
+  const images = new Map<
+    number,
+    { alt: string; to: number; url: string }
+  >()
+
+  const hide = (hiddenFrom: number, hiddenTo: number) => {
+    for (
+      let offset = Math.max(hiddenFrom, from);
+      offset < Math.min(hiddenTo, to);
+      offset += 1
+    ) {
+      isHidden[offset - from] = true
+    }
+  }
+
+  for (const range of ranges) {
+    if (range.type === "marker" && range.isConcealed) {
+      hide(range.from, range.to)
+    }
+
+    if (range.type === "mark") {
+      marks.push({
+        from: range.from,
+        markKind: range.markKind,
+        to: range.to,
+        url: range.url,
+      })
+    }
+
+    if (range.type === "image") {
+      images.set(range.from, {
+        alt: range.alt,
+        to: range.to,
+        url: range.url,
+      })
+
+      hide(range.from, range.to)
+    }
+  }
+
+  const segments: LivePreviewTableSegment[] = []
+
+  let openKey: string | null = null
+
+  let openSegment: {
+    markKinds: LivePreviewMarkKind[]
+    text: string
+    url?: string
+  } | null = null
+
+  const flush = () => {
+    if (openSegment && openSegment.text !== "") {
+      segments.push({ ...openSegment, type: "text" })
+    }
+
+    openKey = null
+
+    openSegment = null
+  }
+
+  for (let offset = from; offset < to; offset += 1) {
+    const image = images.get(offset)
+
+    if (image) {
+      flush()
+
+      segments.push({
+        alt: image.alt,
+        type: "image",
+        url: image.url,
+      })
+
+      offset = image.to - 1
+
+      continue
+    }
+
+    if (isHidden[offset - from]) {
+      continue
+    }
+
+    const covering = marks.filter(
+      (mark) => mark.from <= offset && mark.to > offset,
+    )
+
+    const markKinds = [
+      ...new Set(covering.map((mark) => mark.markKind)),
+    ].sort()
+
+    const url = covering.find((mark) => mark.url)?.url
+
+    const key = `${markKinds.join(" ")}\u0000${url ?? ""}`
+
+    if (key !== openKey) {
+      flush()
+
+      openKey = key
+
+      openSegment = {
+        markKinds,
+        text: "",
+        ...(url ? { url } : {}),
+      }
+    }
+
+    if (openSegment) {
+      openSegment.text += text[offset]
+    }
+  }
+
+  flush()
+
+  return segments
+}
+
+/**
+ * A table, as rows of rendered cells — or `null` when the parser
+ * found no rows at all to render.
+ *
+ * Rows are padded to a rectangle here rather than in the widget:
+ * the width is `max(columns in the delimiter row, columns in the
+ * widest row)`, which is deliberately **not** what GitHub renders.
+ * GFM drops cells past the header's width, and dropping them in an
+ * *editor* means text the author typed is on screen nowhere — a
+ * worse failure than a table one column wider than it should be,
+ * with the raw markdown one toggle away.
+ */
+const toTableRows = ({
+  node,
+  text,
+  toEnter,
+}: {
+  node: SyntaxNode
+  text: string
+  toEnter: (
+    ranges: LivePreviewRange[],
+  ) => (nodeRef: SyntaxNodeRef) => boolean
+}): LivePreviewTableRow[] | null => {
+  const alignments = toColumnAlignments(text, node)
+
+  const rows: LivePreviewTableRow[] = []
+
+  for (
+    let child = node.firstChild;
+    child;
+    child = child.nextSibling
+  ) {
+    if (
+      child.name !== "TableHeader" &&
+      child.name !== "TableRow"
+    ) {
+      continue
+    }
+
+    const row = child
+
+    rows.push({
+      cells: toRowRegions(row, text).map(
+        (region, columnIndex) => {
+          const bounds = toTrimmedBounds(
+            text,
+            region.from,
+            region.to,
+          )
+
+          const cellNode = toCellNodeIn(
+            row,
+            bounds.from,
+            bounds.to,
+          )
+
+          const cellRanges: LivePreviewRange[] = []
+
+          if (cellNode) {
+            cellNode.cursor().iterate(toEnter(cellRanges))
+          }
+
+          return {
+            alignment: alignments[columnIndex] ?? "start",
+            from: bounds.from,
+            segments: toInlineSegments({
+              from: bounds.from,
+              ranges: cellRanges,
+              text,
+              to: bounds.to,
+            }),
+            to: bounds.to,
+          }
+        },
+      ),
+      from: row.from,
+      isHeader: row.name === "TableHeader",
+      to: row.to,
     })
   }
 
-  tree.iterate({
-    from,
-    to,
-    enter: (nodeRef) => {
+  if (rows.length === 0) {
+    return null
+  }
+
+  const columnCount = Math.max(
+    alignments.length,
+    ...rows.map((row) => row.cells.length),
+  )
+
+  return rows.map((row) => ({
+    ...row,
+    cells: [
+      ...row.cells,
+      // A short row keeps its shape by gaining empty cells, and
+      // they collapse to the end of the row: clicking one puts the
+      // caret where the missing `| |` would be typed.
+      ...Array.from(
+        { length: columnCount - row.cells.length },
+        (_unused, index) => ({
+          alignment:
+            alignments[row.cells.length + index] ?? "start",
+          from: row.to,
+          segments: [],
+          to: row.to,
+        }),
+      ),
+    ],
+  }))
+}
+
+/**
+ * Is this table drawn, or edited?
+ *
+ * One predicate, used by both passes, because they have to agree:
+ * the block pass draws the table exactly when the inline pass steps
+ * out of its way, and a disagreement paints the pipes underneath a
+ * rendered table or leaves a gap where neither drew anything.
+ */
+const isTableRendered = ({
+  isRawMode,
+  node,
+  selections,
+}: {
+  isRawMode: boolean
+  node: SyntaxNode
+  selections: readonly LivePreviewSelection[]
+}) =>
+  !isRawMode && !isInside(selections, node.from, node.to)
+
+/**
+ * The walk, parameterised by where it writes.
+ *
+ * Everything the document contains is decorated into the array this
+ * is handed; a table cell's contents are decorated into a throwaway
+ * one instead, because they are not decorations over the document
+ * at all — they describe text a widget will draw itself. Same rules
+ * for `**` in a cell as for `**` in a paragraph, one
+ * implementation, and the recursion is bounded by the cell subtree
+ * rather than by a flag.
+ */
+const toWalker = ({
+  isRawMode,
+  selections,
+  text,
+}: {
+  isRawMode: boolean
+  selections: readonly LivePreviewSelection[]
+  text: string
+}) => {
+  const toEnter = (ranges: LivePreviewRange[]) => {
+    const pushMarker = (
+      from: number,
+      to: number,
+      isRevealed: boolean,
+    ) => {
+      if (from >= to) {
+        return
+      }
+
+      ranges.push({
+        from,
+        isConcealed: !isRawMode && !isRevealed,
+        to,
+        type: "marker",
+      })
+    }
+
+    return (nodeRef: SyntaxNodeRef): boolean => {
       const { name } = nodeRef
 
       const headingKind = HEADING_LINE_KINDS[name]
@@ -358,6 +872,22 @@ export const toLivePreviewRanges = ({
       }
 
       if (name === "Table") {
+        // A rendered table belongs to the block pass, and this one
+        // has nothing to say about lines that will not be drawn.
+        if (
+          isTableRendered({
+            isRawMode,
+            node: nodeRef.node,
+            selections,
+          })
+        ) {
+          return false
+        }
+
+        // Otherwise the caret is in it — or raw mode is on — and
+        // this is the *editing* view: the pipes, monospaced, on the
+        // same rule as an image or a link. You cannot edit a column
+        // you cannot see.
         if (!isRawMode) {
           for (
             let offset = toLineStart(text, nodeRef.from);
@@ -532,6 +1062,19 @@ export const toLivePreviewRanges = ({
         return false
       }
 
+      if (name === "Escape") {
+        // `\|` is the only way to put a pipe in a table cell, and
+        // the reader wants the pipe, not the backslash. Same rule
+        // as any other marker: the caret brings it back.
+        pushMarker(
+          nodeRef.from,
+          nodeRef.from + 1,
+          isInside(selections, nodeRef.from, nodeRef.to),
+        )
+
+        return false
+      }
+
       if (name === "CodeInfo") {
         pushMarker(nodeRef.from, nodeRef.to, true)
 
@@ -574,6 +1117,105 @@ export const toLivePreviewRanges = ({
       }
 
       return true
+    }
+  }
+
+  return toEnter
+}
+
+/**
+ * Every decoration the document wants that a plugin may provide, in
+ * tree order.
+ *
+ * Order is not sorted here on purpose — `Decoration.set(ranges,
+ * true)` sorts, and doing it twice is the sort of thing that looks
+ * free until a document is long.
+ */
+export const toLivePreviewRanges = ({
+  from,
+  isRawMode = false,
+  selections,
+  text,
+  to,
+  tree,
+}: ToLivePreviewRangesOptions): LivePreviewRange[] => {
+  const ranges: LivePreviewRange[] = []
+
+  tree.iterate({
+    from,
+    to,
+    enter: toWalker({ isRawMode, selections, text })(
+      ranges,
+    ),
+  })
+
+  return ranges
+}
+
+/**
+ * Block nodes a table can be nested inside.
+ *
+ * The block pass is not viewport-limited — it cannot be, since a
+ * block decoration is part of what *decides* the viewport — so it
+ * pays for the whole document on every keystroke. Descending only
+ * into containers keeps that a scan of the block structure rather
+ * than a walk of every inline node in the file.
+ */
+const TABLE_CONTAINER_NAMES = new Set([
+  "Blockquote",
+  "BulletList",
+  "Document",
+  "ListItem",
+  "OrderedList",
+])
+
+/**
+ * The tables the document renders, whole-document.
+ *
+ * Separate from `toLivePreviewRanges` because CodeMirror requires
+ * it: block decorations come from a `StateField`, inline ones from
+ * a viewport-limited `ViewPlugin`, and the two passes agree via
+ * `isTableRendered`.
+ */
+export const toLivePreviewTableRanges = ({
+  isRawMode = false,
+  selections,
+  text,
+  tree,
+}: Omit<
+  ToLivePreviewRangesOptions,
+  "from" | "to"
+>): LivePreviewTableRange[] => {
+  const ranges: LivePreviewTableRange[] = []
+
+  const toEnter = toWalker({ isRawMode, selections, text })
+
+  tree.iterate({
+    enter: (nodeRef) => {
+      if (nodeRef.name !== "Table") {
+        return TABLE_CONTAINER_NAMES.has(nodeRef.name)
+      }
+
+      const node = nodeRef.node
+
+      const rows = isTableRendered({
+        isRawMode,
+        node,
+        selections,
+      })
+        ? toTableRows({ node, text, toEnter })
+        : null
+
+      if (rows) {
+        ranges.push({
+          from: node.from,
+          rows,
+          to: node.to,
+          type: "table",
+        })
+      }
+
+      return false
     },
   })
 

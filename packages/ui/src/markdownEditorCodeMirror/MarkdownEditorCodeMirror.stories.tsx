@@ -47,6 +47,28 @@ ip -br addr show
 Replacement rails ordered from https://example.invalid/product?id=1234
 `
 
+/**
+ * Alignment from the delimiter row, inline markup inside cells, a
+ * deliberately blank cell, and a row that is one column short —
+ * every table decision in one fixture.
+ */
+const TABLES = `## Rack inventory
+
+| Port | Goes to | **Speed** | Notes |
+| :--- | :---: | ---: | --- |
+| 1 | uplink | 10G | swapped \`2026-08-19\` |
+| 2 |  | 1G | see [the runbook](https://example.invalid/runbook) |
+| 3 | shelf | 1G |
+| 4 | ~~spare~~ | — | pulled \\| relabel |
+
+A table with no outer pipes is still a table:
+
+Disk | Size
+--- | ---:
+front-left | 18 TB
+front-right | 18 TB
+`
+
 const meta = {
   title: "Components/Controls/MarkdownEditorCodeMirror",
   component: MarkdownEditorCodeMirror,
@@ -142,6 +164,26 @@ export const CaretReveal: Story = {
   args: {
     defaultValue:
       "Click into the **bold run** and its markers come back.\n\nLeave, and they go again.",
+    label: "Description",
+  },
+}
+
+/**
+ * The construct whose meaning is geometry.
+ *
+ * Everything else on this surface is a decoration hung on text that
+ * is drawn anyway — a column is not, because column two's text is
+ * on four separate lines. So the pipes stop being drawn and a real
+ * table is drawn instead, alignment and all, with `**bold**` and
+ * links rendering inside the cells like anywhere else.
+ *
+ * Click a cell and the markdown comes back with the caret in that
+ * cell — the same trade the rest of the surface makes for a link or
+ * an image.
+ */
+export const Tables: Story = {
+  args: {
+    defaultValue: TABLES,
     label: "Description",
   },
 }
