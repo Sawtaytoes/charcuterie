@@ -7,7 +7,80 @@ AST query.
 Extracted from `mux-magic/eslint.config.js`, the reference app for every convention
 in this repo, so apps consume one import instead of six copy-pasted config files.
 
+## Installing
+
+```sh
+yarn add --dev @charcuterie/eslint-config eslint
+```
+
+Two packages, and `eslint` is one of them only because the CLI belongs to the
+consumer. `typescript-eslint`, `eslint-plugin-react` and `@vitest/eslint-plugin` are
+this package's own dependencies — a shared config whose adoption instructions start
+"first install these four plugins" has not shared very much.
+
 ## Usage
+
+```js
+// eslint.config.js — the whole file, in an app repo
+import { createAppConfig } from "@charcuterie/eslint-config"
+import { defineConfig } from "eslint/config"
+
+export default defineConfig(
+  ...createAppConfig({
+    tsconfigRootDir: import.meta.dirname,
+  }),
+)
+```
+
+`createAppConfig` is the default answer for an app. It composes the factories below
+in the right order, scoped off `@charcuterie/ui`, with the house ignore list already
+in place. Name where your source lives if it is not `src`:
+
+```js
+createAppConfig({
+  tsconfigRootDir: import.meta.dirname,
+  appDirectories: ["packages/web"],
+  // Repo-specific paths are *added* to `APP_IGNORES`, not
+  // swapped for it.
+  ignores: ["e2e/**"],
+})
+```
+
+| Option | Default | What it does |
+| --- | --- | --- |
+| `tsconfigRootDir` | **required** | Where the app's `tsconfig.json` lives. `projectService` has no honest default for somebody else's repo. |
+| `appDirectories` | `["src"]` | The app's own source. This is the scoping that keeps the component rules off the library. |
+| `ignores` | `[]` | Appended to `APP_IGNORES`. |
+| `componentChoice` | `"pickers"` | `"all"` for all seven rules once the app has swept its raw anchors and buttons; `"off"` mid-migration. |
+| `flexOverflow` | `"off"` | `"warn"` or `"error"` to turn the flex family on. |
+| `reactVersion` | `"19.0.0"` | |
+
+**Why the preset exists at all**, given that every factory below already takes
+`files`: because eight app repos each composed them by hand, and by 2026-08-21 six
+had drifted. Four hand-registered the plugin object and the two picker rules by
+name — four copies of the same paragraph explaining why they were not calling
+`createComponentChoiceRules` next to it — and two never wired the block at all, so
+the fleet's one machine-enforced picker rule was enforced in half the fleet. A rule
+the library ships but every consumer has to re-derive is a rule the fleet does not
+have.
+
+`componentChoice: "pickers"` is the default because it is the one component-choice
+family with a standing decision behind it and no remaining backlog: `Select` is
+deprecated, `Picker` is the drop-in, and every owned app was swept onto `Listbox` on
+2026-08-21. The other five rules each name a sweep an app has not done —
+`no-raw-button` alone fires on every icon row in the fleet — and a config that turns
+a whole repo red is a config that gets reverted rather than migrated.
+
+`flexOverflow` defaults to `"off"` for the same reason, one step further along:
+`no-shrink-0-with-flex-wrap` is an `error`, so bundling it would make "adopt the
+preset" and "sweep the flex bugs" the same change.
+
+### Composing by hand
+
+An app with a layout the preset cannot describe still calls the factories directly —
+the preset is built out of these, so there is no second implementation to keep in
+step. `mux-magic` does this, because it layers its own `no-restricted-syntax`
+selectors onto the logical-properties ones.
 
 ```js
 // eslint.config.js
@@ -15,6 +88,7 @@ import {
   createComponentChoiceRules,
   createFlexOverflowRules,
   createLogicalPropertiesRules,
+  createPickerRules,
   createReactRules,
   createStoryOverrides,
   createTestRules,
@@ -31,7 +105,13 @@ export default defineConfig(
   createLogicalPropertiesRules({
     files: ["packages/ui/**/*.tsx"],
   }),
-  // Opt-in, and pointed at app source rather than the library.
+  // The settled subset — `no-raw-select`,
+  // `prefer-listbox-over-select`, and the suppression guard.
+  createPickerRules({
+    files: ["packages/web/**/*.tsx"],
+  }),
+  // All seven. Opt-in, and pointed at app source rather than the
+  // library.
   createComponentChoiceRules({
     files: ["packages/web/**/*.tsx"],
   }),
@@ -48,6 +128,8 @@ export default defineConfig(
 Every export is a **factory taking `files`** rather than a fixed config array. A
 shared config that hard-codes `packages/web/**` is a mux-magic config wearing a
 shared name; the consumer knows its own layout and this package does not.
+`createAppConfig` does not break that — it derives the globs from `appDirectories`
+rather than assuming them.
 
 `createTypedRules` needs `tsconfigRootDir` because it turns on `projectService` —
 there is no honest default for where somebody else's tsconfig lives.
@@ -61,7 +143,7 @@ there is no honest default for where somebody else's tsconfig lives.
 | `react/no-multi-comp` | one component per file; off for stories and `__fixtures__` |
 | `vitest/consistent-test-it` (`test`, not `it`) | auto-fixable, which is the only reason a rule this cosmetic earns a slot |
 | `no-restricted-syntax` (logical properties only) | **new here** — see below |
-| `charcuterie/*` (component choice) | **new here, and opt-in** — see below |
+| `charcuterie/*` (component choice) | **opt-in**, except the picker subset — see below |
 | `charcuterie/*` (flex overflow) | **new here, and opt-in** — see below |
 
 All the `charcuterie/*` rules live in **one plugin object under one namespace**, composed
@@ -129,6 +211,24 @@ createComponentChoiceRules({
   files: ["packages/web/**/*.tsx"],
 })
 ```
+
+Or just the picker subset — `no-raw-select`, `prefer-listbox-over-select`, and the
+suppression guard — which is what `createAppConfig` turns on by default and what
+four repos were hand-registering before it existed:
+
+```js
+createPickerRules({ files: ["packages/web/**/*.tsx"] })
+```
+
+The subset is not a compromise; it is the line between a settled decision and a
+backlog. `Select` is deprecated with no per-call-site exception left and `Picker` is
+a drop-in, so nothing in that pair is a judgement call. The other five each name a
+sweep — `no-raw-button` fires on every icon row in the fleet — which is why they stay
+behind an explicit `componentChoice: "all"`.
+
+A repo that lints with Biome and not ESLint gets the same two mistakes caught by
+[`@charcuterie/biome-config/app`](../biome-config/README.md), which expresses them
+as `noRestrictedElements` and `noRestrictedImports`.
 
 **It is opt-in on purpose.** Five apps would go red the day they adopted it, and a config
 that turns a whole repo red is a config that gets reverted rather than migrated — so it is
