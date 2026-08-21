@@ -72,6 +72,15 @@ createAppConfig({
 | `componentChoice` | `"pickers"` | `"all"` for all seven rules once the app has swept its raw anchors and buttons; `"off"` mid-migration. |
 | `flexOverflow` | `"off"` | `"warn"` or `"error"` to turn the flex family on. |
 | `reactVersion` | `"19.0.0"` | |
+| `storyFiles` | `MULTI_COMPONENT_FILE_GLOBS` | Files that may declare more than one component. |
+
+`react/no-multi-comp` is off for stories, `__fixtures__`, **`*.test.tsx`, and icon
+modules** (`icons.tsx`, `*Icons.tsx`). The last two turned up the moment real apps ran the
+preset and are the same argument the story exemption already makes — the file's job is to
+hold a set. A component test that needs a wrapper declares the harness beside the
+assertion, and Charcuterie ships no icons on purpose, so every app has one file of glyphs:
+19 in `mail-sifter/components/icons.tsx`. Nineteen one-line files would be strictly worse,
+and nobody would write them — the rule would just get switched off.
 
 **Why the preset exists at all**, given that every factory below already takes
 `files`: because eight app repos each composed them by hand, and by 2026-08-21 six
