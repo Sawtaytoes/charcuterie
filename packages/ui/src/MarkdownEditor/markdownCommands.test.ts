@@ -7,12 +7,14 @@ import {
   insertImage,
   insertLink,
   insertText,
+  isLinkPaste,
   MARKDOWN_LINE_PREFIXES,
   outdentLines,
   toggleHeading,
   toggleInlineMarker,
   toggleLinePrefix,
   toMarkdownImage,
+  wrapSelectionInLink,
 } from "./markdownCommands.ts"
 
 const at = (text: string, marker = "|") => {
@@ -381,4 +383,57 @@ test("the minimal edit is the smallest range that explains the change", () => {
     start: 4,
     text: "",
   })
+})
+
+/**
+ * Pasting a URL over selected text is what every editor the owner
+ * uses already does, and its absence is why a link pasted into a
+ * Docket description stayed flat text.
+ */
+test("a URL pasted over a selection wraps it", () => {
+  expect(
+    wrapSelectionInLink(
+      at("see |the docs| now"),
+      "https://example.com",
+    ),
+  ).toEqual({
+    // After the whole insertion, not inside the destination: the
+    // URL is already known, so parking the caret in it would ask
+    // the user to replace what they just pasted.
+    selectionEnd: 35,
+    selectionStart: 35,
+    text: "see [the docs](https://example.com) now",
+  })
+})
+
+test("a URL pasted with no selection is inserted plainly", () => {
+  // Autolink renders a bare URL as a link anyway, so wrapping it
+  // with no text would produce `[](url)` — an empty link.
+  expect(
+    wrapSelectionInLink(
+      at("see | now"),
+      "https://example.com",
+    ),
+  ).toEqual({
+    selectionEnd: 23,
+    selectionStart: 23,
+    text: "see https://example.com now",
+  })
+})
+
+test.each([
+  ["https://example.com", true],
+  ["http://example.com/a?b=c#d", true],
+  ["  https://example.com  ", true],
+  ["not a url", false],
+  ["", false],
+  // Deliberately strict: a paste that is only *mostly* a URL is
+  // left alone, because mangling a literal paste is worse than
+  // not linkifying one.
+  ["see https://example.com", false],
+  ["https://a.com https://b.com", false],
+  ["mailto:someone@example.com", false],
+  ["www.example.com", false],
+])("isLinkPaste(%j) is %s", (pasted, isExpected) => {
+  expect(isLinkPaste(pasted)).toBe(isExpected)
 })
