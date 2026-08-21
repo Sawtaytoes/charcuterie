@@ -120,10 +120,17 @@ like a code editor. Raw mode goes back to monospace, because a source view is co
 - Provenance, re-checked rather than assumed: CodeMirror 6 and `@lezer/*` are Marijn
   Haverbeke (Netherlands), MIT. Not Chinese-origin, so the fleet constraint did not decide
   this — recorded so the next person does not redo the check.
-- The concealment invariant is asserted at runtime, not just in unit tests: driving the
-  component in Chromium and reading `.cm-content`'s `textContent` back returns
-  `"Click into the **bold run** and its markers come back."` — the asterisks are on screen as
-  nothing and in the document as themselves.
+- The concealment invariant is asserted end-to-end, through the database rather than through
+  the DOM. **Reading `.cm-content`'s `textContent` does not prove it** — a concealed range is
+  a `Decoration.replace`, so those characters are genuinely absent from the DOM, and
+  CodeMirror only renders the viewport anyway. That check shows markers *return* when
+  revealed; it says nothing about what is stored.
+
+  The real test is a full cycle in Docket: open a task whose description contains
+  `## `, `**…**`, `- [x]`, a table and a bare URL; let live preview mount and conceal;
+  type one character at the end; let the autosave land; then re-`GET` the task. The stored
+  description comes back as `before + "!"` **exactly** — every marker intact, no HTML tag
+  anywhere in it. Concealing two asterisks did not delete two asterisks.
 - `livePreviewRanges.test.ts` covers the rules above against the real GFM parser, in Node.
 - Screenshots of every state, driven and looked at: `__screenshots__/` in this branch, and
   attached to the pull request.
