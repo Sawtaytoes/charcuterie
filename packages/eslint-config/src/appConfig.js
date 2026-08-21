@@ -125,6 +125,46 @@ export const createPickerRules = ({
 })
 
 /**
+ * Files that legitimately declare more than one component, so
+ * `react/no-multi-comp` is off for them.
+ *
+ * `createStoryOverrides` already exempts stories and
+ * `__fixtures__` — a mandated `AllVariants` story is a grid of
+ * components, which is the whole reason it exists. Two more
+ * shapes turned up the moment real apps ran the preset, and both
+ * are the same argument rather than a new one:
+ *
+ *   - **`*.test.tsx`.** A component test that needs a wrapper
+ *     declares a harness beside the assertion.
+ *     `board-game-picker`'s `SelectMenu.test.tsx` mounts an
+ *     `OutsideHarness` to prove a picker remounts when its value
+ *     changes from outside — the harness *is* the test. Splitting
+ *     it into a second file to satisfy a rule about production
+ *     modules puts the setup somewhere the reader is not.
+ *   - **An icon module.** Charcuterie ships no icons on purpose,
+ *     so every app brings its own, and in this fleet that is one
+ *     file of glyphs: `mail-sifter/components/icons.tsx` (19 of
+ *     them), `board-game-picker/components/schemeIcons.tsx`
+ *     (three). Nineteen one-line files would be strictly worse,
+ *     and nobody would write them — the rule would just get
+ *     switched off, which is the outcome this list exists to
+ *     avoid.
+ *
+ * It is a **preset-level** decision and not a change to
+ * `createStoryOverrides`, whose defaults a hand-composed config
+ * still owns. Pass your own `storyFiles` to `createAppConfig` to
+ * replace it.
+ */
+export const MULTI_COMPONENT_FILE_GLOBS = [
+  "**/__fixtures__/**/*.{ts,tsx}",
+  "**/*.stories.tsx",
+  "**/*.storyHelpers.tsx",
+  "**/*.test.tsx",
+  "**/icons.tsx",
+  "**/*Icons.tsx",
+]
+
+/**
  * `["src"]` becomes `["src/**\/*.tsx"]`. Directories rather than
  * globs is the whole ergonomic difference between this and
  * calling the factories by hand — an app knows it keeps its
@@ -189,6 +229,9 @@ const toGlobs = (directories, extensions) =>
  *   to a deliberate opt-in rather than making "adopt the preset"
  *   and "sweep the flex bugs" the same change.
  * @param {string} [options.reactVersion]
+ * @param {readonly string[]} [options.storyFiles] Files that may
+ *   declare more than one component. Defaults to
+ *   `MULTI_COMPONENT_FILE_GLOBS`.
  */
 export const createAppConfig = ({
   tsconfigRootDir,
@@ -197,6 +240,7 @@ export const createAppConfig = ({
   componentChoice = "pickers",
   flexOverflow = "off",
   reactVersion = "19.0.0",
+  storyFiles = MULTI_COMPONENT_FILE_GLOBS,
 }) => {
   const componentGlobs = toGlobs(appDirectories, "tsx")
   const sourceGlobs = toGlobs(appDirectories, "{ts,tsx}")
@@ -237,7 +281,7 @@ export const createAppConfig = ({
     // After the blocks above, because a story legitimately
     // exports the grid of components `react/no-multi-comp`
     // otherwise forbids — and flat config's last word wins.
-    createStoryOverrides({}),
+    createStoryOverrides({ files: storyFiles }),
 
     createTestRules({}),
   ]
