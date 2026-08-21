@@ -103,10 +103,15 @@ enforced on every save.
 | `charcuterie/no-raw-anchor` | `<a>` | `TextLink`, or `ButtonLink` when navigation should look like a button | 14 in mux-magic, 10 in gallery-downloader, 31 in bambuddy |
 | `charcuterie/no-raw-button` | `<button>` | `Button`, or `IconButton` when the control is icon-only | every icon row in the fleet |
 | `charcuterie/no-raw-select` | `<select>` | `Listbox` (short, rich) or `Combobox` (long, searchable) | **134 in bambuddy**, 19 in spoolbuddy, 2 in points-market |
-| `charcuterie/prefer-listbox-over-select` | `<Select>` | `Listbox` or `Combobox` — `Select` needs a stated reason | [the 2026-08-10 demotion](../../docs/decisions/2026-08-10-listbox-and-combobox-are-the-default-and-select-is-demoted.md) |
+| `charcuterie/prefer-listbox-over-select` | `<Select>` | `Picker` (the drop-in), `Listbox`, or `Combobox` — `Select` is **deprecated**, with no per-call-site exception left | [the 2026-08-20 deprecation](../../docs/decisions/2026-08-20-native-select-is-deprecated-and-the-platform-hatch-is-closed.md) |
 | `charcuterie/no-clickable-non-interactive` | `onClick` on `<div>`/`<span>`/`<li>`/… with no `role` or `tabIndex` | `Button`/`IconButton` to act, `TextLink`/`ButtonLink` to navigate | `points-market/…/AppShell.tsx:26-28` — a header title no keyboard can reach |
 | `charcuterie/no-navigation-in-click-handler` | `navigate()`, `router.push()`, `location.href =` inside an `onClick` | `TextLink`/`ButtonLink` with an `href` | all of plex-channels, and mail-sifter's whole shell |
 | `charcuterie/require-suppression-reason` | a disable of any rule above with no `-- reason` | say why in one line | — |
+
+`prefer-listbox-over-select` is the one rule whose escape hatch is **not** a call-site
+judgement: `Select` is deprecated, so a disable cites a decision record rather than a
+reason of its own. Everything already on a native `Select` is a conversion backlog —
+`Picker` takes the same `label` / `options` / `value` / `onChange`.
 
 Both link components render a **real `<a href>`**, which is the point: middle-click,
 ctrl-click, open-in-new-tab, copy-link and the browser's status-bar preview all work, and

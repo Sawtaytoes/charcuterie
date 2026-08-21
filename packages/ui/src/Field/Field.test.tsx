@@ -115,16 +115,18 @@ test("a description is announced with the control", async () => {
   ).toHaveTextContent("Where finished rips are moved.")
 })
 
-test("the slot takes a Select as readily as an input", async () => {
+test("the slot takes a Picker as readily as an input", async () => {
   const { canvas, canvasElement } =
     await mountStory(AllVariants)
 
-  // A native `<select>` reports `role="combobox"`, and it is named
-  // by the same cloned `id`. The slot does not know what it is
-  // holding, which is the contract.
+  // A `Picker` is a `<button>` trigger whose accessible name carries
+  // the current value, and it is named by the same cloned `id`. The
+  // slot does not know what it is holding, which is the contract —
+  // this cell held a native `Select` until that component was
+  // deprecated.
   expectAgentDrivable(canvas, {
-    name: "Rip profile",
-    role: "combobox",
+    name: "Rip profile: Lossless",
+    role: "button",
   })
 
   await expectNoAxeViolations(canvasElement)

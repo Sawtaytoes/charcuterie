@@ -41,7 +41,12 @@ const GROUPED: SelectItem[] = [
 ]
 
 const meta = {
-  title: "Components/Select",
+  // `Deprecated/`, not `Components/`, and that is the whole point of
+  // moving it: the sidebar is the first place an agent looks for a
+  // picker, and a `Select` sitting between `Rail` and `Shell` reads
+  // as a component in good standing. Nothing new gets one — `Picker`
+  // is the drop-in. See the 2026-08-20 deprecation record.
+  title: "Deprecated/Select",
   component: Select,
   parameters: { layout: "padded" },
   argTypes: { size: controlSizeArgType },

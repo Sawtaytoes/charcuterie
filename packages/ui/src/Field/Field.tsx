@@ -12,7 +12,7 @@ export type FieldProps = SlotProps & {
   /**
    * The control. **Cloned, not wrapped** — the same slot contract
    * as `Popover`'s trigger, so a `Field` can go around an `<input>`,
-   * a `<textarea>`, a `Select`, or an app's own control without
+   * a `<textarea>`, a `Picker`, or an app's own control without
    * changing that control's layout.
    */
   children: ReactElement

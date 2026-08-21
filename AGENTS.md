@@ -27,6 +27,16 @@ than `1920x1080`. Scan every title in the index before proposing a change; a set
 outranks your default. When the owner settles something new, write a new dated file —
 **never edit a past decision to change its meaning**, supersede it and cross-link both ways.
 
+**`Select` is deprecated — do not add one, here or in an app.** A picker is `Picker` (the
+assembled `Listbox`, and a drop-in for `Select`: `label`, `options`, `value`, `onChange`),
+`Listbox` when the trigger is not a button, or `Combobox` when the list wants typing. The
+native `<select>`'s popup is painted by the OS and no token reaches inside it. The four
+platform cases the 08-10 record allowed — wheel picker, autofill, `:invalid`, no-JS form post
+— **have never applied to an app in this fleet**, and that exception is closed: a native
+`Select` is now a new decision record, not a call-site judgement
+([decision](docs/decisions/2026-08-20-native-select-is-deprecated-and-the-platform-hatch-is-closed.md)).
+It stays exported for the fleet's 32 existing call sites and goes in the next `ui` major.
+
 **Do not "fix" the three things in
 [README § the three things most likely to get "fixed" by mistake](README.md#the-three-things-most-likely-to-get-fixed-by-mistake).**
 `colour` in TS but `--color-*` in CSS, light mode is not pure white, and the logic hooks are
