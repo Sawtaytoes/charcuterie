@@ -6,6 +6,7 @@ import {
   StoryGrid,
   StorySection,
 } from "../board.storyHelpers.tsx"
+import { FieldGroup } from "../Field/FieldGroup.tsx"
 import { Checkbox } from "./Checkbox.tsx"
 
 const meta = {
@@ -158,6 +159,79 @@ export const WithValues: Story = {
             />
           </StoryCell>
         ))}
+      </StoryGrid>
+    </StorySection>
+  ),
+}
+
+/**
+ * `description` is standing help that follows the box, bound with
+ * `aria-describedby` so a screen reader reads it **with** the control
+ * — the same slot, the same words and the same announcement order as
+ * `Field`'s.
+ *
+ * It renders outside the `<label>`, which is the only place it can go:
+ * a `<label>`'s text content *is* the control's accessible name, so a
+ * hint inside it would be announced twice and a pointer press on it
+ * would toggle the box.
+ *
+ * The gap this closes is a mixed box. Before it, a hint after a
+ * checkbox had to be the app's own paragraph while the hint after the
+ * `Field` two rows down came from the library, and the two disagreed
+ * about the size of a hint — one control's help looking unlike its
+ * neighbour's, in the same editor.
+ */
+export const WithDescriptions: Story = {
+  args: { label: "Delete originals after import" },
+  render: (controlProps) => (
+    <StorySection title="One hint typography for the whole library: `text-sm`, `content-secondary`, hung under the label text rather than under the box.">
+      <StoryGrid columns={2}>
+        <StoryCell label="described">
+          <Checkbox
+            {...controlProps}
+            description="The source files are removed once every title has been written."
+            label="Delete originals after import"
+          />
+        </StoryCell>
+
+        <StoryCell label="described and checked">
+          <Checkbox
+            {...controlProps}
+            description="Nothing plays after the last title finishes."
+            isChecked
+            label="Turn everything off when it finishes"
+          />
+        </StoryCell>
+
+        <StoryCell label="described and disabled">
+          <Checkbox
+            {...controlProps}
+            description="A turned-off box is exactly when this sentence gets read, so it keeps full contrast."
+            isDisabled
+            label="Re-encode to the archive profile"
+          />
+        </StoryCell>
+
+        <StoryCell label="described, in a group">
+          <FieldGroup
+            description="A group's own help sits under all of it."
+            label="After a rip"
+          >
+            <Checkbox
+              {...controlProps}
+              description="Written beside the video, not into it."
+              label="Keep chapter markers"
+              size="sm"
+            />
+
+            <Checkbox
+              {...controlProps}
+              description="Costs a second pass over each title."
+              label="Verify the checksum"
+              size="sm"
+            />
+          </FieldGroup>
+        </StoryCell>
       </StoryGrid>
     </StorySection>
   ),
