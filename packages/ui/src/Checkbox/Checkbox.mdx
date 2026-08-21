@@ -86,6 +86,38 @@ does not become one. `isChecked` still seeds the box, `onChange` still reports a
 
 <Canvas of={CheckboxStories.WithValues} />
 
+## A hint follows the box
+
+`description` is standing help bound with `aria-describedby`, so a screen reader reads it
+**with** the control rather than announcing it from nowhere — the same slot, the same words
+and the same announcement order as [`Field`](/docs/components-field--docs)'s.
+
+`Field` has had one since it shipped and this component had none, which is a gap you only
+feel in a mixed box: a hint after a checkbox had to be the app's own paragraph while the
+hint after the `Field` two rows down came from the library, and the two disagreed about how
+big a hint is. One control's help looking unlike its neighbour's, in the same editor.
+
+The hint renders **outside** the `<label>`, which is the only place it can go. A `<label>`'s
+text content *is* the control's accessible name, so a hint inside it would be announced
+twice — once inside the name, once again as the description — and a pointer press on a
+sentence of explanation would toggle the box. So the `<label>` is no longer the outermost
+element this component renders: a `<div>` holds the row and the hint, and `className` moves
+out to it, because `className` is the outermost box a component renders and that rule does
+not bend for this one.
+
+Two smaller decisions inside it:
+
+- **`opacity-60` stays on the `<label>`** and does not reach the hint. axe exempts a
+  disabled control and its own label from the colour-contrast rule and exempts nothing else,
+  so dimming the hint with the box measures **3.77:1** on `midnight` against a 4.5
+  threshold. A hint nobody can read is worse than a hint that does not dim, and a turned-off
+  box is exactly when that sentence gets read.
+- **There is no `error` to go with it.** `Field` derives `aria-invalid` from its error, and a
+  lone boolean is almost never the invalid thing — a *group* of them is, and a group's error
+  belongs on the `FieldGroup` around it, described rather than asserted.
+
+<Canvas of={CheckboxStories.WithDescriptions} />
+
 ## Checkbox or `Switch`
 
 Same state kind, different meaning. A checkbox is a value you **submit** — "delete

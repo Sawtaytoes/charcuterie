@@ -2,36 +2,88 @@ import {
   useClonedChild,
   useUniqueId,
 } from "@charcuterie/logic"
-import type { ReactElement, ReactNode } from "react"
+import type {
+  ComponentPropsWithRef,
+  ReactElement,
+  ReactNode,
+  Ref,
+} from "react"
 
 import type { SlotProps } from "../slotProps.ts"
 import { mergeSlotProps } from "../slotProps.ts"
 import { toClassName } from "../toClassName.ts"
 
-export type FieldProps = SlotProps & {
-  /**
-   * The control. **Cloned, not wrapped** — the same slot contract
-   * as `Popover`'s trigger, so a `Field` can go around an `<input>`,
-   * a `<textarea>`, a `Picker`, or an app's own control without
-   * changing that control's layout.
-   */
-  children: ReactElement
-  className?: string
-  /**
-   * Standing help — units, a format, a warning about what the value
-   * does. Announced with the control, before any error.
-   */
-  description?: ReactNode
-  /**
-   * Present means invalid. There is no separate `isInvalid`, because
-   * two sources for one fact is how a control ends up
-   * `aria-invalid="true"` with nothing saying why — which is what
-   * `RegexWithFlagsField` does in mux-magic today.
-   */
-  error?: ReactNode
-  isRequired?: boolean
-  label: ReactNode
-}
+/**
+ * Everything else a caller writes on a `Field` reaches **the control
+ * it clones onto**, not the `<div>` around it.
+ *
+ * That is not a new destination, it is the existing one finally
+ * declared. `SlotProps` was a *closed* five-key type over a runtime
+ * that already spread `...receivedSlotProps` into the clone, so
+ * `name`, `placeholder`, `autoFocus`, `onBlur` and every `aria-*` all
+ * arrived at the `<input>` and none of them type-checked. The only
+ * prop a consumer could legally pass was `className` — which is the
+ * one escape hatch the fleet's "configured by props, not a borrowed
+ * class" rule is trying to close, so the closed type forced the very
+ * thing the rule forbids
+ * ([decision](../../../../docs/decisions/2026-08-21-a-slot-components-rest-props-are-the-controls-props.md)).
+ *
+ * `className` stays on the `<div>`, alone, because a class is a
+ * statement about the box a **parent** lays out
+ * ([decision](../../../../docs/decisions/2026-08-19-classname-is-the-outermost-box-a-component-renders.md)).
+ * Every other prop is a statement about the control, and `id` is the
+ * proof: it has named the control since the component shipped, and a
+ * dated record settles its precedence
+ * ([decision](../../../../docs/decisions/2026-08-05-field-adopts-the-childs-own-id.md)).
+ * Routing the rest to the `<div>` would have moved it, silently, in
+ * every consumer.
+ *
+ * `"input"` because `SlotProps` already picks from
+ * `InputHTMLAttributes` and this is the same set widened, not a
+ * second opinion about what a control is. `ref` is re-declared over
+ * `HTMLElement`: the child may be a `Picker`'s `<button>` or a
+ * `contenteditable` `<div>`, so `Ref<HTMLInputElement>` would be a
+ * narrower claim than the slot makes.
+ */
+type ForwardedControlProps = Omit<
+  ComponentPropsWithRef<"input">,
+  "children" | "className" | "ref"
+>
+
+export type FieldProps = ForwardedControlProps &
+  SlotProps & {
+    /**
+     * The control. **Cloned, not wrapped** — the same slot contract
+     * as `Popover`'s trigger, so a `Field` can go around an `<input>`,
+     * a `<textarea>`, a `Picker`, or an app's own control without
+     * changing that control's layout.
+     */
+    children: ReactElement
+    /**
+     * The `<div>` around the label, the control and the messages —
+     * the one prop that does **not** reach the control.
+     */
+    className?: string
+    /**
+     * Standing help — units, a format, a warning about what the value
+     * does. Announced with the control, before any error.
+     */
+    description?: ReactNode
+    /**
+     * Present means invalid. There is no separate `isInvalid`, because
+     * two sources for one fact is how a control ends up
+     * `aria-invalid="true"` with nothing saying why — which is what
+     * `RegexWithFlagsField` does in mux-magic today.
+     */
+    error?: ReactNode
+    isRequired?: boolean
+    label: ReactNode
+    /**
+     * Merged onto the control's own, never replacing it — the wiring
+     * rule `mergeSlotWiring` states for every slot.
+     */
+    ref?: Ref<HTMLElement>
+  }
 
 /**
  * Sixteen files in the fleet spell a label, a control, and a hint,
@@ -108,6 +160,28 @@ export type FieldProps = SlotProps & {
  * `SlotProps` arriving from an outer slot is forwarded down, and
  * `aria-describedby` is merged rather than replaced.
  * `slotProps.ts` has the reasoning.
+ *
+ * ### …and a pass-through cannot tell who wrote the prop
+ *
+ * Which is why the rest props are the **control's** props and not the
+ * `<div>`'s. `receivedSlotProps` below is one object holding two
+ * things that are indistinguishable at runtime: what a cloning
+ * ancestor injected, and what the author typed on the `Field` itself.
+ * A `Tooltip` above hands down `getReferenceProps()` — hover, focus
+ * and dismiss handlers, `refs.setReference`, and an
+ * `aria-describedby` naming the tip — and every bit of it has to
+ * reach the `<input>` at the bottom. Sending the rest to the wrapper
+ * would need a closed runtime allow-list to hold that case back, and
+ * an allow-list is `FieldTooltip`'s silent drop rebuilt inside the
+ * fix for it: the first slot that writes an `aria-expanded` is broken
+ * and nothing says so.
+ *
+ * So there is one rule, and it has no exceptions to remember:
+ * `className` is the box, everything else is the control. A caller
+ * that needs a handle on the **box** — an `id` for a screenshot, a
+ * `hidden` that takes the label with it — wants `FieldGroup`, which
+ * wraps rather than clones and whose rest props land on its own
+ * `<fieldset>`.
  */
 export const Field = ({
   children,
