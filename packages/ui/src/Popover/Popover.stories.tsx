@@ -14,7 +14,7 @@ import {
 import { Popover } from "./Popover.tsx"
 
 const meta = {
-  title: "Components/Popover",
+  title: "Components/Overlays/Popover",
   component: Popover,
   parameters: { layout: "padded" },
   argTypes: { placement: placementArgType },

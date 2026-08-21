@@ -6,7 +6,7 @@ import { Button } from "../Button/Button.tsx"
 import { Modal } from "./Modal.tsx"
 
 const meta = {
-  title: "Components/Modal",
+  title: "Components/Overlays/Modal",
   component: Modal,
   parameters: { layout: "padded" },
   args: {

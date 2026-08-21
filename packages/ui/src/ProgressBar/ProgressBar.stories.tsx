@@ -20,7 +20,7 @@ const DISC_THRESHOLDS: ProgressThreshold[] = [
 ]
 
 const meta = {
-  title: "Components/ProgressBar",
+  title: "Components/Feedback/ProgressBar",
   component: ProgressBar,
   parameters: { layout: "padded" },
   argTypes: { intent: intentArgType },

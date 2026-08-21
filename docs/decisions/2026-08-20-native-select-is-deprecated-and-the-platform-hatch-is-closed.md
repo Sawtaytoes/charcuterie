@@ -4,7 +4,7 @@
 **Date:** 2026-08-20
 **Type:** Architecture · API
 **Supersedes:** [2026-08-10 — `Listbox` and `Combobox` are the default; `Select` is demoted](2026-08-10-listbox-and-combobox-are-the-default-and-select-is-demoted.md)
-**Superseded by:** —
+**Superseded by:** — *(the "moved to `Deprecated/Select`" clause only, by [2026-08-21 — A deprecation is a badge in place, and the sidebar has groups](2026-08-21-a-deprecation-is-a-badge-in-place-and-the-sidebar-has-groups.md); the deprecation itself stands)*
 
 ## Decision
 

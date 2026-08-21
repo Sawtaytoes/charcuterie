@@ -10,7 +10,7 @@ import { Card } from "../Card/Card.tsx"
 import { Skeleton } from "./Skeleton.tsx"
 
 const meta = {
-  title: "Components/Skeleton",
+  title: "Components/Feedback/Skeleton",
   component: Skeleton,
   parameters: { layout: "padded" },
   args: { lineCount: 1, shape: "block" },

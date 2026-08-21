@@ -99,6 +99,13 @@ Every user-visible change carries a changeset.
 
 ## House rules that bite
 
+- **A story's `title` is its place in the sidebar: `Components/<Group>/<Name>`.** The six
+  groups are `Actions`, `Controls`, `Overlays`, `Layout`, `Data`, `Feedback`; a helper that
+  is not a composable component is `Utilities/<Name>`. Do not invent a seventh group or a
+  new root without a decision record — and **do not file a deprecated component under a
+  `Deprecated/` root**: it is a `tags: ["deprecated"]` badge drawn in place, so the warning
+  reaches the person scanning `Controls` for a picker
+  ([decision](docs/decisions/2026-08-21-a-deprecation-is-a-badge-in-place-and-the-sidebar-has-groups.md)).
 - **Booleans start with `is` or `has`.** `isVisible`, `hasPiano` — never a bare adjective.
   Type-aware ESLint rule, and it has **no external-API carve-out**
   ([decision](docs/decisions/2026-07-29-is-has-rule-has-no-external-api-carve-out.md)).

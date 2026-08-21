@@ -33,7 +33,7 @@ const ICONS: ColorSchemeIcons = {
 }
 
 const meta = {
-  title: "Components/ColorSchemeToggle",
+  title: "Utilities/ColorSchemeToggle",
   component: ColorSchemeToggle,
   parameters: { layout: "padded" },
   argTypes: {

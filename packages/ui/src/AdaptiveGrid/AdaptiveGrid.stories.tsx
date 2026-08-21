@@ -68,7 +68,7 @@ const Item = ({ label }: { label: string }) => (
 )
 
 const meta = {
-  title: "Components/AdaptiveGrid",
+  title: "Components/Layout/AdaptiveGrid",
   component: AdaptiveGrid,
   parameters: { layout: "padded" },
   args: {

@@ -23,7 +23,7 @@ import type { DateRange } from "./plainDate.ts"
 const TODAY = "2026-08-19"
 
 const meta = {
-  title: "Components/DatePicker",
+  title: "Components/Controls/DatePicker",
   component: DatePicker,
   args: {
     label: "Due date",

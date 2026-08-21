@@ -19,7 +19,7 @@ import { VisuallyHidden } from "./VisuallyHidden.tsx"
  * loses translation.
  */
 const meta = {
-  title: "Foundation/VisuallyHidden",
+  title: "Utilities/VisuallyHidden",
   component: VisuallyHidden,
   parameters: { layout: "padded" },
 } satisfies Meta<typeof VisuallyHidden>

@@ -33,7 +33,7 @@ const PosterThumb = (): ReactNode => (
 )
 
 const meta = {
-  title: "Components/Lightbox",
+  title: "Components/Overlays/Lightbox",
   component: Lightbox,
   parameters: { layout: "padded" },
   args: {

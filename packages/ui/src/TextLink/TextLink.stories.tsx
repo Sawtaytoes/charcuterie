@@ -39,7 +39,7 @@ const INTENTS = [
 ] as const
 
 const meta = {
-  title: "Components/TextLink",
+  title: "Components/Actions/TextLink",
   component: TextLink,
   parameters: { layout: "padded" },
   argTypes: {

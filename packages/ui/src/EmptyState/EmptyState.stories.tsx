@@ -16,7 +16,7 @@ import {
 import { EmptyState } from "./EmptyState.tsx"
 
 const meta = {
-  title: "Components/EmptyState",
+  title: "Components/Feedback/EmptyState",
   component: EmptyState,
   parameters: { layout: "padded" },
   args: { headingLevel: 2, size: "md" },

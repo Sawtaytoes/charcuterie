@@ -44,7 +44,7 @@ const BAY_TABS: TabItem[] = [
 ]
 
 const meta = {
-  title: "Components/Tabs",
+  title: "Components/Layout/Tabs",
   component: Tabs,
   parameters: { layout: "padded" },
   argTypes: {

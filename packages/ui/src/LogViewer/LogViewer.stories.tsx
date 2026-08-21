@@ -46,7 +46,7 @@ const LONG_LINES: LogLine[] = Array.from(
 )
 
 const meta = {
-  title: "Components/LogViewer",
+  title: "Components/Data/LogViewer",
   component: LogViewer,
   parameters: { layout: "padded" },
   args: {
