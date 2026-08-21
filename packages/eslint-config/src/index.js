@@ -21,6 +21,28 @@ import { PHYSICAL_DIRECTION_SELECTORS } from "./logicalProperties.js"
 import { CHARCUTERIE_NAMESPACE } from "./namespace.js"
 import { charcuteriePlugin } from "./plugin.js"
 
+/**
+ * `typescript-eslint` itself, re-exported.
+ *
+ * **A consumer that composes `tseslint.configs.*` alongside this
+ * package must import it from here, never from its own
+ * `typescript-eslint`.** Flat config throws
+ * `Cannot redefine plugin "@typescript-eslint"` when two config
+ * blocks register that namespace with two different objects — and
+ * two objects is exactly what a second copy in the tree produces.
+ *
+ * That is not hypothetical: `board-game-picker` adopted the
+ * preset with `typescript-eslint` pinned at 8.66.0 in its own
+ * lockfile while this package resolved 8.67.0 beside it, and
+ * `eslint .` failed outright. `docket`, with the same declared
+ * range, happened to dedupe and worked. Which of those a repo
+ * gets is a property of its lockfile, not of its config.
+ *
+ * Re-exporting removes the coin flip rather than documenting it:
+ * there is one instance in play because there is one import
+ * specifier for it.
+ */
+export { default as tseslint } from "typescript-eslint"
 export {
   APP_IGNORES,
   createAppConfig,

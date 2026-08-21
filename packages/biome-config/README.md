@@ -26,17 +26,34 @@ The base config above is deliberately house *style* only: it is what
 `@charcuterie/ui` itself extends, and the library renders a raw `<select>` because
 rendering one correctly **is** the library.
 
-An app is not the library, so an app extends `/app` instead:
+An app is not the library, so an app extends **both** — the base, then the app delta:
 
 ```jsonc
 // biome.json, in any app repo
 {
-  "extends": ["@charcuterie/biome-config/app"],
+  "extends": [
+    "@charcuterie/biome-config",
+    "@charcuterie/biome-config/app"
+  ],
   "files": { "includes": ["./**", "!**/dist"] }
 }
 ```
 
-That adds everything in the base plus the fleet's picker rule, expressed natively:
+**Both entries, and the order matters.** `app.json` is a *delta*: it holds the picker
+rules and nothing else, and it deliberately carries no `extends` of its own.
+
+That is not a style choice, it is Biome's behaviour. **Biome does not resolve a nested
+`extends` inside an extended config.** `app.json` shipped in 1.2.0 with
+`"extends": ["./config.json"]`, on the reasonable assumption that a package's config can
+extend its sibling; a consumer on `/app` alone got the picker rules and silently lost the
+entire house style — 60 columns, no semicolons, the Tailwind CSS parser, the VCS ignore
+file. Nothing errored. The first `biome check --write` would have reformatted the repo.
+`src/appConfig.test.ts` runs the real CLI over real fixtures and asserts each of those
+base settings survives the second entry, because a config that looks adopted and enforces
+Biome's defaults is indistinguishable from a config that works.
+
+Together they give everything in the base plus the fleet's picker rule, expressed
+natively:
 
 | Rule | Fires on | Reach for instead |
 | --- | --- | --- |
