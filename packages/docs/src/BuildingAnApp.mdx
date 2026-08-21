@@ -263,9 +263,51 @@ dependency and the adapter is a separate entry point, so an app that never impor
 resolves it. Full recipe, including wouter and hand-rolled routers, and the three
 destinations that always fall through to a plain `<a>`: **Guides → Routing**.
 
-### 3. Turn on the component-choice lint rules
+### 3. Adopt the house lint config
 
-They are **opt-in and pointed at your app's source**, never at the library's:
+```sh
+yarn add --dev @charcuterie/eslint-config eslint
+```
+
+```js
+// eslint.config.js — the whole file
+import { createAppConfig } from "@charcuterie/eslint-config"
+import { defineConfig } from "eslint/config"
+
+export default defineConfig(
+  ...createAppConfig({
+    tsconfigRootDir: import.meta.dirname,
+    // Where your own source lives. `["src"]` if you omit it.
+    appDirectories: ["packages/web"],
+  }),
+)
+```
+
+```jsonc
+// biome.json — an app extends /app; the library extends the base
+{
+  "extends": ["@charcuterie/biome-config/app"],
+  "files": { "includes": ["./**", "!**/dist"] }
+}
+```
+
+That is the setup. `appDirectories` is the only thing you have to know, and it is the
+scoping that keeps the component rules off `@charcuterie/ui` — which renders raw `<a>`,
+`<button>` and `<select>` because rendering them correctly *is* the library.
+
+Out of the box you get the type-aware house rules (`is`/`has` booleans, `id-length`), one
+component per file, `test()` over `it()`, logical properties only, and **the picker
+rules** — `charcuterie/no-raw-select` and `charcuterie/prefer-listbox-over-select`, on by
+default because `Select` is deprecated and `Picker` is a drop-in. The Biome `/app` config
+enforces the same two natively, so a repo that lints with Biome alone is covered without a
+second linter.
+
+Everything below is a widening of that one call.
+
+### 4. Widen to the rest of the component-choice rules
+
+`componentChoice: "all"`, or the factory directly if you are composing by hand. **Opt-in
+and pointed at your app's source**, never at the library's:
 
 ```js
 // eslint.config.js
@@ -285,9 +327,11 @@ Seven rules, all errors: `charcuterie/no-raw-anchor`, `no-raw-button`, `no-raw-s
 every suppression of the other six carry a `-- reason`. Documentation has existed the whole
 time and moved none of the fleet's numbers; that is the entire argument for a rule.
 
-### 4. Turn on the flex-overflow lint rules
+### 5. Turn on the flex-overflow lint rules
 
-Also opt-in, also pointed at your own source:
+`flexOverflow: "warn"` on the preset, or the factory directly. Off by default, because its
+`error` half would land the day you adopt the config — sweeping those bugs is its own
+change:
 
 ```js
 // eslint.config.js
@@ -314,7 +358,7 @@ alone is *not* enough, the text just spills), `truncate` plus a `title` or an `h
 carrying the full value, or an explicit `w-`/`max-w-`/`basis-`/`shrink-0`. Promote it with
 `severity: "error"` once your app is swept.
 
-### 5. Your `index.html`
+### 6. Your `index.html`
 
 If you use `@charcuterie/vite-config`, this one needs nothing from you and is worth knowing
 anyway: **never put a literal `<head>` or `<body>` in a comment above the real tag.** Vite
@@ -323,7 +367,7 @@ file wins — the react-refresh preamble lands *inside* the comment, the dev ser
 blank page, and production builds are unaffected so CI stays green. Two apps shipped it six
 days apart. The shared Vite base now throws at dev-server start with the offending line.
 
-### 6. Storybook
+### 7. Storybook
 
 `@charcuterie/storybook-config` is a package, not a `.storybook/` to copy — two thin config
 files and the app's Storybook themes exactly like this one. Recipe:
