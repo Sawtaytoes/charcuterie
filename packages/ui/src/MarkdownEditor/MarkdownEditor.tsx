@@ -18,12 +18,14 @@ import {
   indentLines,
   insertLink,
   insertText,
+  isLinkPaste,
   MARKDOWN_LINE_PREFIXES,
   outdentLines,
   toggleHeading,
   toggleInlineMarker,
   toggleLinePrefix,
   toMarkdownImage,
+  wrapSelectionInLink,
 } from "./markdownCommands.ts"
 import type { MarkdownSpanKind } from "./markdownSpans.ts"
 import {
@@ -464,17 +466,41 @@ export const MarkdownEditor = ({
       pasteEvent.clipboardData.files,
     ).filter(isImageFile)
 
-    if (files.length === 0 || !onUploadImage) {
-      // Left to the browser on purpose. A `<textarea>` pastes
-      // `text/plain` and nothing else, so the no-HTML guarantee
-      // needs no code here at all — intercepting the paste to
-      // "sanitise" it would be the version that can have a bug.
+    if (files.length > 0 && onUploadImage) {
+      pasteEvent.preventDefault()
+
+      uploadImages(files)
+
       return
     }
 
-    pasteEvent.preventDefault()
+    const pasted =
+      pasteEvent.clipboardData.getData("text/plain")
 
-    uploadImages(files)
+    const selection = readSelection()
+
+    // A URL pasted over selected text becomes a link, the way it
+    // does in every editor anyone uses. Reading `text/plain` here
+    // is not a hole in the no-HTML guarantee — that flavour is the
+    // only one a `<textarea>` would have taken anyway, and what
+    // goes back in is markdown built by a command.
+    if (
+      isLinkPaste(pasted) &&
+      selection.selectionStart !== selection.selectionEnd
+    ) {
+      pasteEvent.preventDefault()
+
+      applyEdit(
+        wrapSelectionInLink(selection, pasted.trim()),
+      )
+
+      return
+    }
+
+    // Everything else is left to the browser on purpose. A
+    // `<textarea>` pastes `text/plain` and nothing else, so the
+    // no-HTML guarantee needs no code here — intercepting the paste
+    // to "sanitise" it would be the version that can have a bug.
   }
 
   const handleDrop = (

@@ -183,6 +183,24 @@ export const Field = ({
       <label
         className="font-medium text-content-primary text-sm"
         htmlFor={controlId}
+        /**
+         * `htmlFor` names the control for every **labelable**
+         * element — `<input>`, `<textarea>`, `<select>`, `<button>`
+         * — which is all this component wrapped until a
+         * `contenteditable` arrived. A `div[role="textbox"]` is not
+         * in that list, so `htmlFor` alone leaves it with **no
+         * accessible name at all**, silently: the markup looks
+         * right, the label renders, and axe is the only thing that
+         * notices.
+         *
+         * So the label also carries a derivable id, and such a
+         * control points `aria-labelledby` at it.
+         * `MarkdownEditorCodeMirror` is the first consumer;
+         * `Field.test.tsx` pins the format, because the coupling is
+         * a string convention and a rename here would break a name
+         * over in another file.
+         */
+        id={`${controlId}-label`}
       >
         {label}
 

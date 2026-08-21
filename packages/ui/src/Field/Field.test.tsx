@@ -96,6 +96,41 @@ test("the label names the control it points at", async () => {
   await expectNoAxeViolations(canvasElement)
 })
 
+/**
+ * Pins a string coupling that lives in two files.
+ *
+ * `htmlFor` names every **labelable** element — `<input>`,
+ * `<textarea>`, `<select>`, `<button>` — and names a
+ * `div[role="textbox"]` not at all. So a `contenteditable` control
+ * inside a `Field` points `aria-labelledby` at this id instead, and
+ * `MarkdownEditorCodeMirror` builds it as `` `${id}-label` ``.
+ *
+ * Renaming the format here would leave that control with no
+ * accessible name — silently, because the markup still looks right
+ * and the label still renders. Only axe would notice, and only in
+ * the other component's suite.
+ */
+test("the label carries a derivable id for non-labelable controls", async () => {
+  const { canvas } = await mountStory(Default)
+
+  const control = expectAgentDrivable(canvas, {
+    name: "Output directory",
+    role: "textbox",
+  })
+
+  const controlId = control.getAttribute("id")
+
+  await expect(controlId).not.toBeNull()
+
+  const label = document.getElementById(
+    `${controlId}-label`,
+  )
+
+  await expect(label).not.toBeNull()
+
+  await expect(label).toHaveAttribute("for", controlId)
+})
+
 test("a description is announced with the control", async () => {
   const { canvas } = await mountStory(Default)
 

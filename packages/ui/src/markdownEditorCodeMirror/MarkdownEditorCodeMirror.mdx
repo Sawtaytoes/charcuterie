@@ -1,0 +1,144 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as MarkdownEditorCodeMirrorStories from "./MarkdownEditorCodeMirror.stories";
+
+<Meta of={MarkdownEditorCodeMirrorStories} />
+
+# MarkdownEditorCodeMirror
+
+Obsidian-style live preview: markers conceal themselves once the caret leaves, headings are
+genuinely larger, images render in place, task boxes are real checkboxes — and the stored
+value is still markdown, byte for byte.
+
+It is **opt-in**, from a subpath:
+
+```tsx
+import { MarkdownEditorCodeMirror } from "@charcuterie/ui/markdown-editor-codemirror"
+```
+
+<Canvas of={MarkdownEditorCodeMirrorStories.Default} />
+
+## Props
+
+<Controls />
+
+## Which of the two editors you want
+
+`MarkdownEditor` is still the default, and most consumers should keep it.
+
+| | `MarkdownEditor` | `MarkdownEditorCodeMirror` |
+| --- | --- | --- |
+| Surface | `<textarea>` + painted layer | CodeMirror 6 |
+| New dependency | **none** | ~176 KB gz, optional peer |
+| Markers | dimmed, never hidden | **concealed** until the caret arrives |
+| Headings | weight and colour only | **actually larger** |
+| Images | shown as `![alt](url)` | **rendered in place** |
+| Tasks | shown as `- [ ]` | **checkbox you can click** |
+| Bare URLs | painted as a URL | **clickable link** |
+| Undo, IME, spellcheck | the platform's own | CodeMirror's |
+
+Take the subpath when the description field is a **primary** surface of the app and the
+bundle has room. Keep the default when it is one field on a form — a component library that
+makes every consumer install an editor core to render a description has made the wrong
+trade, and `castkit/packages/slatecast` has 60 KB gz of total budget to prove it.
+
+## Markdown is still the stored value
+
+This is the part worth being exact about, because "WYSIWYG" usually means the opposite.
+
+There is **no document model here and no serialiser**. CodeMirror's state holds the markdown
+*text*. Live preview is a set of decorations *over* that text: concealing `**` hides two
+characters that are still in the document, still in `onChange`, and still in whatever you
+save. Replacing `![alt](url)` with an image does not rewrite the line — move the caret into
+it and the markup is simply there again.
+
+That is why this is not TipTap or Lexical. An editor core inverts the relationship: its
+document model becomes authoritative and markdown becomes a lossy *export*, so any construct
+the serialiser does not know about is silently dropped or silently becomes HTML. Docket
+exists partly because HTML in a description field destroyed a previous tracker's data, and
+an editor core would have been the easier build and the one thing that could not be allowed.
+
+The [decision record][decision] has the measured bundle table and the full argument.
+
+[decision]: https://github.com/Sawtaytoes/charcuterie/blob/master/docs/decisions/2026-08-19-the-markdown-editor-is-a-textarea-with-a-painted-layer.md
+
+## Concealment is the caret's answer, not the parser's
+
+<Canvas of={MarkdownEditorCodeMirrorStories.CaretReveal} />
+
+A construct reveals its markers when the selection **touches** it, and hides them again when
+the selection leaves. Two consequences that are easy to mistake for bugs:
+
+- **An unfocused editor reveals nothing.** There is no caret in a document nobody is editing,
+  so the resting offset of `0` deliberately does not count as "inside" the first construct.
+  Without this, a description that opens with a heading rendered its `#` on load and no other
+  heading's.
+- **Reveal is per-construct, not per-line.** Two bold runs on one line reveal independently.
+
+## The "Markdown source" toggle
+
+<Canvas of={MarkdownEditorCodeMirrorStories.RawMode} />
+
+Nothing is concealed, nothing is replaced by a widget, no line is rescaled, and the surface
+switches to monospace — because a source view is code. The syntax stays **coloured**: the
+point of the toggle is to see the markup, not to lose the highlighting.
+
+It is a `Switch` rather than a toolbar button because it is state, not a verb, and a
+`ToolbarAction` renders a `Button` that announces nothing about being on.
+
+## What a mark does when it is hidden
+
+Not every marker conceals, and the rule is narrower than "block marks stay":
+
+> **A mark persists unless something else already says what it said.**
+
+A blockquote gets an accent bar down its inline start, so its `>` is redundant and hides. A
+fenced code block keeps its ` ``` ` and its language tag, because concealing them leaves a
+blank line at the top and bottom of the block that reads as a rendering bug. A list bullet
+stays, because hiding `-` turns an unordered list into indented prose — Obsidian substitutes
+a `•`, which means choosing a width, and this component has no business choosing one.
+
+## Clicking a link opens it
+
+Obsidian's behaviour, not VS Code's: where the markup is hidden, a link that looks like a
+link should act like one. Bare URLs count — GFM autolinks them, so a URL pasted into a
+description is clickable with nothing typed around it.
+
+The trade is real and worth stating: **you cannot click into link text to edit it.** Arrow in
+from either edge, or flip the Markdown source toggle, which is exactly what it is for.
+
+## Pasting
+
+- **An image** (or a drop) runs `onUploadImage` and inserts `![alt](url)` at the caret, then
+  renders it in place. The component does not own storage — it hands you a `File`.
+- **A URL over selected text** becomes `[selection](url)`, the way it does in every other
+  editor. Deliberately strict: one absolute `http(s)` URL and nothing else, because mangling
+  a literal paste is worse than not linkifying one.
+- **Anything else** is left to the browser.
+
+## Accessibility, and the honest cost
+
+The `<textarea>` sibling gets caret movement, IME composition, spellcheck, the platform undo
+stack and `role="textbox"` from the browser, tested by the vendors. A `contenteditable`
+re-earns every one of those, and CodeMirror is the reason that is acceptable rather than
+reckless — it is the most heavily exercised implementation of that re-earning there is. It is
+still a re-implementation, and that is what this subpath costs beyond its bytes.
+
+`Tab` is **never** captured, at any time. Indenting a list with Tab is the convention in
+editors that own the whole page, and inside a form it is a keyboard trap — WCAG 2.1.2 wants
+focus to leave every component with the standard gesture. Indent and outdent are `Ctrl+]` and
+`Ctrl+[`. `indentWithTab` is the extension that would change this, and it is deliberately not
+installed.
+
+<Canvas of={MarkdownEditorCodeMirrorStories.AllStates} />
+
+## It is uncontrolled
+
+`defaultValue` in, `onChange` out — the same contract as `Select` and as the sibling editor.
+An `EditorView` owns the caret, the selection, the scroll position and the undo history, and
+rebuilding it throws all four away, so the view is built exactly **once**. Props that can
+legitimately change afterwards reach it through a compartment (`isReadOnly`, `isDisabled`) or
+through a ref (the callbacks); the rest are frozen at mount.
+
+To swap documents — Docket opening a different task — remount with a `key`. That is one line,
+and it is honest about the old undo history belonging to the old document.

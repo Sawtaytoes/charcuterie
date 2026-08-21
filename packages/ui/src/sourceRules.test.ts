@@ -561,6 +561,26 @@ const ENTRY_POINT_RUNTIMES: Record<
       // silently, which is how it shipped broken in three repos.
       "tailwind-merge",
     ],
+    // The opt-in live-preview editor. Every `@codemirror/*` and
+    // `@lezer/*` package appears **only** here, as an optional peer,
+    // which is the entire reason it is a subpath: measured at ~176 KB
+    // gz, it is 2.5x the total bundle budget of `slatecast`, and a
+    // consumer that renders a description field should not pay it to
+    // get one. The main entry's `MarkdownEditor` stays dependency-free
+    // and stays the default.
+    "./markdown-editor-codemirror": [
+      "@charcuterie/logic",
+      "@charcuterie/tokens",
+      "@codemirror/commands",
+      "@codemirror/lang-markdown",
+      "@codemirror/language",
+      "@codemirror/state",
+      "@codemirror/view",
+      "@floating-ui/react",
+      "@lezer/common",
+      "react",
+      "tailwind-merge",
+    ],
     // The router seam's one shipped adapter, and the reason it is a
     // subpath rather than part of the barrel: `react-router` appears
     // **only** here, as an optional peer, so the eleven consumers of

@@ -5,6 +5,7 @@
 - **Type:** Dependency / Component architecture
 - **Supersedes:** —
 - **Superseded by:** —
+- **Extended by:** [2026-08-21 — the CodeMirror live-preview subpath is built](2026-08-21-the-codemirror-live-preview-subpath-is-built.md), which builds the staged follow-up in point 3 below. Nothing in this record is reversed: the `<textarea>` stays the default and stays dependency-free.
 
 ## Decision
 
