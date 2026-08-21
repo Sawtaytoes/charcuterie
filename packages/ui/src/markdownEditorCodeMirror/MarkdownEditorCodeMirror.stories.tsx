@@ -59,7 +59,7 @@ const TABLES = `## Rack inventory
 | 1 | uplink | 10G | swapped \`2026-08-19\` |
 | 2 |  | 1G | see [the runbook](https://example.invalid/runbook) |
 | 3 | shelf | 1G |
-| 4 | ~~spare~~ | — | pulled |
+| 4 | ~~spare~~ | — | pulled \\| relabel |
 
 A table with no outer pipes is still a table:
 
