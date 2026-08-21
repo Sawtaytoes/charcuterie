@@ -1,11 +1,11 @@
 import { markdownLanguage } from "@codemirror/lang-markdown"
 import { describe, expect, test } from "vitest"
 
-import type {
-  LivePreviewRange,
-  LivePreviewSelection,
+import type { LivePreviewSelection } from "./livePreviewRanges.ts"
+import {
+  toLivePreviewRanges,
+  toLivePreviewTableRanges,
 } from "./livePreviewRanges.ts"
-import { toLivePreviewRanges } from "./livePreviewRanges.ts"
 
 /**
  * The real GFM parser, not a stub.
@@ -27,8 +27,27 @@ const toRanges = (
     tree: markdownLanguage.parser.parse(text),
   })
 
-const toTextOf = (text: string, range: LivePreviewRange) =>
-  text.slice(range.from, range.to)
+/** Anything with document offsets — a range, or a table cell. */
+/**
+ * The block pass. Separate from `toRanges` because CodeMirror
+ * requires the split — see `toLivePreviewTableRanges`.
+ */
+const toTableRanges = (
+  text: string,
+  selections: readonly LivePreviewSelection[] = [],
+  isRawMode = false,
+) =>
+  toLivePreviewTableRanges({
+    isRawMode,
+    selections,
+    text,
+    tree: markdownLanguage.parser.parse(text),
+  })
+
+const toTextOf = (
+  text: string,
+  range: { from: number; to: number },
+) => text.slice(range.from, range.to)
 
 /**
  * Narrows away the `undefined` a `find` returns, failing the test
@@ -76,6 +95,38 @@ describe("toLivePreviewRanges", () => {
       expect(
         concealed.map((range) => toTextOf(text, range)),
       ).toEqual(["**", "**"])
+    })
+  })
+
+  /**
+   * Not table-specific — but `\\|` is the only way to put a pipe in
+   * a cell, so this is where its absence showed.
+   */
+  describe("escapes", () => {
+    test("conceals the backslash and keeps what it escaped", () => {
+      const text = "a \\* b"
+
+      const markers = toRanges(text).filter(
+        (range) => range.type === "marker",
+      )
+
+      expect(
+        markers.map((range) => toTextOf(text, range)),
+      ).toEqual(["\\"])
+
+      expect(markers[0]).toMatchObject({
+        isConcealed: true,
+      })
+    })
+
+    test("brings it back for a caret inside it", () => {
+      const text = "a \\* b"
+
+      expect(
+        toRanges(text, atCaret(3)).find(
+          (range) => range.type === "marker",
+        ),
+      ).toMatchObject({ isConcealed: false })
     })
   })
 
@@ -303,6 +354,291 @@ describe("toLivePreviewRanges", () => {
     })
   })
 
+  /**
+   * The one construct whose meaning is geometry.
+   *
+   * Everything else here is a decoration hung on text CodeMirror is
+   * already drawing. A column is not: column two's text is on four
+   * different lines, so the markdown stops being drawn and a widget
+   * draws instead — which is why these tests assert *content*
+   * (rows, cells, segments) where the rest of the file asserts
+   * offsets.
+   */
+  describe("tables", () => {
+    const TABLE = [
+      "| Port | **Goes to** | Notes |",
+      "| :--- | ---: | :---: |",
+      "| 1 | uplink | see [docs](https://e.com) |",
+      "| 2 |  | `shelf` |",
+    ].join("\n")
+
+    const toTable = (
+      text: string,
+      selections: readonly LivePreviewSelection[] = [],
+    ) => toFound(toTableRanges(text, selections)[0])
+
+    test("replaces the whole block, exactly", () => {
+      const text = `Before\n\n${TABLE}\n\nAfter\n`
+
+      const table = toTable(text)
+
+      // Byte-for-byte the table and nothing either side of it: a
+      // block replacement has to land on whole lines, and one
+      // character out is a thrown decoration rather than a
+      // misdrawn one.
+      expect(toTextOf(text, table)).toBe(TABLE)
+    })
+
+    test("renders no line decoration for a table it replaces", () => {
+      expect(
+        toRanges(TABLE).filter(
+          (range) =>
+            range.type === "line" &&
+            range.lineKind === "table",
+        ),
+      ).toHaveLength(0)
+    })
+
+    test("reads the header row as a header and the rest as rows", () => {
+      expect(
+        toTable(TABLE).rows.map((row) => row.isHeader),
+      ).toEqual([true, false, false])
+    })
+
+    /**
+     * The delimiter row is the column spec, not content — it is the
+     * one row a rendered table does not show, and it is where the
+     * alignment comes from instead.
+     */
+    test("takes alignment from the delimiter row", () => {
+      expect(
+        toTable(TABLE).rows[0]?.cells.map(
+          (cell) => cell.alignment,
+        ),
+      ).toEqual(["start", "end", "center"])
+    })
+
+    test("renders cell markup rather than the markers", () => {
+      expect(
+        toTable(TABLE).rows[0]?.cells[1]?.segments,
+      ).toEqual([
+        {
+          markKinds: ["strong"],
+          text: "Goes to",
+          type: "text",
+        },
+      ])
+    })
+
+    test("keeps a link in a cell clickable and drops its syntax", () => {
+      expect(
+        toTable(TABLE).rows[1]?.cells[2]?.segments,
+      ).toEqual([
+        { markKinds: [], text: "see ", type: "text" },
+        {
+          markKinds: ["linkText"],
+          text: "docs",
+          type: "text",
+          url: "https://e.com",
+        },
+      ])
+    })
+
+    /**
+     * The parser emits no `TableCell` for `| |`, so a cell-node
+     * walk would render the row one column short and shift every
+     * cell after it left. The `|` positions are the truth.
+     */
+    test("keeps an empty cell's column", () => {
+      const cells = toFound(toTable(TABLE).rows[2]).cells
+
+      expect(cells).toHaveLength(3)
+
+      expect(cells[1]?.segments).toEqual([])
+
+      expect(cells[2]?.segments).toEqual([
+        {
+          markKinds: ["code"],
+          text: "shelf",
+          type: "text",
+        },
+      ])
+    })
+
+    test("puts a cell's offsets on the cell's own text", () => {
+      const text = `Before\n\n${TABLE}\n`
+
+      const cell = toFound(
+        toFound(toTable(text).rows[1]).cells[1],
+      )
+
+      // The click target for that cell, and the reason it can be
+      // one: these are real document offsets, not indexes into a
+      // rendered string.
+      expect(toTextOf(text, cell)).toBe("uplink")
+    })
+
+    /**
+     * GFM drops cells past the header's width. An editor that did
+     * the same would put text the author typed on screen nowhere,
+     * so the widest row wins and the short rows gain empty cells.
+     */
+    test("pads every row to the widest row", () => {
+      const text = [
+        "| a | b |",
+        "| --- | --- |",
+        "| 1 | 2 | 3 |",
+        "| only |",
+      ].join("\n")
+
+      const table = toTable(text)
+
+      expect(
+        table.rows.map((row) => row.cells.length),
+      ).toEqual([3, 3, 3])
+
+      // A padded cell collapses to the end of its own row, so
+      // clicking one puts the caret where the missing `| |` would
+      // be typed.
+      const row = toFound(table.rows[2])
+
+      expect(toFound(row.cells[2])).toMatchObject({
+        from: row.to,
+        segments: [],
+        to: row.to,
+      })
+    })
+
+    test("renders an image in a cell as an image", () => {
+      const text = [
+        "| icon |",
+        "| --- |",
+        "| ![up](https://e.com/a.png) |",
+      ].join("\n")
+
+      expect(
+        toTable(text).rows[1]?.cells[0]?.segments,
+      ).toEqual([
+        {
+          alt: "up",
+          type: "image",
+          url: "https://e.com/a.png",
+        },
+      ])
+    })
+
+    /**
+     * A row that ends with a pipe ends there. Counting what follows
+     * as a column gave every table trailing whitespace touched an
+     * empty extra column that nothing in the markdown asked for —
+     * and trailing whitespace is invisible, so it looked like the
+     * renderer inventing a column at random.
+     */
+    test("ignores whitespace after the last pipe", () => {
+      const text =
+        "| a | b |   \n| --- | --- |\n| 1 | 2 |  \n"
+
+      expect(
+        toTable(text).rows.map((row) => row.cells.length),
+      ).toEqual([2, 2])
+    })
+
+    /**
+     * `\\|` is the only way to put a pipe *in* a cell, so a rendered
+     * table is exactly where the backslash must not show.
+     */
+    test("renders an escaped pipe as a pipe", () => {
+      const text =
+        "| a | b |\n| --- | --- |\n| x \\| y | 2 |\n"
+
+      expect(
+        toTable(text).rows[1]?.cells[0]?.segments,
+      ).toEqual([
+        { markKinds: [], text: "x | y", type: "text" },
+      ])
+    })
+
+    test("renders a table nested in a blockquote or a list", () => {
+      for (const text of [
+        "> | a | b |\n> | --- | --- |\n> | 1 | 2 |\n",
+        "- item\n\n  | a | b |\n  | --- | --- |\n  | 1 | 2 |\n",
+      ]) {
+        expect(
+          toTable(text).rows.map((row) =>
+            row.cells.map((cell) => toTextOf(text, cell)),
+          ),
+        ).toEqual([
+          ["a", "b"],
+          ["1", "2"],
+        ])
+      }
+    })
+
+    test("renders a table with no leading or trailing pipes", () => {
+      const text = "a | b\n--- | ---\n1 | 2"
+
+      expect(
+        toTable(text).rows.map((row) =>
+          row.cells.map((cell) => toTextOf(text, cell)),
+        ),
+      ).toEqual([
+        ["a", "b"],
+        ["1", "2"],
+      ])
+    })
+
+    /**
+     * Same rule as a link or an image: the caret is what turns the
+     * rendering back into markup, because you cannot edit a column
+     * you cannot see.
+     */
+    test("stands down for a caret inside it", () => {
+      expect(toTableRanges(TABLE, atCaret(3))).toHaveLength(
+        0,
+      )
+
+      // …and the pipes come back, monospaced, in its place.
+      expect(
+        toRanges(TABLE, atCaret(3)).filter(
+          (range) =>
+            range.type === "line" &&
+            range.lineKind === "table",
+        ),
+      ).toHaveLength(4)
+    })
+
+    test("stands down in raw mode", () => {
+      expect(toTableRanges(TABLE, [], true)).toHaveLength(0)
+    })
+
+    /**
+     * The two passes have to agree: the plugin steps out of the way
+     * of exactly the tables the field draws, or the pipes paint
+     * underneath a rendered table.
+     */
+    test("is the only pass that decorates a rendered table", () => {
+      expect(
+        toRanges(TABLE).filter(
+          (range) => range.from < TABLE.length,
+        ),
+      ).toHaveLength(0)
+    })
+
+    test("describes a view, never an edit", () => {
+      const text = `${TABLE}\n`
+
+      for (const row of toTable(text).rows) {
+        for (const cell of row.cells) {
+          expect(cell.from).toBeGreaterThanOrEqual(0)
+
+          expect(cell.to).toBeLessThanOrEqual(text.length)
+
+          expect(cell.from).toBeLessThanOrEqual(cell.to)
+        }
+      }
+    })
+  })
+
   describe("raw mode", () => {
     const text =
       "# Heading\n\n**bold** and ![img](https://e.com/a.png) and [x](https://e.com)\n"
@@ -398,11 +734,16 @@ describe("toLivePreviewRanges", () => {
       ).toEqual(["`", "`"])
     })
 
-    test("decorates every line of a table", () => {
+    /**
+     * The *editing* view of a table. A caret in it means the
+     * rendered widget stood down, and every line goes monospaced so
+     * the columns line up as typed.
+     */
+    test("decorates every line of a table the caret is in", () => {
       const text = "| a | b |\n| --- | --- |\n| 1 | 2 |"
 
       expect(
-        toRanges(text).filter(
+        toRanges(text, atCaret(2)).filter(
           (range) =>
             range.type === "line" &&
             range.lineKind === "table",
