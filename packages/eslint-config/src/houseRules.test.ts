@@ -28,6 +28,7 @@ import {
   createTestRules,
   createTypedRules,
   GENERATED_SCHEMA_GLOBS,
+  tseslint as reExportedTseslint,
 } from "./index.js"
 
 const packageRoot = resolve(
@@ -719,3 +720,42 @@ test("a repo's own ignores are added to the house list, not swapped for it", asy
     expect.arrayContaining(GENERATED_SCHEMA_GLOBS),
   )
 })
+
+test("the re-exported typescript-eslint is the instance the preset uses", async () => {
+  // The `Cannot redefine plugin "@typescript-eslint"` failure,
+  // pinned. A consumer composing `tseslint.configs.*` beside
+  // `createAppConfig` hands ESLint a second plugin object if its
+  // `typescript-eslint` resolves to a different copy than this
+  // package's — which is a property of the consumer's lockfile,
+  // not of its config. board-game-picker hit it (8.66.0 beside
+  // 8.67.0); docket, with the same declared range, deduped and
+  // did not.
+  //
+  // Asserting on the plugin object rather than on the version is
+  // deliberate: it is object identity that flat config checks, so
+  // matching version strings would prove nothing.
+  const eslint = new ESLint({
+    cwd: packageRoot,
+    overrideConfigFile: true,
+    overrideConfig: defineConfig(
+      ...createAppConfig({
+        tsconfigRootDir: fixturesRoot,
+        appDirectories: ["src/__fixtures__/appPackage"],
+      }),
+      {
+        files: ["**/*.{ts,tsx}"],
+        extends: [reExportedTseslint.configs.base],
+      },
+    ),
+  })
+
+  const ruleIds = await getCharcuterieRuleIds(
+    eslint,
+    "appPackage/rawComponentChoice.tsx",
+  )
+
+  expect(countRuleIds(ruleIds)).toEqual({
+    "charcuterie/no-raw-select": 1,
+    "charcuterie/prefer-listbox-over-select": 1,
+  })
+}, 30_000)
