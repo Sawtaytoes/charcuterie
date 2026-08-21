@@ -47,6 +47,7 @@ export {
   APP_IGNORES,
   createAppConfig,
   createPickerRules,
+  MULTI_COMPONENT_FILE_GLOBS,
   PICKER_RULE_IDS,
 } from "./appConfig.js"
 export {
