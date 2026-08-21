@@ -19,7 +19,7 @@ import { toClassName } from "../toClassName.ts"
  * children as-is, so the only element it owns is the `<fieldset>` and
  * a prop has nowhere else to go. One rule reads both:
  * ***a component's props land on the element it owns***
- * ([decision](../../../docs/decisions/2026-08-21-a-slot-components-rest-props-are-the-controls-props.md)).
+ * ([decision](../../../../docs/decisions/2026-08-21-a-slot-components-rest-props-are-the-controls-props.md)).
  *
  * `disabled` is worth knowing about before reaching for it. On a
  * `<fieldset>` it is not decoration — the platform disables every

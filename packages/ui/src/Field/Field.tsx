@@ -23,18 +23,18 @@ import { toClassName } from "../toClassName.ts"
  * `name`, `placeholder`, `autoFocus`, `onBlur` and every `aria-*` all
  * arrived at the `<input>` and none of them type-checked. The only
  * prop a consumer could legally pass was `className` — which is the
- * one escape hatch the fleet's
- * ["configured by props, not a borrowed class"](../../../docs/decisions/2026-08-21-a-slot-components-rest-props-are-the-controls-props.md)
- * rule is trying to close, so the closed type forced the very thing
- * the rule forbids.
+ * one escape hatch the fleet's "configured by props, not a borrowed
+ * class" rule is trying to close, so the closed type forced the very
+ * thing the rule forbids
+ * ([decision](../../../../docs/decisions/2026-08-21-a-slot-components-rest-props-are-the-controls-props.md)).
  *
  * `className` stays on the `<div>`, alone, because a class is a
  * statement about the box a **parent** lays out
- * ([decision](../../../docs/decisions/2026-08-19-classname-is-the-outermost-box-a-component-renders.md)).
+ * ([decision](../../../../docs/decisions/2026-08-19-classname-is-the-outermost-box-a-component-renders.md)).
  * Every other prop is a statement about the control, and `id` is the
  * proof: it has named the control since the component shipped, and a
  * dated record settles its precedence
- * ([decision](../../../docs/decisions/2026-08-05-field-adopts-the-childs-own-id.md)).
+ * ([decision](../../../../docs/decisions/2026-08-05-field-adopts-the-childs-own-id.md)).
  * Routing the rest to the `<div>` would have moved it, silently, in
  * every consumer.
  *
