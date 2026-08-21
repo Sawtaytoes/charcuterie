@@ -284,12 +284,19 @@ export default defineConfig(
 ```
 
 ```jsonc
-// biome.json — an app extends /app; the library extends the base
+// biome.json — an app extends both; the library extends the base alone
 {
-  "extends": ["@charcuterie/biome-config/app"],
+  "extends": [
+    "@charcuterie/biome-config",
+    "@charcuterie/biome-config/app"
+  ],
   "files": { "includes": ["./**", "!**/dist"] }
 }
 ```
+
+Both entries. `/app` is a **delta** carrying only the picker rules — Biome does not
+resolve a nested `extends` inside an extended config, so a lone `/app` would hand you the
+picker rules and Biome's stock formatter, silently.
 
 That is the setup. `appDirectories` is the only thing you have to know, and it is the
 scoping that keeps the component rules off `@charcuterie/ui` — which renders raw `<a>`,

@@ -18,6 +18,24 @@ consumer. `typescript-eslint`, `eslint-plugin-react` and `@vitest/eslint-plugin`
 this package's own dependencies — a shared config whose adoption instructions start
 "first install these four plugins" has not shared very much.
 
+**If your config composes `tseslint.configs.*` too, import it from here:**
+
+```js
+import {
+  createAppConfig,
+  tseslint,
+} from "@charcuterie/eslint-config"
+```
+
+Not from your own `typescript-eslint`. Flat config throws
+`Cannot redefine plugin "@typescript-eslint"` when two blocks register that namespace
+with two different objects, and a second copy of `typescript-eslint` in the tree is
+exactly that. `board-game-picker` adopted the preset with 8.66.0 pinned in its lockfile
+while this package resolved 8.67.0 beside it and `eslint .` failed outright; `docket`,
+with the same declared range, deduped and worked. Which one a repo gets is a property of
+its lockfile, not of its config — so the instance is re-exported and there is one import
+specifier for it.
+
 ## Usage
 
 ```js
