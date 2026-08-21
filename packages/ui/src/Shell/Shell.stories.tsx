@@ -29,7 +29,7 @@ const CONTENT_WIDTH_OPTIONS = [
 ] as const
 
 const meta = {
-  title: "Components/Shell",
+  title: "Components/Layout/Shell",
   component: Shell,
   parameters: { layout: "fullscreen" },
   argTypes: {

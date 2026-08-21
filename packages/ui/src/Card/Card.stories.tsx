@@ -15,7 +15,7 @@ import { ProgressBar } from "../ProgressBar/ProgressBar.tsx"
 import { Card, ELEVATION_CLASS } from "./Card.tsx"
 
 const meta = {
-  title: "Components/Card",
+  title: "Components/Layout/Card",
   component: Card,
   parameters: { layout: "padded" },
   argTypes: {

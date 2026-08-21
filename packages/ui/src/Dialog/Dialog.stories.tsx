@@ -11,7 +11,7 @@ import type { DialogSize } from "./Dialog.tsx"
 import { Dialog } from "./Dialog.tsx"
 
 const meta = {
-  title: "Components/Dialog",
+  title: "Components/Overlays/Dialog",
   component: Dialog,
   parameters: { layout: "padded" },
   argTypes: {

@@ -126,7 +126,7 @@ const Frame = ({
 )
 
 const meta = {
-  title: "Components/Toolbar",
+  title: "Components/Actions/Toolbar",
   component: Toolbar,
   parameters: { layout: "padded" },
   argTypes: { size: controlSizeArgType },

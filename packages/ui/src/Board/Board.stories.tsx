@@ -388,7 +388,7 @@ const Frame = ({
 )
 
 const meta = {
-  title: "Components/Board",
+  title: "Components/Layout/Board",
   component: Board,
   parameters: { layout: "padded" },
   args: {

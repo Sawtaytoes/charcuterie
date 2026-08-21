@@ -24,7 +24,7 @@ const NAMING_ITEMS: RadioItem[] = [
 ]
 
 const meta = {
-  title: "Components/RadioGroup",
+  title: "Components/Controls/RadioGroup",
   component: RadioGroup,
   parameters: { layout: "padded" },
   argTypes: { size: controlSizeArgType },

@@ -37,7 +37,7 @@ const INTENTS = [
 ] as const
 
 const meta = {
-  title: "Components/Badge",
+  title: "Components/Data/Badge",
   component: Badge,
   parameters: { layout: "padded" },
   argTypes: {

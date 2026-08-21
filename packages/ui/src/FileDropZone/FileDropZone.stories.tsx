@@ -10,7 +10,7 @@ import { FileDropZone } from "./FileDropZone.tsx"
 const noop = () => undefined
 
 const meta = {
-  title: "Components/FileDropZone",
+  title: "Components/Controls/FileDropZone",
   component: FileDropZone,
   parameters: { layout: "padded" },
   args: {

@@ -11,7 +11,7 @@ import { SettingsIcon } from "../icons.storyHelpers.tsx"
 import { Tooltip } from "./Tooltip.tsx"
 
 const meta = {
-  title: "Components/Tooltip",
+  title: "Components/Overlays/Tooltip",
   component: Tooltip,
   parameters: { layout: "centered" },
   argTypes: { placement: placementArgType },

@@ -51,7 +51,7 @@ const APPEARANCES: IntentAppearance[] = [
 ]
 
 const meta = {
-  title: "Components/ButtonLink",
+  title: "Components/Actions/ButtonLink",
   component: ButtonLink,
   parameters: { layout: "padded" },
   argTypes: {

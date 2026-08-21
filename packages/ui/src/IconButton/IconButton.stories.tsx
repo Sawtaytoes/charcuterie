@@ -27,7 +27,7 @@ import { IconButton } from "./IconButton.tsx"
 const UNDO_ICON = <UndoIcon />
 
 const meta = {
-  title: "Components/IconButton",
+  title: "Components/Actions/IconButton",
   component: IconButton,
   parameters: { layout: "padded" },
   argTypes: { size: controlSizeArgType },

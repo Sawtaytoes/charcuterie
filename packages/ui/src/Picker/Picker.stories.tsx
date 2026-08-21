@@ -57,7 +57,7 @@ const TRACKS: PickerOption[] = [
 ]
 
 const meta = {
-  title: "Components/Picker",
+  title: "Components/Controls/Picker",
   component: Picker,
   parameters: { layout: "padded" },
   argTypes: {

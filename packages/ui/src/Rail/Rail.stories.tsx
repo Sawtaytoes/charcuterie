@@ -13,7 +13,7 @@ import {
 import { Rail } from "./Rail.tsx"
 
 const meta = {
-  title: "Components/Rail",
+  title: "Components/Layout/Rail",
   component: Rail,
   parameters: { layout: "fullscreen" },
   argTypes: {
