@@ -4,7 +4,33 @@ import * as SelectStories from "./Select.stories";
 
 <Meta of={SelectStories} />
 
-# Select
+# Select (deprecated)
+
+> **Deprecated 2026-08-20. Nothing new gets a native `Select`.**
+>
+> Use **`Picker`** — a `Listbox` with the trigger already attached, and a near drop-in for
+> this component — or **`Combobox`** when the list is long enough to want typing.
+>
+> ```tsx
+> // Before.
+> <Select label="Quality" onChange={setQuality} options={QUALITY_OPTIONS} value={quality} />
+>
+> // After.
+> <Picker label="Quality" onChange={setQuality} options={QUALITY_OPTIONS} value={quality} />
+> ```
+>
+> The [2026-08-10 demotion](https://github.com/Sawtaytoes/charcuterie/blob/master/docs/decisions/2026-08-10-listbox-and-combobox-are-the-default-and-select-is-demoted.md)
+> left four platform cases where native was still the right call — the mobile wheel picker,
+> autofill, `:invalid`, and a form that posts with no JS. **Not one of them has ever applied
+> to an app in this fleet**, and the exception is what agents kept reading as permission. It
+> is closed: a new native `Select` is a new decision with the reason written down, not a
+> call-site choice. `Listbox` has no `<optgroup>` equivalent, and that gap is a change to
+> `Listbox` rather than a reason to keep this.
+>
+> It stays exported so existing call sites keep compiling while they convert, and it will be
+> removed in the next major of `@charcuterie/ui`.
+
+Everything below is how the component works, for the call sites still on it.
 
 Eighteen sites in the fleet, and they split cleanly in two: **twelve native `<select>`s**
 that differ only in their Tailwind classes, and **six hand-rolled `role="listbox"`
