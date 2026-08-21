@@ -20,11 +20,14 @@ import tseslint from "typescript-eslint"
 import { expect, test } from "vitest"
 
 import {
+  APP_IGNORES,
+  createAppConfig,
   createComponentChoiceRules,
   createFlexOverflowRules,
   createLogicalPropertiesRules,
   createTestRules,
   createTypedRules,
+  GENERATED_SCHEMA_GLOBS,
 } from "./index.js"
 
 const packageRoot = resolve(
@@ -553,3 +556,166 @@ test("it() is reported in favour of test()", async () => {
 
   expect(ruleIds).toContain("vitest/consistent-test-it")
 }, 30_000)
+
+// ---------------------------------------------------------------
+// The app preset
+//
+// `createAppConfig` is the one call an ordinary app repo makes, so
+// what it needs proving is not that the rules work — the blocks
+// above do that — but that composing them **as a consumer would**
+// still scopes correctly. The failure this catches is the one the
+// fleet actually hit: a preset that looks adopted and enforces
+// nothing, because a derived glob missed the app's source.
+// ---------------------------------------------------------------
+
+const fixturesRoot = resolve(
+  packageRoot,
+  "src/__fixtures__",
+)
+
+const createPresetLinter = (
+  options: Partial<
+    Parameters<typeof createAppConfig>[0]
+  > = {},
+) =>
+  new ESLint({
+    cwd: packageRoot,
+    overrideConfigFile: true,
+    overrideConfig: defineConfig(
+      ...createAppConfig({
+        tsconfigRootDir: fixturesRoot,
+        appDirectories: ["src/__fixtures__/appPackage"],
+        ...options,
+      }),
+    ),
+  })
+
+const getCharcuterieRuleIds = async (
+  eslint: ESLint,
+  fixtureName: string,
+) =>
+  (await getReportedRuleIds(eslint, fixtureName)).filter(
+    (ruleId) => ruleId?.startsWith("charcuterie/"),
+  )
+
+test("the preset enforces the picker rules and nothing else", async () => {
+  const ruleIds = await getCharcuterieRuleIds(
+    createPresetLinter(),
+    "appPackage/rawComponentChoice.tsx",
+  )
+
+  // The default is the settled subset, not all seven. The raw
+  // `<a>`, the raw `<button>`, the three hand-rolled click
+  // targets and the three in-handler navigations in this fixture
+  // are each a real sweep an app has not done — a preset that
+  // reported them would be a preset nobody adopts.
+  expect(countRuleIds(ruleIds)).toEqual({
+    "charcuterie/no-raw-select": 1,
+    "charcuterie/prefer-listbox-over-select": 1,
+  })
+}, 30_000)
+
+test("the preset does not reach @charcuterie/ui's own source", async () => {
+  // `appDirectories` is the whole scoping mechanism. The library
+  // renders a raw `<select>` because rendering one correctly *is*
+  // the library, so a preset that widened its own globs would
+  // make the library the first thing it broke.
+  const ruleIds = await getCharcuterieRuleIds(
+    createPresetLinter(),
+    "uiPackage/rawElements.tsx",
+  )
+
+  expect(ruleIds).toEqual([])
+}, 30_000)
+
+test("componentChoice: all widens the preset to every rule", async () => {
+  const ruleIds = await getCharcuterieRuleIds(
+    createPresetLinter({ componentChoice: "all" }),
+    "appPackage/rawComponentChoice.tsx",
+  )
+
+  expect(countRuleIds(ruleIds)).toEqual({
+    "charcuterie/no-clickable-non-interactive": 3,
+    "charcuterie/no-navigation-in-click-handler": 3,
+    "charcuterie/no-raw-anchor": 1,
+    "charcuterie/no-raw-button": 1,
+    "charcuterie/no-raw-select": 1,
+    "charcuterie/prefer-listbox-over-select": 1,
+  })
+}, 30_000)
+
+test("componentChoice: off leaves an app mid-migration alone", async () => {
+  const ruleIds = await getCharcuterieRuleIds(
+    createPresetLinter({ componentChoice: "off" }),
+    "appPackage/rawComponentChoice.tsx",
+  )
+
+  expect(ruleIds).toEqual([])
+}, 30_000)
+
+test("the preset's picker escape hatch still owes a reason", async () => {
+  const ruleIds = await getCharcuterieRuleIds(
+    createPresetLinter(),
+    "appPackage/unjustifiedSuppression.tsx",
+  )
+
+  // `require-suppression-reason` rides along with the picker
+  // subset. Without it the hatch is a bare `eslint-disable-next-
+  // line`, which is the loophole that makes the whole rule
+  // decorative.
+  expect(ruleIds).toContain(
+    "charcuterie/require-suppression-reason",
+  )
+}, 30_000)
+
+test("the preset carries the fleet's logical-properties rule", async () => {
+  const ruleIds = await getReportedRuleIds(
+    createPresetLinter({
+      appDirectories: ["src/__fixtures__"],
+    }),
+    "physicalDirectionClassName.tsx",
+  )
+
+  expect(ruleIds).toContain("no-restricted-syntax")
+}, 30_000)
+
+test("the flex rules stay a deliberate opt-in", async () => {
+  const eslint = createPresetLinter()
+
+  const defaultRuleIds = await getCharcuterieRuleIds(
+    eslint,
+    "appPackage/unconstrainedFlexText.tsx",
+  )
+
+  // `no-shrink-0-with-flex-wrap` is an `error`, and this fixture
+  // is four real rows the fleet had to fix. Turning that on as
+  // part of "adopt the preset" would make adoption day and the
+  // flex sweep the same change.
+  expect(defaultRuleIds).toEqual([])
+
+  const optedInRuleIds = await getCharcuterieRuleIds(
+    createPresetLinter({ flexOverflow: "warn" }),
+    "appPackage/unconstrainedFlexText.tsx",
+  )
+
+  expect(countRuleIds(optedInRuleIds)).toEqual({
+    "charcuterie/no-shrink-0-with-flex-wrap": 1,
+    "charcuterie/no-unconstrained-flex-text": 3,
+  })
+}, 30_000)
+
+test("a repo's own ignores are added to the house list, not swapped for it", async () => {
+  const [{ ignores }] = createAppConfig({
+    tsconfigRootDir: fixturesRoot,
+    ignores: ["scratch/**"],
+  }) as [{ ignores: string[] }]
+
+  // A repo adding one scratch directory should not have to
+  // restate `dist`, `node_modules` and the generated schemas —
+  // that restatement is exactly how the eight hand-written
+  // configs drifted apart.
+  expect(ignores).toEqual([...APP_IGNORES, "scratch/**"])
+  expect(APP_IGNORES).toEqual(
+    expect.arrayContaining(GENERATED_SCHEMA_GLOBS),
+  )
+})

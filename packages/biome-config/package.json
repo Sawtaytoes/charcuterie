@@ -7,9 +7,12 @@
   "main": "./config.json",
   "exports": {
     ".": "./config.json",
-    "./config.json": "./config.json"
+    "./config.json": "./config.json",
+    "./app": "./app.json",
+    "./app.json": "./app.json"
   },
   "files": [
+    "app.json",
     "config.json"
   ],
   "publishConfig": {
