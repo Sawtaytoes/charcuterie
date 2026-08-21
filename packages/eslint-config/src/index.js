@@ -22,6 +22,12 @@ import { CHARCUTERIE_NAMESPACE } from "./namespace.js"
 import { charcuteriePlugin } from "./plugin.js"
 
 export {
+  APP_IGNORES,
+  createAppConfig,
+  createPickerRules,
+  PICKER_RULE_IDS,
+} from "./appConfig.js"
+export {
   COMPONENT_CHOICE_NAMESPACE,
   COMPONENT_CHOICE_RULE_IDS,
   COMPONENT_CHOICE_RULES,
@@ -45,6 +51,10 @@ export {
   NO_UNCONSTRAINED_FLEX_TEXT_MESSAGE,
   TEXT_ELEMENTS,
 } from "./flexOverflow.js"
+export {
+  createGeneratedIgnores,
+  GENERATED_SCHEMA_GLOBS,
+} from "./generatedGlobs.js"
 export {
   PHYSICAL_DIRECTION_MESSAGE,
   PHYSICAL_DIRECTION_PATTERN,
@@ -165,7 +175,11 @@ export const createStoryOverrides = ({
 }) => ({
   files,
   rules: {
-    "react/no-multi-comp": "off",
+    // Annotated for the same reason `asError` exists: a bare
+    // `"off"` widens to `string`, which `defineConfig` rejects —
+    // and it only surfaced once `createAppConfig` put this block
+    // in an array beside the others, where the union is inferred.
+    "react/no-multi-comp": /** @type {"off"} */ ("off"),
   },
 })
 
@@ -183,39 +197,6 @@ export const createTestRules = ({
       fn: "test",
     }),
   },
-})
-
-/**
- * The canonical globs for generated API schemas — the
- * `openapi-typescript` output a `@charcuterie/logic/query` consumer
- * commits to the repo. Kept here so Biome (via
- * `@charcuterie/biome-config`) and ESLint ignore the same paths, and
- * so a consumer's `tsconfig` `exclude` / editor config can point at
- * one list.
- *
- * `.gen.ts` for a single generated module (`api.gen.ts`) and
- * `__generated__/` for a directory of them.
- */
-export const GENERATED_SCHEMA_GLOBS = [
-  "**/*.gen.ts",
-  "**/*.gen.tsx",
-  "**/__generated__/**",
-]
-
-/**
- * Generated schemas are committed but never linted — hand rules
- * have no say over machine output, and type-aware linting a 10k-line
- * `paths` type is pure cost. Spread this into a consumer's flat
- * config so the type-aware pass skips them:
- *
- * ```js
- * export default defineConfig(createGeneratedIgnores(), ...rest)
- * ```
- */
-export const createGeneratedIgnores = ({
-  ignores = GENERATED_SCHEMA_GLOBS,
-} = {}) => ({
-  ignores,
 })
 
 /**

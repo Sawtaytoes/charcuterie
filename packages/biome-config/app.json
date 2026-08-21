@@ -1,0 +1,32 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.4.15/schema.json",
+  "extends": ["./config.json"],
+  "linter": {
+    "rules": {
+      "correctness": {
+        "noRestrictedElements": {
+          "level": "error",
+          "options": {
+            "elements": {
+              "select": "Choose with `Picker` (a `Listbox` with its trigger attached), `Listbox`, or `Combobox` from `@charcuterie/ui` — not a raw `<select>`, which paints as the OS widget and cannot be restyled.",
+              "Select": "`Select` is deprecated and is removed in the next `@charcuterie/ui` major. `Picker` is the drop-in: same `label`, `options`, `value`, `onChange`."
+            }
+          }
+        }
+      },
+      "style": {
+        "noRestrictedImports": {
+          "level": "error",
+          "options": {
+            "paths": {
+              "@charcuterie/ui": {
+                "importNames": ["Select"],
+                "message": "`Select` is deprecated and is removed in the next `@charcuterie/ui` major. Import `Picker` instead — same `label`, `options`, `value`, `onChange`."
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
