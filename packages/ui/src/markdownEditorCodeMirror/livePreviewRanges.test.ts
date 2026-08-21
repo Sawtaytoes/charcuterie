@@ -98,6 +98,38 @@ describe("toLivePreviewRanges", () => {
     })
   })
 
+  /**
+   * Not table-specific — but `\\|` is the only way to put a pipe in
+   * a cell, so this is where its absence showed.
+   */
+  describe("escapes", () => {
+    test("conceals the backslash and keeps what it escaped", () => {
+      const text = "a \\* b"
+
+      const markers = toRanges(text).filter(
+        (range) => range.type === "marker",
+      )
+
+      expect(
+        markers.map((range) => toTextOf(text, range)),
+      ).toEqual(["\\"])
+
+      expect(markers[0]).toMatchObject({
+        isConcealed: true,
+      })
+    })
+
+    test("brings it back for a caret inside it", () => {
+      const text = "a \\* b"
+
+      expect(
+        toRanges(text, atCaret(3)).find(
+          (range) => range.type === "marker",
+        ),
+      ).toMatchObject({ isConcealed: false })
+    })
+  })
+
   describe("headings", () => {
     test("scales the line and conceals the hashes with their space", () => {
       const text = "### Heading three"
@@ -493,6 +525,53 @@ describe("toLivePreviewRanges", () => {
           url: "https://e.com/a.png",
         },
       ])
+    })
+
+    /**
+     * A row that ends with a pipe ends there. Counting what follows
+     * as a column gave every table trailing whitespace touched an
+     * empty extra column that nothing in the markdown asked for —
+     * and trailing whitespace is invisible, so it looked like the
+     * renderer inventing a column at random.
+     */
+    test("ignores whitespace after the last pipe", () => {
+      const text =
+        "| a | b |   \n| --- | --- |\n| 1 | 2 |  \n"
+
+      expect(
+        toTable(text).rows.map((row) => row.cells.length),
+      ).toEqual([2, 2])
+    })
+
+    /**
+     * `\\|` is the only way to put a pipe *in* a cell, so a rendered
+     * table is exactly where the backslash must not show.
+     */
+    test("renders an escaped pipe as a pipe", () => {
+      const text =
+        "| a | b |\n| --- | --- |\n| x \\| y | 2 |\n"
+
+      expect(
+        toTable(text).rows[1]?.cells[0]?.segments,
+      ).toEqual([
+        { markKinds: [], text: "x | y", type: "text" },
+      ])
+    })
+
+    test("renders a table nested in a blockquote or a list", () => {
+      for (const text of [
+        "> | a | b |\n> | --- | --- |\n> | 1 | 2 |\n",
+        "- item\n\n  | a | b |\n  | --- | --- |\n  | 1 | 2 |\n",
+      ]) {
+        expect(
+          toTable(text).rows.map((row) =>
+            row.cells.map((cell) => toTextOf(text, cell)),
+          ),
+        ).toEqual([
+          ["a", "b"],
+          ["1", "2"],
+        ])
+      }
     })
 
     test("renders a table with no leading or trailing pipes", () => {

@@ -440,7 +440,7 @@ const toColumnAlignments = (
  * written. The `|` positions are the truth, so the gaps between
  * them are the columns, cell node or not.
  */
-const toRowRegions = (row: SyntaxNode) => {
+const toRowRegions = (row: SyntaxNode, text: string) => {
   const regions: { from: number; to: number }[] = []
 
   let start = row.from
@@ -466,7 +466,14 @@ const toRowRegions = (row: SyntaxNode) => {
     start = child.to
   }
 
-  if (start < row.to) {
+  // What is left after the last `|`. Only a column if it holds
+  // something: a row that ends with a pipe and then trailing spaces
+  // has no final column, and counting one gives every table an
+  // empty extra column that nothing in the markdown asked for.
+  if (
+    start < row.to &&
+    text.slice(start, row.to).trim() !== ""
+  ) {
     regions.push({ from: start, to: row.to })
   }
 
@@ -690,7 +697,7 @@ const toTableRows = ({
     const row = child
 
     rows.push({
-      cells: toRowRegions(row).map(
+      cells: toRowRegions(row, text).map(
         (region, columnIndex) => {
           const bounds = toTrimmedBounds(
             text,
@@ -1051,6 +1058,19 @@ const toWalker = ({
 
       if (name === "TableDelimiter") {
         pushMarker(nodeRef.from, nodeRef.to, true)
+
+        return false
+      }
+
+      if (name === "Escape") {
+        // `\|` is the only way to put a pipe in a table cell, and
+        // the reader wants the pipe, not the backslash. Same rule
+        // as any other marker: the caret brings it back.
+        pushMarker(
+          nodeRef.from,
+          nodeRef.from + 1,
+          isInside(selections, nodeRef.from, nodeRef.to),
+        )
 
         return false
       }

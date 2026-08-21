@@ -12,6 +12,9 @@ The caret is the way back into the markdown, as it is for a link or an image. Cl
 and the table stands down with the caret in that cell; Down from the line above enters at
 the top row, Up from below at the bottom. Raw mode is unchanged.
 
+Also: an escape (`\|`, `\*`) now conceals its backslash like any other marker, which is what
+made escaped pipes readable in a cell.
+
 Additive and behind the same optional subpath — no new dependency, and nothing changes for
 `MarkdownEditor` or for consumers that never import
 `@charcuterie/ui/markdown-editor-codemirror`.

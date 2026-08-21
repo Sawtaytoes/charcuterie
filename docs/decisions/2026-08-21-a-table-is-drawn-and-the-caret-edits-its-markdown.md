@@ -38,6 +38,11 @@ Four sub-decisions, each of which could have gone the other way:
    widget, so without this a table is unreachable by keyboard and so is everything the
    caret would have passed on the way.
 
+One thing came along for the ride because tables are where its absence showed: an **escape**
+(`\|`, `\*`) conceals its backslash like any other marker. `\|` is the only way to put a
+pipe in a cell, so a rendered table that printed the backslash was printing markup at the
+reader.
+
 **Markdown is still the stored value, byte for byte.** The widget draws from descriptors
 carrying document offsets; there is no serialiser, and a rendered table is a view over an
 unmodified string exactly as a concealed `**` is.
