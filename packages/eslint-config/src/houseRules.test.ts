@@ -28,6 +28,7 @@ import {
   createTestRules,
   createTypedRules,
   GENERATED_SCHEMA_GLOBS,
+  MULTI_COMPONENT_FILE_GLOBS,
   tseslint as reExportedTseslint,
 } from "./index.js"
 
@@ -758,4 +759,49 @@ test("the re-exported typescript-eslint is the instance the preset uses", async 
     "charcuterie/no-raw-select": 1,
     "charcuterie/prefer-listbox-over-select": 1,
   })
+}, 30_000)
+
+test("an icon module and a test harness may declare several components", async () => {
+  // Both turned up the moment real apps ran the preset, and both
+  // are the same argument the story exemption already makes: the
+  // file's job is to hold a set. board-game-picker's
+  // `SelectMenu.test.tsx` mounts a harness to prove a picker
+  // remounts; its `schemeIcons.tsx` holds three glyphs, and
+  // mail-sifter's `icons.tsx` holds nineteen.
+  const eslint = createPresetLinter()
+
+  expect(
+    await getReportedRuleIds(
+      eslint,
+      "appPackage/schemeIcons.tsx",
+    ),
+  ).toEqual([])
+
+  expect(
+    await getReportedRuleIds(
+      eslint,
+      "appPackage/pickerHarness.test.tsx",
+    ),
+  ).toEqual([])
+}, 30_000)
+
+test("an ordinary component file still declares only one", async () => {
+  // The exemption is a list of globs, not a repeal.
+  //
+  // Every fixture in this package lives under `__fixtures__/`,
+  // which is itself on the list — so the only honest way to show
+  // the rule is on by default is to lint one of them with that
+  // glob removed. If this ever goes quiet,
+  // `MULTI_COMPONENT_FILE_GLOBS` has grown a pattern wide enough
+  // to match production source.
+  const ruleIds = await getReportedRuleIds(
+    createPresetLinter({
+      storyFiles: MULTI_COMPONENT_FILE_GLOBS.filter(
+        (glob) => !glob.includes("__fixtures__"),
+      ),
+    }),
+    "appPackage/rawComponentChoice.tsx",
+  )
+
+  expect(ruleIds).toContain("react/no-multi-comp")
 }, 30_000)
