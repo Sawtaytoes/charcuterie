@@ -4,7 +4,7 @@
 **Date:** 2026-08-10
 **Type:** Architecture · API
 **Supersedes:** [2026-08-03 — `Listbox` and `Combobox` are siblings of `Select`, not replacements](2026-08-03-listbox-and-combobox-are-siblings-of-select.md)
-**Superseded by:** —
+**Superseded by:** [2026-08-20 — Native `Select` is deprecated, and the platform hatch is closed](2026-08-20-native-select-is-deprecated-and-the-platform-hatch-is-closed.md)
 
 ## Decision
 

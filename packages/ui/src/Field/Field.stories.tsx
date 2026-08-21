@@ -5,7 +5,6 @@ import {
   StoryGrid,
 } from "../board.storyHelpers.tsx"
 import { Picker } from "../Picker/Picker.tsx"
-import { Select } from "../Select/Select.tsx"
 import { Tooltip } from "../Tooltip/Tooltip.tsx"
 import { Field } from "./Field.tsx"
 import { FieldGroup } from "./FieldGroup.tsx"
@@ -84,7 +83,7 @@ export const AdoptsOverlayTriggerId: Story = {
 }
 
 /**
- * The control is a slot, not a hardcoded `<input>` — `Select` goes
+ * The control is a slot, not a hardcoded `<input>` — a `Picker` goes
  * in the same hole, and so does an app's own control. The `id`,
  * `aria-describedby`, `aria-invalid`, and `required` are cloned onto
  * whatever is passed.
@@ -104,13 +103,16 @@ export const AllVariants: Story = {
         </Field>
       </StoryCell>
 
-      <StoryCell label="select">
+      <StoryCell label="picker">
         <Field label="Rip profile">
-          <Select
+          <Picker
+            label="Rip profile"
+            onChange={() => {}}
             options={[
               { label: "Lossless", value: "lossless" },
               { label: "Compressed", value: "compressed" },
             ]}
+            value="lossless"
           />
         </Field>
       </StoryCell>
@@ -305,12 +307,14 @@ export const Group: Story = {
           label="Chapter split"
         >
           <div className="flex gap-2">
-            <Select
+            <Picker
               label="Unit"
+              onChange={() => {}}
               options={[
                 { label: "Chapters", value: "chapters" },
                 { label: "Minutes", value: "minutes" },
               ]}
+              value="chapters"
             />
 
             <input
