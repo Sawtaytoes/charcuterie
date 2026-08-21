@@ -78,6 +78,47 @@ floating node with no trigger and no anchor.
 
 <Canvas of={FieldStories.Nested} />
 
+## Where a prop lands
+
+`FieldProps` and `FieldGroupProps` were **closed** types until 2026-08-21: the only prop a
+caller could legally pass was `className`. That is the sharpest argument for opening them —
+a component whose whole purpose is *configured by props, not a borrowed class* accepted only
+the escape hatch that rule exists to close, so it forced the very thing the rule forbids.
+queuepilot paid for it twice in one modal: a `FieldGroup` that gave up the `id` its
+screenshot suite drives by, and a box beside it that stayed a hand-rolled `<fieldset>`
+because it needed `hidden`.
+
+The rule that opens them is one sentence — **a component's props land on the element it
+owns** — and it reads differently in each component because they own different elements:
+
+| | `Field` | `FieldGroup` |
+| --- | --- | --- |
+| Renders | `<div>` around a **cloned** child | a `<fieldset>` around children rendered as-is |
+| Rest props land on | the **control** | the **`<fieldset>`** |
+| `className` lands on | the `<div>` | the `<fieldset>` |
+| So you can pass | `name`, `placeholder`, `autoFocus`, `aria-*`, `ref` | `id`, `hidden`, `ref`, and `disabled` / `form` / `name` |
+
+`Field`'s destination is not a new one, it is the existing one finally declared: the runtime
+already spread everything it received into the clone, and `id` has named the control since
+the component shipped. Routing the rest to the `<div>` would have moved that `id`, silently,
+in every consumer.
+
+It also could not have been done safely. A slot is a pass-through and **cannot tell who
+wrote a prop** — a `Tooltip` above hands down `getReferenceProps()`, and the author types on
+the same object. Holding the author's props back at the `<div>` needs a closed runtime
+allow-list, and an allow-list is `FieldTooltip`'s silent drop rebuilt inside the fix for it:
+the first slot that writes an `aria-expanded` breaks, and nothing says so.
+
+So a caller who wants a handle on the **box** — an `id` for a screenshot, a `hidden` that
+takes the label with it — wants `FieldGroup`. It wraps rather than clones, so its props have
+nowhere else to go.
+
+`disabled` on a `<fieldset>` is worth knowing before reaching for it: the platform disables
+every control inside the element, not just the box. That is usually what a caller means, and
+it is something a `<div>`-based group could not have offered at all.
+
+<Canvas of={FieldStories.ForwardsRestProps} />
+
 ## Several controls are a `FieldGroup`, not a `Field`
 
 `Field` mints one id and clones it onto one child. An `id` names one element and a

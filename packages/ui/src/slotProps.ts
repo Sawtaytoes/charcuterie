@@ -127,13 +127,27 @@ export type SlotProps = Pick<
  * inner one won. The outer panel had no anchor and rendered in the
  * corner of the viewport — no error, no failing test, and it looks
  * like a CSS bug.
+ *
+ * ### A wrapping component uses it too, and keeps its own prop type
+ *
+ * `receivedProps` is generic in `ReceivedProps extends SlotProps`
+ * rather than plain `SlotProps`, so the return type carries whatever
+ * the caller actually holds instead of narrowing it to the five keys.
+ * `FieldGroup` is the reason: it does not clone, its rest props land
+ * on its own `<fieldset>`, and it writes an `aria-describedby` that
+ * has to **join** a caller's rather than replace it. Narrowing to
+ * `SlotProps` on the way out would have dropped `disabled`, `form`,
+ * `name` and every `data-*` from the type of the object it spreads
+ * onto that element — the props would still arrive at runtime, and
+ * only the type would have lied.
  */
 export const mergeSlotProps = <
+  ReceivedProps extends SlotProps,
   OwnProps extends Record<string, unknown>,
 >(
-  receivedProps: SlotProps,
+  receivedProps: ReceivedProps,
   ownProps: OwnProps,
-): OwnProps & SlotProps => {
+): OwnProps & ReceivedProps => {
   const definedOwnProps = Object.fromEntries(
     Object.entries(ownProps).filter(
       ([, value]) => value !== undefined,

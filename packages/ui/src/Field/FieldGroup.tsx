@@ -1,23 +1,53 @@
 import { useUniqueId } from "@charcuterie/logic"
-import type { ReactNode } from "react"
+import type {
+  ComponentPropsWithRef,
+  ReactNode,
+} from "react"
 
+import { mergeSlotProps } from "../slotProps.ts"
 import { toClassName } from "../toClassName.ts"
 
-export type FieldGroupProps = {
-  /**
-   * The controls. **Rendered as-is, not cloned** — that is the whole
-   * difference from `Field`, and it is why this is a separate
-   * component rather than a boolean on that one.
-   */
-  children: ReactNode
-  className?: string
-  /** Standing help for the group as a whole. */
-  description?: ReactNode
-  /** Present means the group is invalid. */
-  error?: ReactNode
-  isRequired?: boolean
-  label: ReactNode
-}
+/**
+ * Everything a caller writes on a `FieldGroup` reaches the
+ * `<fieldset>` — `id`, `hidden`, `data-*`, `aria-*`, `ref`, and the
+ * three attributes that are the element's own: `disabled`, `form`
+ * and `name`.
+ *
+ * This is the **opposite** destination from `Field`'s, and the
+ * difference is not a preference. `Field` clones onto its child, so
+ * its props are that control's props; `FieldGroup` renders its
+ * children as-is, so the only element it owns is the `<fieldset>` and
+ * a prop has nowhere else to go. One rule reads both:
+ * ***a component's props land on the element it owns***
+ * ([decision](../../../../docs/decisions/2026-08-21-a-slot-components-rest-props-are-the-controls-props.md)).
+ *
+ * `disabled` is worth knowing about before reaching for it. On a
+ * `<fieldset>` it is not decoration — the platform disables every
+ * form control inside the element, not just the box itself. That is
+ * usually what a caller wants and occasionally a surprise, and it is
+ * a thing a `<div>`-based group could not have offered at all.
+ */
+export type FieldGroupProps =
+  ComponentPropsWithRef<"fieldset"> & {
+    /**
+     * The controls. **Rendered as-is, not cloned** — that is the whole
+     * difference from `Field`, and it is why this is a separate
+     * component rather than a boolean on that one.
+     */
+    children: ReactNode
+    /**
+     * The `<fieldset>`, which is also the outermost element this
+     * component renders — so `className` is not the exception here that
+     * it is on `Field`.
+     */
+    className?: string
+    /** Standing help for the group as a whole. */
+    description?: ReactNode
+    /** Present means the group is invalid. */
+    error?: ReactNode
+    isRequired?: boolean
+    label: ReactNode
+  }
 
 /**
  * A label over **several** controls.
@@ -66,6 +96,7 @@ export const FieldGroup = ({
   error,
   isRequired = false,
   label,
+  ...receivedFieldsetProps
 }: FieldGroupProps): ReactNode => {
   const baseId = useUniqueId()
 
@@ -85,9 +116,19 @@ export const FieldGroup = ({
 
   return (
     <fieldset
-      aria-describedby={
-        describedBy === "" ? undefined : describedBy
-      }
+      /*
+        Through `mergeSlotProps`, not around it. A caller may now pass
+        an `aria-describedby` of its own, and that attribute is the
+        one prop in the set that is a **list** — a plain spread keeps
+        whichever side is written last and drops the other, silently,
+        which is the defect `mergeSlotProps` exists to prevent one
+        level down. Received first, then this group's description and
+        error, for the reason the ordering array above gives.
+      */
+      {...mergeSlotProps(receivedFieldsetProps, {
+        "aria-describedby":
+          describedBy === "" ? undefined : describedBy,
+      })}
       className={toClassName(
         // A `<fieldset>` arrives with a border, an inline margin, a
         // block padding, and `min-inline-size: min-content` — the
