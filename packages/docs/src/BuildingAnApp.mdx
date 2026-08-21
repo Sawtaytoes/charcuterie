@@ -133,6 +133,28 @@ itself. Same slot contract as `Popover`'s trigger, so the child's own layout is 
 onto the child. If the child already has an `id`, it is kept; an `id` passed to the `Field`
 wins over both.
 
+**Every other prop you write on a `Field` reaches that child too** — `name`, `placeholder`,
+`autoFocus`, `onBlur`, any `aria-*`, a `ref`. `className` is the single exception and stays
+on the wrapping `<div>`, because a class describes the box your layout positions. So do not
+reach for a `className` to do what a prop does; that hatch is the thing the rule closes.
+
+Want a handle on the **box** instead — an `id`, a `hidden` that takes the label with it?
+That is `FieldGroup`, which wraps rather than clones, so its props land on its own
+`<fieldset>`. It is also the right component whenever one label sits over several controls,
+and `disabled` on it disables every control inside, which is the platform's behaviour and not
+ours.
+
+```tsx
+<FieldGroup hidden={behaviour === "rewatch"} id="playback-lineup" label="Playback">
+  <Checkbox description="Nothing plays after the last title." label="Turn everything off" />
+  <Field label="When a show has nothing left">…</Field>
+</FieldGroup>
+```
+
+`Checkbox` takes a `description` of its own, so a hint can follow its box instead of being an
+app-styled paragraph beside one — the same `text-sm` / `content-secondary` a `Field`
+description wears, so a mixed box does not carry two hint typographies.
+
 ### Page chrome: `Shell` / `Header` / `Rail` / `Main`
 
 Do not write another `AppShell.tsx`. Ten of twelve UI repos hand-roll the page chrome, none
