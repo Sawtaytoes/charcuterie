@@ -98,6 +98,34 @@ blank line at the top and bottom of the block that reads as a rendering bug. A l
 stays, because hiding `-` turns an unordered list into indented prose — Obsidian substitutes
 a `•`, which means choosing a width, and this component has no business choosing one.
 
+## Tables render, and the caret edits them
+
+<Canvas of={MarkdownEditorCodeMirrorStories.Tables} />
+
+A table is the one construct on this surface whose meaning is *geometry*. Every other
+decoration hangs on text CodeMirror draws anyway; a column cannot, because column two's text
+is on four separate lines. So the pipes stop being drawn and a real `<table>` is drawn
+instead — alignment from the delimiter row, and `**bold**`, `` `code` ``, links and images
+rendering inside the cells exactly as they do in a paragraph.
+
+**Click a cell and the markdown comes back with the caret in that cell.** That is the same
+trade as a link or an image, and it is the only way in: you cannot edit a column you cannot
+see. Arrow keys work too — Down from the line above enters at the top row, Up from below
+enters at the bottom — because CodeMirror otherwise steps *over* a block widget and the
+table would be unreachable without a mouse.
+
+Three decisions worth knowing:
+
+- **The widest row wins, not the header.** GFM drops cells past the header's width. An
+  editor that did the same would put text you typed on screen nowhere, so short rows gain
+  empty cells instead and nothing is ever hidden.
+- **An empty cell keeps its column.** The parser emits no cell node for `| |`; the `|`
+  positions are what the columns are read from, so a blank cell does not shift the row.
+- **A wide table scrolls inside its own block** rather than pushing the editor sideways.
+
+`\|` — the only way to put a pipe *in* a cell — now conceals its backslash like any other
+marker, in tables and everywhere else.
+
 ## Clicking a link opens it
 
 Obsidian's behaviour, not VS Code's: where the markup is hidden, a link that looks like a
