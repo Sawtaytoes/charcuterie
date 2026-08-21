@@ -19,10 +19,16 @@
  *   VRT_REPORT_BASE_URL   default https://garage.octen.dev (fallback)
  *   VRT_STATUS_CONTEXT    default vrt/charcuterie
  *
- * Exits non-zero when a story changed against its baseline, so the
- * job itself goes red on a real regression (reg-suit's own `run`
- * exits 0 on diffs) — review the report, approve by merging, and the
- * baseline advances on the next push to master.
+ * Exits non-zero when a story changed against its baseline **on a pull
+ * request**, so the job goes red on a regression while there is still
+ * something to decide (reg-suit's own `run` exits 0 on diffs). A push
+ * build reports the same numbers and stays green: reg-keygen resolves
+ * both the PR and the merged commit to the same baseline — the last
+ * release commit, since `changeset-release/master` is the only
+ * long-lived branch off master — so the push re-reports a diff that
+ * was already reviewed, and merging it *was* the approval. Failing
+ * there reds master for every intentional visual change with nothing
+ * left to act on.
  */
 
 import { readFile } from "node:fs/promises"
@@ -83,9 +89,12 @@ const deleted = count("deletedItems")
 const passed = count("passedItems")
 
 // `failedItems` = a story whose pixels moved against its baseline —
-// that's the regression signal, so it drives a red check. New/deleted
-// baselines (a story added or removed) are expected churn → green.
-const state = changed > 0 ? "failure" : "success"
+// that's the regression signal, so it drives a red check on a PR.
+// New/deleted baselines (a story added or removed) are expected churn
+// → green. A push build never gates: see the header.
+const isPullRequest = Boolean(VRT_PR_NUMBER)
+const isRegression = changed > 0 && isPullRequest
+const state = isRegression ? "failure" : "success"
 const summary = `${changed} changed · ${added} new · ${deleted} deleted · ${passed} unchanged`
 
 const reportUrl =
@@ -103,7 +112,11 @@ if (GITHUB_REPOSITORY && VRT_STATUS_SHA) {
       target_url: reportUrl,
     },
   )
-  console.log(`[vrt] status ${state}: ${summary}`)
+  console.log(
+    changed > 0 && !isPullRequest
+      ? `[vrt] status ${state}: ${summary} — push build, recorded not gated (${reportUrl})`
+      : `[vrt] status ${state}: ${summary}`,
+  )
 }
 
 if (GITHUB_REPOSITORY && VRT_PR_NUMBER) {
@@ -151,5 +164,6 @@ if (GITHUB_REPOSITORY && VRT_PR_NUMBER) {
   console.log(`[vrt] PR #${VRT_PR_NUMBER} comment posted`)
 }
 
-// Red job on a real regression; green on clean/baseline-churn.
-process.exitCode = changed > 0 ? 1 : 0
+// Red job on a real regression; green on clean/baseline-churn, and on
+// every push build — master has no reviewer left to show a diff to.
+process.exitCode = isRegression ? 1 : 0
