@@ -842,7 +842,6 @@ __metadata:
     vitest: "npm:^4.1.8"
   peerDependencies:
     eslint: ">=10"
-    typescript-eslint: ">=8"
   languageName: unknown
   linkType: soft
 
