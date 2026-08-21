@@ -147,12 +147,18 @@ class ImageWidget extends WidgetType {
  * into whatever moved into that slot.
  */
 class TaskWidget extends WidgetType {
-  constructor(private readonly isChecked: boolean) {
+  constructor(
+    private readonly isChecked: boolean,
+    private readonly label: string,
+  ) {
     super()
   }
 
   eq(other: TaskWidget) {
-    return other.isChecked === this.isChecked
+    return (
+      other.isChecked === this.isChecked &&
+      other.label === this.label
+    )
   }
 
   toDOM(view: EditorView) {
@@ -163,6 +169,22 @@ class TaskWidget extends WidgetType {
     checkbox.checked = this.isChecked
 
     checkbox.className = "cm-md-task"
+
+    /**
+     * The item's own text, as the checkbox's name.
+     *
+     * A bare `<input type="checkbox">` inside a `contenteditable`
+     * has no wrapping `<label>` to inherit from and no `for`
+     * pointing at it, so without this it announces as an unlabelled
+     * checkbox — and a task list is exactly where "checkbox,
+     * checked" with no name is useless. The text is right there on
+     * the line; using it means the widget says what the sighted
+     * reader sees.
+     */
+    checkbox.setAttribute(
+      "aria-label",
+      this.label === "" ? "Task" : this.label,
+    )
 
     checkbox.addEventListener("mousedown", (event) => {
       // The checkbox owns the click; without this CodeMirror also
@@ -278,7 +300,10 @@ const toDecorations = (view: EditorView): DecorationSet => {
         case "task": {
           decorations.push(
             Decoration.replace({
-              widget: new TaskWidget(range.isChecked),
+              widget: new TaskWidget(
+                range.isChecked,
+                range.label,
+              ),
             }).range(range.from, range.to),
           )
 

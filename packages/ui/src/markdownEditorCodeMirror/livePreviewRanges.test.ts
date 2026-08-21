@@ -270,6 +270,21 @@ describe("toLivePreviewRanges", () => {
       ).toMatchObject({ isChecked })
     })
 
+    /**
+     * A checkbox inside a `contenteditable` has no `<label>` to
+     * inherit a name from, so it announces as an unlabelled
+     * checkbox — useless in exactly the place a task list is read.
+     */
+    test("carries the item's text as the checkbox's name", () => {
+      expect(
+        toRanges(
+          "- [ ] Photograph the current cabling",
+        ).find((range) => range.type === "task"),
+      ).toMatchObject({
+        label: "Photograph the current cabling",
+      })
+    })
+
     test("keeps the bullet visible and never conceals it", () => {
       const text = "- [ ] open"
 

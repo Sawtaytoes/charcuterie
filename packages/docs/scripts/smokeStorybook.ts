@@ -481,6 +481,13 @@ for (const entry of entries) {
     // is displaying one". `pre`/`code` were always a latent false
     // positive here for the same reason: an MDX example *of* a
     // markdown table would have tripped it.
+    //
+    // `.cm-editor` joins the list for exactly the reason `textarea`
+    // is on it. `MarkdownEditorCodeMirror` is the same kind of demo
+    // and the same kind of false positive — its fixture contains a
+    // markdown table on purpose — but its editing surface is a
+    // `contenteditable` div, so the `textarea` that covered the
+    // sibling does not cover it.
     const renderedText =
       (await preview
         .locator("body")
@@ -488,7 +495,7 @@ for (const entry of entries) {
           const prose = body.cloneNode(true) as HTMLElement
 
           for (const surface of prose.querySelectorAll(
-            'textarea, pre, code, [aria-hidden="true"]',
+            'textarea, pre, code, .cm-editor, [aria-hidden="true"]',
           )) {
             surface.remove()
           }

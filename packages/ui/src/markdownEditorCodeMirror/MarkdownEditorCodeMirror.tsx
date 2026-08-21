@@ -509,6 +509,26 @@ export const MarkdownEditorCodeMirror = ({
             ...(mountRef.current.label
               ? { "aria-label": mountRef.current.label }
               : {}),
+            /**
+             * Named by the `Field` above, when there is one and no
+             * `label` was passed.
+             *
+             * The sibling editor needs none of this: a `<textarea>`
+             * is a **labelable** element, so `Field`'s
+             * `<label htmlFor>` names it and that is the end of it.
+             * This surface is a `div[role="textbox"]`, which is not
+             * labelable — `htmlFor` pointing at it names nothing,
+             * silently, and axe was the only thing that caught it.
+             *
+             * `Field` gives its `<label>` the id below for exactly
+             * this, and `Field.test.tsx` pins the format.
+             */
+            ...(mountRef.current.id &&
+            !mountRef.current.label
+              ? {
+                  "aria-labelledby": `${mountRef.current.id}-label`,
+                }
+              : {}),
             // Joined, not replaced. `aria-describedby` is the one
             // slot-props key that is a list, and a `Field` above
             // this component has already written its description and

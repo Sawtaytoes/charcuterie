@@ -85,6 +85,12 @@ export type LivePreviewRange = {
   | {
       /** A rendered task checkbox, standing in for `[ ]` / `[x]`. */
       isChecked: boolean
+      /**
+       * The item's own text, which becomes the checkbox's
+       * accessible name — a checkbox inside a `contenteditable` has
+       * no `<label>` to inherit one from.
+       */
+      label: string
       type: "task"
     }
   | {
@@ -496,6 +502,12 @@ export const toLivePreviewRanges = ({
           ranges.push({
             from: nodeRef.from,
             isChecked: text[nodeRef.from + 1] !== " ",
+            label: text
+              .slice(
+                nodeRef.to,
+                toLineEnd(text, nodeRef.to),
+              )
+              .trim(),
             to: nodeRef.to,
             type: "task",
           })
