@@ -30,7 +30,7 @@ const CELL_CLASS =
  * every table gets wrong the same way.
  */
 const meta = {
-  title: "Components/SortableTableHeader",
+  title: "Components/Data/SortableTableHeader",
   component: SortableTableHeader,
   parameters: { layout: "padded" },
   args: { onSort: noop },

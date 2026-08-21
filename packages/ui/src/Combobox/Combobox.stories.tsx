@@ -34,7 +34,7 @@ const MANY: ListboxItem[] = Array.from(
 )
 
 const meta = {
-  title: "Components/Combobox",
+  title: "Components/Controls/Combobox",
   component: Combobox,
   parameters: { layout: "padded" },
 } satisfies Meta<typeof Combobox>

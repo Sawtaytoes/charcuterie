@@ -24,7 +24,7 @@ const COLUMN_ITEMS: SegmentedItem[] = [
 ]
 
 const meta = {
-  title: "Components/SegmentedControl",
+  title: "Components/Controls/SegmentedControl",
   component: SegmentedControl,
   parameters: { layout: "padded" },
   argTypes: { size: controlSizeArgType },

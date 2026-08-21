@@ -48,7 +48,7 @@ Replacement rails ordered from https://example.invalid/product?id=1234
 `
 
 const meta = {
-  title: "Components/MarkdownEditorCodeMirror",
+  title: "Components/Controls/MarkdownEditorCodeMirror",
   component: MarkdownEditorCodeMirror,
   parameters: { layout: "padded" },
   args: {

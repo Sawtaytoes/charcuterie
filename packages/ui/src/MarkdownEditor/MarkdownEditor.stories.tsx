@@ -45,7 +45,7 @@ ip -br addr show
 const noop = () => undefined
 
 const meta = {
-  title: "Components/MarkdownEditor",
+  title: "Components/Controls/MarkdownEditor",
   component: MarkdownEditor,
   parameters: { layout: "padded" },
   args: {

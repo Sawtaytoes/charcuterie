@@ -85,7 +85,7 @@ const ScopedSwitcherDemo = () => {
 }
 
 const meta = {
-  title: "Components/ColorSchemeSwitcher",
+  title: "Utilities/ColorSchemeSwitcher",
   component: ColorSchemeSwitcher,
   parameters: { layout: "padded" },
   // The three injected seams are functions/objects, not values a

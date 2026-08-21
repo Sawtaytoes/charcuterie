@@ -41,13 +41,24 @@ const GROUPED: SelectItem[] = [
 ]
 
 const meta = {
-  // `Deprecated/`, not `Components/`, and that is the whole point of
-  // moving it: the sidebar is the first place an agent looks for a
-  // picker, and a `Select` sitting between `Rail` and `Shell` reads
-  // as a component in good standing. Nothing new gets one — `Picker`
-  // is the drop-in. See the 2026-08-20 deprecation record.
-  title: "Deprecated/Select",
+  title: "Components/Controls/Select",
   component: Select,
+  /**
+   * Deprecated — `Picker` is the drop-in. This is a **label, not a
+   * relocation**: the component still lives beside the other
+   * controls, where somebody looking for a picker will actually
+   * find it, and the sidebar paints a badge on it there. A
+   * `Deprecated/` section instead of a label hides the warning from
+   * everyone who does not already know to look for it, which is
+   * exactly backwards.
+   *
+   * Manager entries take the **intersection** of their children's
+   * tags, so tagging the meta puts the badge on the `Select` node
+   * itself, not just on each story underneath it.
+   * `sidebar.renderLabel` in `@charcuterie/storybook-config/manager`
+   * is what draws it.
+   */
+  tags: ["deprecated"],
   parameters: { layout: "padded" },
   argTypes: { size: controlSizeArgType },
   args: {

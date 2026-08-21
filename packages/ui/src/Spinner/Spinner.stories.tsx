@@ -11,7 +11,7 @@ import {
 import { Spinner } from "./Spinner.tsx"
 
 const meta = {
-  title: "Components/Spinner",
+  title: "Components/Feedback/Spinner",
   component: Spinner,
   parameters: { layout: "padded" },
   argTypes: { size: controlSizeArgType },

@@ -9,7 +9,7 @@ import {
 import { Switch } from "./Switch.tsx"
 
 const meta = {
-  title: "Components/Switch",
+  title: "Components/Controls/Switch",
   component: Switch,
   parameters: { layout: "padded" },
   argTypes: { size: controlSizeArgType },
