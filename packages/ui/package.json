@@ -1,6 +1,6 @@
 {
   "name": "@charcuterie/ui",
-  "version": "3.3.0",
+  "version": "3.4.0",
   "description": "The Charcuterie components. Tokens for look, @charcuterie/logic for state, ARIA that agents can actually drive.",
   "license": "MIT",
   "type": "module",
@@ -18,6 +18,11 @@
       "source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./markdown-editor-codemirror": {
+      "source": "./src/markdownEditorCodeMirror/index.ts",
+      "types": "./dist/markdownEditorCodeMirror/index.d.ts",
+      "default": "./dist/markdownEditorCodeMirror/index.js"
     },
     "./react-router": {
       "source": "./src/reactRouter/index.ts",
@@ -55,16 +60,46 @@
     "tailwind-merge": "^3.6.0"
   },
   "peerDependencies": {
+    "@codemirror/commands": "^6",
+    "@codemirror/lang-markdown": "^6",
+    "@codemirror/language": "^6",
+    "@codemirror/state": "^6",
+    "@codemirror/view": "^6",
+    "@lezer/common": "^1",
     "react": ">=19",
     "react-dom": ">=19",
     "react-router": ">=7"
   },
   "peerDependenciesMeta": {
+    "@codemirror/commands": {
+      "optional": true
+    },
+    "@codemirror/lang-markdown": {
+      "optional": true
+    },
+    "@codemirror/language": {
+      "optional": true
+    },
+    "@codemirror/state": {
+      "optional": true
+    },
+    "@codemirror/view": {
+      "optional": true
+    },
+    "@lezer/common": {
+      "optional": true
+    },
     "react-router": {
       "optional": true
     }
   },
   "devDependencies": {
+    "@codemirror/commands": "^6",
+    "@codemirror/lang-markdown": "^6",
+    "@codemirror/language": "^6",
+    "@codemirror/state": "^6",
+    "@codemirror/view": "^6",
+    "@lezer/common": "^1",
     "@storybook/react": "^10.3.6",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",

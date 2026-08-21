@@ -395,6 +395,66 @@ export const insertLink = (
 }
 
 /**
+ * Does this pasted string want to become a link?
+ *
+ * Deliberately strict. A paste that is *mostly* a URL — a sentence
+ * with one in it, two URLs on two lines — is left alone, because
+ * the cost of guessing wrong is silently mangling something the
+ * user meant to paste literally. One absolute `http(s)` URL, no
+ * inner whitespace, nothing either side of it.
+ *
+ * `mailto:` and bare `www.` are excluded on the same principle:
+ * they are the cases where "did they mean a link?" genuinely has
+ * two answers.
+ */
+export const isLinkPaste = (pasted: string): boolean =>
+  /^https?:\/\/[^\s<>]+$/.test(pasted.trim())
+
+/**
+ * Paste a URL over selected text and get `[selected](url)`.
+ *
+ * Every editor the owner uses does this — Outline, Notion, Slack,
+ * GitHub — and its absence is why a link pasted into Docket stayed
+ * flat text nobody could click. It is the one paste behaviour worth
+ * intercepting, and it is still markdown in and markdown out.
+ *
+ * Unlike `insertLink`, the caret lands **after** the whole
+ * insertion rather than inside the destination: the URL is already
+ * known, so parking the selection in it would ask the user to
+ * replace what they just pasted.
+ *
+ * With an empty selection this is a plain insertion of the URL —
+ * autolink renders a bare URL as a link anyway, so wrapping it in
+ * `[](…)` with no text would produce an empty link instead.
+ */
+export const wrapSelectionInLink = (
+  state: MarkdownSelection,
+  url: string,
+): MarkdownSelection => {
+  const selected = state.text.slice(
+    state.selectionStart,
+    state.selectionEnd,
+  )
+
+  if (selected === "") {
+    return insertText(state, url)
+  }
+
+  const insertion = `[${selected}](${url})`
+
+  const caret = state.selectionStart + insertion.length
+
+  return replaceRange({
+    end: state.selectionEnd,
+    insertion,
+    selectionEnd: caret,
+    selectionStart: caret,
+    start: state.selectionStart,
+    text: state.text,
+  })
+}
+
+/**
  * What Enter should do inside a list, a task list or a blockquote —
  * or `null` when it should do the ordinary thing and the component
  * must not call `preventDefault`.
