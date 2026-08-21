@@ -1,0 +1,86 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as StepperStories from "./Stepper.stories";
+
+<Meta of={StepperStories} />
+
+# Stepper
+
+An ordered sequence of steps, with **what belongs to each one** under it.
+
+Docket asked for this. Its phases — *"these 3 cards have to be done in order"* — were a
+hand-rolled numbered rail with a connector drawn in a `::before`, and a `ProgressBar` per
+phase for the count. Neither says which things go together.
+
+<Canvas of={StepperStories.Default} />
+
+## Props
+
+<Controls />
+
+## Why a step carries content
+
+This is the difference between a stepper and a progress bar with a legend. A bar says a
+sequence is half done; only the contents say **which three things go together and which
+one is next**.
+
+```tsx
+<Stepper
+  label="Ingest sequence"
+  steps={phases.map((phase) => ({
+    content: <TaskList tasks={tasksIn(phase)} />,
+    description: gateReason(phase),
+    key: phase.id,
+    label: phase.name,
+    status: statusOf(phase),
+  }))}
+/>
+```
+
+## The four statuses, and why `blocked` is not a worse `upcoming`
+
+| Status | Means |
+| --- | --- |
+| `done` | Finished. |
+| `current` | Being worked on. |
+| `upcoming` | Its turn has not come. |
+| `blocked` | Its turn **has** come and something is in the way. |
+
+The last two look alike and are not. `upcoming` is a thing to wait for; `blocked` is a
+thing to go and fix, and collapsing them hides the second behind the first. Docket's case
+is exact: a phase gated behind an *unfinished* phase is normal, and a phase gated behind an
+**empty** one is a mistake somebody has to correct — the same grey pill for both is how
+that sits unnoticed.
+
+## Status is never colour alone
+
+Four marker colours is four colours as far as assistive technology, a greyscale print and
+the ePaper build are concerned — a WCAG 1.4.1 failure however clear it looks. So the status
+reaches a screen reader as a **word**, in a `VisuallyHidden` beside the label, and gets a
+second visual channel besides hue: a filled marker for finished work, an outlined one
+ahead of it, and a connector that is solid behind and subdued in front.
+
+## The marker is the ordinal, never a tick
+
+This library
+[ships no icons and no symbol glyphs](?path=/docs/guides-decisions--docs). A `✓` renders as
+an empty box wherever the font lacks it — the sandbox chromium, the kiosk image, the ePaper
+build — and an empty box in the "done" position reads as an *error*, which is the opposite
+of what it meant. The ordinal always renders. An app that owns a glyph set passes one as
+`marker`.
+
+## `horizontal` is a request, not a promise
+
+It collapses to the vertical column below `cq-md`. Four steps side by side in a narrow
+container squash into `2. / De- / dupe` — measured, in the app this came out of, before any
+of them contained anything. A step carrying `content` should stay vertical regardless: a
+column cannot hold a list.
+
+<Canvas of={StepperStories.Responsive} />
+
+## There is nothing to focus
+
+A stepper is a **document outline**, not a widget: an `<ol>` of headings. Advancing is the
+app's operation and the component only reports where the sequence got to, so there is no
+roving focus, no `aria-current` on a control, and nothing to arrow between. If your steps
+are *navigable* — a checkout you can click back into — you want `Tabs`.

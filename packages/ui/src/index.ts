@@ -329,6 +329,13 @@ export { SortableTableHeader } from "./SortableTableHeader/SortableTableHeader.t
 export type { SpinnerProps } from "./Spinner/Spinner.tsx"
 export { Spinner } from "./Spinner/Spinner.tsx"
 export type {
+  Step,
+  StepperOrientation,
+  StepperProps,
+  StepStatus,
+} from "./Stepper/Stepper.tsx"
+export { Stepper } from "./Stepper/Stepper.tsx"
+export type {
   SwatchAppearance,
   SwatchProps,
   SwatchSize,
