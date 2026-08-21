@@ -236,6 +236,13 @@ test("a container-query component is never storied in a shrink-to-fit cell", () 
     "Main",
     "MarkdownEditor",
     "MediaTile",
+    // `Stepper`'s container is the one that decides whether a
+    // `horizontal` sequence is actually horizontal. Below `--cq-md`
+    // it falls back to the vertical column, because four steps side
+    // by side in a narrow container squash into `2. / De- / dupe` —
+    // measured in Docket, before any of the steps contained
+    // anything.
+    "Stepper",
   ])
 
   // `StoryCell`s are never nested, so the lazy match really does
@@ -430,7 +437,7 @@ test("the barrel is the only place components are re-exported", async () => {
   // `useBoardDrag.ts` are its members and stay out of this count and
   // the barrel by the `<Name>/<Name>.tsx` rule, exactly as
   // `ToolbarSlot` and `QueryBuilderRow` do.
-  expect(componentNames.length).toBe(49)
+  expect(componentNames.length).toBe(50)
 
   for (const name of componentNames) {
     expect(barrel).toContain(`export { ${name} }`)
