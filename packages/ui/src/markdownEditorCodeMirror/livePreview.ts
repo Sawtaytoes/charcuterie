@@ -904,8 +904,20 @@ const livePreviewTheme = EditorView.theme({
   ".cm-md-table-rendered td, .cm-md-table-rendered th": {
     border: "1px solid var(--color-border-subtle)",
     cursor: "text",
+    /**
+     * Undo the editor's own wrapping rules inside a cell.
+     *
+     * `.cm-lineWrapping` sets `overflow-wrap: anywhere` so a long
+     * unbroken line cannot escape the gutter, and a table cell
+     * inherits it — which in the Narrow View broke `Port` across
+     * two lines as `Por` / `t`. A cell wraps at spaces like prose,
+     * and breaks a word only when the word alone will not fit.
+     */
+    overflowWrap: "break-word",
     padding: "var(--space-1) var(--space-2)",
     verticalAlign: "top",
+    whiteSpace: "normal",
+    wordBreak: "normal",
   },
   /**
    * A blank cell still owns a row's worth of height.
