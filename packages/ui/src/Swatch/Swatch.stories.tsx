@@ -22,7 +22,7 @@ const STICKERS = [
 ] as const
 
 const meta = {
-  title: "Components/Swatch",
+  title: "Components/Controls/Swatch",
   component: Swatch,
   parameters: { layout: "padded" },
   argTypes: { color: { control: "color" } },

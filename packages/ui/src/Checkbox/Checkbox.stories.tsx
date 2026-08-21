@@ -9,7 +9,7 @@ import {
 import { Checkbox } from "./Checkbox.tsx"
 
 const meta = {
-  title: "Components/Checkbox",
+  title: "Components/Controls/Checkbox",
   component: Checkbox,
   parameters: { layout: "padded" },
   argTypes: { size: controlSizeArgType },

@@ -20,7 +20,7 @@ const noop = () => undefined
  * is the documented way to hold one for an action anyway.
  */
 const meta = {
-  title: "Components/Toast",
+  title: "Components/Overlays/Toast",
   component: Toast,
   parameters: { layout: "padded" },
   argTypes: { intent: intentArgType },

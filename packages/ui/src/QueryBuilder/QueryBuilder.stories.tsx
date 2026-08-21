@@ -173,7 +173,7 @@ const QueryBuilderHarness = ({
 }
 
 const meta = {
-  title: "Components/QueryBuilder",
+  title: "Components/Controls/QueryBuilder",
   component: QueryBuilder,
   parameters: { layout: "padded" },
   args: {

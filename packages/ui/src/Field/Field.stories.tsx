@@ -13,7 +13,7 @@ const TEXT_INPUT_CLASS =
   "w-full rounded-md border border-border-default bg-surface-raised px-3 py-2 text-content-primary text-sm focus-visible:outline-solid focus-visible:outline-(length:--focus-ring-width) focus-visible:outline-offset-(--focus-ring-offset) focus-visible:outline-focus-ring"
 
 const meta = {
-  title: "Components/Field",
+  title: "Components/Controls/Field",
   component: Field,
   parameters: { layout: "padded" },
   args: {

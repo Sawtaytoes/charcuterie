@@ -16,7 +16,7 @@ import {
 import { Header } from "./Header.tsx"
 
 const meta = {
-  title: "Components/Header",
+  title: "Components/Layout/Header",
   component: Header,
   parameters: { layout: "fullscreen" },
   argTypes: {

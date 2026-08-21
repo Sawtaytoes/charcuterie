@@ -53,7 +53,7 @@ const STATE_SECTIONS: AccordionItem[] = [
 ]
 
 const meta = {
-  title: "Components/Accordion",
+  title: "Components/Layout/Accordion",
   component: Accordion,
   parameters: { layout: "padded" },
   args: {

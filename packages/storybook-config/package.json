@@ -16,6 +16,11 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
+    "./manager": {
+      "source": "./src/manager.ts",
+      "types": "./dist/manager.d.ts",
+      "default": "./dist/manager.js"
+    },
     "./preview": {
       "source": "./src/preview.tsx",
       "types": "./dist/preview.d.ts",

@@ -70,7 +70,7 @@ const TRACKS: ListboxItem[] = [
 ]
 
 const meta = {
-  title: "Components/Listbox",
+  title: "Components/Controls/Listbox",
   component: Listbox,
   parameters: { layout: "padded" },
   argTypes: { placement: placementArgType },

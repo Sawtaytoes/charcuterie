@@ -24,7 +24,7 @@ const CONNECTION_STATUSES = [
 ] as const
 
 const meta = {
-  title: "Components/LiveStatusIndicator",
+  title: "Components/Feedback/LiveStatusIndicator",
   component: LiveStatusIndicator,
   parameters: { layout: "padded" },
   argTypes: { status: connectionStatusArgType },

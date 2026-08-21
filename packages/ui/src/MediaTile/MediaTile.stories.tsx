@@ -25,7 +25,7 @@ const toPosterSrc = (label: string) =>
 const MISSING_SRC = "/charcuterie-missing-poster.png"
 
 const meta = {
-  title: "Components/MediaTile",
+  title: "Components/Data/MediaTile",
   component: MediaTile,
   parameters: { layout: "padded" },
   args: { aspectRatio: "poster" },
