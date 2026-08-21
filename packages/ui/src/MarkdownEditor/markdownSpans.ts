@@ -121,8 +121,22 @@ const TASK_MARKER_PATTERN = /^\[[ xX]\][ \t]*/
  *  - **Image before link**, because `![alt](url)` starts with a
  *    valid link at index 1.
  *  - **Strong before emphasis**, because `**` starts with `*`.
+ *  - **Link before autolink**, because the `https://…` inside
+ *    `[text](https://…)` is a destination, not a bare URL, and
+ *    matching it as one would paint the parentheses as link text.
  */
 const INLINE_PATTERNS = {
+  /**
+   * A bare URL, as GFM autolinks it.
+   *
+   * Trailing punctuation is excluded from the match rather than
+   * trimmed after: `see https://example.com.` ends a sentence, and
+   * the full stop belongs to the prose. The closing paren is
+   * likewise left out so `(see https://example.com)` does not
+   * swallow it — at the cost of clipping a URL that genuinely ends
+   * in one, which is the rarer and less annoying failure.
+   */
+  autolink: /https?:\/\/[^\s<>[\]()]+[^\s<>[\]().,;:!?'"]/y,
   code: /(`+)([^\n]*?)\1/y,
   emphasis: /([*_])(?=[^\s*_])([^\n*_]*?[^\s*_])\1/y,
   escape: /\\([\\`*_{}[\]()#+\-.!>~|])/y,
@@ -239,6 +253,27 @@ export const toInlineSpans = (
       pushSpan(spans, "marker", link[5] ?? "")
 
       index += link[0].length
+
+      continue
+    }
+
+    INLINE_PATTERNS.autolink.lastIndex = index
+
+    const autolinked = INLINE_PATTERNS.autolink.exec(text)
+
+    if (autolinked) {
+      // One span, no markers — there is no syntax to dim, because
+      // the user typed none. It paints as a URL so that a pasted
+      // link reads as a link, which is the whole complaint this
+      // answers: a URL dropped into a description used to be
+      // indistinguishable from prose.
+      //
+      // Running before `emphasis` also fixes a bug nobody filed:
+      // a URL with two underscores in it used to italicise the
+      // stretch between them.
+      pushSpan(spans, "url", autolinked[0])
+
+      index += autolinked[0].length
 
       continue
     }

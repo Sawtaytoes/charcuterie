@@ -215,3 +215,68 @@ test("the caret's line is found from its offset", () => {
 
   expect(toLineIndex(text, 9999)).toBe(2)
 })
+
+/**
+ * Gap 2 of Docket's markdown handoff. A URL pasted into a
+ * description used to tokenize as prose — no `url` span, nothing to
+ * paint, and indistinguishable from the words around it.
+ */
+test("a bare URL paints as a URL without being marked up", () => {
+  expect(
+    toInlineSpans("see https://example.com now"),
+  ).toEqual([
+    { kind: "plain", text: "see " },
+    { kind: "url", text: "https://example.com" },
+    { kind: "plain", text: " now" },
+  ])
+})
+
+test("a sentence's full stop is not part of the URL", () => {
+  expect(
+    toInlineSpans("read https://example.com/a."),
+  ).toEqual([
+    { kind: "plain", text: "read " },
+    { kind: "url", text: "https://example.com/a" },
+    { kind: "plain", text: "." },
+  ])
+})
+
+test("a parenthesised URL does not swallow the paren", () => {
+  expect(
+    toInlineSpans("(see https://example.com)"),
+  ).toEqual([
+    { kind: "plain", text: "(see " },
+    { kind: "url", text: "https://example.com" },
+    { kind: "plain", text: ")" },
+  ])
+})
+
+/**
+ * The destination inside an explicit link is already a `url` span
+ * emitted by the link rule, and the link rule runs first. If
+ * autolink won here, the `](` and `)` would stop being markers.
+ */
+test("an explicit link still tokenizes as a link", () => {
+  expect(
+    toInlineSpans("[docs](https://example.com)"),
+  ).toEqual([
+    { kind: "marker", text: "[" },
+    { kind: "link", text: "docs" },
+    { kind: "marker", text: "](" },
+    { kind: "url", text: "https://example.com" },
+    { kind: "marker", text: ")" },
+  ])
+})
+
+/**
+ * Autolink runs before emphasis, which fixes a bug that predates
+ * it: the stretch between two underscores in a URL used to paint
+ * as italic text.
+ */
+test("underscores inside a URL are not emphasis", () => {
+  expect(
+    toInlineSpans("https://example.com/a_b_c"),
+  ).toEqual([
+    { kind: "url", text: "https://example.com/a_b_c" },
+  ])
+})
