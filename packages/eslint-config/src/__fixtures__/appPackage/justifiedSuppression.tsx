@@ -7,8 +7,13 @@
 // suppressed one — a suppression that stops matching is a rule
 // that quietly stopped working.
 
-export const NativeSelectOnPurpose = () => (
-  // eslint-disable-next-line charcuterie/prefer-listbox-over-select -- the kiosk's touch build wants the native OS wheel picker
+// `Select` is deprecated outright as of 2026-08-20, so the only
+// honest reason left is "this one predates the deprecation and is
+// still in the conversion backlog" — not a platform argument. The
+// suppression mechanism is what this fixture tests; the reason
+// text is what it teaches.
+export const NativeSelectAwaitingConversion = () => (
+  // eslint-disable-next-line charcuterie/prefer-listbox-over-select -- pre-existing call site, queued for conversion to Picker
   <Select name="quality" />
 )
 

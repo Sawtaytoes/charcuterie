@@ -28,9 +28,9 @@ Start here. Find the row that matches what you are about to build.
 | Send the user somewhere, but it should *look* like a button | `ButtonLink` — a real `<a href>` painted as a button | `Button` with an `onClick` that navigates |
 | Do something on this page — submit, open, retry, delete | `Button` | `<button>`; a `<div onClick>` |
 | Do something on this page, and the control is icon-only | `IconButton` — `label` is **required** | `Button` with only a glyph inside |
-| Pick one of a handful of rich options | `Listbox` | a hand-rolled `role="listbox"` |
+| Pick one of a handful of options | `Picker` — a `Listbox` with the trigger attached | `Select`; a hand-rolled `role="listbox"`; a raw `<select>` |
+| Pick one, but the trigger is a tile, a table header, something that is not a button | `Listbox` | wrapping `Picker` in something that is not a button |
 | Pick from many, or the user should be able to type to find it | `Combobox` (`isMultiple` for multi-select) | a `<select>` with 400 `<option>` |
-| A native select, for one of four platform reasons | `Select`, with a written justification | reaching for it by default |
 | Label, describe or error-annotate any control | `Field` | a bare `<label>` + hand-wired `aria-describedby` |
 | Page chrome — header, rails, the content column | `Shell` / `Header` / `Rail` / `Main` | a new `AppShell.tsx` |
 | A grid of cards that should reflow | `AdaptiveGrid` | `grid-cols-*` breakpoints; `auto-fill, minmax()` |
@@ -70,11 +70,11 @@ accessible name — a screen reader reads `↶` as "↶", and
 `getByRole("button", { name: "Undo" })` finds nothing at all, which is the concrete reason
 the fleet is not agent-drivable today.
 
-### Pickers: `Listbox` and `Combobox` first, `Select` with a reason
+### Pickers: `Picker`, `Listbox`, `Combobox` — and never `Select`
 
-`Listbox` (short list, rich rows) and `Combobox` (long list, searchable) are the default.
-Both render options as `ReactNode`, so an icon, two lines or a badge is fine — which is what
-`<option>` cannot do.
+`Picker` (short list, its own trigger), `Listbox` (short list, your trigger) and `Combobox`
+(long list, searchable) are the picker family. All three render options as `ReactNode`, so an
+icon, two lines or a badge is fine — which is what `<option>` cannot do.
 
 ```tsx
 const [isVisible, setIsVisible] = useState(false)
@@ -93,23 +93,29 @@ const [isVisible, setIsVisible] = useState(false)
 `options` shape and adds `query`/`onQueryChange`, `isMultiple`, `isCreatable`,
 `isVirtualized` (auto-on past ~100 options).
 
-Native `Select` is **demoted, not deleted**. It is still right for four platform cases — the
-mobile wheel picker, autofill, `:invalid`, and a form that must submit with no JS on the page
-— and each call site says which, in a one-line reason on its lint suppression:
+`Picker` is the one to reach for by default, and it is what a native `Select` converts into
+almost line for line:
 
 ```tsx
-// eslint-disable-next-line charcuterie/prefer-listbox-over-select -- posted by the browser with no JS on the page at all
-<Select label="Country" options={COUNTRIES} />
+// Deprecated.
+<Select label="Quality" onChange={setQuality} options={QUALITY_OPTIONS} value={quality} />
+
+// This.
+<Picker label="Quality" onChange={setQuality} options={QUALITY_OPTIONS} value={quality} />
 ```
 
-Note `Select`'s `value` is an **initial** value that seeds `defaultValue` — the platform owns
-the value, so there is no controlled mode and no prop-sync effect.
+Native `Select` is **deprecated as of 2026-08-20** and nothing new gets one. The four platform
+cases that used to excuse it — the mobile wheel picker, autofill, `:invalid`, and a form that
+posts with no JS — have never applied to an app in this fleet, and the exception is what kept
+getting read as permission. There is no per-call-site exception left: a native `Select` is a
+new decision record in charcuterie, and the disable comment cites it. Everything already on
+one is a conversion backlog, not a settled state.
 
 ### `Field` is a generic wrapper, not a text input
 
 The name undersells it. `Field` is **not** a text field, and it contains no input of its own:
 it renders the label, description and error, and **clones any single child** to wire them up
-— an `<input>`, a `<textarea>`, a `Select`, a `FileDropZone`, or a control your app wrote
+— an `<input>`, a `<textarea>`, a `Picker`, a `FileDropZone`, or a control your app wrote
 itself. Same slot contract as `Popover`'s trigger, so the child's own layout is untouched.
 
 ```tsx
@@ -118,7 +124,7 @@ itself. Same slot contract as `Popover`'s trigger, so the child's own layout is 
 </Field>
 
 <Field error={errors.quality} isRequired label="Quality">
-  <Select options={QUALITY_OPTIONS} />
+  <Picker label="Quality" onChange={setQuality} options={QUALITY_OPTIONS} value={quality} />
 </Field>
 ```
 
@@ -341,8 +347,9 @@ The short version:
 - Navigation is `TextLink` / `ButtonLink` — a real `<a href>`. **Never** `<button onClick={navigate}>`,
   never a clickable `<div>`.
 - On-page actions are `Button`; icon-only actions are `IconButton`, whose `label` is required.
-- Pickers are `Listbox` (short, rich) or `Combobox` (long, searchable). A native `Select`
-  needs a written reason on the line above it.
+- Pickers are `Picker` (short list, brings its own trigger), `Listbox` (short list, your own
+  trigger) or `Combobox` (long, searchable). **Never a native `Select`** — it is deprecated,
+  and `Picker` takes the same `label` / `options` / `value` / `onChange`.
 - Labels, descriptions and errors come from `Field`, which clones **any** child control.
 - Page chrome is `Shell` / `Header` / `Rail` / `Main`. Do not add an `AppShell.tsx`.
 - Reflowing grids are `AdaptiveGrid`.

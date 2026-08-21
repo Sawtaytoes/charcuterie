@@ -298,6 +298,11 @@ export type {
   SegmentedItem,
 } from "./SegmentedControl/SegmentedControl.tsx"
 export { SegmentedControl } from "./SegmentedControl/SegmentedControl.tsx"
+// DEPRECATED 2026-08-20. `Select` is the native `<select>` and
+// nothing new gets one — `Picker` is the drop-in, `Combobox` when
+// the list wants typing. It stays exported so the fleet's existing
+// call sites keep compiling while they convert, and for no other
+// reason; see the decision record next to the component.
 export type {
   SelectItem,
   SelectOption,
