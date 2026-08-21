@@ -10,6 +10,7 @@
       "!.yarn",
       "!docs/previews",
       "!packages/tokens/preview",
+      "!packages/biome-config/**/__fixtures__",
       "!packages/eslint-config/**/__fixtures__",
       "!**/*.gen.ts",
       "!**/*.gen.tsx",

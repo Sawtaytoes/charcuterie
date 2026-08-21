@@ -21,6 +21,7 @@ export default defineConfig(
       // isn't in a tsconfig `include` trips the type-aware project
       // service.
       "**/*.d.ts",
+      "packages/biome-config/src/__fixtures__/**",
       "packages/eslint-config/src/__fixtures__/**",
       "packages/tokens/preview/**",
     ],

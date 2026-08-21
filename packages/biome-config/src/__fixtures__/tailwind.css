@@ -1,0 +1,4 @@
+/* Parser fixture: `@source` is Tailwind-specific syntax, and
+   Biome refuses to parse it unless `css.parser.tailwindDirectives`
+   is on — which is a BASE setting. */
+@source "../ui/dist";

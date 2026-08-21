@@ -11,6 +11,7 @@ export default defineConfig({
       "packages/tokens/vitest.config.ts",
       "packages/logic/vitest.config.ts",
       "packages/logic/vitest.browser.config.ts",
+      "packages/biome-config/vitest.config.ts",
       "packages/eslint-config/vitest.config.ts",
       "packages/vite-config/vitest.config.ts",
       "packages/vitest-config/vitest.config.ts",
