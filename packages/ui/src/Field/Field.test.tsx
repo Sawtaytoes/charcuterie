@@ -13,6 +13,7 @@ const {
   AllStates,
   AllVariants,
   Default,
+  ForwardsRestProps,
   Group,
   Nested,
 } = composeStories(stories)
@@ -446,4 +447,140 @@ test("a group describes its error rather than asserting invalidity", async () =>
   ).toHaveTextContent(
     "A pattern needs at least one capture group.",
   )
+})
+
+/**
+ * The gap this closes, stated as the two things that were impossible.
+ *
+ * `FieldProps` and `FieldGroupProps` were closed types, so the only
+ * prop that reached an element was `className` — which is the escape
+ * hatch the "configured by props, not a borrowed class" rule exists to
+ * close. A component that accepts only `className` forces the very
+ * thing the rule forbids, and queuepilot paid for it twice: a
+ * `FieldGroup` that had to give up the `id` its screenshot suite
+ * drives by, and a box beside it that stayed a hand-rolled
+ * `<fieldset>` because it needed `hidden`.
+ *
+ * `Field` clones its child, so its props are the **control's**. The
+ * assertion is which element they landed on, because that is the half
+ * that could have gone silently wrong: routing them to the wrapper
+ * would have moved every consumer's `id` off the control the
+ * `<label htmlFor>` points at.
+ */
+test("a rest prop reaches the control, not the box around it", async () => {
+  const { canvas, canvasElement } = await mountStory(
+    ForwardsRestProps,
+  )
+
+  const control = expectAgentDrivable(canvas, {
+    name: "Scratch path",
+    role: "textbox",
+  })
+
+  await expect(control).toHaveAttribute(
+    "name",
+    "scratchPath",
+  )
+
+  await expect(control).toHaveAttribute(
+    "placeholder",
+    "/mnt/scratch",
+  )
+
+  // …and the `<div>` did not take them. `Field`'s own `className` is
+  // the one prop that stays on the box, so the two destinations have
+  // to be distinguishable in the DOM rather than merely documented.
+  await expect(
+    canvasElement.querySelector("[name='scratchPath']"),
+  ).toBe(control)
+
+  await expectNoAxeViolations(canvasElement)
+})
+
+/**
+ * `aria-describedby` is a **list**, and opening the type is what makes
+ * a caller able to write one at all. A plain spread would keep one
+ * side and drop the other — the same silent drop `mergeSlotProps`
+ * exists to prevent between two nested slots, arriving by a shorter
+ * route now that the outer writer can be the author.
+ *
+ * Order is behaviour, not formatting: what the caller passed is the
+ * outer declaration and reads first, then the field's own description,
+ * then its error.
+ */
+test("a caller's aria-describedby composes with the description and the error", async () => {
+  const { canvas } = await mountStory(ForwardsRestProps)
+
+  const control = expectAgentDrivable(canvas, {
+    name: "Scratch path",
+    role: "textbox",
+  })
+
+  const [policyId, descriptionId, errorId] = (
+    control.getAttribute("aria-describedby") ?? ""
+  ).split(" ")
+
+  await expect(
+    document.getElementById(policyId ?? ""),
+  ).toHaveTextContent("Cleared between runs.")
+
+  await expect(
+    document.getElementById(descriptionId ?? ""),
+  ).toHaveTextContent("Absolute paths only.")
+
+  await expect(
+    document.getElementById(errorId ?? ""),
+  ).toHaveTextContent("That path is not writable.")
+
+  // The error is still the only source of invalidity, and a caller's
+  // own description did not disturb it.
+  await expect(control).toHaveAttribute(
+    "aria-invalid",
+    "true",
+  )
+})
+
+/**
+ * The other reading of the same rule. `FieldGroup` renders its
+ * children as-is, so the only element it owns is the `<fieldset>` and
+ * a prop has nowhere else to go — including `disabled`, which on this
+ * element is not decoration: the platform disables every control
+ * inside it.
+ *
+ * This is the case queuepilot's `#dyn-lineup` needed and could not
+ * have: an `id` on the group's own element.
+ */
+test("a rest prop reaches the fieldset, and the fieldset disables what is inside it", async () => {
+  const { canvas, canvasElement } = await mountStory(
+    ForwardsRestProps,
+  )
+
+  const group = expectAgentDrivable(canvas, {
+    name: "Playback",
+    role: "group",
+  })
+
+  await expect(group).toHaveAttribute(
+    "id",
+    "playback-lineup",
+  )
+
+  await expect(group.tagName).toBe("FIELDSET")
+
+  // The `<legend>` still names the group, and the group's own
+  // description still reaches it, so the rest props did not overwrite
+  // the wiring they were spread beside.
+  await expect(
+    document.getElementById(
+      group.getAttribute("aria-describedby") ?? "",
+    ),
+  ).toHaveTextContent(
+    "The whole group is turned off by the element itself.",
+  )
+
+  await expect(
+    canvasElement.querySelector("input[type='number']"),
+  ).toBeDisabled()
+
+  await expectNoAxeViolations(canvasElement)
 })

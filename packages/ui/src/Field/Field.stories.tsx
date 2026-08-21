@@ -329,3 +329,82 @@ export const Group: Story = {
     </StoryGrid>
   ),
 }
+
+/**
+ * Where a prop lands, in both components, side by side.
+ *
+ * `FieldProps` and `FieldGroupProps` were **closed** types until
+ * 2026-08-21: the only prop a caller could legally pass was
+ * `className`, so a component whose whole purpose is "configured by
+ * props, not a borrowed class" forced the borrowed class. queuepilot's
+ * `#dyn-lineup` gave up an `id` its screenshot suite drives by, and
+ * the box beside it stayed a hand-rolled `<fieldset>` because it
+ * needed `hidden`.
+ *
+ * The rule that opens them is one sentence with two readings, because
+ * the two components own different elements:
+ *
+ *  - **`Field` clones its child**, so its props are that **control's**
+ *    props. `name`, `placeholder`, `autoFocus`, `aria-describedby` and
+ *    `id` all reach the `<input>` — `id` always did, which is why the
+ *    rest go with it rather than moving it.
+ *  - **`FieldGroup` wraps its children**, so its props are the
+ *    **`<fieldset>`'s**. `id`, `hidden`, `ref`, and the element's own
+ *    `disabled`, `form` and `name`.
+ *
+ * `className` is the exception on `Field` alone: a class describes the
+ * box a parent lays out, so it stays on the wrapping `<div>`.
+ */
+export const ForwardsRestProps: Story = {
+  args: {
+    children: (
+      <input className={TEXT_INPUT_CLASS} type="text" />
+    ),
+    label: "Output directory",
+  },
+  render: () => (
+    <StoryGrid columns={2}>
+      <StoryCell label="field: the props are the control's">
+        <Field
+          // Composed with the field's own description and error, not
+          // replaced by them — `aria-describedby` is the one prop in
+          // the set that is a list.
+          aria-describedby="scratch-path-policy"
+          description="Absolute paths only."
+          error="That path is not writable."
+          label="Scratch path"
+          name="scratchPath"
+          placeholder="/mnt/scratch"
+        >
+          <input className={TEXT_INPUT_CLASS} type="text" />
+        </Field>
+
+        <p
+          className="mt-1.5 text-content-secondary text-sm"
+          id="scratch-path-policy"
+        >
+          Cleared between runs.
+        </p>
+      </StoryCell>
+
+      <StoryCell label="group: the props are the fieldset's">
+        <FieldGroup
+          description="The whole group is turned off by the element itself."
+          // `disabled` on a `<fieldset>` is not decoration: the
+          // platform disables every control inside it. A `<div>`-based
+          // group could not have offered this at all.
+          disabled
+          id="playback-lineup"
+          label="Playback"
+        >
+          <input
+            aria-label="Episodes"
+            className={TEXT_INPUT_CLASS}
+            defaultValue="12"
+            type="number"
+          />
+        </FieldGroup>
+      </StoryCell>
+    </StoryGrid>
+  ),
+}
