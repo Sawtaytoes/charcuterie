@@ -227,15 +227,21 @@ export const NO_RAW_SELECT_MESSAGE = [
 ].join(" ")
 
 export const PREFER_LISTBOX_OVER_SELECT_MESSAGE = [
-  "`Select` is demoted: reach for `Listbox` (short, rich",
-  "options) or `Combobox` (long, searchable) first. `Select` is",
-  "still legal where the native platform behaviour is the point",
-  "— the mobile OS wheel picker, autofill, or uncontrolled form",
-  "submission — but say which in a one-line justification:",
-  "`// eslint-disable-next-line",
-  "charcuterie/prefer-listbox-over-select -- native wheel picker",
-  "on mobile`. See",
-  "docs/decisions/2026-08-10-listbox-and-combobox-are-the-default-and-select-is-demoted.md.",
+  "`Select` is **deprecated** — the native `<select>` popup is",
+  "painted by the OS and nothing in the design system reaches",
+  "inside it. Use `Picker` (a `Listbox` with the trigger",
+  "attached, and a drop-in for this: `label`, `options`,",
+  "`value`, `onChange`), `Listbox` when the trigger is",
+  "something else, or `Combobox` when the list is long enough",
+  "to want typing. The four platform cases that used to excuse",
+  "a native one — wheel picker, autofill, `:invalid`, no-JS",
+  "form post — have never applied to an app in this fleet, so",
+  "there is no per-call-site exception left: a native `Select`",
+  "is a new decision record in charcuterie, and the disable",
+  "comment cites it (`// eslint-disable-next-line",
+  "charcuterie/prefer-listbox-over-select -- <link to the",
+  "decision>`). See",
+  "docs/decisions/2026-08-20-native-select-is-deprecated-and-the-platform-hatch-is-closed.md.",
 ].join(" ")
 
 export const NO_CLICKABLE_NON_INTERACTIVE_MESSAGE = [
@@ -344,7 +350,7 @@ export const COMPONENT_CHOICE_RULES = {
       type: /** @type {const} */ ("suggestion"),
       docs: {
         description:
-          "`Listbox` and `Combobox` are the default; `Select` needs a stated reason.",
+          "`Select` is deprecated; pick with `Picker`, `Listbox` or `Combobox`.",
       },
       messages: {
         preferListbox: PREFER_LISTBOX_OVER_SELECT_MESSAGE,
