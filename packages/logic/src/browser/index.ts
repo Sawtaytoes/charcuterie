@@ -161,3 +161,27 @@ export const dataSchemeApplier = (
     element?.setAttribute("data-scheme", resolvedScheme)
   }
 }
+
+/**
+ * Drop the browser's own text selection.
+ *
+ * Shift-clicking inside a grid of text drags a native text
+ * selection along with it — every card from the anchor to the
+ * pointer goes grey-blue and stays that way, over the top of the
+ * app's own selected state. A click handler's `preventDefault`
+ * does not undo it, because the range was started by the
+ * **mousedown** before React ever saw the click.
+ *
+ * Guarded on `window` like everything else in this module, so a
+ * server render calls it and nothing happens.
+ */
+export const clearTextSelection = () => {
+  const selection =
+    typeof window === "undefined"
+      ? null
+      : window.getSelection()
+
+  if (selection !== null && !selection.isCollapsed) {
+    selection.removeAllRanges()
+  }
+}

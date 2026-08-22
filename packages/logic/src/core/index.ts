@@ -135,6 +135,12 @@ export {
   selectVisibleKey,
 } from "./createVisibilityGroup.ts"
 export type {
+  SelectionAnchor,
+  SelectionClick,
+  SelectionResult,
+} from "./rangeSelection.ts"
+export { applySelectionClick } from "./rangeSelection.ts"
+export type {
   AsyncStatus,
   ConnectionStatus,
 } from "./statusMachines.ts"
