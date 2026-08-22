@@ -322,6 +322,11 @@ export type {
 } from "./Skeleton/Skeleton.tsx"
 export { Skeleton } from "./Skeleton/Skeleton.tsx"
 export type {
+  SliderProps,
+  SliderSize,
+} from "./Slider/Slider.tsx"
+export { Slider } from "./Slider/Slider.tsx"
+export type {
   SortableTableHeaderProps,
   SortDirection,
 } from "./SortableTableHeader/SortableTableHeader.tsx"
