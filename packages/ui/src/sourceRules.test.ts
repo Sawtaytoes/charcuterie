@@ -437,7 +437,16 @@ test("the barrel is the only place components are re-exported", async () => {
   // `useBoardDrag.ts` are its members and stay out of this count and
   // the barrel by the `<Name>/<Name>.tsx` rule, exactly as
   // `ToolbarSlot` and `QueryBuilderRow` do.
-  expect(componentNames.length).toBe(50)
+  //
+  // `VirtualizedGrid` — `AdaptiveGrid`'s layout with only the
+  // visible rows mounted — is +1 -> 51. It **calls**
+  // `useAdaptiveColumns` rather than forking it, so the two grids
+  // cannot answer the column question differently; windowing is the
+  // whole of the difference. `gridGap.ts` is its member and stays
+  // out of this count by the `<Name>/<Name>.tsx` rule, while still
+  // being exported from the barrel — a consumer measuring its own
+  // `itemBlockSize` needs the number the rows are spaced by.
+  expect(componentNames.length).toBe(51)
 
   for (const name of componentNames) {
     expect(barrel).toContain(`export { ${name} }`)
