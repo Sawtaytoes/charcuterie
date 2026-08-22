@@ -1,5 +1,12 @@
 # @charcuterie/ui
 
+## 3.8.1
+
+### Patch Changes
+
+- Updated dependencies [79f0124]
+  - @charcuterie/logic@2.1.0
+
 ## 3.8.0
 
 ### Minor Changes
