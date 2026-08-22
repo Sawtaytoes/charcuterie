@@ -9,6 +9,11 @@ import type {
 } from "react"
 
 import { toClassName } from "../toClassName.ts"
+import type { CardAccentEdge } from "./cardAccentEdge.ts"
+import {
+  getAccentEdgeClassName,
+  getAccentEdgeStyle,
+} from "./cardAccentEdge.ts"
 
 export type CardSurface = Extract<
   SurfaceRole,
@@ -18,6 +23,16 @@ export type CardSurface = Extract<
 export type CardPadding = "lg" | "md" | "none" | "sm"
 
 export type CardProps = ComponentPropsWithRef<"section"> & {
+  /**
+   * A coloured bar down the leading edge, following the card's own
+   * corners.
+   *
+   * `{ categorical: 3 }` for a colour a user picked; `{ color }`
+   * for one an app computed — a hue hashed from a repo's name, say,
+   * where ten indices are not enough. See `cardAccentEdge.ts` for
+   * why it is a pseudo-element and not a border.
+   */
+  accentEdge?: CardAccentEdge
   /** Buttons or a badge, laid out beside the heading. */
   actions?: ReactNode
   elevation?: ElevationStep
@@ -79,6 +94,7 @@ const PADDING_CLASS: Record<CardPadding, string> = {
  * a layout fact rather than a density one.
  */
 export const Card = ({
+  accentEdge,
   actions,
   children,
   className,
@@ -87,10 +103,24 @@ export const Card = ({
   heading,
   headingLevel = 2,
   padding = "md",
+  style,
   surface = "raised",
   ...sectionProps
 }: CardProps): ReactNode => {
   const headingId = useUniqueId()
+
+  // The caller's own `style` wins. An accent colour is one custom
+  // property, and silently dropping whatever else the call site set
+  // would be a worse trade than letting it override this one.
+  const accentEdgeStyle =
+    accentEdge == null
+      ? undefined
+      : getAccentEdgeStyle(accentEdge)
+
+  const mergedStyle =
+    accentEdgeStyle == null
+      ? style
+      : { ...accentEdgeStyle, ...style }
 
   const Heading = `h${headingLevel}` as const
 
@@ -108,8 +138,12 @@ export const Card = ({
         SURFACE_CLASS[surface],
         ELEVATION_CLASS[elevation],
         PADDING_CLASS[padding],
+        accentEdge == null
+          ? undefined
+          : getAccentEdgeClassName(accentEdge),
         className,
       )}
+      style={mergedStyle}
     >
       {heading || actions ? (
         <header className="flex flex-col gap-2 cq-sm:flex-row cq-sm:items-start cq-sm:justify-between">

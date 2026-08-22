@@ -51,3 +51,24 @@ The header stacks below `--cq-sm` and sits on one row above it, and the containe
 cannot tell apart, and it is where the fleet's poster grids look wrong today.
 
 <Canvas of={CardStories.Responsive} />
+
+## The accent edge follows the corner
+
+`accentEdge` draws a coloured bar down the leading edge. `{ categorical: 3 }` is a colour a
+user picked, from the ten-wide contrast-audited family; `{ color }` is one the app computed,
+for the case where ten indices are not enough — Folio hashes a repo's name so a repo added
+tomorrow already has a hue and nobody maintains a palette.
+
+> **It is a pseudo-element, not a border, and that is the whole point.** Three apps grew this
+> shape independently and all three drew a straight border beside a rounded box, so the bar
+> ran past the curve and stopped square while the card was round. A border is painted on the
+> border box; it cannot follow a corner. The overlay here takes `border-radius: inherit`, so
+> the bar reads the radius off whatever card it is on and nobody states one twice.
+
+Two shapes this deliberately is not. **Not `box-shadow: inset` on the card itself** — `Card`
+carries `shadow-low` from the elevation scale, and a `box-shadow` at the call site outranks
+that utility and takes the elevation with it. **Not a 3px-wide pseudo-element with a rounded
+leading edge** — a `0.5rem` radius on a 3px box is clamped to fit, so it caps the bar instead
+of following the curve.
+
+<Canvas of={CardStories.AccentEdge} />
