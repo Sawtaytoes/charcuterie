@@ -1,6 +1,6 @@
 {
   "name": "@charcuterie/logic",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "The five Charcuterie state kinds — Visibility, VisibilityGroup, SinglePicker, MultiplePicker, RovingFocus, and Status — as framework-free cores with React and Preact bindings.",
   "license": "MIT",
   "type": "module",
