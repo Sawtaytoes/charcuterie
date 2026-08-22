@@ -1,0 +1,110 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as VirtualizedGridStories from "./VirtualizedGrid.stories";
+
+<Meta of={VirtualizedGridStories} />
+
+# VirtualizedGrid
+
+**`AdaptiveGrid`, with only the rows you can see mounted.** Same column rule, same
+two-box structure, same content cap. The one difference is that a list of 2,000 costs
+about as much as a list of 40.
+
+<Canvas of={VirtualizedGridStories.Default} />
+
+## Props
+
+<Controls />
+
+## When to reach for it
+
+Not by default. `AdaptiveGrid` renders everything it is handed, and that is the right
+behaviour: the DOM is searchable with `Ctrl+F`, `Ctrl+End` goes where you expect, and
+nothing has to be measured. Reach for this one when the item count is genuinely
+unbounded — a library listing, an inbox, a backlog that grows.
+
+The number that prompted it, measured on QueuePilot's Pending page:
+
+| | Every item rendered |
+| --- | --- |
+| Items | 2,162 |
+| DOM nodes | 19,933 |
+| `<img>` elements | 2,162 |
+| `<button>` elements | 4,371 |
+| Time to settle | 7.8 s |
+| Scroll rate | ~43 fps |
+
+Nothing about that page was wrong except how much of it existed at once.
+
+## Rows are the unit
+
+The virtualizer counts **rows**, not items. An item-level virtualizer would have to place
+every item on both axes; a row-level one gets the inline axis from CSS grid for free and
+only ever answers "how far down".
+
+So `itemBlockSize` is a row-height estimate, and unlike `AdaptiveGrid`'s it is not a
+commitment — every mounted row is measured and the estimate corrected. It still wants to
+be close, because it is what the scrollbar is sized from before anything has been
+measured. A bad guess makes the bar jump under the thumb on the first scroll.
+
+## It scrolls the page, not a box of its own
+
+`useWindowVirtualizer`, so the page scrolls the way every other page in the fleet
+scrolls — the header leaves, the scrollbar is the browser's, `Ctrl+End` works. A
+component that grew its own `overflow: auto` well would trap the wheel and strand the
+page header above it.
+
+The cost is that the grid has to know how far down the document it starts, which it
+measures in a layout effect and feeds to the virtualizer as `scrollMargin`. Get that
+wrong and every row is offset by the height of the header above it.
+
+## The column rule is inherited, not reimplemented
+
+<Canvas of={VirtualizedGridStories.AllVariants} />
+
+Columns come from `useAdaptiveColumns` — the identical hook `AdaptiveGrid` calls. The
+consequence that reads backwards holds here too: a **taller** window takes **fewer**
+columns, because height is what a column is bought with.
+
+This is deliberate. A second column heuristic that windowed lists followed and flow lists
+did not would be a fleet where the same content lays out two ways depending on how many
+of it there are.
+
+## The states that are easy to miss
+
+<Canvas of={VirtualizedGridStories.AllStates} />
+
+An empty list draws a zero-height box and no rows — a windowed grid must not reserve
+space for a list that is not there, and it is the state a filter lands on. One item is
+one column, the same answer `AdaptiveGrid` gives.
+
+## It is still read from the container
+
+<Canvas of={VirtualizedGridStories.Responsive} />
+
+The browser never moves and the column count still falls. Inline size comes off a
+`ResizeObserver` on the container, so a grid beside a rail gets the room it actually has
+rather than the room the window claims.
+
+## Accessibility
+
+A mounted window is a lie about length, so the true length is stated rather than implied:
+
+- `role="list"` on the grid, with the `label` prop as its accessible name.
+- `aria-setsize` on every cell, carrying the **full** item count.
+- `aria-posinset` naming each cell's real position in that full list.
+- `role="presentation"` on the row wrappers — they are a positioning device and have no
+  business appearing in the structure.
+
+Without `aria-setsize` a screen reader announces "list, 40 items" on a list of 2,000.
+
+Two things windowing genuinely costs, and neither has a fix at this layer: the browser's
+`Ctrl+F` only searches what is mounted, and so does "select all". A page that needs
+either owes its users a search field of its own.
+
+## `getItemKey`
+
+Pass one. Without it the key is the array index, which is wrong the moment the list is
+filtered or an item is removed from the middle — React reuses the mounted subtree and the
+wrong tile inherits the wrong open menu. That is not hypothetical; it is what a
+dismiss-an-item list does on every interaction.
