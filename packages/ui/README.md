@@ -48,6 +48,16 @@ Moving a card takes **no drag-and-drop dependency**: one handle per card, a `Men
 other lanes as the primary path, Pointer-Event dragging at 1.4 KB gzip beside it
 ([decision](../../docs/decisions/2026-08-19-the-board-owns-the-move-and-takes-no-drag-and-drop-dependency.md)).
 
+**`BadgeButton` is a `Badge` you can press**, and it came from a consumer rather than from a
+plan: QueuePilot has six pill-shaped controls — per-entry setting tags, an Edit chip, two
+start-point chips, a group chip, a pool's Exclude chip — that were hand-rolled
+`<button className="badge …">` because `Badge` is a `<span>`. A sibling component, exactly
+as `ButtonLink` is to `Button`: one paint through `useBadgeShape`, compared as **computed**
+styles in the test, and a real `<button>` for focus, Enter, Space, `:disabled` and a role a
+screen reader announces. `onClick` is required, so a pill nobody can press is a `Badge` by
+construction
+([decision](../../docs/decisions/2026-08-22-a-pressable-badge-is-a-sibling-component-not-a-prop.md)).
+
 **The unified app shell adds four**: `Shell`, `Header`, `Rail`, `Main` — the fleet's largest
 single duplication, where ten of twelve UI repos hand-roll the page chrome and three of them
 have a file named `AppShell.tsx` (two of those headers are a *byte-identical* class string,

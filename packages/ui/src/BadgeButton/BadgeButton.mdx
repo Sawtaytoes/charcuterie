@@ -1,0 +1,67 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as BadgeButtonStories from "./BadgeButton.stories";
+
+<Meta of={BadgeButtonStories} />
+
+# BadgeButton
+
+**A badge you can press.** It takes `Badge`'s visual props and paints identically to it —
+and it is a real `<button>`.
+
+QueuePilot is where this came from. Its poster tiles carry per-entry settings as *tags*: a
+default entry says nothing, and every tag you do see is a deviation worth reading. Each one
+opens the panel that changes it, so each one is pressable — and all six were spelled
+`<button className="badge tagbtn …">`, a hand-painted pill in app CSS, because the library
+had no way to make `Badge` pressable. The same shape turns up on a start-point chip, a
+group chip and a pool's Exclude chip.
+
+<Canvas of={BadgeButtonStories.Default} />
+
+## Props
+
+<Controls />
+
+## It is the same pill, not a copy of it
+
+`Badge` and `BadgeButton` both build their pill through `useBadgeShape`, so the class list,
+the icon slot, the truncation and the only-when-clipped `title` are read once rather than
+duplicated. `BadgeButton.test.tsx` then compares the two elements' **computed** styles in
+the real browser, which is the version of that claim a refactor cannot quietly break.
+
+<Canvas of={BadgeButtonStories.BesideABadge} />
+
+<Canvas of={BadgeButtonStories.AllVariants} />
+
+## What the element buys, and none of it is paint
+
+Focus, the tab order, Enter **and** Space, `:disabled`, form participation, and a `button`
+role a screen reader announces as pressable. A `<span onClick>` has none of them, and
+`getByRole("button", { name })` — what every test and every agent driving the app matches
+on — finds nothing at all.
+
+<Canvas of={BadgeButtonStories.AllStates} />
+
+## Why not `asChild`, and why not `Badge` growing an `onClick`
+
+This library has no polymorphism pattern and has not needed one. Adding `asChild` here would
+make every future component answer "can it be something else?" instead of "what is it?",
+and the precedent already exists in the other direction: `ButtonLink` is a sibling of
+`Button` for exactly this reason.
+
+An element type that changes as a **side effect** of passing a handler is worse. Forget the
+handler and the control silently ships as a `<span>` — not focusable, not in the tab order,
+invisible to `getByRole`, with no error anywhere. `onClick` is required here instead, so a
+pill nobody can press is a `Badge` by construction.
+
+## Two defaults worth knowing
+
+**`type="button"`.** These chips sit inside forms — QueuePilot's entry sheet is one — and
+the platform's default of `submit` would make a "change the start point" chip save the whole
+dialog. It is overridable, because a badge-shaped submit is a real thing.
+
+**`ghost` is excluded**, inherited from `Badge`: a pill that paints nothing until hovered
+has no pill left, and a control that only advertises itself on hover cannot be found by
+touch.
+
+<Canvas of={BadgeButtonStories.InATileFooter} />
