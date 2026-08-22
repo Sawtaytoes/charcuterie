@@ -1,0 +1,78 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as SliderStories from "./Slider.stories";
+
+<Meta of={SliderStories} />
+
+# Slider
+
+A single-value range control: what `<input type="range">` is, without the OS painting it.
+
+The fleet had no way to ask for a value along a range, so QueuePilot's Now-playing bar
+could not have a scrubber and the choice was a native range input or a hand-rolled one in
+a single app. `ProgressBar` looks like the answer and is not — it is **output**, it takes
+no input, and `role="progressbar"` tells assistive technology exactly that.
+
+<Canvas of={SliderStories.Default} />
+
+## Props
+
+<Controls />
+
+## Why a `div` and not `<input type="range">`
+
+The same reason [`Select` is deprecated](?path=/docs/components-controls-select--docs).
+
+A range input's thumb and track are UA pseudo-elements — `::-webkit-slider-thumb`,
+`::-moz-range-track` — and they are not one surface: the two engines disagree about which
+of them the filled portion even belongs to, so a token-styled range is two stylesheets that
+drift apart. Windows paints its own regardless.
+
+`role="slider"` on a focusable `div` is the APG's own pattern, gets the same AT support, and
+every pixel of it is ours.
+
+## The role, the tab stop and the pointer target are all the track
+
+Putting them on the thumb is what a hand-rolled slider usually does, because the thumb is
+the part that looks draggable. It gives the widget a 16px box: a press on the bar does
+nothing, and a Playwright bounding box is the handle rather than the control.
+
+The hit area is a row taller than the bar, because a 2px track is not a pointer target.
+
+## Drag does not commit
+
+`onChange` fires on every movement — each arrow key, each pointer sample. `onChangeEnd`
+fires once, on release or key up.
+
+This split exists because the expensive consumer of a slider is almost never the paint. A
+seek scrubber issuing its network call from `onChange` would send one request per pointer
+sample and arrive at the right offset **last**, behind a queue of stale ones.
+
+While a drag is in flight the component paints from its own local value rather than from
+the `value` prop. Without that, a controlled slider whose owner only commits on
+`onChangeEnd` would render the thumb pinned at the old position under the finger — the drag
+would look broken while behaving correctly.
+
+<Canvas of={SliderStories.Interactive} />
+
+## Read-only is not disabled
+
+A read-only slider keeps full contrast and stays focusable, so its value is still readable
+and still reachable by a screen reader. A live stream's position is this: the number
+matters and seeking is not offered.
+
+<Canvas of={SliderStories.AllStates} />
+
+## The arithmetic is a tested pure function
+
+`sliderValue.ts`, in the node project. Steps anchor on `min` rather than on zero — a 7–19
+range stepping by 4 anchored on zero can reach 8, 12 and 16, and neither end of its own
+range is one of them. A snap never escapes the range, a float step does not accumulate
+drift into `aria-valuenow`, and a `NaN` cannot reach the style attribute, where it would
+render `inline-size: NaN%` and paint nothing with no error.
+
+`fromFraction` takes an `isRtl` flag because `getBoundingClientRect()` is physical and knows
+nothing about writing direction — without it a right-to-left slider runs backwards under the
+pointer while its keyboard path stays correct.
+
+<Canvas of={SliderStories.AllVariants} />
