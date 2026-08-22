@@ -1,61 +1,21 @@
 import type {
-  CategoricalIndex,
-  IntentName,
-} from "@charcuterie/tokens"
-import type {
   ComponentPropsWithRef,
   ReactNode,
 } from "react"
 
-import { CATEGORICAL_APPEARANCE_CLASS } from "../categoricalStyles.ts"
-import type { BadgeSize } from "../controlStyles.ts"
-import { BADGE_SIZE_CLASS } from "../controlStyles.ts"
-import type { IntentAppearance } from "../intentStyles.ts"
-import { INTENT_APPEARANCE_CLASS } from "../intentStyles.ts"
-import { toClassName } from "../toClassName.ts"
-import { useIsTextClipped } from "./useIsTextClipped.ts"
+import type { BadgeShapeProps } from "./useBadgeShape.tsx"
+import { useBadgeShape } from "./useBadgeShape.tsx"
 
-export type BadgeProps = ComponentPropsWithRef<"span"> & {
-  appearance?: Exclude<IntentAppearance, "ghost">
-  /**
-   * A numbered, **non-semantic** colour: 1–10, no meaning attached.
-   *
-   * For a badge whose colour the user picked — a Docket label, a
-   * project, a chart series — where `intent` would be a lie. A
-   * "Homelab" label is not a `danger`, and the palette is curated
-   * and contrast-gated in both schemes precisely so the user cannot
-   * pick one that is unreadable. `getCategoricalIndex(key)` from
-   * `@charcuterie/tokens` is the stable fallback for a row nobody
-   * has chosen a colour for yet.
-   *
-   * Mutually exclusive with `intent` **in the type**: a badge is one
-   * colour, and passing both is a question with no answer rather
-   * than a precedence rule to remember.
-   */
-  categorical?: CategoricalIndex
-  children: ReactNode
-  icon?: ReactNode
-  intent?: IntentName
-  /**
-   * What happens when the label is wider than the space it is given.
-   *
-   *  - `truncate` — one line, capped at the container, ellipsis. The
-   *    default, because a status pill that changes its row's height
-   *    when a message gets longer breaks the table it sits in.
-   *  - `wrap` — the pill grows taller and shows everything. For the
-   *    kiosk and any touch context, where the hover readout that
-   *    `truncate` relies on does not exist.
-   */
-  overflow?: "truncate" | "wrap"
-  size?: BadgeSize
-  /**
-   * The exclusivity, and it is deliberately the *only* thing this
-   * arm says. Both props stay declared above so `react-docgen` can
-   * see them and `storyControls.test.ts` can require a control for
-   * each; this arm's whole job is to refuse the case where both
-   * arrive with a value.
-   */
-} & ({ categorical?: never } | { intent?: never })
+export type BadgeProps = ComponentPropsWithRef<"span"> &
+  BadgeShapeProps & {
+    /**
+     * The exclusivity, and it is deliberately the *only* thing this
+     * arm says. Both props stay declared on `BadgeShapeProps` so
+     * `react-docgen` can see them and `storyControls.test.ts` can
+     * require a control for each; this arm's whole job is to refuse
+     * the case where both arrive with a value.
+     */
+  } & ({ categorical?: never } | { intent?: never })
 
 /**
  * Four repos, and rip-deck declares the **identical** `TONE_CLASS`
@@ -98,79 +58,36 @@ export type BadgeProps = ComponentPropsWithRef<"span"> & {
  * `overflow` is what happens next.
  */
 export const Badge = ({
-  appearance = "soft",
+  appearance,
   categorical,
   children,
   className,
   icon,
-  intent = "neutral",
-  overflow = "truncate",
-  size = "md",
+  intent,
+  overflow,
+  size,
   title,
   ...spanProps
 }: BadgeProps): ReactNode => {
-  const [labelRef, clippedText] = useIsTextClipped()
+  const shape = useBadgeShape({
+    appearance,
+    categorical,
+    children,
+    className,
+    icon,
+    intent,
+    overflow,
+    size,
+    title,
+  })
 
   return (
     <span
       {...spanProps}
-      className={toClassName(
-        "inline-flex shrink-0 items-center rounded-full border font-medium",
-        // The cap. Without it every other rule here is decoration.
-        "max-w-full",
-        overflow === "wrap"
-          ? // A stadium end-cap on a three-line box reads as a
-            // rendering fault rather than a badge, so the wrapping
-            // pill relaxes to a rounded rectangle.
-            "rounded-2xl"
-          : "rounded-full",
-        BADGE_SIZE_CLASS[size],
-        // A ternary rather than a merged map: the two are indexed
-        // by different keys, and `undefined` is the only honest
-        // discriminant once the type has already refused the case
-        // where both arrive.
-        categorical === undefined
-          ? INTENT_APPEARANCE_CLASS[intent][appearance]
-          : CATEGORICAL_APPEARANCE_CLASS[categorical][
-              appearance
-            ],
-        className,
-      )}
-      // Only when something is actually hidden. A tooltip on every
-      // short pill in a bay list is noise, and a `title` that
-      // duplicates fully-visible text is a screen-reader duplicate
-      // for no gain.
-      title={title ?? clippedText}
+      className={shape.className}
+      title={shape.title}
     >
-      {icon ? (
-        <span
-          aria-hidden="true"
-          className="contents shrink-0"
-        >
-          {icon}
-        </span>
-      ) : null}
-
-      {/*
-       * The truncation happens here rather than on the pill so the
-       * border and the rounded end-cap stay outside the clip — an
-       * `overflow: hidden` on the pill itself squares off the end
-       * the ellipsis is nearest to.
-       *
-       * `min-w-0` because a flex item's automatic minimum size is
-       * its content, which would win against `max-w-full` on the
-       * parent and put the overflow back.
-       */}
-      <span
-        className={
-          overflow === "wrap"
-            ? "min-w-0"
-            : "min-w-0 overflow-hidden text-ellipsis whitespace-nowrap"
-        }
-        ref={labelRef}
-      >
-        {children}
-      </span>
+      {shape.content}
     </span>
   )
 }

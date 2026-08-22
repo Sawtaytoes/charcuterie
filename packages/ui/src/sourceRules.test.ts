@@ -452,7 +452,14 @@ test("the barrel is the only place components are re-exported", async () => {
   // count by the `<Name>/<Name>.tsx` rule; it is not exported from the
   // barrel either, because a consumer sets `min`/`max`/`step` and never
   // does the arithmetic itself.
-  expect(componentNames.length).toBe(52)
+  //
+  // `BadgeButton` — a `Badge` you can press — is +1 -> 53. It is to
+  // `Badge` what `ButtonLink` is to `Button`: a sibling element
+  // sharing one paint, here through `useBadgeShape`, which is a
+  // member of `Badge/` and so stays out of this count and out of the
+  // barrel as a component. Its PROPS type is exported, because a
+  // consumer writing a wrapper needs to name the visual half.
+  expect(componentNames.length).toBe(53)
 
   for (const name of componentNames) {
     expect(barrel).toContain(`export { ${name} }`)
