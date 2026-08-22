@@ -146,6 +146,7 @@ an hour of confusion.
 | Type | `text-sm`/`text-md`/`text-lg`, which are **ours**: `theme.css` bridges `--text-*` onto the density-scaled `--font-size-*` |
 | Motion | `styles.css`, at `--duration-loop-*`, switched off under `prefers-reduced-motion` |
 | Scrollbar | `styles.css` — add `charcuterie-scrollbar` to any scrolling element for a token-tinted bar (rounded thumb on Chromium/Safari; thin standard match on Firefox) that flips with `[data-scheme]` |
+| Accent edge | `Card/cardAccentEdge.ts` — `<Card accentEdge={{ categorical }} \| {{ color }}>` draws a bar down the leading edge from a pseudo-element that **inherits the card's radius**. A border cannot follow a corner, which is why three apps had a square bar on a round card |
 | State | `@charcuterie/logic` — `useUniqueId` for label wiring, `useStatus` for `MediaTile`'s three image states |
 
 **Class names are never interpolated.** `` `bg-intent-${intent}-solid` `` generates nothing
