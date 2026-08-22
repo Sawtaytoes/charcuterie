@@ -446,7 +446,13 @@ test("the barrel is the only place components are re-exported", async () => {
   // out of this count by the `<Name>/<Name>.tsx` rule, while still
   // being exported from the barrel — a consumer measuring its own
   // `itemBlockSize` needs the number the rows are spaced by.
-  expect(componentNames.length).toBe(51)
+  //
+  // `Slider` — the range control the fleet had no way to ask for — is
+  // +1 -> 52. `sliderValue.ts` is its member and stays out of this
+  // count by the `<Name>/<Name>.tsx` rule; it is not exported from the
+  // barrel either, because a consumer sets `min`/`max`/`step` and never
+  // does the arithmetic itself.
+  expect(componentNames.length).toBe(52)
 
   for (const name of componentNames) {
     expect(barrel).toContain(`export { ${name} }`)
