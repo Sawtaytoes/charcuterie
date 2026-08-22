@@ -13,12 +13,18 @@ import { IconButton } from "../IconButton/IconButton.tsx"
 import { SettingsIcon } from "../icons.storyHelpers.tsx"
 import { ProgressBar } from "../ProgressBar/ProgressBar.tsx"
 import { Card, ELEVATION_CLASS } from "./Card.tsx"
+import { ACCENT_EDGE_CATEGORICAL_CLASS } from "./cardAccentEdge.ts"
 
 const meta = {
   title: "Components/Layout/Card",
   component: Card,
   parameters: { layout: "padded" },
   argTypes: {
+    // An object union, so an object control is the right one — but
+    // it is stated rather than inferred, because docgen's fallback
+    // for a type it cannot read is also an object control and the
+    // two are indistinguishable in the panel.
+    accentEdge: { control: "object" },
     elevation: toStoryChoice(
       Object.keys(
         ELEVATION_CLASS,
@@ -203,5 +209,90 @@ export const Interactive: Story = {
         </Card>
       ))}
     </div>
+  ),
+}
+
+/**
+ * The leading edge, and the two answers the fleet has for what
+ * colour it is.
+ *
+ * A **categorical index** is a colour a user picked — Docket's
+ * project colours come from this ten-wide family, and every pair in
+ * it is contrast-audited. An explicit **colour** is one the app
+ * computed: Folio hashes a repo's name so a repo added tomorrow
+ * already has a hue and nobody maintains a palette, which is 360
+ * answers rather than ten.
+ *
+ * Both bars follow the card's own corner, because the treatment
+ * inherits its radius instead of naming one. Every app that grew
+ * this shape by hand drew it as a straight border beside a rounded
+ * box, and a border cannot follow a curve.
+ */
+export const AccentEdge: Story = {
+  args: { children: "Content" },
+  render: () => (
+    <StorySection title="A categorical index, and an app's own colour. Both take the card's radius.">
+      <StoryGrid columns={3}>
+        {(
+          Object.keys(
+            ACCENT_EDGE_CATEGORICAL_CLASS,
+          ) as unknown as (keyof typeof ACCENT_EDGE_CATEGORICAL_CLASS)[]
+        ).map((index) => (
+          <StoryCell
+            align="stretch"
+            key={index}
+            label={`categorical ${index}`}
+          >
+            <Card
+              accentEdge={{
+                categorical: Number(index) as 1,
+              }}
+              heading={`Project ${index}`}
+            >
+              <p className="text-content-secondary text-sm">
+                A colour the user picked.
+              </p>
+            </Card>
+          </StoryCell>
+        ))}
+
+        <StoryCell align="stretch" label="a hashed hue">
+          <Card
+            accentEdge={{ color: "hsl(287 55% 52%)" }}
+            heading="home-assistant"
+          >
+            <p className="text-content-secondary text-sm">
+              A hue hashed from the name, not an index.
+            </p>
+          </Card>
+        </StoryCell>
+
+        <StoryCell
+          align="stretch"
+          label="a rounder card, same rule"
+        >
+          <Card
+            accentEdge={{ color: "hsl(24 55% 52%)" }}
+            className="rounded-3xl"
+            heading="A wider radius"
+          >
+            <p className="text-content-secondary text-sm">
+              The bar reads the radius off the card rather
+              than naming one, so an override still lines
+              up.
+            </p>
+          </Card>
+        </StoryCell>
+
+        <StoryCell align="stretch" label="a link inside it">
+          <Card
+            accentEdge={{ categorical: 4 }}
+            heading="Still clickable"
+          >
+            <Button size="sm">Open</Button>
+          </Card>
+        </StoryCell>
+      </StoryGrid>
+    </StorySection>
   ),
 }
