@@ -65,6 +65,9 @@ export type {
 export { Alert } from "./Alert/Alert.tsx"
 export type { BadgeProps } from "./Badge/Badge.tsx"
 export { Badge } from "./Badge/Badge.tsx"
+export type { BadgeShapeProps } from "./Badge/useBadgeShape.tsx"
+export type { BadgeButtonProps } from "./BadgeButton/BadgeButton.tsx"
+export { BadgeButton } from "./BadgeButton/BadgeButton.tsx"
 export type {
   BoardMove,
   BoardProps,
