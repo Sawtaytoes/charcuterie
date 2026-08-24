@@ -106,8 +106,12 @@ Yarn 4, `node-modules` linker, TypeScript 6, Vitest 4, Biome 2, ESLint 10 — ma
 than inventing new ones.
 
 Browser-mode tests — Storybook's, and `@charcuterie/logic`'s React/Preact conformance run —
-need a chromium matching this repo's Playwright, which the agent sandbox now ships at
-`/opt/pw-browsers`. No environment override; see the note in
+need a chromium matching **this repo's** Playwright. The agent sandbox bakes its own set at
+`/opt/pw-browsers`, and as of 2026-08-24 the two agree, so no override is needed. They agree
+**by coincidence**: the image pins one Playwright and this repo pins another, and two repos
+in the fleet already disagree. When a run dies naming a build number that is not there,
+install this repo's build into `/tmp/pw-browsers` and point the run at it — never bump the
+repo to match the image. Recipe and reasoning: the note in
 [`packages/logic/README.md`](packages/logic/README.md#testing).
 
 ## Where the reasoning lives

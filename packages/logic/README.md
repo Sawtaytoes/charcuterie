@@ -169,10 +169,29 @@ Mutation-checked, because a green suite that cannot fail proves nothing:
 | multiset → plain `Set` in `registrations.ts` | 15 core properties fail |
 | Preact `useStoreValue` stops subscribing | 10 Preact properties fail, React unaffected |
 
-> **Sandbox note, corrected 2026-07-29 (M3).** `PLAYWRIGHT_BROWSERS_PATH` points at
-> `/opt/pw-browsers`, which now ships **both** chromium 1234 and
-> `chromium_headless_shell-1234`. No override is needed, and the one M2 recommended
-> (`$HOME/.cache/ms-playwright`) now *breaks* the run — that directory no longer exists.
+> **Sandbox note.** The `logic-dom` project needs a chromium build. The agent container
+> ships browsers for its **own** globally-installed Playwright at a root-owned
+> `/opt/pw-browsers` and points `PLAYWRIGHT_BROWSERS_PATH` there. As of 2026-08-24 that
+> directory holds chromium **1234** and this repo's Playwright wants **1234**, so the run
+> works with no override — but the two agree **by coincidence**, not by design. Each side
+> moves on its own schedule, and two repos in the fleet already disagree.
+>
+> When the run dies naming a build number that is not in `/opt/pw-browsers`, install this
+> repo's build somewhere writable rather than changing the repo:
+>
+> ```bash
+> PLAYWRIGHT_BROWSERS_PATH=/tmp/pw-browsers yarn playwright install chromium-headless-shell
+> PLAYWRIGHT_BROWSERS_PATH=/tmp/pw-browsers yarn vitest run --project logic-dom
+> ```
+>
+> `/tmp`, not `$HOME/.cache/ms-playwright` — M2 recommended that path and it was wrong even
+> then. `--dry-run` on the install prints the exact revision without downloading.
+>
+> ⚠️ **Never bump this package's Playwright to match the container**, and never edit
+> `vitest.browser.config.ts` for it. The pinned version is what CI installs and what the
+> conformance suite is measured against. ⚠️ **Never report the browser suite as unrunnable**
+> — it runs fine under the override; say that you used it. Long version:
+> `docs/runbooks/agent-sandbox-runtime.md` in the `agentic` workspace.
 
 ## What is deliberately not here
 
