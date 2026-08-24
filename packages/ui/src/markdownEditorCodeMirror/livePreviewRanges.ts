@@ -334,6 +334,44 @@ const toChildNamed = (
 }
 
 /**
+ * The `]` that closes a link's or an image's text.
+ *
+ * NOT `firstChild.nextSibling`, which is what this was and which
+ * is only the closing bracket when the text is plain words. Give
+ * the text any inline construct of its own —
+ * ``[`a`](url)``, `[**a**](url)`, `[see `a` here](url)` — and the
+ * parser puts that construct's node between the two `LinkMark`s,
+ * so the sibling is `InlineCode` or `StrongEmphasis` and the
+ * bracket is one or more nodes further along.
+ *
+ * The old guess was not a near miss. `[`a`](url)` starts its code
+ * span immediately after the `[`, so the link-text mark came out
+ * `from === to`, and CodeMirror refuses an empty mark decoration:
+ * *"Mark decorations may not be empty"*, thrown out of the whole
+ * `ViewPlugin`, which loses EVERY decoration in the document and
+ * leaves the reader looking at raw markdown.
+ */
+const toClosingBracket = (
+  openMark: SyntaxNode,
+  text: string,
+): SyntaxNode | null => {
+  for (
+    let sibling = openMark.nextSibling;
+    sibling;
+    sibling = sibling.nextSibling
+  ) {
+    if (
+      sibling.name === "LinkMark" &&
+      text.slice(sibling.from, sibling.to) === "]"
+    ) {
+      return sibling
+    }
+  }
+
+  return null
+}
+
+/**
  * A heading's `#` run, plus the whitespace after it.
  *
  * Concealing `#` alone would leave the heading text indented by the
@@ -931,7 +969,8 @@ const toWalker = ({
 
         const openMark = node.firstChild
 
-        const closeMark = openMark?.nextSibling
+        const closeMark =
+          openMark && toClosingBracket(openMark, text)
 
         const safeUrl = urlNode
           ? toSafeImageUrl(
@@ -994,7 +1033,8 @@ const toWalker = ({
 
         const openMark = node.firstChild
 
-        const closeMark = openMark?.nextSibling
+        const closeMark =
+          openMark && toClosingBracket(openMark, text)
 
         const safeUrl = urlNode
           ? toSafeLinkUrl(

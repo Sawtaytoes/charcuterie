@@ -226,6 +226,60 @@ describe("toLivePreviewRanges", () => {
       })
     })
 
+    /**
+     * The crash this suite existed to not have.
+     *
+     * `firstChild.nextSibling` is the closing `]` only when the
+     * link text is plain words. Put an inline construct in it and
+     * that sibling is the construct — for ``[`a`](url)`` the code
+     * span starts one character after the `[`, so the link-text
+     * mark came out `from === to`. CodeMirror throws *"Mark
+     * decorations may not be empty"* out of the whole `ViewPlugin`,
+     * which loses every decoration in the document: the reader gets
+     * raw markdown, and the failure looks nothing like a link bug.
+     */
+    test.each([
+      ["`code`", "[`code`](https://example.com)"],
+      ["**bold**", "[**bold**](https://example.com)"],
+      ["_it_", "[_it_](https://example.com)"],
+    ])(
+      "marks link text that is only %s, and never empty",
+      (_kind, text) => {
+        const linkText = toRanges(text).find(
+          (range) =>
+            range.type === "mark" &&
+            range.markKind === "linkText",
+        )
+
+        const found = toFound(linkText)
+
+        expect(found.from).not.toBe(found.to)
+
+        expect(toTextOf(text, found)).toBe(_kind)
+      },
+    )
+
+    /**
+     * The same bug without the crash, and the reason a
+     * non-empty assertion alone would not have caught it: the mark
+     * stopped at the code span and the closing concealment started
+     * there, so `` `code` here](url) `` was hidden and the link
+     * ended mid-sentence.
+     */
+    test("marks the whole link text around an inline construct", () => {
+      const text = "[see `code` here](https://example.com)"
+
+      const linkText = toRanges(text).find(
+        (range) =>
+          range.type === "mark" &&
+          range.markKind === "linkText",
+      )
+
+      expect(toTextOf(text, toFound(linkText))).toBe(
+        "see `code` here",
+      )
+    })
+
     test("conceals the brackets and the URL together", () => {
       const text = "see [the docs](https://example.com) now"
 
@@ -305,6 +359,24 @@ describe("toLivePreviewRanges", () => {
           (range) => range.type === "image",
         ),
       ).toHaveLength(0)
+    })
+
+    /**
+     * An alt text with markup in it hits the same closing-bracket
+     * bug as a link, and loses quietly rather than throwing: the
+     * sibling after `![` is the `StrongEmphasis`, so the alt came
+     * out empty and the image announced itself to a screen reader
+     * as nothing at all.
+     */
+    test("reads the whole alt text when it carries markup", () => {
+      const text =
+        "![**a** screenshot](https://example.com/a.png)"
+
+      expect(
+        toRanges(text).find(
+          (range) => range.type === "image",
+        ),
+      ).toMatchObject({ alt: "**a** screenshot" })
     })
   })
 

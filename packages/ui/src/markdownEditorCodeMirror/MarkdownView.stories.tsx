@@ -134,6 +134,31 @@ const TickableChecklist = () => {
   )
 }
 
+/**
+ * Link text that is not plain words — the document that took the
+ * whole surface down.
+ *
+ * A link whose text is only a code span put the parser's
+ * `InlineCode` between the two `LinkMark`s, so the link-text mark
+ * was computed `from === to`. CodeMirror refuses an empty mark
+ * decoration and throws out of the entire `ViewPlugin`, which loses
+ * EVERY decoration in the document — the reader is left looking at
+ * raw markdown, and nothing about the failure points at a link.
+ *
+ * A real docs file is full of these: a path in backticks, a bolded
+ * status, an emphasised name. So the fixture is one of each, plus
+ * markup in the middle of a longer text, which failed silently
+ * rather than loudly.
+ */
+const LINKS_WITH_MARKUP = `## Where the decisions live
+
+The rule is in [\`2026-08-03-listbox-and-combobox\`](https://example.invalid/a.md),
+and the [**2026-08-11 status**](https://example.invalid/b.md) supersedes it.
+
+Read [the \`Toolbar\` notes](https://example.invalid/c.md) before either, and
+[_the older draft_](https://example.invalid/d.md) after.
+`
+
 const meta = {
   title: "Components/Data/MarkdownView",
   component: MarkdownView,
@@ -234,6 +259,19 @@ export const AllStates: Story = {
       </StoryCell>
     </StoryGrid>
   ),
+}
+
+/**
+ * The regression frame. Every link here renders as a link and the
+ * rest of the document keeps its headings and its emphasis — which
+ * is the part that proves the fix: before it, ONE of these lines
+ * turned the whole page back into source.
+ */
+export const LinkTextWithMarkup: Story = {
+  args: {
+    label: "Where the decisions live",
+    value: LINKS_WITH_MARKUP,
+  },
 }
 
 /**
