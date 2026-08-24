@@ -459,7 +459,13 @@ test("the barrel is the only place components are re-exported", async () => {
   // member of `Badge/` and so stays out of this count and out of the
   // barrel as a component. Its PROPS type is exported, because a
   // consumer writing a wrapper needs to name the visual half.
-  expect(componentNames.length).toBe(53)
+  //
+  // `CopyButton` — the clipboard write, with a failure state — is
+  // +1 -> 54. `copyText.ts` is its member: it stays out of this
+  // count by the `<Name>/<Name>.tsx` rule, and it IS exported from
+  // the barrel as a function, because a host with its own clipboard
+  // bridge needs the fallback chain without the button.
+  expect(componentNames.length).toBe(54)
 
   for (const name of componentNames) {
     expect(barrel).toContain(`export { ${name} }`)

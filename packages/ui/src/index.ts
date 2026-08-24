@@ -110,6 +110,12 @@ export type {
 export { ColorSchemeToggle } from "./ColorSchemeToggle/ColorSchemeToggle.tsx"
 export type { ComboboxProps } from "./Combobox/Combobox.tsx"
 export { Combobox } from "./Combobox/Combobox.tsx"
+export type {
+  CopyButtonProps,
+  CopyStatus,
+} from "./CopyButton/CopyButton.tsx"
+export { CopyButton } from "./CopyButton/CopyButton.tsx"
+export { copyText } from "./CopyButton/copyText.ts"
 export {
   CATEGORICAL_APPEARANCE_CLASS,
   CATEGORICAL_CONTENT_CLASS,
