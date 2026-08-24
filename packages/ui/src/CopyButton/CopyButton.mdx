@@ -1,0 +1,84 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as CopyButtonStories from "./CopyButton.stories";
+
+<Meta of={CopyButtonStories} />
+
+# CopyButton
+
+**A button that puts a string on the clipboard and says so.** Press it, the label turns to
+`Copied`, and the caller is told whether that is true.
+
+<Canvas of={CopyButtonStories.Default} />
+
+## Props
+
+<Controls />
+
+## Where it came from
+
+Four repos spell this shape by hand, and no two agree:
+
+| Repo | How it copies | What it does when the clipboard says no |
+| --- | --- | --- |
+| mux-magic (`YamlModal`) | flips its own label on a `setTimeout` | nothing — the label still says `Copied!` |
+| spoolbuddy (`Settings`) | 15 lines inline, with the `execCommand` fallback | a toast |
+| bambuddy (`ArchivesPage`) | a menu item, twice in one file | a toast |
+| mail-sifter | a verification-code banner | **marks the mail done anyway** |
+
+The last row is why the failure path is a first-class state here rather than a `catch` that
+shrugs. That consumer files the mail away on a copy, so a copy that did not happen has to be
+distinguishable from one that did.
+
+## The confirmation is the button
+
+The press and the proof are the same object, so the eye does not travel. A toast is the
+right shape for something that happened **somewhere else** — a background job, another pane
+— and the wrong shape for the thing directly under the pointer. A consumer that wants a
+toast as well still gets one from `onCopy`.
+
+<Canvas of={CopyButtonStories.Confirmed} />
+
+## The label is a word, and so is the failure
+
+`Copy` → `Copied`, with the intent moving to `success` underneath it. The colour is not the
+message: a colour change alone is invisible to a screen reader, unreliable for a
+colour-blind reader, and this library [ships no icons](?path=/docs/guides-building-an-app--docs),
+so a tick glyph is not available to carry it either.
+
+The refusal says what to do next rather than only that something went wrong.
+
+<Canvas of={CopyButtonStories.Refused} />
+
+## Three routes to the clipboard
+
+`copyText.ts` tries them in order and never throws:
+
+1. **`navigator.clipboard.writeText`** — the real API, and it exists only in a *secure
+   context*. A `devshare` URL and `localhost` are secure; a plain `http://` dev server on
+   the LAN is not.
+2. **A hidden `<textarea>` and `document.execCommand("copy")`** — deprecated, kept because
+   it is the only thing that works in that insecure context, and because spoolbuddy already
+   carries this exact block inline.
+3. **Report the failure**, so the caller can hold on to whatever it was about to discard.
+
+`copy` is injectable, which is how the `Refused` story above exists and how a host with its
+own clipboard bridge — Electron, a kiosk shell — supplies it.
+
+## Own labels
+
+The labels are content. A surface that copies one specific thing should say which thing.
+
+<Canvas of={CopyButtonStories.OwnLabels} />
+
+<Canvas of={CopyButtonStories.AllAppearances} />
+
+## What it does not do
+
+**It does not own the value.** No `children`-as-value, no reading text out of a sibling
+node: the string is a prop, because the thing on screen is regularly not the thing worth
+copying (a masked key, a truncated URL, a code split across two spans).
+
+**It does not clear the timer for you and hope.** The confirmation timer is cancelled on
+unmount and on a re-press — two of the four hand-rolled copies set state on an unmounted
+component if you press and navigate away.
