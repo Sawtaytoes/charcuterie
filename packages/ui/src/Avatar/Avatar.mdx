@@ -32,6 +32,15 @@ a dead one.
 An app that genuinely wants to *say* "unassigned" still can. That is text, or an
 `EmptyState`, and neither of them is an avatar.
 
+Where a column of rows has to keep one start edge, **the layout reserves the slot** — a
+grid column sized in `em` of the row's own type, which the unassigned row leaves empty.
+That is a decision about alignment, made once by the thing that owns the alignment, rather
+than a placeholder chip pretending to be data. `InAList` below is that composition.
+
+Keep the wrapper. A component that returns `null` contributes **no grid item**, so a bare
+`<Avatar>` in a grid cell lets the unassigned row's next element slide into the reserved
+column — the one way this goes wrong, and it goes wrong silently.
+
 ## The name is never visible text
 
 `role="img"` with an `aria-label`, exactly as `Swatch` does, so

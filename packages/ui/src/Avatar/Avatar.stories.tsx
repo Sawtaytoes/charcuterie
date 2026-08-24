@@ -217,14 +217,31 @@ export const InAList: Story = {
           },
         ].map((task) => (
           <li
-            className="flex items-center gap-3"
+            /*
+             * The chip's slot is **reserved by the layout**, in `em`
+             * of the row's own type, and the unassigned row simply
+             * leaves it empty. That is the composition the "draws
+             * nothing" rule asks for: a grid column keeps every
+             * title on one start edge without the design system
+             * inventing a grey placeholder to hold the space open.
+             *
+             * The wrapper around the chip is what makes it work. A
+             * component that returns `null` contributes **no grid
+             * item**, so without it the title of an unassigned row
+             * slides into the first column — which is the one way
+             * this composition goes wrong, and it goes wrong
+             * silently.
+             */
+            className="grid grid-cols-[2em_1fr] items-center gap-3"
             key={task.title}
           >
-            <Avatar
-              categoricalKey={task.assignee?.id}
-              name={task.assignee?.name}
-              size="sm"
-            />
+            <span className="justify-self-center">
+              <Avatar
+                categoricalKey={task.assignee?.id}
+                name={task.assignee?.name}
+                size="sm"
+              />
+            </span>
 
             <span className="text-content-secondary text-sm">
               {task.title}
