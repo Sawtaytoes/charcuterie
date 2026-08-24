@@ -34,3 +34,9 @@ and a throw while building decorations costs the current frame instead of the pl
 destroyed plugin never comes back for the life of the editor, so the surface stayed
 broken until it was remounted; an empty frame repaints on the next update. One bad
 construct degrades itself, never the page.
+
+Supersedes #158, which found the same root cause independently. Its explicit
+closing-bracket check and its `MarkdownView` documentation section are carried over here.
+It asserted an image's `alt` keeps its markup characters (`"**a** screenshot"`); this
+renders it as plain text instead, because `alt` is read aloud and a screen reader
+pronounces the asterisks.

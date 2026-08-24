@@ -359,13 +359,22 @@ const toChildNamed = (
  */
 const toCloseMark = (
   openMark: SyntaxNode | null,
+  text: string,
 ): SyntaxNode | null => {
   for (
     let sibling = openMark?.nextSibling;
     sibling;
     sibling = sibling.nextSibling
   ) {
-    if (sibling.name === "LinkMark") {
+    if (
+      sibling.name === "LinkMark" &&
+      // Redundant against today's parser — the first `LinkMark`
+      // after the opener is always `]`, for a link and an image
+      // alike. It is here to state the contract: this function
+      // returns a **closing bracket**, and it returns nothing
+      // rather than the wrong node if that ever stops holding.
+      text.slice(sibling.from, sibling.to) === "]"
+    ) {
       return sibling
     }
   }
@@ -1031,7 +1040,7 @@ const toWalker = ({
 
         const openMark = node.firstChild
 
-        const closeMark = toCloseMark(openMark)
+        const closeMark = toCloseMark(openMark, text)
 
         const safeUrl = urlNode
           ? toSafeImageUrl(
@@ -1099,7 +1108,7 @@ const toWalker = ({
 
         const openMark = node.firstChild
 
-        const closeMark = toCloseMark(openMark)
+        const closeMark = toCloseMark(openMark, text)
 
         const safeUrl = urlNode
           ? toSafeLinkUrl(
