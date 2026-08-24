@@ -92,6 +92,22 @@ reload is worse than one that says up front it cannot.
 immediately so the box responds under the pointer; if the consumer rejects the change, the
 next `value` puts it back.
 
+## Link text that carries its own markup
+
+<Canvas of={MarkdownViewStories.NestedLinkText} />
+
+A link whose text is a code span, a bolded phrase or an emphasised one is ordinary in a
+docs file, and until 2026-08-24 one of them took the whole surface down. The closing `]`
+was read as *the sibling after the opening bracket*, which is true only while the text is
+plain words — put an `InlineCode` in it and that sibling is the code span, so
+``[`a`](url)`` produced a link-text mark with `from === to`. CodeMirror refuses an empty
+mark decoration and throws out of the whole `ViewPlugin`, so **every** decoration in the
+document is lost and the reader gets raw markdown.
+
+The failure looks nothing like a link bug, which is why the story is here: one frame where
+every link is a link, and a heading above them that has nothing to do with links and
+stopped rendering anyway.
+
 ## Hostile markdown
 
 This will render files fetched from a git host, so the document is untrusted by default.

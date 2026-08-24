@@ -714,6 +714,31 @@ const toDecorations = (view: EditorView): DecorationSet => {
       to: visible.to,
       tree: syntaxTree(view.state),
     })) {
+      /**
+       * One malformed descriptor costs its own construct, never the
+       * page.
+       *
+       * `Decoration.mark` throws `Mark decorations may not be
+       * empty` on a zero-length range, and a throw in here does not
+       * degrade gracefully: CodeMirror destroys the view plugin, so
+       * **every** decoration in the document disappears at once and
+       * the reader is left looking at raw markdown. That is what
+       * ``[`file.md`](path)`` did to whole documents before
+       * `toCloseMark` — one link in one paragraph, and the file
+       * stopped rendering.
+       *
+       * `toLivePreviewRanges` is not supposed to emit one of these
+       * any more. This is the second wall, and it is worth having
+       * precisely because the first wall already failed once.
+       *
+       * A `line` decoration is the exception, and legitimately so —
+       * it is a point anchored to a line start, so it is always
+       * zero-length.
+       */
+      if (range.type !== "line" && range.from >= range.to) {
+        continue
+      }
+
       switch (range.type) {
         case "image": {
           decorations.push(
@@ -882,12 +907,47 @@ const livePreviewTableField =
     provide: (field) => EditorView.decorations.from(field),
   })
 
+/**
+ * `toDecorations`, but a throw costs one render rather than the
+ * editor.
+ *
+ * CodeMirror's answer to a view plugin that throws is to destroy
+ * it. That is permanent for the life of the editor: the document
+ * falls back to raw markdown and no later keystroke brings it back,
+ * because there is no longer a plugin to run. The reader sees a
+ * surface that broke and stayed broken, and the only trace is one
+ * console line nobody is looking at.
+ *
+ * Returning an empty set instead costs the *current* frame — that
+ * frame looks like raw source — and the next update repaints
+ * normally. Recovery beats a permanent failure.
+ *
+ * The stale set is deliberately not reused. Decorations here are
+ * not mapped through document changes, so holding the previous
+ * frame's offsets over an edit invites a second throw for
+ * positions past the end of the document.
+ */
+const toSafeDecorations = (
+  view: EditorView,
+): DecorationSet => {
+  try {
+    return toDecorations(view)
+  } catch (error) {
+    console.error(
+      "[charcuterie] live preview could not build its decorations; this frame renders as raw markdown.",
+      error,
+    )
+
+    return Decoration.none
+  }
+}
+
 const livePreviewPlugin = ViewPlugin.fromClass(
   class {
     decorations: DecorationSet
 
     constructor(view: EditorView) {
-      this.decorations = toDecorations(view)
+      this.decorations = toSafeDecorations(view)
     }
 
     update(update: ViewUpdate) {
@@ -911,7 +971,7 @@ const livePreviewPlugin = ViewPlugin.fromClass(
         update.startState.facet(livePreviewOptions) !==
           update.state.facet(livePreviewOptions)
       ) {
-        this.decorations = toDecorations(update.view)
+        this.decorations = toSafeDecorations(update.view)
       }
     }
   },

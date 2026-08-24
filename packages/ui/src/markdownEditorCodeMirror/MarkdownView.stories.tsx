@@ -52,6 +52,34 @@ Replacement rails ordered from https://example.invalid/product?id=1234
 `
 
 /**
+ * Link text with inline markup in it — the shape that used to take
+ * the **whole document** down to raw source.
+ *
+ * The closing bracket was read as the node right after `[`, which
+ * is the bracket only while the link text is plain prose. A code
+ * span or a `**bold**` run becomes that node instead, the link text
+ * measures zero characters, `Decoration.mark` refuses an empty
+ * range, and the throw destroys the view plugin — so every
+ * decoration in the file disappears at once, not just this link's.
+ *
+ * Invented, like every fixture here, but the shape is not invented:
+ * agent-written task descriptions are full of ``[`file.md`](path)``.
+ */
+const NESTED_LINK_TEXT = `## Where the fix landed
+
+The range walk lives in [\`livePreviewRanges.ts\`](https://example.invalid/ranges)
+and the decorations in [\`livePreview.ts\`](https://example.invalid/preview).
+
+- A code span: [\`AGENTS.md\`](https://example.invalid/agents)
+- Strong: [**the runbook**](https://example.invalid/runbook)
+- Emphasis: [*the older note*](https://example.invalid/note)
+- Struck through: [~~the retired page~~](https://example.invalid/retired)
+- Mixed: [read \`this\` **first**](https://example.invalid/first)
+
+Plain links still work: [the index](https://example.invalid/index).
+`
+
+/**
  * A drawing rather than a fetched file, so the story needs no
  * network and the frame is the same on every machine. The same
  * technique `Avatar`'s portrait uses, and one of the few things
@@ -311,4 +339,24 @@ export const Interactive: Story = {
       </button>
     </div>
   ),
+}
+
+/**
+ * The regression frame.
+ *
+ * Every line here is a link whose text carries inline markup, and
+ * the assertion a reader can make from the picture is the one that
+ * matters: the document is **drawn**. Before the fix this frame was
+ * the markdown source, brackets and parentheses and all, because
+ * one empty mark decoration killed the plugin for the whole file.
+ *
+ * The last line is the control. A plain `[text](url)` never had the
+ * bug, so if it renders and the ones above it do not, the failure
+ * is this and not something else.
+ */
+export const NestedLinkText: Story = {
+  args: {
+    label: "Where the fix landed",
+    value: NESTED_LINK_TEXT,
+  },
 }

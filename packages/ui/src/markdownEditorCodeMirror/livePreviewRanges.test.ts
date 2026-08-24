@@ -277,6 +277,200 @@ describe("toLivePreviewRanges", () => {
         ),
       ).toHaveLength(0)
     })
+
+    /**
+     * The bug that took whole documents down to raw source.
+     *
+     * The closing `]` was read as `openMark.nextSibling`, which is
+     * the bracket only while the link text is plain prose. Any
+     * inline construct in the text becomes that sibling instead, so
+     * the link text measured `[` → the construct's own start:
+     * **zero-length**. `Decoration.mark` rejects an empty range,
+     * the throw destroys the view plugin, and every decoration in
+     * the file goes with it.
+     *
+     * ``[`file.md`](path)`` is not an exotic spelling. It was in
+     * 69 of the 127 Docket task descriptions that had one.
+     *
+     * These assert the range, not a rendering. A whole-document
+     * render would go green on the *quiet* half of this bug — the
+     * cases below that produced a non-empty but wrong mark.
+     */
+    describe("inline markup inside the link text", () => {
+      test.each([
+        ["a code span", "[`file.md`](url)", "`file.md`"],
+        ["strong", "[**bold**](url)", "**bold**"],
+        ["emphasis", "[*thin*](url)", "*thin*"],
+        ["strikethrough", "[~~gone~~](url)", "~~gone~~"],
+        [
+          "a mix, after plain text",
+          "[a *b* `c` **d**](url)",
+          "a *b* `c` **d**",
+        ],
+        [
+          "markup then plain text",
+          "[**b** then more](url)",
+          "**b** then more",
+        ],
+        ["nesting", "[**`both`**](url)", "**`both`**"],
+        ["an escape", "[a\\]b](url)", "a\\]b"],
+        [
+          "an image",
+          "[![alt](a.png)](url)",
+          "![alt](a.png)",
+        ],
+      ])(
+        "spans the whole link text through %s",
+        (_case, text, expected) => {
+          const linkText = toRanges(text).find(
+            (range) =>
+              range.type === "mark" &&
+              range.markKind === "linkText",
+          )
+
+          expect(toTextOf(text, toFound(linkText))).toBe(
+            expected,
+          )
+        },
+      )
+
+      /**
+       * The invariant, swept rather than enumerated.
+       *
+       * Every caret position in the document, in both modes. A
+       * caret changes which constructs are revealed, and reveal
+       * state feeds the same bracket arithmetic — so "the mark is
+       * non-empty with no caret in the file" is a weaker promise
+       * than the one the plugin needs. `Decoration.mark` throws on
+       * an empty range wherever the caret happens to be.
+       */
+      test("emits no empty mark at any caret position, in either mode", () => {
+        const empties: string[] = []
+
+        for (const text of [
+          "see [`file.md`](https://example.com) now",
+          "see [**bold**](https://example.com) now",
+          "[a *b* `c` **d**](https://example.com)",
+          "[![alt](https://example.com/a.png)](https://example.com)",
+          "![`code` alt](https://example.com/a.png)",
+          "[](https://example.com)",
+          "[a\\]b](https://example.com)",
+        ]) {
+          for (const isRawMode of [false, true]) {
+            for (
+              let offset = 0;
+              offset <= text.length;
+              offset += 1
+            ) {
+              for (const range of toRanges(
+                text,
+                atCaret(offset),
+                isRawMode,
+              )) {
+                if (
+                  range.type === "mark" &&
+                  range.from >= range.to
+                ) {
+                  empties.push(
+                    `${text} @${offset} raw=${isRawMode}`,
+                  )
+                }
+              }
+            }
+          }
+        }
+
+        expect(empties).toEqual([])
+      })
+
+      test("never emits an empty mark, whatever the nesting", () => {
+        for (const text of [
+          "[`file.md`](url)",
+          "[**bold**](url)",
+          "[*thin*](url)",
+          "[~~gone~~](url)",
+          "[a *b* `c` **d**](url)",
+          "[**`both`**](url)",
+          "[![alt](a.png)](url)",
+          "[a\\]b](url)",
+        ]) {
+          for (const range of toRanges(text)) {
+            if (range.type === "mark") {
+              // `Mark decorations may not be empty` — the throw
+              // that destroyed the plugin.
+              expect(range.to).toBeGreaterThan(range.from)
+            }
+          }
+        }
+      })
+
+      test("conceals only the brackets, not the text between them", () => {
+        const text =
+          "see [`file.md`](https://example.com) now"
+
+        const concealed = toRanges(text)
+          .filter(
+            (range) =>
+              range.type === "marker" && range.isConcealed,
+          )
+          .map((range) => toTextOf(text, range))
+
+        // The `](url)` run is the point. Before the fix it started
+        // one character after `[` and swallowed the link text
+        // whole, so dropping the empty mark on its own would have
+        // rendered an invisible link rather than a fixed one.
+        expect(concealed).toContain(
+          "](https://example.com)",
+        )
+
+        expect(concealed).not.toContain(
+          "`file.md`](https://example.com)",
+        )
+      })
+
+      test("still carries the URL onto the nested case", () => {
+        const text = "[`file.md`](https://example.com)"
+
+        expect(
+          toRanges(text).find(
+            (range) =>
+              range.type === "mark" &&
+              range.markKind === "linkText",
+          ),
+        ).toMatchObject({ url: "https://example.com" })
+      })
+
+      test("leaves the nested construct's own marks intact", () => {
+        const text = "[`file.md`](https://example.com)"
+
+        expect(
+          toRanges(text).find(
+            (range) =>
+              range.type === "mark" &&
+              range.markKind === "code",
+          ),
+        ).toBeDefined()
+      })
+    })
+
+    /**
+     * `[](url)` has no text, so there is nothing to mark. This is
+     * the *only* empty case — every other one was the bug above,
+     * which is why the guard in `livePreviewRanges` is written as
+     * `openMark.to < closeMark.from` and not as a filter over the
+     * finished list.
+     */
+    test("emits no link-text mark for a link with no text", () => {
+      const text = "[](https://example.com)"
+
+      expect(
+        toRanges(text).filter(
+          (range) =>
+            range.type === "mark" &&
+            range.markKind === "linkText",
+        ),
+      ).toHaveLength(0)
+    })
   })
 
   describe("images", () => {
@@ -306,6 +500,45 @@ describe("toLivePreviewRanges", () => {
         ),
       ).toHaveLength(0)
     })
+
+    /**
+     * The same `nextSibling` mistake, without the crash: an image
+     * emits a replace range over its whole construct, which is
+     * never empty, so a marked-up alt came out as `""` and nothing
+     * threw. `alt` is an attribute rather than a span, so it is
+     * read as plain text — which is what CommonMark says an alt is.
+     */
+    test.each([
+      [
+        "a code span",
+        "![`code` shot](https://example.com/a.png)",
+        "code shot",
+      ],
+      [
+        "strong",
+        "![**bold** shot](https://example.com/a.png)",
+        "bold shot",
+      ],
+      [
+        "a mix",
+        "![*a* `b` **c**](https://example.com/a.png)",
+        "a b c",
+      ],
+      [
+        "an escape",
+        "![a\\]b](https://example.com/a.png)",
+        "a]b",
+      ],
+    ])(
+      "reads the alt text as plain text through %s",
+      (_case, text, expected) => {
+        expect(
+          toRanges(text).find(
+            (range) => range.type === "image",
+          ),
+        ).toMatchObject({ alt: expected })
+      },
+    )
   })
 
   describe("task lists", () => {

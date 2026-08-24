@@ -32,6 +32,7 @@
  *   VRT_OUT          actual dir           (default .vrt-actual)
  *   VRT_SCHEMES      comma list           (default "dark,light")
  *   VRT_LIMIT        cap story count      (dry runs; default all)
+ *   VRT_ONLY         id substring filter  (flake triage; default all)
  *   VRT_CONCURRENCY  parallel pages       (default 4)
  */
 
@@ -117,8 +118,26 @@ const stories = Object.values(
     first.id.localeCompare(second.id),
   )
 
+/**
+ * Flake triage, and the reason it earns its four lines.
+ *
+ * A story that "changed" between two branches has two possible
+ * causes, and the full run cannot tell them apart: the component
+ * really changed, or the shot list moved and the story is sensitive
+ * to what ran before it on the same pooled page. Capturing the one
+ * story on each side answers it in seconds instead of twice the
+ * whole suite — and the answer is often the second cause. Adding a
+ * single story ahead of `VirtualizedGrid` in the sort order moved
+ * its rendered height by 58px with its own code untouched.
+ */
+const ONLY = process.env.VRT_ONLY
+
+const filtered = ONLY
+  ? stories.filter((entry) => entry.id.includes(ONLY))
+  : stories
+
 const selected =
-  LIMIT > 0 ? stories.slice(0, LIMIT) : stories
+  LIMIT > 0 ? filtered.slice(0, LIMIT) : filtered
 
 // The whole job is one shot list — every (story, scheme) pair —
 // drained by a fixed pool of pages so wall-clock is count/CONCURRENCY,
