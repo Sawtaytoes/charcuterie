@@ -49,6 +49,11 @@ import type {
   Tree,
 } from "@lezer/common"
 
+import {
+  toSafeImageUrl,
+  toSafeLinkUrl,
+} from "./safeUrls.ts"
+
 /**
  * A block-level treatment applied to a whole line.
  *
@@ -928,11 +933,21 @@ const toWalker = ({
 
         const closeMark = openMark?.nextSibling
 
+        const safeUrl = urlNode
+          ? toSafeImageUrl(
+              text.slice(urlNode.from, urlNode.to),
+            )
+          : undefined
+
         // An image whose caret is inside it is markup again: you
-        // cannot edit a URL you cannot see.
+        // cannot edit a URL you cannot see. An image whose URL did
+        // not survive `toSafeImageUrl` stays markup **always**,
+        // which is the honest answer for a document this surface
+        // did not write: the reader is shown the source rather than
+        // a broken frame or a silently dropped line.
         if (
           !isRawMode &&
-          urlNode &&
+          safeUrl !== undefined &&
           openMark &&
           closeMark &&
           !isInside(selections, node.from, node.to)
@@ -942,9 +957,24 @@ const toWalker = ({
             from: node.from,
             to: node.to,
             type: "image",
-            url: text.slice(urlNode.from, urlNode.to),
+            url: safeUrl,
           })
 
+          return false
+        }
+
+        /**
+         * An image whose URL was refused shows its **whole**
+         * construct, markers and all.
+         *
+         * Not descending is what does it: the `![`, `](` and `)`
+         * would otherwise reach the generic concealment rule below
+         * and vanish, leaving the alt text welded to a URL with no
+         * punctuation between them. This is the same result the
+         * refused-link path gets, by the same reasoning — a reader
+         * shown the source can see what the file tried to do.
+         */
+        if (safeUrl === undefined && !isRawMode) {
           return false
         }
 
@@ -966,13 +996,35 @@ const toWalker = ({
 
         const closeMark = openMark?.nextSibling
 
-        if (urlNode && openMark && closeMark) {
+        const safeUrl = urlNode
+          ? toSafeLinkUrl(
+              text.slice(urlNode.from, urlNode.to),
+            )
+          : undefined
+
+        /**
+         * A link whose URL did not survive the guard is **not a
+         * link at all**, and not a link-coloured span that quietly
+         * does nothing either.
+         *
+         * Returning here skips the `linkText` mark *and* the two
+         * `pushMarker` calls below, so `[click me](javascript:…)`
+         * keeps its brackets, keeps its parentheses and reads as
+         * exactly the characters the file contains. A reader who
+         * can see the trap is better served than one shown a
+         * confident blue word that silently refuses to work.
+         */
+        if (safeUrl === undefined) {
+          return true
+        }
+
+        if (openMark && closeMark) {
           ranges.push({
             from: openMark.to,
             markKind: "linkText",
             to: closeMark.from,
             type: "mark",
-            url: text.slice(urlNode.from, urlNode.to),
+            url: safeUrl,
           })
         }
 
@@ -998,16 +1050,21 @@ const toWalker = ({
         // paste a link, get a link, with no `[](…)` typed at all.
         const parentName = nodeRef.node.parent?.name
 
+        const safeUrl = toSafeLinkUrl(
+          text.slice(nodeRef.from, nodeRef.to),
+        )
+
         if (
           parentName !== "Link" &&
-          parentName !== "Image"
+          parentName !== "Image" &&
+          safeUrl !== undefined
         ) {
           ranges.push({
             from: nodeRef.from,
             markKind: "autolink",
             to: nodeRef.to,
             type: "mark",
-            url: text.slice(nodeRef.from, nodeRef.to),
+            url: safeUrl,
           })
         } else {
           ranges.push({
