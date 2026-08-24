@@ -334,6 +334,115 @@ const toChildNamed = (
 }
 
 /**
+ * The closing `]` of a `Link` or an `Image`.
+ *
+ * **Not** `openMark.nextSibling`. That sibling is the closing
+ * bracket only while the text between the brackets is plain prose,
+ * because plain prose gets no node of its own. Put any inline
+ * construct in there — ``[`file.md`](path)``, `[**bold**](path)`,
+ * `[~~struck~~](path)` — and the second child is that construct,
+ * so the old walk measured the link text as `[` → the construct's
+ * own start and got a **zero-length** range. CodeMirror rejects an
+ * empty mark decoration (`Mark decorations may not be empty`), the
+ * throw destroys the view plugin, and every decoration in the
+ * document goes with it: the whole file drops to raw source.
+ *
+ * Text *before* the construct failed more quietly and just as
+ * wrongly. `[a *b*](path)` marked `a ` as the link and then
+ * concealed `*b*](path)`, because the concealment marker starts
+ * where this bracket is thought to be.
+ *
+ * The bracket is the first `LinkMark` **child** after the opener. A
+ * nested image's brackets belong to the `Image` node, not to this
+ * one, so a direct-sibling walk steps over `[![alt](a.png)](url)`
+ * without mistaking `![` for the end of the link text.
+ */
+const toCloseMark = (
+  openMark: SyntaxNode | null,
+  text: string,
+): SyntaxNode | null => {
+  for (
+    let sibling = openMark?.nextSibling;
+    sibling;
+    sibling = sibling.nextSibling
+  ) {
+    if (
+      sibling.name === "LinkMark" &&
+      // Redundant against today's parser — the first `LinkMark`
+      // after the opener is always `]`, for a link and an image
+      // alike. It is here to state the contract: this function
+      // returns a **closing bracket**, and it returns nothing
+      // rather than the wrong node if that ever stops holding.
+      text.slice(sibling.from, sibling.to) === "]"
+    ) {
+      return sibling
+    }
+  }
+
+  return null
+}
+
+/**
+ * The syntax spans `toPlainText` drops, gathered depth-first.
+ *
+ * `Escape` contributes only its backslash — `\]` reads as `]`.
+ */
+const toSyntaxSpans = (
+  node: SyntaxNode,
+  spans: { from: number; to: number }[],
+) => {
+  for (
+    let child = node.firstChild;
+    child;
+    child = child.nextSibling
+  ) {
+    if (CONCEALABLE_MARK_NAMES.has(child.name)) {
+      spans.push({ from: child.from, to: child.to })
+    } else if (child.name === "Escape") {
+      spans.push({ from: child.from, to: child.from + 1 })
+    } else {
+      toSyntaxSpans(child, spans)
+    }
+  }
+
+  return spans
+}
+
+/**
+ * What `[from, to)` reads as once its inline syntax is removed.
+ *
+ * An image's `alt` is an attribute rather than a span a reader can
+ * look at, so ``![`code` shot](a.png)`` has to arrive as
+ * `code shot` — never as its own source, and never as the empty
+ * string the old sibling walk produced. CommonMark says the same:
+ * alt is the plain-text rendering of the inline content.
+ *
+ * Tree order is ascending, so the spans need no sort.
+ */
+const toPlainText = (
+  node: SyntaxNode,
+  text: string,
+  from: number,
+  to: number,
+) => {
+  let offset = from
+
+  let plainText = ""
+
+  for (const span of toSyntaxSpans(node, [])) {
+    if (span.from < offset || span.to > to) {
+      continue
+    }
+
+    plainText += text.slice(offset, span.from)
+
+    offset = span.to
+  }
+
+  return plainText + text.slice(offset, to)
+}
+
+/**
  * A heading's `#` run, plus the whitespace after it.
  *
  * Concealing `#` alone would leave the heading text indented by the
@@ -931,7 +1040,7 @@ const toWalker = ({
 
         const openMark = node.firstChild
 
-        const closeMark = openMark?.nextSibling
+        const closeMark = toCloseMark(openMark, text)
 
         const safeUrl = urlNode
           ? toSafeImageUrl(
@@ -953,7 +1062,12 @@ const toWalker = ({
           !isInside(selections, node.from, node.to)
         ) {
           ranges.push({
-            alt: text.slice(openMark.to, closeMark.from),
+            alt: toPlainText(
+              node,
+              text,
+              openMark.to,
+              closeMark.from,
+            ),
             from: node.from,
             to: node.to,
             type: "image",
@@ -994,7 +1108,7 @@ const toWalker = ({
 
         const openMark = node.firstChild
 
-        const closeMark = openMark?.nextSibling
+        const closeMark = toCloseMark(openMark, text)
 
         const safeUrl = urlNode
           ? toSafeLinkUrl(
@@ -1018,7 +1132,18 @@ const toWalker = ({
           return true
         }
 
-        if (openMark && closeMark) {
+        /**
+         * `openMark.to < closeMark.from` is the genuinely-empty
+         * case and only that: `[](url)`, which has no text to mark.
+         * Nested inline markup used to land here too — see
+         * `toCloseMark` — and the guard would have hidden that bug
+         * rather than fixed it, so it stays narrow on purpose.
+         */
+        if (
+          openMark &&
+          closeMark &&
+          openMark.to < closeMark.from
+        ) {
           ranges.push({
             from: openMark.to,
             markKind: "linkText",
