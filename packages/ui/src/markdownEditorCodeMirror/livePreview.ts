@@ -32,6 +32,7 @@ import type {
   Range,
 } from "@codemirror/state"
 import {
+  Facet,
   Prec,
   StateEffect,
   StateField,
@@ -75,6 +76,72 @@ const URL_ATTRIBUTE = "data-charcuterie-url"
  * cases; a captured absolute offset silently is not.
  */
 const CELL_OFFSET_ATTRIBUTE = "data-charcuterie-cell-offset"
+
+/**
+ * What kind of surface this is, and what its checkboxes may do.
+ *
+ * A facet rather than closure state, for the same reason raw mode is
+ * a `StateField`: the decoration builders below are module-level
+ * singletons — one `ViewPlugin`, one `StateField` — and rebuilding
+ * them per instance would mean a second copy of the whole live
+ * preview for every surface on the page. They read the answer out of
+ * the state they were already handed.
+ *
+ * It is also what lets `MarkdownView` put the task flag in a
+ * `Compartment` and flip it without discarding the view, exactly as
+ * the editors already flip editability.
+ */
+export type LivePreviewOptions = {
+  /**
+   * Draw a **document** rather than an editing surface: real
+   * anchors, heading roles, and a table that is a table instead of a
+   * way back into the markdown behind it.
+   *
+   * Off by default, because the editors are the surface this module
+   * was written for and every one of these would be wrong inside a
+   * `contenteditable`.
+   */
+  hasDocumentSemantics?: boolean
+  /** Whether a `- [ ]` checkbox can be ticked. Defaults to `true`. */
+  isTaskListInteractive?: boolean
+}
+
+/**
+ * The facet itself is exported so a consumer can put **only this**
+ * in a `Compartment` and flip one answer without reconfiguring the
+ * whole extension — which would tear down and recreate the
+ * `StateField`s beside it.
+ *
+ * A later input wins per key, and a key nobody stated keeps the
+ * default. That is a merge rather than "the last one wins outright",
+ * so an override that only cares about checkboxes cannot silently
+ * turn document semantics back off.
+ */
+export const livePreviewOptions = Facet.define<
+  LivePreviewOptions,
+  Required<LivePreviewOptions>
+>({
+  combine: (values) =>
+    values.reduce<Required<LivePreviewOptions>>(
+      (merged, value) => ({
+        hasDocumentSemantics:
+          value.hasDocumentSemantics ??
+          merged.hasDocumentSemantics,
+        isTaskListInteractive:
+          value.isTaskListInteractive ??
+          merged.isTaskListInteractive,
+      }),
+      {
+        hasDocumentSemantics: false,
+        isTaskListInteractive: true,
+      },
+    ),
+})
+
+const toOptions = (
+  state: EditorState,
+): Required<LivePreviewOptions> =>
+  state.facet(livePreviewOptions)
 
 /** Toggle the "edit Markdown" mode. */
 export const setLivePreviewRawMode =
@@ -138,6 +205,66 @@ const focusTracker = EditorView.focusChangeEffect.of(
   (_state, isFocusing) => setIsEditorFocused.of(isFocusing),
 )
 
+/**
+ * How the read view says "heading" to something that is not looking
+ * at the font size.
+ *
+ * The editing surface deliberately has none of this. Its content is
+ * a `role="textbox"`, and ARIA flattens a textbox's contents to
+ * text — a heading role inside one is not exposed, so adding it
+ * there would be a decoration that lies about what it does. The read
+ * view is a `role="article"`, where the same markup is a real
+ * heading and the reader's H key steps between sections.
+ *
+ * A `Decoration.line` carries the role, which is exactly right for
+ * an ATX heading: the parser only ever emits `ATXHeading1`…`6`, and
+ * one of those is one line by definition.
+ */
+const HEADING_LEVELS: Partial<
+  Record<LivePreviewLineKind, string>
+> = {
+  heading1: "1",
+  heading2: "2",
+  heading3: "3",
+  heading4: "4",
+  heading5: "5",
+  heading6: "6",
+}
+
+const toLineAttributes = (
+  lineKind: LivePreviewLineKind,
+  hasDocumentSemantics: boolean,
+) => {
+  const level = HEADING_LEVELS[lineKind]
+
+  return hasDocumentSemantics && level
+    ? { "aria-level": level, role: "heading" }
+    : undefined
+}
+
+/**
+ * A link's DOM, in a surface where a real anchor is allowed.
+ *
+ * The editor cannot have one. Its content is `contenteditable`, and
+ * an `<a href>` inside an editable region is a focus target the
+ * caret has to share the line with — which is why the editor paints
+ * a `<span>` and opens the URL from a `mousedown` handler instead,
+ * and why clicking link *text* there cannot place a caret.
+ *
+ * A read view has no caret to protect, so the link is simply a link:
+ * tabbable, activated by Enter, copyable from the context menu, and
+ * announced as a link rather than as coloured text. That difference
+ * is the one place the two surfaces deliberately emit different DOM,
+ * and it is a strictly larger set of things a reader can do.
+ */
+const toLinkAttributes = (url: string) => ({
+  href: url,
+  // Not optional with `target="_blank"`: without it the opened page
+  // gets a live `window.opener` back into this one.
+  rel: "noopener noreferrer",
+  target: "_blank",
+})
+
 const LINE_CLASSES: Record<LivePreviewLineKind, string> = {
   blockquote: "cm-md-blockquote",
   code: "cm-md-codeblock",
@@ -187,6 +314,15 @@ class ImageWidget extends WidgetType {
 
     image.setAttribute("alt", this.alt)
 
+    /**
+     * A remote image in a document nobody here wrote is a beacon:
+     * fetching it tells its host that this reader opened this file,
+     * and the default `Referer` tells it which page they opened it
+     * from. The image is still fetched — that is what rendering it
+     * means — but it learns nothing about where from.
+     */
+    image.setAttribute("referrerpolicy", "no-referrer")
+
     image.className = "cm-md-image"
 
     // The document's height is unknown until the image decodes, and
@@ -213,6 +349,7 @@ class TaskWidget extends WidgetType {
   constructor(
     private readonly isChecked: boolean,
     private readonly label: string,
+    private readonly isInteractive: boolean,
   ) {
     super()
   }
@@ -220,6 +357,7 @@ class TaskWidget extends WidgetType {
   eq(other: TaskWidget) {
     return (
       other.isChecked === this.isChecked &&
+      other.isInteractive === this.isInteractive &&
       other.label === this.label
     )
   }
@@ -248,6 +386,30 @@ class TaskWidget extends WidgetType {
       "aria-label",
       this.label === "" ? "Task" : this.label,
     )
+
+    /**
+     * A read view's checkbox is **inert by default**, and `disabled`
+     * rather than hidden or repainted as a glyph.
+     *
+     * The state is a fact about the document and belongs on screen;
+     * the ability to change it is not, when the document is a file
+     * fetched at a commit hash and there is nowhere for a tick to go.
+     * A disabled checkbox says both of those at once — it shows
+     * checked or unchecked, and it announces "unavailable", so the
+     * reader is never left clicking something that swallows the
+     * click.
+     *
+     * A consumer that *does* have somewhere to put the change passes
+     * `onToggleTask`, and this comes back to life. That is the same
+     * shape as `onUploadImage` on the editors: omit the handler and
+     * the capability is simply not offered, which beats offering one
+     * that half works.
+     */
+    if (!this.isInteractive) {
+      checkbox.disabled = true
+
+      return checkbox
+    }
 
     checkbox.addEventListener("mousedown", (event) => {
       // The checkbox owns the click; without this CodeMirror also
@@ -285,6 +447,7 @@ class TaskWidget extends WidgetType {
 const toSegmentNode = (
   segment: LivePreviewTableSegment,
   view: EditorView,
+  hasDocumentSemantics: boolean,
 ) => {
   if (segment.type === "image") {
     const image = document.createElement("img")
@@ -292,6 +455,8 @@ const toSegmentNode = (
     image.setAttribute("src", segment.url)
 
     image.setAttribute("alt", segment.alt)
+
+    image.setAttribute("referrerpolicy", "no-referrer")
 
     image.className = "cm-md-image"
 
@@ -306,19 +471,33 @@ const toSegmentNode = (
     return document.createTextNode(segment.text)
   }
 
-  const span = document.createElement("span")
+  // A link in a cell follows the same rule as a link in a
+  // paragraph: an anchor where an anchor is allowed, a painted span
+  // with a click handler where the caret owns the line.
+  const element: HTMLElement =
+    segment.url && hasDocumentSemantics
+      ? document.createElement("a")
+      : document.createElement("span")
 
-  span.className = segment.markKinds
+  element.className = segment.markKinds
     .map((markKind) => MARK_CLASSES[markKind])
     .join(" ")
 
   if (segment.url) {
-    span.setAttribute(URL_ATTRIBUTE, segment.url)
+    if (hasDocumentSemantics) {
+      for (const [name, value] of Object.entries(
+        toLinkAttributes(segment.url),
+      )) {
+        element.setAttribute(name, value)
+      }
+    } else {
+      element.setAttribute(URL_ATTRIBUTE, segment.url)
+    }
   }
 
-  span.textContent = segment.text
+  element.textContent = segment.text
 
-  return span
+  return element
 }
 
 /**
@@ -346,6 +525,7 @@ class TableWidget extends WidgetType {
     private readonly source: string,
     private readonly rows: readonly LivePreviewTableRow[],
     private readonly tableFrom: number,
+    private readonly hasDocumentSemantics: boolean,
   ) {
     super()
   }
@@ -383,7 +563,13 @@ class TableWidget extends WidgetType {
         )
 
         for (const segment of cell.segments) {
-          cellElement.append(toSegmentNode(segment, view))
+          cellElement.append(
+            toSegmentNode(
+              segment,
+              view,
+              this.hasDocumentSemantics,
+            ),
+          )
         }
 
         rowElement.append(cellElement)
@@ -399,6 +585,34 @@ class TableWidget extends WidgetType {
     table.append(body)
 
     scroll.append(table)
+
+    /**
+     * The way back into the markdown, and only where there is one.
+     *
+     * A read view has no caret to put in a cell, so this handler
+     * would be a click that steals the selection and gives nothing
+     * back — and `cursor: text` on the cells would be advertising
+     * an edit that cannot happen. The table there is simply a table.
+     */
+    if (this.hasDocumentSemantics) {
+      scroll.classList.add("cm-md-table-static")
+
+      /**
+       * A scroll box a keyboard can reach.
+       *
+       * A table wider than its column scrolls sideways, and in the
+       * editor that box is inside a `contenteditable` — already
+       * focusable, already scrollable with the arrow keys. Here it
+       * is inside content that is deliberately *not* a tab stop, so
+       * without this the only way to see column four is a pointer.
+       * axe reports it as `scrollable-region-focusable` and is
+       * right: it is WCAG 2.1.1, and it is the one thing a read view
+       * has to add back that the editor got for free.
+       */
+      scroll.tabIndex = 0
+
+      return scroll
+    }
 
     scroll.addEventListener("mousedown", (event) => {
       const target = event.target
@@ -458,24 +672,36 @@ const toDecorations = (view: EditorView): DecorationSet => {
     false,
   )
 
+  const { hasDocumentSemantics, isTaskListInteractive } =
+    toOptions(view.state)
+
   const text = view.state.doc.toString()
 
   /**
-   * An unfocused editor reveals nothing.
+   * An unfocused editor reveals nothing, and a document reveals
+   * nothing ever.
    *
-   * Without this the caret's default resting place — offset 0 —
-   * counts as "inside" whatever construct starts the document, so a
-   * task whose description opens with a heading rendered its `#` on
-   * load and no other heading's. It looked like a concealment bug
-   * and was really a focus bug: there is no caret in the document
-   * until someone puts one there.
+   * Without the focus half, the caret's default resting place —
+   * offset 0 — counts as "inside" whatever construct starts the
+   * document, so a task whose description opens with a heading
+   * rendered its `#` on load and no other heading's. It looked like
+   * a concealment bug and was really a focus bug: there is no caret
+   * in the document until someone puts one there.
+   *
+   * The document half is stated rather than inherited. A read view's
+   * content is not editable, so it cannot take focus and `hasFocus`
+   * is already false — but that is a property of how CodeMirror
+   * happens to treat a `contenteditable="false"` element, and
+   * "markup never comes back in a read view" is a promise the
+   * component makes, not a side effect it is relying on.
    */
-  const selections = view.hasFocus
-    ? view.state.selection.ranges.map((range) => ({
-        from: range.from,
-        to: range.to,
-      }))
-    : []
+  const selections =
+    view.hasFocus && !hasDocumentSemantics
+      ? view.state.selection.ranges.map((range) => ({
+          from: range.from,
+          to: range.to,
+        }))
+      : []
 
   const decorations: Range<Decoration>[] = []
 
@@ -502,6 +728,10 @@ const toDecorations = (view: EditorView): DecorationSet => {
         case "line": {
           decorations.push(
             Decoration.line({
+              attributes: toLineAttributes(
+                range.lineKind,
+                hasDocumentSemantics,
+              ),
               class: LINE_CLASSES[range.lineKind],
             }).range(range.from),
           )
@@ -513,9 +743,14 @@ const toDecorations = (view: EditorView): DecorationSet => {
           decorations.push(
             Decoration.mark({
               attributes: range.url
-                ? { [URL_ATTRIBUTE]: range.url }
+                ? hasDocumentSemantics
+                  ? toLinkAttributes(range.url)
+                  : { [URL_ATTRIBUTE]: range.url }
                 : undefined,
               class: MARK_CLASSES[range.markKind],
+              ...(range.url && hasDocumentSemantics
+                ? { tagName: "a" }
+                : {}),
             }).range(range.from, range.to),
           )
 
@@ -543,6 +778,7 @@ const toDecorations = (view: EditorView): DecorationSet => {
               widget: new TaskWidget(
                 range.isChecked,
                 range.label,
+                isTaskListInteractive,
               ),
             }).range(range.from, range.to),
           )
@@ -577,15 +813,16 @@ const toTableDecorations = (state: EditorState) => {
     false,
   )
 
-  const selections = state.field(
-    isEditorFocusedField,
-    false,
-  )
-    ? state.selection.ranges.map((range) => ({
-        from: range.from,
-        to: range.to,
-      }))
-    : []
+  const { hasDocumentSemantics } = toOptions(state)
+
+  const selections =
+    state.field(isEditorFocusedField, false) &&
+    !hasDocumentSemantics
+      ? state.selection.ranges.map((range) => ({
+          from: range.from,
+          to: range.to,
+        }))
+      : []
 
   const text = state.doc.toString()
 
@@ -605,6 +842,7 @@ const toTableDecorations = (state: EditorState) => {
           text.slice(range.from, range.to),
           range.rows,
           range.from,
+          hasDocumentSemantics,
         ),
       }).range(range.from, range.to),
     ),
@@ -624,6 +862,11 @@ const livePreviewTableField =
             effect.is(setLivePreviewRawMode) ||
             effect.is(setIsEditorFocused),
         ) ||
+        // A `Compartment` reconfigure — `MarkdownView` turning its
+        // checkboxes on or off — arrives as neither a doc change
+        // nor an effect this field would otherwise notice.
+        transaction.startState.facet(livePreviewOptions) !==
+          transaction.state.facet(livePreviewOptions) ||
         // Parsing is incremental and time-sliced, so a long
         // document's tables arrive over several transactions that
         // change nothing else. Comparing the tree by identity is
@@ -661,7 +904,12 @@ const livePreviewPlugin = ViewPlugin.fromClass(
           transaction.effects.some((effect) =>
             effect.is(setLivePreviewRawMode),
           ),
-        )
+        ) ||
+        // The same `Compartment` reconfigure the block pass watches
+        // for: a checkbox that just became operable is a widget
+        // that has to be rebuilt.
+        update.startState.facet(livePreviewOptions) !==
+          update.state.facet(livePreviewOptions)
       ) {
         this.decorations = toDecorations(update.view)
       }
@@ -873,6 +1121,19 @@ const livePreviewTheme = EditorView.theme({
     textDecoration: "underline",
   },
   /**
+   * The read view's links are real anchors, so they are in the tab
+   * order — and a focus ring is the whole reason that is worth
+   * having. CodeMirror injects its own stylesheet and nothing here
+   * is DOM Tailwind scans, so the ring is written from the same
+   * custom properties the `focus-visible` utilities generate.
+   */
+  ".cm-md-link:focus-visible": {
+    borderRadius: "var(--radius-sm)",
+    outline:
+      "var(--focus-ring-width) solid var(--color-focus-ring)",
+    outlineOffset: "var(--focus-ring-offset)",
+  },
+  /**
    * The dimmed marker.
    *
    * A token role, never `opacity`. Fading text over a themed
@@ -941,6 +1202,23 @@ const livePreviewTheme = EditorView.theme({
     fontWeight: "var(--font-weight-semibold)",
   },
   /**
+   * A read view's table takes no click, so it stops advertising
+   * one. `cursor: text` on a cell is a promise that clicking there
+   * puts a caret in the markdown behind it, and there is no
+   * markdown behind it to reach.
+   */
+  ".cm-md-table-static .cm-md-table-rendered td, .cm-md-table-static .cm-md-table-rendered th":
+    {
+      cursor: "auto",
+    },
+  /** A focusable box says so when it has focus. */
+  ".cm-md-table-static:focus-visible": {
+    borderRadius: "var(--radius-sm)",
+    outline:
+      "var(--focus-ring-width) solid var(--color-focus-ring)",
+    outlineOffset: "var(--focus-ring-offset)",
+  },
+  /**
    * The scroll box, not the table.
    *
    * A table wider than the editor has to go somewhere. Letting it
@@ -981,7 +1259,10 @@ const rawModeClass = EditorView.editorAttributes.of(
       : null,
 )
 
-export const livePreview = (): Extension => [
+export const livePreview = (
+  options: LivePreviewOptions = {},
+): Extension => [
+  livePreviewOptions.of(options),
   livePreviewRawModeField,
   isEditorFocusedField,
   focusTracker,
@@ -991,7 +1272,22 @@ export const livePreview = (): Extension => [
   livePreviewTableField,
   livePreviewPlugin,
   livePreviewTheme,
-  openLinkOnClick,
-  tableStepKeymap,
+  /**
+   * The two extensions a **document** does not get, and both are
+   * absences with a reason rather than an oversight.
+   *
+   * `openLinkOnClick` exists because the editor's links are painted
+   * `<span>`s that a `mousedown` has to translate into a
+   * navigation. A document's links are real `<a href>` elements, so
+   * installing this as well would open every link twice — once from
+   * the handler and once from the browser.
+   *
+   * `tableStepKeymap` steps the *caret* into a rendered table so its
+   * markdown can be reached. A document has no caret and nothing
+   * behind the table to reach.
+   */
+  options.hasDocumentSemantics
+    ? []
+    : [openLinkOnClick, tableStepKeymap],
   rawModeClass,
 ]

@@ -22,6 +22,17 @@ import { MarkdownEditorCodeMirror } from "@charcuterie/ui/markdown-editor-codemi
 
 <Controls />
 
+## Reading, not editing
+
+`isReadOnly` here means *an editor you cannot type in*: the toolbar stays, drawn in its
+disabled colours above a document nobody is editing. That is right for a form field that is
+temporarily locked, and wrong for reading a file.
+
+For reading, take **[`MarkdownView`](?path=/docs/components-data-markdownview--docs)** from
+this same subpath. It has no toolbar in the DOM at all, it is controlled rather than
+uncontrolled, its content is a `role="article"` instead of a `role="textbox"`, and it renders
+**identically** to this component because it is the same code — same range rules, same theme.
+
 ## Which of the two editors you want
 
 `MarkdownEditor` is still the default, and most consumers should keep it.
