@@ -12,6 +12,7 @@ const {
   Default,
   HostileMarkdown,
   Interactive,
+  NestedLinkText,
   SameAsTheEditor,
 } = composeStories(stories)
 
@@ -286,3 +287,63 @@ test("the text can be selected", async () => {
     "Rack move, phase two",
   )
 })
+
+/**
+ * The blast radius, as a red/green fact.
+ *
+ * ``[`file.md`](path)`` produced a zero-length `linkText` range.
+ * `Decoration.mark` throws on an empty range, CodeMirror answers a
+ * throwing view plugin by destroying it, and destroying it takes
+ * **every** decoration in the document — so one link in one bullet
+ * dropped the whole file to raw markdown.
+ *
+ * The unit tests in `livePreviewRanges.test.ts` pin the range. This
+ * pins the consequence, which is the part a range assertion cannot
+ * see: that the heading three lines above the bad link still
+ * renders.
+ */
+test("inline markup in link text does not drop the document to raw source", async () => {
+  const { canvas } = await mountStory(NestedLinkText)
+
+  // The canary. This heading has nothing to do with links, and it
+  // is what stopped rendering when the plugin died.
+  await expect(
+    canvas.getByRole("heading", {
+      name: "Where the fix landed",
+    }),
+  ).toHaveAttribute("aria-level", "2")
+
+  // No raw source anywhere in the document.
+  const article = canvas.getByRole("article")
+
+  await expect(article.textContent).not.toContain("](")
+
+  await expect(article.textContent).not.toContain("**")
+
+  await expect(article.textContent).not.toContain("~~")
+})
+
+/**
+ * Each nesting, reachable as a link by the text a reader sees —
+ * with the markers gone, since those are concealed in a document.
+ */
+test.each([
+  ["a code span", "livePreviewRanges.ts"],
+  ["strong", "the runbook"],
+  ["emphasis", "the older note"],
+  ["strikethrough", "the retired page"],
+  ["a mix", "read this first"],
+  ["no nesting at all", "the index"],
+])(
+  "link text through %s is a reachable anchor",
+  async (_case, name) => {
+    const { canvas } = await mountStory(NestedLinkText)
+
+    const link = expectAgentDrivable(canvas, {
+      name,
+      role: "link",
+    })
+
+    await expect(link.tagName).toBe("A")
+  },
+)
