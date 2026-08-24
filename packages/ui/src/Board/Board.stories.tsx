@@ -3,6 +3,7 @@ import type { ReactNode } from "react"
 import { useState } from "react"
 
 import { Alert } from "../Alert/Alert.tsx"
+import { Avatar } from "../Avatar/Avatar.tsx"
 import { Badge } from "../Badge/Badge.tsx"
 import { Button } from "../Button/Button.tsx"
 import {
@@ -68,26 +69,6 @@ const Mark = ({
     }
   >
     <VisuallyHidden>{name}</VisuallyHidden>
-  </span>
-)
-
-/**
- * An assignee. Two initials and a name nobody has to hover to hear —
- * an avatar with no accessible name is a coloured circle, which is
- * the fleet's most-repeated a11y defect after the unnamed icon
- * button.
- */
-const Avatar = ({
-  initials,
-  name,
-}: {
-  initials: string
-  name: string
-}): ReactNode => (
-  <span className="grid size-5 shrink-0 place-items-center rounded-full bg-intent-info-surface font-medium text-[0.625rem] text-intent-info-content">
-    <span aria-hidden="true">{initials}</span>
-
-    <VisuallyHidden>{`Assigned to ${name}`}</VisuallyHidden>
   </span>
 )
 
@@ -184,8 +165,20 @@ const toItem = ({
     </>
   ),
   title,
+  /*
+   * `Avatar` from this package, not a chip hand-rolled in a story
+   * file. This story *had* one — a `size-5` circle painted
+   * `intent-info`, with the name in a `VisuallyHidden` — which is
+   * exactly the shape three apps were about to write for
+   * themselves. The library owns the shape; the story owns the
+   * data.
+   */
   trailing: (
-    <Avatar initials={assignee[0]} name={assignee[1]} />
+    <Avatar
+      initials={assignee[0]}
+      name={assignee[1]}
+      size="sm"
+    />
   ),
 })
 
@@ -703,5 +696,38 @@ export const InBoardScreen: Story = {
         onMove={() => undefined}
       />
     </div>
+  ),
+}
+
+/**
+ * A lane whose heading goes somewhere — the "show me only this
+ * column" route.
+ *
+ * `href` on the lane, not a `ReactNode` label. The heading stays an
+ * `<h3>` at the level the caller asked for, keeps its id, and keeps
+ * naming the `group`; the anchor sits **inside** it, so the document
+ * outline is the same one a board with no links has.
+ *
+ * It also reads as the same heading: `TextLink` supplies the cursor,
+ * the focus ring and the hover underline, and the colour is
+ * inherited. Three accent-coloured column titles would compete with
+ * the card titles below them, which are what a reader is scanning.
+ */
+export const LinkedLaneHeadings: Story = {
+  render: (boardProps) => (
+    // The same fixed 72rem the other three-up stories use. Three
+    // lanes at once is a measurement of the board's own box, and a
+    // story that inherited the canvas width would show three linked
+    // headings on one machine and one plus a segmented control on
+    // another.
+    <Frame inlineSize="72rem">
+      <Board
+        {...boardProps}
+        lanes={LANES.map((lane) => ({
+          ...lane,
+          href: `/board/${lane.key}`,
+        }))}
+      />
+    </Frame>
   ),
 }

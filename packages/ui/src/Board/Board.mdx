@@ -108,6 +108,32 @@ An app that already owns a glyph set passes `moveIcon` and buys back ~55px a row
 
 <Canvas of={BoardStories.AllVariants} />
 
+## A lane heading can be a link
+
+<Canvas of={BoardStories.LinkedLaneHeadings} />
+
+`BoardLane.href` makes the column title navigate — the "show me only this column" route a
+board screen wants. It is **a link inside the heading, never a heading replaced by a
+link**: the `<h3>` keeps the level the caller passed, keeps its id, and keeps naming the
+lane's `group`, so the screen-reader outline of a linked board is the outline of an
+unlinked one.
+
+`label` stays a `string` rather than widening to a `ReactNode`, and that is the trade the
+prop exists to avoid. The same value names the lane in the move menu on every card, in the
+Narrow View's segmented control, in the "+ n more in Todo" line, and in the sentence the
+live region reads after a move. None of those four can put a `ReactNode` in a string, so
+widening `label` would buy one linkable heading at the cost of four places that could no
+longer say which lane they mean.
+
+The link inherits the heading's colour and weight. `TextLink` still supplies the cursor,
+the focus ring and the hover underline, which is what says it is a link; a board whose
+three column titles are all accent-coloured competes with the card titles underneath, and
+those are what a reader is actually scanning. The `href` is routed through
+`RouterLinkProvider` like every other one in this library, so an app with a client-side
+router navigates without a full page load.
+
+An app that was putting a link in `actions` as a stopgap can take it out.
+
 **No `onMove` means read-only**, all or nothing: no handles, no menus, no drag. A per-card
 `isMovable` would put the decision in the data, where a card that cannot move looks identical
 to one nobody has thought about.

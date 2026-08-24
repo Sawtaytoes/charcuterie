@@ -17,6 +17,7 @@ const {
   Default,
   InBoardScreen,
   Interactive,
+  LinkedLaneHeadings,
   Responsive,
 } = composeStories(stories)
 
@@ -307,4 +308,65 @@ test("the board sits under a separate attention banner, and the page is clean", 
   const { canvasElement } = await mountStory(InBoardScreen)
 
   await expectNoAxeViolations(canvasElement)
+})
+
+/**
+ * A linkable column title is a **link inside the heading**, never a
+ * heading replaced by a link.
+ *
+ * The distinction is the whole reason `href` is a prop rather than a
+ * widened `label`: swap the `<h3>` for an `<a>` and the lane stops
+ * having a heading, the `group` loses the element it is named by,
+ * and the document outline gains a hole that no gate but a screen
+ * reader would notice.
+ */
+test("a lane heading with an href is a link inside a real heading", async () => {
+  const { canvas } = await mountStory(LinkedLaneHeadings)
+
+  const board = expectAgentDrivable(canvas, {
+    name: "Today",
+    role: "region",
+  })
+
+  for (const [laneKey, laneLabel] of [
+    ["todo", "Todo"],
+    ["in-progress", "In Progress"],
+    ["review", "Needs Review"],
+  ]) {
+    // Still a named group — the heading did not stop being the
+    // thing that names it.
+    expectAgentDrivable(canvas, {
+      name: laneLabel,
+      role: "group",
+    })
+
+    const heading = canvas.getByRole("heading", {
+      level: 3,
+      name: laneLabel,
+    })
+
+    const link = within(heading).getByRole("link", {
+      name: laneLabel,
+    })
+
+    await expect(link).toHaveAttribute(
+      "href",
+      `/board/${laneKey}`,
+    )
+  }
+
+  await expectNoAxeViolations(board)
+})
+
+/**
+ * The lane label is still a string everywhere else it is used, and
+ * a linked heading must not have changed that. The move menu, the
+ * segmented control and the truncation line all interpolate it.
+ */
+test("a linked lane still names itself in the move menu and the overflow line", async () => {
+  const { canvas } = await mountStory(LinkedLaneHeadings)
+
+  await expect(
+    canvas.getByText("+ 11 more in Needs Review"),
+  ).toBeInTheDocument()
 })

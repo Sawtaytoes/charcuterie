@@ -465,7 +465,15 @@ test("the barrel is the only place components are re-exported", async () => {
   // count by the `<Name>/<Name>.tsx` rule, and it IS exported from
   // the barrel as a function, because a host with its own clipboard
   // bridge needs the fallback chain without the button.
-  expect(componentNames.length).toBe(54)
+  //
+  // `Avatar` — a person as a coloured chip, so a board stops
+  // printing the same name on every card — is +1 -> 55. It has no
+  // members: the initials derivation is a private function in
+  // `Avatar.tsx`, and the colour it falls back to is
+  // `getCategoricalIndex`, which already lives in
+  // `@charcuterie/tokens` because a Node service and a Satori render
+  // both need to answer the colour question with no React in scope.
+  expect(componentNames.length).toBe(55)
 
   for (const name of componentNames) {
     expect(barrel).toContain(`export { ${name} }`)
