@@ -334,6 +334,55 @@ describe("toLivePreviewRanges", () => {
         },
       )
 
+      /**
+       * The invariant, swept rather than enumerated.
+       *
+       * Every caret position in the document, in both modes. A
+       * caret changes which constructs are revealed, and reveal
+       * state feeds the same bracket arithmetic — so "the mark is
+       * non-empty with no caret in the file" is a weaker promise
+       * than the one the plugin needs. `Decoration.mark` throws on
+       * an empty range wherever the caret happens to be.
+       */
+      test("emits no empty mark at any caret position, in either mode", () => {
+        const empties: string[] = []
+
+        for (const text of [
+          "see [`file.md`](https://example.com) now",
+          "see [**bold**](https://example.com) now",
+          "[a *b* `c` **d**](https://example.com)",
+          "[![alt](https://example.com/a.png)](https://example.com)",
+          "![`code` alt](https://example.com/a.png)",
+          "[](https://example.com)",
+          "[a\\]b](https://example.com)",
+        ]) {
+          for (const isRawMode of [false, true]) {
+            for (
+              let offset = 0;
+              offset <= text.length;
+              offset += 1
+            ) {
+              for (const range of toRanges(
+                text,
+                atCaret(offset),
+                isRawMode,
+              )) {
+                if (
+                  range.type === "mark" &&
+                  range.from >= range.to
+                ) {
+                  empties.push(
+                    `${text} @${offset} raw=${isRawMode}`,
+                  )
+                }
+              }
+            }
+          }
+        }
+
+        expect(empties).toEqual([])
+      })
+
       test("never emits an empty mark, whatever the nesting", () => {
         for (const text of [
           "[`file.md`](url)",
