@@ -4,6 +4,7 @@ import type { ReactNode } from "react"
 import { Badge } from "../Badge/Badge.tsx"
 import { Button } from "../Button/Button.tsx"
 import { EmptyState } from "../EmptyState/EmptyState.tsx"
+import { TextLink } from "../TextLink/TextLink.tsx"
 import { toClassName } from "../toClassName.ts"
 import type { BoardItem } from "./BoardCard.tsx"
 import { BoardCard } from "./BoardCard.tsx"
@@ -21,6 +22,23 @@ export type BoardLane = {
    */
   emptyState?: ReactNode
   /**
+   * Where the lane's own heading navigates — a route showing this
+   * lane and nothing else.
+   *
+   * **A link inside the heading, never a heading replaced by a
+   * link.** The `<h3>` keeps its level, its id and its place in the
+   * document outline, so the lane stays a named `group` and the
+   * screen-reader outline is unchanged; the anchor sits inside it.
+   * Routed through `RouterLinkProvider` like every other `href` in
+   * this library, so an app with a client-side router navigates
+   * without a full page load and one without it still gets a real
+   * `<a href>`.
+   *
+   * Absent means the heading is plain text, which is what every
+   * existing consumer gets.
+   */
+  href?: string
+  /**
    * The **true** size of the lane, when `items` is a truncated page
    * of it. This is what the count badge shows, and the difference
    * between it and `items.length` is what the "+ n more" line says.
@@ -31,6 +49,18 @@ export type BoardLane = {
   itemCount?: number
   items: readonly BoardItem[]
   key: string
+  /**
+   * The lane's name, and it stays a **string** rather than widening
+   * to a `ReactNode`.
+   *
+   * It is not only a heading: the same value names the lane in the
+   * move menu on every card, in the Narrow View's segmented control,
+   * in the "+ n more in Todo" line, and in the sentence the live
+   * region reads out after a move. A `ReactNode` is not something
+   * any of those four can put in a string, so widening this would
+   * trade one linkable heading for four places that can no longer
+   * say which lane they mean. `href` buys the link without that.
+   */
   label: string
   /**
    * What "+ n more in this lane" does. With no handler the line is
@@ -177,7 +207,28 @@ export const BoardLaneList = ({
               className="font-semibold text-content-primary text-sm"
               id={headingId}
             >
-              {lane.label}
+              {lane.href ? (
+                /*
+                 * `text-inherit` and `font-semibold` on purpose: a
+                 * linkable column title should read as the same
+                 * heading it was, not as a blue word. The link
+                 * announces itself by being a link — the cursor,
+                 * the focus ring and the hover underline all come
+                 * from `TextLink` — and a board whose every lane
+                 * title is accent-coloured competes with the card
+                 * titles underneath it, which are the things a
+                 * reader is actually scanning.
+                 */
+                <TextLink
+                  appearance="standalone"
+                  className="font-semibold text-inherit"
+                  href={lane.href}
+                >
+                  {lane.label}
+                </TextLink>
+              ) : (
+                lane.label
+              )}
             </Heading>
 
             <Badge

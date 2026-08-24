@@ -63,6 +63,11 @@ export type {
   AlertSize,
 } from "./Alert/Alert.tsx"
 export { Alert } from "./Alert/Alert.tsx"
+export type {
+  AvatarProps,
+  AvatarSize,
+} from "./Avatar/Avatar.tsx"
+export { Avatar } from "./Avatar/Avatar.tsx"
 export type { BadgeProps } from "./Badge/Badge.tsx"
 export { Badge } from "./Badge/Badge.tsx"
 export type { BadgeShapeProps } from "./Badge/useBadgeShape.tsx"
