@@ -1,0 +1,157 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as MarkdownViewStories from "./MarkdownView.stories";
+
+<Meta of={MarkdownViewStories} />
+
+# MarkdownView
+
+Rendered markdown, with **no toolbar in the DOM** and nothing to type into. The same
+document, drawn the same way, as the editor beside it.
+
+It is **opt-in**, from the same subpath as the editor:
+
+```tsx
+import { MarkdownView } from "@charcuterie/ui/markdown-editor-codemirror"
+```
+
+<Canvas of={MarkdownViewStories.Default} />
+
+## Props
+
+<Controls />
+
+## Which of the three you want
+
+| | `MarkdownEditor` | `MarkdownEditorCodeMirror` | `MarkdownView` |
+| --- | --- | --- | --- |
+| For | typing markdown | typing markdown, rendered | **reading** markdown |
+| Surface | `<textarea>` + painted layer | CodeMirror 6 | CodeMirror 6 |
+| New dependency | none | ~176 KB gz, optional peer | the same one |
+| Toolbar | nine buttons | nine buttons + a switch | **none, ever** |
+| Value | `defaultValue` | `defaultValue` | **`value`, controlled** |
+| Content role | `textbox` | `textbox` | **`article`** |
+
+`isReadOnly` on either editor is **not** this. It means *an editor you cannot type in*: the
+nine formatting buttons are still there, still in the accessibility tree, drawn in their
+disabled colours above a document nobody is editing. That is right for a form field that is
+temporarily locked, and wrong for reading a file — which is what this exists for.
+
+## No toolbar means no toolbar
+
+`queryAllByRole("toolbar")` returns nothing here, and so does `queryAllByRole("button")`.
+That is asserted rather than described, because the workaround it replaces was a CSS rule
+in a consuming app keyed on `role="toolbar"`, and CSS is a poor place to keep a promise:
+`visibility: hidden` leaves the buttons in the accessibility tree, `opacity: 0` leaves them
+in the tab order, and even `display: none` leaves the *overflow menu button* the toolbar
+collapses into at narrow widths.
+
+## It renders what the editor renders
+
+<Canvas of={MarkdownViewStories.SameAsTheEditor} />
+
+One string, two surfaces, side by side. They agree because they **are the same code** —
+`livePreviewRanges.ts` decides what every construct looks like and both call it, over the
+same GFM parse, under the same theme.
+
+That is the whole reason this lives in the CodeMirror subpath instead of being a
+`react-markdown` reader in the main barrel. A second renderer agrees on the day it is
+written and drifts afterwards, one construct at a time, and the bug arrives six months later
+as *"the table changed when I saved it"*. There is no second renderer here to drift.
+
+The cost is honest and worth stating: a consumer who wants **only** the reader still installs
+CodeMirror. For an app that renders markdown in three places and edits it in one, that is the
+right way round — the dependency is paid once.
+
+## It is controlled, and the editors are not
+
+`value` in, and that is it. Fetch a file at a different commit hash, pass the new string, and
+the page changes — no `key`, no remount, no stale document sitting above a new title.
+
+The editors take `defaultValue` because reassigning an `EditorView`'s document from outside
+throws away the undo history that belonged to it, which is a real cost and is why they ask
+for a `key` instead. A view has no undo history and no caret to protect, so it has nothing to
+lose by simply rendering what it is given.
+
+## A `- [ ]` box is inert unless you say where the tick goes
+
+<Canvas of={MarkdownViewStories.AllStates} />
+
+Pass `onToggleTask` and the checkboxes are operable; leave it out and they render
+**disabled**. The state is still on screen either way — that is a fact about the document
+and belongs there — but nothing pretends the reader can change it.
+
+This is the same shape as `onUploadImage` on the editors: omit the handler and the capability
+is simply not offered, which beats offering one that half works. Two of the three surfaces
+this component was built for — a rendered comment, and a repo file fetched at a commit hash —
+have nowhere to put a tick, and a box that visibly toggles and then loses the change on
+reload is worse than one that says up front it cannot.
+
+`onToggleTask` hands back the **whole next markdown document**, exactly like the editors'
+`onChange`, so one autosave wires to both. The view applies the tick to its own document
+immediately so the box responds under the pointer; if the consumer rejects the change, the
+next `value` puts it back.
+
+## Hostile markdown
+
+This will render files fetched from a git host, so the document is untrusted by default.
+
+<Canvas of={MarkdownViewStories.HostileMarkdown} />
+
+**Raw HTML in the source is never parsed as HTML.** There is no `innerHTML` in this subpath,
+no `dangerouslySetInnerHTML`, and no sanitiser to have a bug in. CodeMirror's state holds the
+source as *text* and every rendered node is `createElement` plus `textContent`, so a
+`<script>` in a fetched README is drawn as the characters `<script>`. It is not stripped,
+not escaped and not "sanitised" — there is simply no code path that would turn it into an
+element.
+
+**A URL is checked before it is used as one.** That was the one place the document reached the
+platform, and it was live in the editor too: `[click](javascript:…)` concealed its markup,
+painted as a link, and `window.open` ran it in this origin. Both components now go through an
+allowlist that normalises the way a browser does, so `JaVaScript:` and a tab in the middle of
+the word are the same URL to it. A rejected link is **left as source** — brackets, parentheses
+and all — rather than repainted as a link-coloured word that silently refuses to work.
+Images take `http:`, `https:` and `data:image/*` only; `data:text/html` is not an image.
+
+**The reader is not a beacon.** Remote images carry `referrerpolicy="no-referrer"`, so an
+image in somebody else's file cannot learn which page loaded it.
+
+What is *not* claimed: nothing here stops a document linking somewhere unpleasant, and the
+images the markdown names are still fetched — that is what rendering them means.
+
+## Accessibility
+
+The content is `role="article"`, not the `role="textbox"` CodeMirror writes by default, and
+that swap is the difference between reading a document and being trapped in a text field: a
+screen reader entering a textbox switches to forms mode and reads the contents as one flat
+string, with no heading navigation and no table navigation.
+
+So the structure has to be real, and two pieces of it are:
+
+- **Headings carry `role="heading"` and an `aria-level`**, so the H key steps between
+  sections. The editor deliberately has none of this — ARIA flattens a textbox's contents, so
+  a heading role inside one would be a decoration that lies about what it does.
+- **Links are real `<a href>` elements**, in the tab order, activated by Enter, with an
+  address the browser will show and copy. The editor cannot have these: an anchor inside a
+  `contenteditable` competes with the caret for its line, which is why the editor paints a
+  span and translates a `mousedown` instead — and why clicking link text *there* cannot place
+  a caret.
+
+<Canvas of={MarkdownViewStories.Interactive} />
+
+**The document itself is not a tab stop.** There is nothing in it to operate, and a reading
+surface that swallowed a Tab would be one more thing between the reader and the next control.
+Every link inside it is reachable, in document order.
+
+List structure is **visual only**, and worth knowing rather than discovering: the `-` bullet
+is drawn as a dimmed marker rather than concealed, the same way it is in the editor, so a
+list reads as a list on screen but is not a `<ul>` in the tree. Tables are real `<table>`
+elements with real `<th>`s, because the table widget builds one.
+
+## The Narrow View
+
+<Canvas of={MarkdownViewStories.Responsive} />
+
+A table too wide for its column scrolls **inside its own block** rather than pushing the
+column sideways, and an image is capped at the width it is given. Nothing here is keyed to a
+viewport width; a column in a three-up board is narrow on a 4K display.
