@@ -15,6 +15,11 @@ stored string.
 
 <Canvas of={MarkdownEditorStories.Default} />
 
+> **Reading rather than editing?** `isReadOnly` here leaves the toolbar on screen, because it
+> means "an editor you cannot type in". A surface with no toolbar in the DOM is
+> [`MarkdownView`](?path=/docs/components-data-markdownview--docs), in the
+> `@charcuterie/ui/markdown-editor-codemirror` subpath.
+
 ## Props
 
 <Controls />
