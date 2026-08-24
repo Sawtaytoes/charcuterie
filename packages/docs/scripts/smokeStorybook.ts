@@ -80,14 +80,18 @@ const IGNORED_MESSAGES = [
 ]
 
 /**
- * The one 404 that is the point. `MediaTile`'s error story points at
- * a poster that genuinely is not there, because a mocked `onError`
- * proves nothing about what the browser does with a broken `<img>`.
+ * The 404s that are the point. `MediaTile`'s error story and
+ * `Avatar`'s fallback story both point at a file that genuinely is
+ * not there, because a mocked `onError` proves nothing about what
+ * the browser does with a broken `<img>` — and the avatar fallback
+ * is the state a hand-rolled chip always gets wrong.
+ *
  * Scoped to the URL rather than to the words "404", so a real
  * missing chunk still fails the run.
  */
 const EXPECTED_MISSING_RESOURCES = [
   "/charcuterie-missing-poster.png",
+  "/charcuterie-missing-portrait.png",
 ]
 
 const serveStaticBuild = async (): Promise<{

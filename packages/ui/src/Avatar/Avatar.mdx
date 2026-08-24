@@ -1,0 +1,92 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as AvatarStories from "./Avatar.stories";
+
+<Meta of={AvatarStories} />
+
+# Avatar
+
+A person, as a coloured chip — a glyph or an initial, with the name attached where only
+assistive technology and a hover can reach it. It exists to **delete a printed name**: a
+board whose cards all say "Owner" has spent a column on a word that a colour says faster.
+
+<Canvas of={AvatarStories.Default} />
+
+## Props
+
+<Controls />
+
+## Unassigned draws nothing, and the component owns that
+
+`name` accepts `null` and `undefined`, and either one renders `null`. That is the decision,
+not an accident of the type.
+
+A grey "None" placeholder is a design system talking over the reader: it repeats a fact
+nobody needed, down every unassigned row, at the same visual weight as the chips that mean
+something. The alternative — a ternary at every call site — puts the same decision in a
+board, a table, a card footer and a detail pane, each written on a different day, and the
+one that forgets is the one that ships the grey circle. Absence is expressed once, here.
+It is the same call `Board` makes with `onMove`: no handler means no affordance rather than
+a dead one.
+
+An app that genuinely wants to *say* "unassigned" still can. That is text, or an
+`EmptyState`, and neither of them is an avatar.
+
+Where a column of rows has to keep one start edge, **the layout reserves the slot** — a
+grid column sized in `em` of the row's own type, which the unassigned row leaves empty.
+That is a decision about alignment, made once by the thing that owns the alignment, rather
+than a placeholder chip pretending to be data. `InAList` below is that composition.
+
+Keep the wrapper. A component that returns `null` contributes **no grid item**, so a bare
+`<Avatar>` in a grid cell lets the unassigned row's next element slide into the reserved
+column — the one way this goes wrong, and it goes wrong silently.
+
+## The name is never visible text
+
+`role="img"` with an `aria-label`, exactly as `Swatch` does, so
+`getByRole("img", { name })` is one stable handle whether the chip is showing a photo, a
+glyph or two letters. `title` carries the same string for a pointer — the letters `AL` are
+not a name, and hover is the only channel a sighted reader has.
+
+There is deliberately no `isNameVisible`. An avatar with its name printed beside it is a
+name with a decoration in front of it; a layout that wants that should print the name and
+skip the chip.
+
+## The colour is derived, never invented
+
+<Canvas of={AvatarStories.AllVariants} />
+
+`categorical` is the ten-wide non-semantic scale — the same one `Badge` takes — and **not**
+an `intent`. An intent is a claim the design system makes about state, and a person is not
+`danger`.
+
+With no `categorical`, the index comes from `getCategoricalIndex` in
+`@charcuterie/tokens`: a pure function of the key, so the same person is the same colour on
+every machine, on every reload, and in a server render. Pass `categoricalKey` with the
+user's **id** wherever one exists — the hash does no normalization on purpose, so hashing a
+name means a rename or a trailing space silently repaints somebody the reader had already
+learned to recognise.
+
+Ten colours means collisions past ten people. That is a property of the palette rather than
+a fault in the hash: the colour helps you *scan* a list, and the accessible name is what
+identifies.
+
+## A photo is never the only thing
+
+<Canvas of={AvatarStories.AllStates} />
+
+`imageUrl` is optional and falls back to the initials when it is absent, when it 404s, and
+when a signed URL has expired. A hand-rolled avatar shows the browser's broken-image glyph
+in all three, because nobody writes the `onError` handler until they have seen it happen.
+
+The failed URL is stored rather than a `hasFailed` boolean, so a second photo gets its own
+attempt with no effect syncing a prop back into state.
+
+## There is no `AvatarGroup`
+
+Deliberately. A stack of overlapping chips with a `+3` needs answers to which three
+survive, in what order, and what the overflow announces — and no consumer has asked the
+question yet. A row of `Avatar`s in a flex box is what a multi-assignee list looks like
+until one does.
+
+<Canvas of={AvatarStories.InAList} />
