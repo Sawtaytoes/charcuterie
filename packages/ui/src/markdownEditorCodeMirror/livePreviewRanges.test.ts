@@ -1003,3 +1003,140 @@ describe("toLivePreviewRanges", () => {
     })
   })
 })
+
+describe("resolveUrl", () => {
+  const toResolved = (
+    text: string,
+    resolveUrl: (url: string) => string | undefined,
+  ) =>
+    toLivePreviewRanges({
+      isRawMode: false,
+      resolveUrl,
+      selections: [],
+      text,
+      tree: markdownLanguage.parser.parse(text),
+    })
+
+  /**
+   * The case the option exists for: a relative path in a document
+   * the app fetched from somewhere else. The browser resolves it
+   * against the page the reader is ON, which is the app, so it
+   * lands on nothing. Only the app knows what the path means.
+   */
+  test("re-points a link the consumer claims", () => {
+    const text = "see [the runbook](../docs/runbook.md)"
+
+    const linkText = toRanges(text).find(
+      (range) =>
+        range.type === "mark" &&
+        range.markKind === "linkText",
+    )
+
+    expect(linkText).toMatchObject({
+      url: "../docs/runbook.md",
+    })
+
+    const resolved = toResolved(text, (url) =>
+      url.startsWith("../")
+        ? `/files?path=${url.slice(3)}`
+        : undefined,
+    ).find(
+      (range) =>
+        range.type === "mark" &&
+        range.markKind === "linkText",
+    )
+
+    expect(resolved).toMatchObject({
+      url: "/files?path=docs/runbook.md",
+    })
+  })
+
+  test("leaves a link alone when the consumer returns undefined", () => {
+    const text = "see [the docs](https://example.invalid/a)"
+
+    expect(
+      toResolved(text, () => undefined).find(
+        (range) =>
+          range.type === "mark" &&
+          range.markKind === "linkText",
+      ),
+    ).toMatchObject({ url: "https://example.invalid/a" })
+  })
+
+  test("re-points a bare URL too", () => {
+    const text = "see https://example.invalid/a for more"
+
+    expect(
+      toResolved(text, () => "/elsewhere").find(
+        (range) =>
+          range.type === "mark" &&
+          range.markKind === "autolink",
+      ),
+    ).toMatchObject({ url: "/elsewhere" })
+  })
+
+  /**
+   * The guard runs FIRST, so a refused URL never reaches the
+   * consumer — it is not a link at all by then, and offering an app
+   * the chance to resurrect one would undo `safeUrls.ts`.
+   */
+  test("never offers a URL the scheme guard refused", () => {
+    const seen: string[] = []
+
+    const text = "[click me](javascript:alert(1))"
+
+    toResolved(text, (url) => {
+      seen.push(url)
+
+      return undefined
+    })
+
+    expect(seen).toEqual([])
+  })
+
+  /**
+   * An image is deliberately not offered. An app that maps a
+   * document path to a PAGE url would turn a working image into a
+   * broken one, and the image's `src` is the one URL here that has
+   * to stay fetchable.
+   */
+  test("does not offer an image's src", () => {
+    const seen: string[] = []
+
+    const text = "![a diagram](../docs/a.png)"
+
+    const image = toResolved(text, (url) => {
+      seen.push(url)
+
+      return "/elsewhere.png"
+    }).find((range) => range.type === "image")
+
+    expect(seen).toEqual([])
+
+    expect(image).toMatchObject({
+      url: "../docs/a.png",
+    })
+  })
+
+  test("re-points a link inside a table cell", () => {
+    const text = [
+      "| Port | Notes |",
+      "| --- | --- |",
+      "| 1 | see [the runbook](../docs/runbook.md) |",
+    ].join("\n")
+
+    const cell = toLivePreviewTableRanges({
+      isRawMode: false,
+      resolveUrl: () => "/files?path=docs/runbook.md",
+      selections: [],
+      text,
+      tree: markdownLanguage.parser.parse(text),
+    })[0]?.rows[1]?.cells[1]
+
+    expect(toFound(cell).segments).toContainEqual(
+      expect.objectContaining({
+        url: "/files?path=docs/runbook.md",
+      }),
+    )
+  })
+})

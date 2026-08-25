@@ -51,6 +51,29 @@ export type MarkdownViewProps = SlotProps & {
    */
   onToggleTask?: (nextValue: string) => void
   /**
+   * Re-point a link before it becomes an `href`, for a document
+   * whose paths mean something only the app knows.
+   *
+   * The case it exists for is a **relative** path in a fetched or
+   * imported file. `[the runbook](../docs/runbook.md)` is resolved
+   * by the browser against the page the reader is on — the app —
+   * so it lands on nothing. Return the URL it should point at
+   * instead, or `undefined` to leave the link exactly as written.
+   *
+   * The document's own URL has already been through the scheme
+   * guard when it arrives, so `javascript:` never reaches this.
+   * What comes back is the app's own string and is used as given.
+   *
+   * **Links only.** An image's `src` is deliberately not offered:
+   * an app that maps a document path to a page URL would turn a
+   * working image into a broken one.
+   *
+   * Read once, at mount, through a ref — so a resolver defined
+   * inline in a render does not rebuild the view and lose the
+   * reader's scroll position.
+   */
+  resolveUrl?: (url: string) => string | undefined
+  /**
    * The markdown to render, and **controlled** — unlike either
    * editor.
    *
@@ -170,6 +193,7 @@ export const MarkdownView = ({
   className,
   label,
   onToggleTask,
+  resolveUrl,
   value,
   ...receivedSlotProps
 }: MarkdownViewProps): ReactNode => {
@@ -192,6 +216,16 @@ export const MarkdownView = ({
   const handlerRef = useRef(onToggleTask)
 
   handlerRef.current = onToggleTask
+
+  /**
+   * Same treatment, and for the same reason: a resolver written
+   * inline in the consumer's render is a new function every time,
+   * and rebuilding the view on it would throw away the scroll
+   * position of whatever the reader was reading.
+   */
+  const resolveUrlRef = useRef(resolveUrl)
+
+  resolveUrlRef.current = resolveUrl
 
   /**
    * Frozen at mount, and named so rather than read from the render
@@ -224,7 +258,12 @@ export const MarkdownView = ({
           // component exists to avoid.
           markdown({ base: markdownLanguage }),
           EditorView.lineWrapping,
-          livePreview({ hasDocumentSemantics: true }),
+          livePreview({
+            hasDocumentSemantics: true,
+            // Stable by construction — the ref is what changes.
+            resolveUrl: (url) =>
+              resolveUrlRef.current?.(url),
+          }),
           /**
            * The one answer that can change after mount, and only
            * that answer.
