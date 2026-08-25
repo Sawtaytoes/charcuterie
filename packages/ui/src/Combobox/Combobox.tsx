@@ -255,6 +255,78 @@ export const Combobox = ({
   const optionDomId = (value: string) =>
     `${listboxId}-opt-${value}`
 
+  // ─── Opening lands on the chosen option, not the top of the list ────
+  //
+  // The APG listbox rule, and the one `Listbox` has always followed: a
+  // reopened picker resumes on its current value. Combobox seeded 0
+  // instead, so reopening a long list showed its head with the chosen
+  // row scrolled out of sight — correcting a misclick meant hunting the
+  // list for the value you had just set, and the panel read as though
+  // nothing had been chosen at all.
+  const seedValue = selected[0]
+
+  // Derived in render, not read from a ref inside the effect, so it
+  // recomputes as `options` arrive: a picker that fetches its list when
+  // it opens still lands on its value once the rows turn up.
+  const openSeedIndex =
+    seedValue === undefined
+      ? -1
+      : filtered.findIndex(
+          (option) =>
+            option.value === seedValue &&
+            !option.isDisabled,
+        )
+
+  const hasSeededOnOpen = useRef(false)
+
+  // The seed sets the index and the in-view effect further down scrolls
+  // to it, one commit later — the virtualizer measures its scroll
+  // element in an effect of its own, so a `scrollToIndex` issued any
+  // earlier has nothing to scroll and is dropped. That effect must not
+  // scroll the *stale* highlight in the meantime, which would undo the
+  // centring, so it is told which index to wait for and skips every pass
+  // short of it.
+  const pendingSeedIndex = useRef<null | number>(null)
+
+  useEffect(() => {
+    if (!isVisible) {
+      hasSeededOnOpen.current = false
+      pendingSeedIndex.current = null
+
+      return
+    }
+
+    // A live query owns the highlight: its top match, not the old value.
+    if (
+      hasSeededOnOpen.current ||
+      currentQuery.length > 0
+    ) {
+      return
+    }
+
+    if (openSeedIndex < 0) {
+      setActiveIndex(0)
+
+      // Nothing chosen means the top of the list is the right seed and
+      // there is nothing left to wait for. A chosen value that is not in
+      // the list *yet* keeps waiting — this effect reruns when it lands.
+      hasSeededOnOpen.current = seedValue === undefined
+
+      return
+    }
+
+    hasSeededOnOpen.current = true
+
+    pendingSeedIndex.current = openSeedIndex
+
+    setActiveIndex(openSeedIndex)
+  }, [
+    isVisible,
+    currentQuery.length,
+    openSeedIndex,
+    seedValue,
+  ])
+
   // `activeIndex` is seeded at 0 on open and on every query reset, which
   // can land on a disabled option; arrowing skips disabled but the seed
   // does not. Resolve to the nearest enabled row and drive the highlight,
@@ -272,6 +344,24 @@ export const Combobox = ({
     resolvedActiveIndex < 0
       ? undefined
       : filtered[resolvedActiveIndex]?.value
+
+  // A windowed list only renders its window, and the virtualizer moves
+  // that window a tick *after* `scrollToIndex` sets the scroll offset.
+  // Naming a row that is not in the DOM leaves `aria-activedescendant`
+  // pointing at nothing — an idref a screen reader cannot resolve, and
+  // an `aria-valid-attr-value` failure. So the reference waits for its
+  // row: the virtualizer re-renders as the range catches up, one frame
+  // later, and the announcement is right rather than broken. The
+  // highlight and every commit still run off `resolvedActiveIndex`, so
+  // only the announcement waits, never the behaviour.
+  const activeDescendantId =
+    activeValue === undefined ||
+    (isWindowed &&
+      !rowVirtualizer
+        .getVirtualItems()
+        .some((row) => row.index === resolvedActiveIndex))
+      ? undefined
+      : optionDomId(activeValue)
 
   const commitValue = (value: string) => {
     if (isMultiple) {
@@ -435,8 +525,28 @@ export const Combobox = ({
       return
     }
 
+    const isSeeding = pendingSeedIndex.current !== null
+
+    if (
+      isSeeding &&
+      pendingSeedIndex.current !== resolvedActiveIndex
+    ) {
+      // The seeded index has not reached this render yet. Scrolling the
+      // stale highlight now would drag the list off the chosen row.
+      return
+    }
+
+    pendingSeedIndex.current = null
+
+    // The open seed centres its row; an arrow move only pulls the next
+    // one just into view. "nearest" on open would park the chosen row
+    // against the panel's bottom edge with nothing after it, so the
+    // neighbours the list was reopened to reach stay off screen.
     if (isWindowed) {
-      rowVirtualizer.scrollToIndex(resolvedActiveIndex)
+      rowVirtualizer.scrollToIndex(
+        resolvedActiveIndex,
+        isSeeding ? { align: "center" } : undefined,
+      )
 
       return
     }
@@ -446,7 +556,9 @@ export const Combobox = ({
         ?.querySelector(
           `#${CSS.escape(`${listboxId}-opt-${activeValue}`)}`,
         )
-        ?.scrollIntoView({ block: "nearest" })
+        ?.scrollIntoView({
+          block: isSeeding ? "center" : "nearest",
+        })
     }
   }, [
     resolvedActiveIndex,
@@ -508,14 +620,12 @@ export const Combobox = ({
       element.setAttribute("aria-expanded", "true")
       element.setAttribute("aria-controls", listboxId)
 
-      if (activeValue === undefined) {
+      if (activeDescendantId === undefined) {
         element.removeAttribute("aria-activedescendant")
       } else {
-        // Inlined rather than via `optionDomId` so the effect depends on
-        // the stable `listboxId`, not a per-render closure.
         element.setAttribute(
           "aria-activedescendant",
-          `${listboxId}-opt-${activeValue}`,
+          activeDescendantId,
         )
       }
     } else {
@@ -526,7 +636,7 @@ export const Combobox = ({
   }, [
     isAttached,
     isVisible,
-    activeValue,
+    activeDescendantId,
     listboxId,
     inputRef,
   ])
@@ -617,9 +727,7 @@ export const Combobox = ({
                 <div className="flex items-center gap-1 border-border-subtle border-b px-3 py-2">
                   <input
                     aria-activedescendant={
-                      activeValue === undefined
-                        ? undefined
-                        : optionDomId(activeValue)
+                      activeDescendantId
                     }
                     aria-autocomplete="list"
                     aria-controls={listboxId}
