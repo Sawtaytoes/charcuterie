@@ -4,13 +4,40 @@ import {
   useSinglePicker,
 } from "@charcuterie/logic"
 import type { ControlSize } from "@charcuterie/tokens"
-import type { ReactNode } from "react"
+import type { CSSProperties, ReactNode } from "react"
 import { useCallback, useEffect, useRef } from "react"
 
 import { toClassName } from "../toClassName.ts"
 import { RadioGroupOption } from "./RadioGroupOption.tsx"
 
+/**
+ * Which shape the options are drawn in. The control is the same
+ * `radiogroup` either way — this is layout, and it is a prop rather
+ * than a second component because nothing about the semantics, the
+ * keyboard model or the element changes with it.
+ *
+ *  - `row` — the default. Each option is a line of prose beside its
+ *    radio, stacked down the page. The form-length list.
+ *  - `tile` — each option is a bordered card carrying a name, an
+ *    optional line of help and a selected surface, and the group is
+ *    a grid that gains columns with the CONTAINER's width.
+ */
+export type RadioItemShape = "row" | "tile"
+
 export type RadioItem = {
+  /**
+   * A line of help under the label. Drawn one step down the type
+   * ramp in `content-muted`, inside the option's accessible name —
+   * a hint a screen reader never reads is a hint half the audience
+   * does not have.
+   */
+  hint?: ReactNode
+  /**
+   * Leading content, before the name. A `Badge`, an app's own icon,
+   * a count. `tile` only: a row already leads with its radio, and a
+   * second leading mark either side of it has nowhere to sit.
+   */
+  icon?: ReactNode
   /**
    * A disabled option is simply **not registered** with the roving
    * group, so the arrow keys skip it without any command in
@@ -24,6 +51,11 @@ export type RadioItem = {
 
 export type RadioGroupProps = {
   className?: string
+  /**
+   * Draws each option as a card in a grid instead of a row in a
+   * stack. Defaults to `row`.
+   */
+  itemShape?: RadioItemShape
   items: readonly RadioItem[]
   /**
    * Shows which option is chosen at full contrast but refuses to move
@@ -34,6 +66,13 @@ export type RadioGroupProps = {
   isReadOnly?: boolean
   /** The group's accessible name. Required. */
   label: string
+  /**
+   * The narrowest a tile track may be, in CSS px. `tile` only.
+   *
+   * It is the grid's floor and not the tile's width: tracks below it
+   * are not created, and the ones that are share the row evenly.
+   */
+  minTileInlineSize?: number
   onChange?: (selectedValue: string | null) => void
   /** **Initial** only. Charcuterie owns it from then on. */
   selectedValue?: string
@@ -45,6 +84,47 @@ const GAP_CLASS: Record<ControlSize, string> = {
   md: "gap-1.5",
   lg: "gap-2",
 }
+
+/**
+ * Wider than the row gaps: rows are separated by their leading, and
+ * tiles by nothing but the gap, so the same 6px that reads as a list
+ * reads as a seam between two cards.
+ */
+const TILE_GAP_CLASS: Record<ControlSize, string> = {
+  sm: "gap-1.5",
+  md: "gap-2",
+  lg: "gap-3",
+}
+
+/**
+ * `auto-fill`, and deliberately not `auto-fit`.
+ *
+ * `auto-fit` collapses the empty tracks and lets the ones that
+ * remain share the whole row, so six tiles in a 2560px container
+ * become six 420px slabs — the full-width-row shape in a new
+ * costume. `auto-fill` keeps the empty tracks, so a tile stays a
+ * tile and the grid simply has room to spare.
+ *
+ * `min(…, 100%)` is what stops the floor overflowing a container
+ * narrower than one tile, which is the Narrow View and is otherwise
+ * a horizontal scrollbar on a phone.
+ *
+ * The floor arrives as a custom property rather than an interpolated
+ * class because Tailwind scans source *text* for complete class
+ * strings: `` `grid-cols-[…${n}px…]` `` generates nothing, paints
+ * nothing and reports nothing. One written-out literal reading
+ * `var(--charcuterie-tile-min-inline-size)` covers every width an
+ * app can ask for — the same reason `Card`'s accent edge goes
+ * through one property.
+ *
+ * This is **not** `useAdaptiveColumns`, and the difference is the
+ * question being asked. That hook buys a column with height, for an
+ * unbounded gallery that will scroll; a radio group is a bounded set
+ * of options inside a form section, where the only question is how
+ * many fit across the box it was given.
+ */
+const TILE_COLUMNS_CLASS =
+  "grid-cols-[repeat(auto-fill,minmax(min(var(--charcuterie-tile-min-inline-size),100%),1fr))]"
 
 /**
  * One choice out of many, each on its own row with a label the size
@@ -67,12 +147,24 @@ const GAP_CLASS: Record<ControlSize, string> = {
  * choice from a named set is a radio group, and its arrow keys both
  * move focus and check — APG's one activation mode, the same reason
  * `SegmentedControl` has no `manual` prop.
+ *
+ * ### `itemShape="tile"` is the choice tile
+ *
+ * A bordered card carrying a name, a line of help and a selected
+ * surface, in a grid that gains columns with its container. It is a
+ * prop and not a third component because **only the box changes**:
+ * the element, the role, the roving tabindex, selection-follows-focus
+ * and `isReadOnly` are the ones already tested here. `SegmentedControl`
+ * earns its own file by being a different control — one connected
+ * strip, no radio affordance; a tile is this control with a border.
  */
 export const RadioGroup = ({
   className,
+  itemShape = "row",
   items,
   isReadOnly = false,
   label,
+  minTileInlineSize = 200,
   onChange,
   selectedValue,
   size = "md",
@@ -82,6 +174,8 @@ export const RadioGroup = ({
   const optionElements = useRef(
     new Map<string, HTMLButtonElement>(),
   )
+
+  const isTile = itemShape === "tile"
 
   const initialValue =
     selectedValue ??
@@ -152,8 +246,10 @@ export const RadioGroup = ({
       aria-label={label}
       aria-readonly={isReadOnly || undefined}
       className={toClassName(
-        "flex flex-col",
-        GAP_CLASS[size],
+        isTile
+          ? toClassName("grid", TILE_COLUMNS_CLASS)
+          : "flex flex-col",
+        isTile ? TILE_GAP_CLASS[size] : GAP_CLASS[size],
         className,
       )}
       onKeyDown={(keyEvent) => {
@@ -193,6 +289,13 @@ export const RadioGroup = ({
         }
       }}
       ref={groupRef}
+      style={
+        isTile
+          ? ({
+              "--charcuterie-tile-min-inline-size": `${minTileInlineSize}px`,
+            } as CSSProperties)
+          : undefined
+      }
       role="radiogroup"
     >
       {items.map((item) => (
@@ -200,6 +303,7 @@ export const RadioGroup = ({
           isChecked={checkedValue === item.value}
           isReadOnly={isReadOnly}
           item={item}
+          itemShape={itemShape}
           key={item.value}
           onChoose={chooseOption}
           registerFocus={focus.register}

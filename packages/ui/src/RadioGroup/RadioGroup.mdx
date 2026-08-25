@@ -47,6 +47,68 @@ at.
 
 <Canvas of={RadioGroupStories.AllStates} />
 
+## `itemShape="tile"` — the choice tile
+
+A bordered card carrying a name, a line of help and a selected surface, laid out in a grid
+that gains columns with its **container**. It is a prop rather than a third component
+because **only the box changes**: the element, the `radio` role, the roving tab stop,
+selection-follows-focus and `isReadOnly` are the ones already tested on the row shape. A
+tile with its border taken away is a row.
+
+`SegmentedControl` earns its own file by being a different *control* — one connected strip,
+no radio affordance, options too short to carry a sentence. A tile is this control with a
+border, which is a different reason.
+
+<Canvas of={RadioGroupStories.Tiles} />
+
+Four apps in the fleet had each hand-painted this shape — ten instances between them — and
+**not one carried `aria-checked`**. Every one was a bare `<button>` or `<a>` whose selection
+was visible only as colour: correct to an eye, silent to a screen reader, and announced as
+neither pressed nor "3 of 6". That is what this prop is for, and it is why the semantics are
+not the part an app should be writing.
+
+Eight of the ten had a **second line** under the name, which is also why none of them
+reached for `RadioGroup`: a plain-text `label` could not express it. `hint` can, and it
+renders on a row as readily as on a tile.
+
+### The selected tile is an edge and a surface, never a fill
+
+The chosen tile takes the accent on its **border** and lifts to `surface-overlay`; the radio
+dot inside it is unchanged and is still the thing a screen reader reads. A state told in
+colour alone is the one state a monochrome ePaper build cannot show at all — the same reason
+`Stepper` refuses to say "done" with a hue.
+
+### A tile may lead with an icon
+
+`icon` is `tile` only — a row already leads with its radio, and a second mark either side of
+it has nowhere to sit — and it is `aria-hidden` by construction, because the name it sits
+above is inside the same button. The library still ships no icons; apps bring their own.
+
+<Canvas of={RadioGroupStories.TilesWithIcons} />
+
+## The grid takes its columns from the container
+
+`repeat(auto-fill, minmax(min(var(--charcuterie-tile-min-inline-size), 100%), 1fr))`, and
+each of those three parts is load-bearing:
+
+- **`auto-fill`, not `auto-fit`.** `auto-fit` collapses the empty tracks and lets the
+  survivors share the whole row, so six tiles in a 2560px container become six 420px slabs —
+  the full-width-row shape in a new costume. `auto-fill` keeps the empty tracks, so a tile
+  stays a tile and the grid simply has room to spare.
+- **`min(…, 100%)`.** Without it the 200px floor overflows a container narrower than one
+  tile, which is a horizontal scrollbar in the Narrow View.
+- **A custom property, not an interpolated class.** Tailwind scans source *text* for
+  complete class strings, so `` `grid-cols-[…${n}px…]` `` generates nothing, paints nothing
+  and reports nothing. `minTileInlineSize` lands in `--charcuterie-tile-min-inline-size`,
+  which one written-out literal reads.
+
+This is **not** `useAdaptiveColumns`, and the difference is which question is being asked.
+That hook buys a column with **height**, for an unbounded gallery that is going to scroll. A
+radio group is a bounded set of options inside a form section, where the only question is
+how many fit across the box it was handed.
+
+<Canvas of={RadioGroupStories.Responsive} />
+
 ## A read-only group shows the choice without moving it
 
 `isReadOnly` severs the one link that defines this component — selection follows focus — so
