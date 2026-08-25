@@ -751,3 +751,66 @@ test("the search row and an option are the same height", async () => {
       .fontSize,
   )
 })
+
+test("a windowed list reopens where the new element is, not where the old one was", async () => {
+  const mounted = await mountStory(Virtualized)
+
+  const trigger = expectAgentDrivable(mounted.canvas, {
+    name: "Search 500 tracks",
+    role: "button",
+  })
+
+  const listOf = (row: HTMLElement) =>
+    row.closest("[role=listbox]") as HTMLElement
+
+  // Scroll away from the top, the way anyone reading 500 rows does. A
+  // real `scroll` event, because that is the only thing the virtualizer
+  // listens to.
+  const scrolled = listOf(
+    mounted.body.getByRole("option", { name: "Track 1" }),
+  )
+
+  scrolled.scrollTop = 500
+  scrolled.dispatchEvent(new Event("scroll"))
+
+  await waitFor(() => {
+    expect(
+      mounted.body.queryByRole("option", {
+        name: "Track 1",
+      }),
+    ).toBeNull()
+  })
+
+  await userEvent.click(trigger)
+
+  await waitFor(() => {
+    expect(mounted.body.queryByRole("combobox")).toBeNull()
+  })
+
+  await userEvent.click(trigger)
+
+  // The panel is a new element at scrollTop 0, but the virtualizer is
+  // the same instance and still believed it was 500px down — so it
+  // rendered the window for an offset nothing was at, leaving a blank
+  // band across the top of the panel with the old rows stranded below.
+  await waitFor(() => {
+    expect(
+      mounted.body.getByRole("option", { name: "Track 1" }),
+    ).toBeInTheDocument()
+  })
+
+  const reopened = mounted.body.getByRole("option", {
+    name: "Track 1",
+  })
+
+  const list = listOf(reopened)
+
+  await expect(list.scrollTop).toBe(0)
+
+  // No blank band: the first row sits at the top of the list, allowing
+  // for the container's own 4px padding.
+  await expect(
+    reopened.getBoundingClientRect().top -
+      list.getBoundingClientRect().top,
+  ).toBeLessThan(12)
+})
