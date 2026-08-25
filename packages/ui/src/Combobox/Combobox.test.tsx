@@ -10,12 +10,14 @@ import * as stories from "./Combobox.stories.tsx"
 const {
   AllVariants,
   AttachedInputDrillDown,
+  ChosenValueOnOpen,
   Default,
   DisabledFirstOption,
   Interactive,
   LongFooter,
   TrailingElement,
   Virtualized,
+  VirtualizedChosenValue,
 } = composeStories(stories)
 
 const openMulti = async () => {
@@ -460,4 +462,119 @@ test("a windowed list carries aria-setsize and aria-posinset", async () => {
   )
 
   await expect(options[0]).toHaveAttribute("aria-posinset")
+})
+
+test("opening lands on the chosen option, not the top of the list", async () => {
+  const mounted = await mountStory(ChosenValueOnOpen)
+
+  await userEvent.click(
+    expectAgentDrivable(mounted.canvas, {
+      name: "Search languages",
+      role: "button",
+    }),
+  )
+
+  const input = expectAgentDrivable(mounted.body, {
+    role: "combobox",
+  })
+
+  // "por" is last of the seven, so index 0 would be the old behaviour.
+  const chosen = mounted.body.getByRole("option", {
+    name: "Portuguese",
+  })
+
+  await waitFor(() => {
+    expect(input).toHaveAttribute(
+      "aria-activedescendant",
+      chosen.id,
+    )
+  })
+
+  await expect(chosen).toHaveAttribute(
+    "aria-selected",
+    "true",
+  )
+
+  // The seed is the chosen row, not merely a non-zero index.
+  await expect(
+    mounted.body.getAllByRole("option")[0],
+  ).toHaveAttribute("aria-selected", "false")
+})
+
+test("typing reseeds the highlight to the top match, not the chosen row", async () => {
+  const mounted = await mountStory(ChosenValueOnOpen)
+
+  await userEvent.click(
+    expectAgentDrivable(mounted.canvas, {
+      name: "Search languages",
+      role: "button",
+    }),
+  )
+
+  const input = expectAgentDrivable(mounted.body, {
+    role: "combobox",
+  })
+
+  // Matches "English", "French", "German" and "Portuguese" — the open
+  // seed must not drag the highlight down to the chosen one.
+  await userEvent.type(input, "n")
+
+  await waitFor(() => {
+    expect(input).toHaveAttribute(
+      "aria-activedescendant",
+      mounted.body.getAllByRole("option")[0]?.id,
+    )
+  })
+})
+
+test("reopening after a pick lands on what was just picked", async () => {
+  const mounted = await mountStory(ChosenValueOnOpen)
+
+  const trigger = expectAgentDrivable(mounted.canvas, {
+    name: "Search languages",
+    role: "button",
+  })
+
+  await userEvent.click(trigger)
+
+  await userEvent.click(
+    mounted.body.getByRole("option", { name: "German" }),
+  )
+
+  await waitFor(() => {
+    expect(mounted.body.queryByRole("combobox")).toBeNull()
+  })
+
+  await userEvent.click(trigger)
+
+  const reopened = expectAgentDrivable(mounted.body, {
+    role: "combobox",
+  })
+
+  await waitFor(() => {
+    expect(reopened).toHaveAttribute(
+      "aria-activedescendant",
+      mounted.body.getByRole("option", { name: "German" })
+        .id,
+    )
+  })
+})
+
+test("a windowed list scrolls its chosen option into the window on open", async () => {
+  const { body } = await mountStory(VirtualizedChosenValue)
+
+  // Rows 1–12 would be the window if the seed were still index 0.
+  await waitFor(() => {
+    expect(
+      body.getByRole("option", { name: "Track 400" }),
+    ).toBeInTheDocument()
+  })
+
+  await expect(
+    body.getByRole("option", { name: "Track 400" }),
+  ).toHaveAttribute("aria-selected", "true")
+
+  await expect(
+    body.queryByRole("option", { name: "Track 1" }),
+  ).toBeNull()
 })
