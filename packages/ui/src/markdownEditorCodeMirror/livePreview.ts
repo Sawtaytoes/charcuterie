@@ -1153,6 +1153,28 @@ const livePreviewTheme = EditorView.theme({
    * it.
    */
   ".cm-content": {
+    /**
+     * The caret, which CodeMirror hard-codes **black**.
+     *
+     * `drawSelection` is not installed, so the caret is the
+     * browser's own and `caret-color` decides what it looks like.
+     * The base theme sets that per light/dark class — `&light .cm-
+     * content { caret-color: black }` — and those classes track
+     * whether a *CodeMirror theme* declared `dark: true`, not what
+     * scheme the page is painted in. Charcuterie has one theme for
+     * both schemes because every colour in it is a token, so the
+     * editor is always `cm-light` and the caret was always black:
+     * invisible on `surface-base` in dark mode, which is a text
+     * field you cannot find the insertion point in.
+     *
+     * The token is the same one the text uses, so it follows the
+     * scheme by construction and cannot be black on black again.
+     * Same specificity as the base rule it replaces (two classes),
+     * and later in the sheet — a theme's rules are inserted after
+     * the base theme's, which is what CodeMirror's `Prec.lowest`
+     * on the base module guarantees.
+     */
+    caretColor: "var(--color-content-primary)",
     lineHeight: "1.6",
   },
   /**
