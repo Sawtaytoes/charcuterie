@@ -3,6 +3,7 @@ import {
   useRovingFocus,
   useUniqueId,
 } from "@charcuterie/logic"
+import type { ControlSize } from "@charcuterie/tokens"
 import type { Placement } from "@floating-ui/react"
 import {
   FloatingFocusManager,
@@ -11,8 +12,10 @@ import {
 import type { ReactElement, ReactNode } from "react"
 import { useEffect, useRef } from "react"
 
+import { PANEL_ITEM_SIZE_CLASS } from "../controlStyles.ts"
 import { PANEL_SURFACE_CLASS } from "../Overlay/overlayPanelClass.ts"
 import { useAnchoredOverlay } from "../Overlay/useAnchoredOverlay.ts"
+import { usePanelItemSize } from "../Overlay/usePanelItemSize.ts"
 import { toClassName } from "../toClassName.ts"
 import { MenuAction } from "./MenuAction.tsx"
 
@@ -72,12 +75,39 @@ export type MenuProps = {
    */
   emptyState?: ReactNode
   isVisible: boolean
+  /**
+   * How tall each item is, from the same density-aware tokens a
+   * `Button` reads — so a `md` item and a `md` `Button` measure the
+   * same.
+   *
+   * **Defaults to `lg`**, which no other component in the library does,
+   * and the asymmetry is the decision rather than an oversight. A menu
+   * item is a *pointer* target first: it is read once and then aimed
+   * at, often in a hurry, and there are rarely more than about eight of
+   * them — so the height a dense list cannot spare, a menu can. A short
+   * window steps it back down on its own (`usePanelItemSize`).
+   */
+  itemSize?: ControlSize
   items: MenuEntry[]
   /** Outside press, Escape, and choosing an item all land here. */
   onDismiss: () => void
   placement?: Placement
   /** The control the menu hangs off. **Cloned, not wrapped.** */
   trigger: ReactElement
+}
+
+/**
+ * A group heading is not a row — it has no height of its own to take
+ * — so it borrows only the inline padding, which is the one thing it
+ * has to share with the items under it.
+ */
+const GROUP_HEADING_INSET_CLASS: Record<
+  ControlSize,
+  string
+> = {
+  sm: "px-(--control-padding-inline-sm)",
+  md: "px-(--control-padding-inline-md)",
+  lg: "px-(--control-padding-inline-lg)",
 }
 
 const isMenuItem = (entry: MenuEntry): entry is MenuItem =>
@@ -171,10 +201,13 @@ export const Menu = ({
   emptyState,
   isVisible,
   items,
+  itemSize: requestedItemSize = "lg",
   onDismiss,
   placement = "bottom-start",
   trigger,
 }: MenuProps): ReactNode => {
+  const itemSize = usePanelItemSize(requestedItemSize)
+
   const menuId = useUniqueId()
 
   const itemElements = useRef(
@@ -195,6 +228,11 @@ export const Menu = ({
     getFloatingProps,
     setFloating,
   } = useAnchoredOverlay({
+    // A menu had no clamp at all, which was survivable while a row was
+    // 32px and is not now: nine `lg` rows are 400px, and on a short
+    // window the panel simply ran off the bottom of the screen with no
+    // way to reach the last item. It scrolls instead.
+    isHeightClamped: true,
     isVisible,
     offsetValue: 4,
     onDismiss,
@@ -242,6 +280,7 @@ export const Menu = ({
   const renderItem = (item: MenuItem) => (
     <MenuAction
       item={item}
+      itemSize={itemSize}
       key={item.key}
       onDismiss={onDismiss}
       register={focus.register}
@@ -280,7 +319,13 @@ export const Menu = ({
           role="group"
         >
           <div
-            className="px-2 pt-1.5 pb-0.5 font-medium text-content-secondary text-xs"
+            // The heading is inset to the items' own inline padding so
+            // its text starts where their labels do, which is why it
+            // reads the row-size tokens rather than a fixed `px-2`.
+            className={toClassName(
+              GROUP_HEADING_INSET_CLASS[itemSize],
+              "pt-1.5 pb-0.5 font-medium text-content-secondary text-xs",
+            )}
             id={headingId}
           >
             {entry.label}
@@ -304,7 +349,10 @@ export const Menu = ({
     emptyState === undefined ? null : (
       <div
         aria-disabled="true"
-        className="px-2 py-1.5 text-content-disabled text-sm"
+        className={toClassName(
+          "flex items-center text-content-disabled",
+          PANEL_ITEM_SIZE_CLASS[itemSize],
+        )}
         role="menuitem"
         tabIndex={-1}
       >
@@ -333,7 +381,10 @@ export const Menu = ({
               {...getFloatingProps()}
               className={toClassName(
                 PANEL_SURFACE_CLASS,
-                "z-[var(--layer-modal)] flex min-w-48 flex-col gap-0.5 p-1",
+                // The height is clamped to the space the viewport left,
+                // written straight onto the element by the `size`
+                // middleware; this scrolls inside it.
+                "charcuterie-scrollbar z-[var(--layer-modal)] flex min-w-48 flex-col gap-0.5 overflow-y-auto p-1",
                 className,
               )}
               onKeyDown={(keyEvent) => {

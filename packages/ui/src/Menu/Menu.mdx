@@ -122,3 +122,38 @@ an anchored panel and an unanchored one land in the same place, and the test ass
 padding is still there before it asserts anything else.
 
 <Canvas of={MenuStories.SharedTrigger} />
+
+## The row is a click target, so it is `lg` by default
+
+`itemSize` takes the same `sm` / `md` / `lg` a `Button` takes, from the same
+density-aware `--control-height-*` tokens — so a `md` menu item and a `md` `Button`
+measure the same, and the `kiosk` density grows both together.
+
+It **defaults to `lg`**, which nothing else in the library does. The asymmetry is the
+decision rather than an oversight: a menu item is a *pointer* target before it is a list
+row. It is read once and then aimed at, usually in a hurry, and a menu rarely holds more
+than about eight items — so it can spend the height a dense list cannot. At `comfortable`
+density `lg` is 2.75rem, which is also the 44px WCAG 2.5.5 target; on the `kiosk` density
+it is 3.75rem with no prop change.
+
+The floor is a **minimum**, not a fixed height (`min-h-`, where a `Button` uses `h-`), so a
+long label that wraps to a second line still grows past it.
+
+<Canvas of={MenuStories.ItemSizes} />
+
+## A short window steps the size back down, and the panel scrolls
+
+Two separate protections, because they answer different failures.
+
+A window shorter than **40rem** drops every panel row one step, and one shorter than
+**30rem** takes them to `sm` — so a `lg` menu is never the reason its own last item is off
+the screen. That is `usePanelItemSize`, a `matchMedia` read rather than a CSS media query:
+`text-sm` → `text-md` is a Tailwind bridge onto `--font-size-*` rather than a variable a
+media query can reassign, so stepping the whole `ControlSize` in JS is what keeps one
+literal class string per size. It costs a re-render on resize, which is not the axis the
+library keeps as a repaint.
+
+Independently, the panel is now clamped to the space the viewport actually left it and
+scrolls inside that. A menu had **no** clamp before — survivable at a 32px row, and not at
+44px, where nine items are 400px and the panel simply ran off the bottom of the screen with
+no way to reach the last one.

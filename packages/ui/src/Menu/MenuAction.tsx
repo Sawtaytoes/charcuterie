@@ -1,11 +1,15 @@
+import type { ControlSize } from "@charcuterie/tokens"
 import type { ReactNode } from "react"
 import { useEffect } from "react"
 
+import { PANEL_ITEM_SIZE_CLASS } from "../controlStyles.ts"
 import { FOCUS_RING_CLASS } from "../intentStyles.ts"
 import { toClassName } from "../toClassName.ts"
 import type { MenuItem } from "./Menu.tsx"
 
 export type MenuActionProps = {
+  /** Already stepped down for a short window by `usePanelItemSize`. */
+  itemSize: ControlSize
   item: MenuItem
   onDismiss: () => void
   /** `RovingFocus.register` — membership of the arrow-key group. */
@@ -31,6 +35,7 @@ export type MenuActionProps = {
  */
 export const MenuAction = ({
   item,
+  itemSize,
   onDismiss,
   register,
   tabIndex,
@@ -55,10 +60,25 @@ export const MenuAction = ({
   return (
     <button
       className={toClassName(
-        "flex w-full cursor-pointer items-center gap-2 rounded-sm bg-transparent px-2 py-1.5 text-start text-content-primary text-sm transition-colors duration-(--duration-fast) ease-standard",
-        "hover:bg-intent-neutral-surface",
+        // No base `bg-transparent`: it is a plain `background-color`
+        // utility at the same specificity as the hover tint and Tailwind
+        // emits it last, so it wins — the same clobber that made a
+        // `Combobox`'s keyboard cursor invisible. A button's background is
+        // transparent already.
+        "flex w-full cursor-pointer items-center rounded-sm text-start text-content-primary transition-colors duration-(--duration-fast) ease-standard",
+        // Height, inline padding, gap and type all come from the row-size
+        // system, so a `md` menu item is exactly as tall as a `md`
+        // `Button` and the kiosk density grows both together.
+        PANEL_ITEM_SIZE_CLASS[itemSize],
+        // `-hover`, not plain `intent-neutral-surface`: this panel is
+        // `surface-overlay`, which every dark scheme paints *lighter*
+        // than the base-surface tint — so the plain one reads as no
+        // change. `ListboxOption` and `ComboboxOption` were corrected on
+        // 2026-08-05 and this was missed.
+        !isDisabled &&
+          "hover:bg-intent-neutral-surface-hover",
         isDisabled &&
-          "cursor-not-allowed text-content-disabled hover:bg-transparent",
+          "cursor-not-allowed text-content-disabled",
         FOCUS_RING_CLASS,
       )}
       disabled={isDisabled}

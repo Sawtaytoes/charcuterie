@@ -85,6 +85,17 @@ export type UseAnchoredOverlayOptions = {
    * floating-ui `useDismiss` options they carry.
    */
   isEscapeDismissable?: boolean
+  /**
+   * Clamp the panel to the space the viewport actually leaves below
+   * (or above) the trigger, with no fixed cap. The panel owes itself
+   * an `overflow`, or a clamped one simply hides its last rows.
+   *
+   * `maxHeightPx` implies this *and* caps it at a number — a `Listbox`
+   * never wants to be 900px tall even on a monitor that would allow
+   * it. A `Menu` wants the other half only: as tall as its items need,
+   * and never off the bottom of the screen.
+   */
+  isHeightClamped?: boolean
   isOutsidePressDismissable?: boolean
   /** Ports `PortalDropdown`'s anchor-width match, via `size`. */
   isTriggerWidthMatched?: boolean
@@ -120,6 +131,7 @@ const PLACEHOLDER_TRIGGER = createElement("span")
 export const useAnchoredOverlay = ({
   anchorRef,
   isEscapeDismissable = true,
+  isHeightClamped = false,
   isOutsidePressDismissable = true,
   isTriggerWidthMatched = false,
   isVisible,
@@ -138,6 +150,7 @@ export const useAnchoredOverlay = ({
   ]
 
   if (
+    isHeightClamped ||
     isTriggerWidthMatched ||
     maxHeightPx !== undefined ||
     maxWidthPx !== undefined
