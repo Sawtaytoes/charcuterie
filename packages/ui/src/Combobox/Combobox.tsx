@@ -71,6 +71,13 @@ export type ComboboxProps = {
 
 const AUTO_VIRTUALIZE_THRESHOLD = 100
 
+/**
+ * How many frames the open seed will wait for the panel to be capped
+ * before it gives up on centring the chosen row. A few is all
+ * floating-ui's `size` middleware needs.
+ */
+const SEED_SCROLL_ATTEMPTS = 5
+
 const getOptionText = (item: ListboxItem) =>
   (
     item.textValue ??
@@ -288,6 +295,19 @@ export const Combobox = ({
   // short of it.
   const pendingSeedIndex = useRef<null | number>(null)
 
+  // Retrying the seed's centring scroll. `useAnchoredOverlay` caps the
+  // panel's height by writing `style.maxHeight` straight onto the
+  // floating element inside floating-ui's `size` middleware —
+  // deliberately outside the `floatingStyles` React manages, so a
+  // keystroke cannot wipe it. The cost lands here: it arrives a frame
+  // after the open seed, announces itself with no re-render, and until
+  // it does the list stands at its full content height with **nothing to
+  // scroll**. A seed scroll issued then is dropped without a trace,
+  // which is how the first build of this fix highlighted the chosen row
+  // and still left it off screen in a real app.
+  const [seedScrollAttempt, setSeedScrollAttempt] =
+    useState(0)
+
   useEffect(() => {
     if (!isVisible) {
       hasSeededOnOpen.current = false
@@ -318,6 +338,8 @@ export const Combobox = ({
     hasSeededOnOpen.current = true
 
     pendingSeedIndex.current = openSeedIndex
+
+    setSeedScrollAttempt(0)
 
     setActiveIndex(openSeedIndex)
   }, [
@@ -536,6 +558,27 @@ export const Combobox = ({
       return
     }
 
+    const list = listElement.current
+
+    if (
+      isSeeding &&
+      seedScrollAttempt < SEED_SCROLL_ATTEMPTS &&
+      list !== null &&
+      list.scrollHeight <= list.clientHeight
+    ) {
+      // Nothing to scroll yet — the panel is still at its full height.
+      // Hold the seed and look again next frame rather than scroll a
+      // container that cannot move. Bounded, so a list that genuinely
+      // fits its panel stops instead of spinning.
+      const frame = requestAnimationFrame(() => {
+        setSeedScrollAttempt((attempt) => attempt + 1)
+      })
+
+      return () => {
+        cancelAnimationFrame(frame)
+      }
+    }
+
     pendingSeedIndex.current = null
 
     // The open seed centres its row; an arrow move only pulls the next
@@ -567,6 +610,7 @@ export const Combobox = ({
     isWindowed,
     listboxId,
     rowVirtualizer.scrollToIndex,
+    seedScrollAttempt,
   ])
 
   // ─── Attached mode: drive the consumer's input ──────────────────────

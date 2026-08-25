@@ -23,6 +23,18 @@ const LANGUAGES_DISABLED_FIRST: ListboxItem[] = [
   { label: "French", value: "fra" },
 ]
 
+// Long enough to overflow the panel's height cap, short enough to stay
+// under `AUTO_VIRTUALIZE_THRESHOLD` — the shape most app pickers have,
+// and the one that exercises the plain DOM scroll path.
+const MANY_SHORT: ListboxItem[] = Array.from(
+  { length: 62 },
+  (_unused, index) => ({
+    label: `Item ${index + 1}`,
+    textValue: `Item ${index + 1}`,
+    value: `item-${index + 1}`,
+  }),
+)
+
 // A long list, to trip the auto-virtualization threshold.
 const MANY: ListboxItem[] = Array.from(
   { length: 500 },
@@ -542,15 +554,14 @@ export const ChosenValueOnOpen: Story = {
     isVisible: false,
     onDismiss: () => {},
     onSelect: () => {},
-    options: LANGUAGES,
-    selectedValue: "por",
+    options: MANY_SHORT,
+    selectedValue: "item-58",
     trigger: <Button>Search languages</Button>,
   },
   render: () => (
     <ComboboxHarness
-      className="max-h-48"
-      options={LANGUAGES}
-      selectedValue="por"
+      options={MANY_SHORT}
+      selectedValue="item-58"
       triggerLabel="Search languages"
     />
   ),
