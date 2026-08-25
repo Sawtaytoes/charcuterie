@@ -1,5 +1,50 @@
 # @charcuterie/ui
 
+## 3.16.0
+
+### Minor Changes
+
+- 13431cd: `RadioGroup` draws choice tiles: `itemShape="tile"`, plus `hint` and `icon` on an item
+
+  A bordered card carrying a name, a line of help and a selected surface, laid out in a grid
+  that gains columns with its **container**. The control does not change — same `radiogroup`
+  of `radio`s, same roving tab stop, same selection-follows-focus, same `isReadOnly` — so it
+  is a prop and not a third component. `minTileInlineSize` (CSS px, default 200) is the grid's
+  floor.
+
+  Four apps in the fleet had each hand-painted this shape, ten instances between them, and not
+  one carried `aria-checked`: every one was a bare `<button>` or `<a>` whose selection was
+  visible only as colour. Eight of the ten put a second line under the name, which is also why
+  none of them reached for `RadioGroup` — a plain-text `label` could not express it. `hint`
+  renders on a row as readily as on a tile.
+
+  Nothing here is breaking. `itemShape` defaults to `row`, and an item with no `hint` and no
+  `icon` renders exactly the markup it did before.
+
+### Patch Changes
+
+- f3ef10c: `Combobox`: the open seed's scroll now waits for a panel it can actually scroll.
+
+  Completes the previous patch, which highlighted the chosen option correctly and still
+  left it off screen in a real app — a fix that was half-landed, and worth naming as such.
+
+  `useAnchoredOverlay` caps the panel's height by writing `style.maxHeight` straight onto
+  the floating element inside floating-ui's `size` middleware. That is deliberate and
+  documented: a `setState` in `apply` would be a render loop, and keeping the value out of
+  the `floatingStyles` React manages is what stops a keystroke wiping it. The cost lands on
+  anything that wants to scroll the panel on open. The write arrives a frame after the
+  seed, announces itself with no re-render, and until it does the list stands at its **full
+  content height with nothing to scroll** — so the centring is dropped without a trace.
+
+  The seed now holds until the list is genuinely scrollable, retrying for a few frames and
+  then giving up, so a list that really does fit its panel cannot spin.
+
+  The gap was in the tests as much as the code: the story asserted the _highlight_ and set
+  a static `max-h-48`, which made the list scrollable on first layout and removed the very
+  condition the bug needs. It is 62 options under floating-ui's own cap now — the shape an
+  app picker actually has — and there is a test that asserts the chosen row's rectangle
+  lies inside the list's, which is the thing a user can see.
+
 ## 3.15.0
 
 ### Minor Changes
