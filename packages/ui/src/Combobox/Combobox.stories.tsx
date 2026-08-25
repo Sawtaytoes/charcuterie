@@ -527,3 +527,54 @@ export const VirtualizedLongOptions: Story = {
     />
   ),
 }
+
+/**
+ * A chosen value far down the list. Opening lands on it — highlighted,
+ * ticked and centred in the panel — rather than at the head of the list
+ * with the current value scrolled out of sight. Reopening to correct a
+ * misclick is then one glance, not a hunt.
+ *
+ * Not windowed (seven options), so this covers the plain DOM path;
+ * `VirtualizedChosenValue` covers the virtualized one.
+ */
+export const ChosenValueOnOpen: Story = {
+  args: {
+    isVisible: false,
+    onDismiss: () => {},
+    onSelect: () => {},
+    options: LANGUAGES,
+    selectedValue: "por",
+    trigger: <Button>Search languages</Button>,
+  },
+  render: () => (
+    <ComboboxHarness
+      className="max-h-48"
+      options={LANGUAGES}
+      selectedValue="por"
+      triggerLabel="Search languages"
+    />
+  ),
+}
+
+/**
+ * The same rule through the virtualizer: track 400 of 500 is chosen, so
+ * opening scrolls the window to it instead of rendering rows 1–12.
+ */
+export const VirtualizedChosenValue: Story = {
+  args: {
+    isVisible: false,
+    onDismiss: () => {},
+    onSelect: () => {},
+    options: MANY,
+    selectedValue: "track-400",
+    trigger: <Button>Search 500 tracks</Button>,
+  },
+  render: () => (
+    <ComboboxHarness
+      isInitiallyVisible
+      options={MANY}
+      selectedValue="track-400"
+      triggerLabel="Search 500 tracks"
+    />
+  ),
+}
