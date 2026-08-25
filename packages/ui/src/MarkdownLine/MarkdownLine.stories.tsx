@@ -237,6 +237,23 @@ export const Routed: Story = {
  * reader who can see the trap is better served than one shown a
  * confident blue word that silently refuses to work.
  */
+/**
+ * A whole card title as one link, with a code span inside it — the
+ * shape Docket's backlog rows and board cards are.
+ *
+ * It exists so a test can assert the link's **accessible name**,
+ * which is where a mark's surrounding spaces go missing without
+ * anything on screen changing.
+ */
+export const TitleAsALink: Story = {
+  render: () => (
+    <MarkdownLine
+      href="/tasks/7"
+      value="Ingest 53 movies from `Downloads/MOVIES` tonight"
+    />
+  ),
+}
+
 export const RefusedUrl: Story = {
   args: { value: "[click me](javascript:alert(1))" },
 }

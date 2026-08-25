@@ -1,4 +1,5 @@
 import type { ReactNode } from "react"
+import { Fragment } from "react"
 
 import {
   FOCUS_RING_CLASS,
@@ -95,6 +96,33 @@ const toMarkedContent = (
   run: InlineMarkdownRun,
   key: number,
 ): ReactNode => {
+  /**
+   * AN UNMARKED RUN IS A TEXT NODE, NOT A WRAPPED ONE — and this is
+   * an accessibility fix rather than a saving.
+   *
+   * Every run used to come back inside a keyed `<span>`. It looked
+   * identical, and it silently broke every accessible name on the
+   * page: the name computation **trims** each element child's
+   * contribution before joining them, so
+   * `<span>Deduplicate </span><code>~/archive</code><span> by</span>`
+   * announces as `Deduplicate~/archiveby`. A text node keeps its
+   * spaces, so the same line as text-node / `<code>` / text-node
+   * announces correctly.
+   *
+   * Caught by `Board`'s move handle, which is named after the card's
+   * title. On screen the two are indistinguishable — the spaces are
+   * still painted either way — which is why `MarkdownLine.test.tsx`
+   * asserts the NAME rather than the text.
+   */
+  if (
+    !run.isCode &&
+    !run.isEmphasis &&
+    !run.isStrikethrough &&
+    !run.isStrong
+  ) {
+    return run.text
+  }
+
   // Innermost first: the element that carries the text, then the
   // marks wrapped around it. `<code>` is innermost because it is the
   // only one that changes the *face* rather than a variation of it.
@@ -122,7 +150,11 @@ const toMarkedContent = (
     )
   }
 
-  return <span key={key}>{content}</span>
+  // A `Fragment` rather than a `<span>`: it carries the key React
+  // needs for an array child and adds no element to the DOM, so the
+  // mark element sits directly inside the anchor and the name
+  // computation sees no extra boundary to trim.
+  return <Fragment key={key}>{content}</Fragment>
 }
 
 /**

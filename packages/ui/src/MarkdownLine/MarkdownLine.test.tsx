@@ -26,6 +26,7 @@ const {
   FileNames,
   RefusedUrl,
   Routed,
+  TitleAsALink,
 } = composeStories(stories)
 
 test("a code span is a `code` element, and the backticks are gone", async () => {
@@ -192,4 +193,27 @@ test("a refused scheme renders its source as text", async () => {
   await expect(canvasElement.textContent).toBe(
     "[click me](javascript:alert(1))",
   )
+})
+
+/**
+ * THE SPACES AROUND A MARK SURVIVE INTO THE ACCESSIBLE NAME.
+ *
+ * The name computation trims each **element** child's contribution
+ * before joining them, so a line whose every run was wrapped in a
+ * `<span>` announced as `Ingest 53 movies fromDownloads/MOVIESinto`
+ * — painted correctly, announced as one run-on word, and invisible
+ * to any assertion that reads `textContent`.
+ *
+ * Found through `Board`'s move handle, which is named after the
+ * card's title. The fix is that an unmarked run is a text node
+ * rather than a wrapped one; this is the guard that keeps it.
+ */
+test("the accessible name keeps the spaces around a mark", async () => {
+  const { canvas } = await mountStory(TitleAsALink)
+
+  await expect(
+    canvas.getByRole("link", {
+      name: "Ingest 53 movies from Downloads/MOVIES tonight",
+    }),
+  ).toBeInTheDocument()
 })

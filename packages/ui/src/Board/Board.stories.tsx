@@ -13,6 +13,8 @@ import {
 } from "../board.storyHelpers.tsx"
 import { EmptyState } from "../EmptyState/EmptyState.tsx"
 import { MoreIcon } from "../icons.storyHelpers.tsx"
+import { toPlainMarkdownText } from "../MarkdownLine/inlineMarkdown.ts"
+import { MarkdownLine } from "../MarkdownLine/MarkdownLine.tsx"
 import { ProgressBar } from "../ProgressBar/ProgressBar.tsx"
 import { VisuallyHidden } from "../VisuallyHidden/VisuallyHidden.tsx"
 import type { BoardMove } from "./Board.tsx"
@@ -726,6 +728,71 @@ export const LinkedLaneHeadings: Story = {
         lanes={LANES.map((lane) => ({
           ...lane,
           href: `/board/${lane.key}`,
+        }))}
+      />
+    </Frame>
+  ),
+}
+
+/**
+ * Task names, as markdown. Invented, like every other string in this
+ * file — keyed by the plain title each fixture already carries.
+ */
+const MARKDOWN_TITLES: Record<string, string> = {
+  "Deduplicate the archive by content hash":
+    "Deduplicate `~/archive` by content hash",
+  "Link queue for the weekly digest":
+    "Link queue for the ~~weekly~~ *daily* digest",
+  "Unify the page chrome across the fleet":
+    "**Unify** the page chrome across the fleet",
+  "Wire the pantry sensors onto the new bridge":
+    "Wire the pantry sensors onto `bridge-02`",
+}
+
+/**
+ * A card whose title is **markdown** rather than a flat string.
+ *
+ * `titleContent` draws the line and `title` stays the words, because
+ * the move handle is named after `title` — and a control named after
+ * a `ReactNode` is a control with no name at all.
+ *
+ * The title takes its own navigation with it, which is why the type
+ * refuses `href` beside `titleContent`: the board's own `TextLink`
+ * around a line that may contain an anchor is an anchor inside an
+ * anchor, which the HTML parser silently un-nests.
+ */
+export const MarkdownTitles: Story = {
+  render: (boardProps) => (
+    <Frame inlineSize="72rem">
+      <Board
+        {...boardProps}
+        // Movable, so the move handle renders — it is named after
+        // `title`, and that it stays the plain words is the whole
+        // assertion this story exists for.
+        onMove={() => {}}
+        lanes={LANES.map((lane) => ({
+          ...lane,
+          items: lane.items.map(
+            ({
+              href: _href,
+              onSelect: _onSelect,
+              ...item
+            }): BoardItem => {
+              const markdown =
+                MARKDOWN_TITLES[item.key] ?? item.title
+
+              return {
+                ...item,
+                title: toPlainMarkdownText(markdown),
+                titleContent: (
+                  <MarkdownLine
+                    href={`/tasks/${encodeURIComponent(item.key)}`}
+                    value={markdown}
+                  />
+                ),
+              }
+            },
+          ),
         }))}
       />
     </Frame>
