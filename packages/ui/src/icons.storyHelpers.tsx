@@ -191,3 +191,111 @@ export const MoreIcon = (): ReactNode => (
     <circle cx="12" cy="19" r="1.75" />
   </svg>
 )
+
+/**
+ * The markdown toolbar's nine, plus the bar's own overflow above.
+ *
+ * They are here rather than in the editor's story file because the
+ * two editors — the textarea one and the CodeMirror one — take the
+ * same `icons` bag and both boards want it. `MARKDOWN_ICONS` below
+ * is the whole bag, so a story passes one object instead of nine
+ * props and cannot demonstrate a half-iconed bar by accident.
+ */
+export const BoldIcon = (): ReactNode => (
+  <svg {...iconProps} aria-hidden="true">
+    <path d="M7 5h6.5a3.5 3.5 0 0 1 0 7H7z" />
+
+    <path d="M7 12h7.5a3.5 3.5 0 0 1 0 7H7z" />
+  </svg>
+)
+
+export const ItalicIcon = (): ReactNode => (
+  <svg {...iconProps} aria-hidden="true">
+    <path d="M19 5h-8M13 19H5M15 5l-4 14" />
+  </svg>
+)
+
+export const HeadingIcon = (): ReactNode => (
+  <svg {...iconProps} aria-hidden="true">
+    <path d="M6 5v14M18 5v14M6 12h12" />
+  </svg>
+)
+
+export const BulletedListIcon = (): ReactNode => (
+  <svg {...iconProps} aria-hidden="true">
+    <path d="M9 6h12M9 12h12M9 18h12" />
+
+    <path d="M4.5 6h.01M4.5 12h.01M4.5 18h.01" />
+  </svg>
+)
+
+export const TaskListIcon = (): ReactNode => (
+  <svg {...iconProps} aria-hidden="true">
+    <path d="M3 6.5l1.8 1.8L8 5M3 16.5l1.8 1.8L8 15" />
+
+    <path d="M12 7h9M12 17h9" />
+  </svg>
+)
+
+export const NumberedListIcon = (): ReactNode => (
+  <svg {...iconProps} aria-hidden="true">
+    <path d="M11 6h10M11 12h10M11 18h10" />
+
+    <path d="M4 5.5l1.5-.5V10M4 10h3" />
+
+    <path d="M4 15.2a1.6 1.6 0 1 1 2.6 1.3L4 19h3" />
+  </svg>
+)
+
+/**
+ * Two quote marks, not an indented bar. An indent bar is what the
+ * *result* looks like; the marks are what the button does.
+ *
+ * Filled, and closed rather than an open stroke. The stroked
+ * version of this shape drew as a pair of `s` characters at
+ * `size-[1.15em]` — a curve that reads as a letter is worse than
+ * no icon, because the eye stops to read it.
+ */
+export const QuoteIcon = (): ReactNode => (
+  <svg
+    {...iconProps}
+    aria-hidden="true"
+    fill="currentColor"
+    stroke="none"
+  >
+    <path d="M10 6.2a6.6 6.6 0 0 0-4.7 6.2c0 2.1 1.3 3.6 3.2 3.6 1.7 0 2.9-1.2 2.9-2.8 0-1.6-1.1-2.7-2.6-2.7h-.5c.4-1.4 1.4-2.5 2.8-3.1z" />
+
+    <path d="M19 6.2a6.6 6.6 0 0 0-4.7 6.2c0 2.1 1.3 3.6 3.2 3.6 1.7 0 2.9-1.2 2.9-2.8 0-1.6-1.1-2.7-2.6-2.7h-.5c.4-1.4 1.4-2.5 2.8-3.1z" />
+  </svg>
+)
+
+export const CodeIcon = (): ReactNode => (
+  <svg {...iconProps} aria-hidden="true">
+    <path d="M16 18l6-6-6-6M8 6l-6 6 6 6" />
+  </svg>
+)
+
+export const LinkIcon = (): ReactNode => (
+  <svg {...iconProps} aria-hidden="true">
+    <path d="M10.5 13.5a4.5 4.5 0 0 0 6.8.5l2.5-2.5a4.5 4.5 0 0 0-6.4-6.4l-1.4 1.4" />
+
+    <path d="M13.5 10.5a4.5 4.5 0 0 0-6.8-.5l-2.5 2.5a4.5 4.5 0 0 0 6.4 6.4l1.4-1.4" />
+  </svg>
+)
+
+/**
+ * The whole `MarkdownEditorIcons` bag, ready to spread into either
+ * editor's `icons` prop.
+ */
+export const MARKDOWN_ICONS = {
+  bold: <BoldIcon />,
+  bulletedList: <BulletedListIcon />,
+  code: <CodeIcon />,
+  heading: <HeadingIcon />,
+  italic: <ItalicIcon />,
+  link: <LinkIcon />,
+  numberedList: <NumberedListIcon />,
+  overflow: <MoreIcon />,
+  quote: <QuoteIcon />,
+  taskList: <TaskListIcon />,
+}
