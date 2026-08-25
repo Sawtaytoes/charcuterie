@@ -478,9 +478,11 @@ test("opening lands on the chosen option, not the top of the list", async () => 
     role: "combobox",
   })
 
-  // "por" is last of the seven, so index 0 would be the old behaviour.
+  // Item 58 of 62, far past the panel's height cap — index 0 would be
+  // the old behaviour, and a row still off screen would be the fix
+  // landing only halfway.
   const chosen = mounted.body.getByRole("option", {
-    name: "Portuguese",
+    name: "Item 58",
   })
 
   await waitFor(() => {
@@ -515,9 +517,9 @@ test("typing reseeds the highlight to the top match, not the chosen row", async 
     role: "combobox",
   })
 
-  // Matches "English", "French", "German" and "Portuguese" — the open
-  // seed must not drag the highlight down to the chosen one.
-  await userEvent.type(input, "n")
+  // Matches "Item 1", "Item 10"… — the open seed must not drag the
+  // highlight down to the chosen row.
+  await userEvent.type(input, "1")
 
   await waitFor(() => {
     expect(input).toHaveAttribute(
@@ -538,7 +540,7 @@ test("reopening after a pick lands on what was just picked", async () => {
   await userEvent.click(trigger)
 
   await userEvent.click(
-    mounted.body.getByRole("option", { name: "German" }),
+    mounted.body.getByRole("option", { name: "Item 3" }),
   )
 
   await waitFor(() => {
@@ -554,7 +556,7 @@ test("reopening after a pick lands on what was just picked", async () => {
   await waitFor(() => {
     expect(reopened).toHaveAttribute(
       "aria-activedescendant",
-      mounted.body.getByRole("option", { name: "German" })
+      mounted.body.getByRole("option", { name: "Item 3" })
         .id,
     )
   })
@@ -577,4 +579,40 @@ test("a windowed list scrolls its chosen option into the window on open", async 
   await expect(
     body.queryByRole("option", { name: "Track 1" }),
   ).toBeNull()
+})
+
+test("the chosen row is scrolled into view, not merely highlighted", async () => {
+  const mounted = await mountStory(ChosenValueOnOpen)
+
+  await userEvent.click(
+    expectAgentDrivable(mounted.canvas, {
+      name: "Search languages",
+      role: "button",
+    }),
+  )
+
+  const chosen = mounted.body.getByRole("option", {
+    name: "Item 58",
+  })
+
+  // The panel's height cap is written imperatively by floating-ui's
+  // `size` middleware, a frame after the open seed runs — so this is the
+  // assertion the first version of this fix passed while the row sat off
+  // screen in the real app. Highlighting it is not the same as showing
+  // it.
+  await waitFor(() => {
+    const list = chosen.closest("[role=listbox]")
+
+    expect(list).not.toBeNull()
+
+    const listBox = (
+      list as HTMLElement
+    ).getBoundingClientRect()
+    const rowBox = chosen.getBoundingClientRect()
+
+    expect(rowBox.top).toBeGreaterThanOrEqual(listBox.top)
+    expect(rowBox.bottom).toBeLessThanOrEqual(
+      listBox.bottom,
+    )
+  })
 })
