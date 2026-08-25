@@ -347,3 +347,51 @@ test.each([
     await expect(link.tagName).toBe("A")
   },
 )
+
+/**
+ * Prose leading, not code leading.
+ *
+ * CodeMirror's base theme sets `line-height: 1.4` on the content,
+ * which is right for a file of short lines you scan down and too
+ * tight for wrapped paragraphs across a full measure. Docket's
+ * owner read a task at 1.4 and called the page unreadable.
+ *
+ * Asserted as a ratio rather than a pixel count so the rule
+ * survives a change to the base font size.
+ */
+test("the document is set at prose leading", async () => {
+  const { canvas } = await mountStory(Default)
+
+  const article = canvas.getByRole("article")
+
+  const { fontSize, lineHeight } = getComputedStyle(article)
+
+  await expect(
+    Number.parseFloat(lineHeight) /
+      Number.parseFloat(fontSize),
+  ).toBeGreaterThan(1.5)
+})
+
+/**
+ * A monospace face at the same `font-size` as the prose around it
+ * reads BIGGER than the prose — fixed advance width, taller
+ * x-height — so a description whose nouns are all file names in
+ * backticks comes out as a wall of emphasis nobody asked for.
+ */
+test("a code span is smaller than the prose it sits in", async () => {
+  const { canvas } = await mountStory(Default)
+
+  const article = canvas.getByRole("article")
+
+  const code = article.querySelector(".cm-md-code")
+
+  await expect(code).not.toBeNull()
+
+  await expect(
+    Number.parseFloat(
+      getComputedStyle(code as Element).fontSize,
+    ),
+  ).toBeLessThan(
+    Number.parseFloat(getComputedStyle(article).fontSize),
+  )
+})
