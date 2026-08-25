@@ -1,9 +1,15 @@
 import { useVisibility } from "@charcuterie/logic"
+import type { ControlSize } from "@charcuterie/tokens"
 import type { Meta, StoryObj } from "@storybook/react"
 import type { ReactNode } from "react"
 import { useRef, useState } from "react"
 
+import { controlSizeArgType } from "../argTypes.storyHelpers.ts"
 import { Button } from "../Button/Button.tsx"
+import {
+  StoryCell,
+  StoryGrid,
+} from "../board.storyHelpers.tsx"
 import type { ListboxItem } from "../Listbox/Listbox.tsx"
 import { Combobox } from "./Combobox.tsx"
 
@@ -49,6 +55,8 @@ const meta = {
   title: "Components/Controls/Combobox",
   component: Combobox,
   parameters: { layout: "padded" },
+  argTypes: { itemSize: controlSizeArgType },
+  args: { itemSize: "md" },
 } satisfies Meta<typeof Combobox>
 
 export default meta
@@ -65,6 +73,7 @@ const ComboboxHarness = ({
   isLoading,
   isMultiple,
   isVirtualized,
+  itemSize,
   options,
   selectedValue,
   triggerLabel,
@@ -78,6 +87,7 @@ const ComboboxHarness = ({
   isLoading?: boolean
   isMultiple?: boolean
   isVirtualized?: boolean
+  itemSize?: ControlSize
   options: ListboxItem[]
   selectedValue?: readonly string[] | string
   triggerLabel: string
@@ -105,6 +115,7 @@ const ComboboxHarness = ({
         isLoading={isLoading}
         isMultiple={isMultiple}
         isVirtualized={isVirtualized}
+        itemSize={itemSize}
         isVisible={isVisible}
         onDismiss={hide}
         onSelect={(value) => {
@@ -587,5 +598,59 @@ export const VirtualizedChosenValue: Story = {
       selectedValue="track-400"
       triggerLabel="Search 500 tracks"
     />
+  ),
+}
+
+/**
+ * The three row sizes — and the fix the owner's screenshot asked for.
+ *
+ * The report was that a `Combobox`'s trigger was visibly bigger than
+ * the options under it. Two things were true at once: the option row
+ * was a hardcoded `px-2 py-1.5 text-sm` that no control shares, and
+ * the panel's **own** search field was bigger than the options it
+ * filters — two sizes inside one panel, which is the defect rather
+ * than either number being wrong.
+ *
+ * `itemSize` now drives the search row and the options together, from
+ * the same `--control-height-*` a `Button` reads. At the `md` default
+ * a trigger, the search field and every option are all 2.25rem.
+ */
+export const ItemSizes: Story = {
+  args: {
+    isVisible: false,
+    onDismiss: () => {},
+    onSelect: () => {},
+    options: LANGUAGES,
+    trigger: <Button>Search languages</Button>,
+  },
+  render: () => (
+    <StoryGrid columns={3}>
+      <StoryCell label="sm — the old option">
+        <ComboboxHarness
+          isInitiallyVisible
+          itemSize="sm"
+          options={LANGUAGES}
+          triggerLabel="Search languages"
+        />
+      </StoryCell>
+
+      <StoryCell label="md — the default, matches the trigger">
+        <ComboboxHarness
+          isInitiallyVisible
+          itemSize="md"
+          options={LANGUAGES}
+          triggerLabel="Search languages"
+        />
+      </StoryCell>
+
+      <StoryCell label="lg — the fat option (44px)">
+        <ComboboxHarness
+          isInitiallyVisible
+          itemSize="lg"
+          options={LANGUAGES}
+          triggerLabel="Search languages"
+        />
+      </StoryCell>
+    </StoryGrid>
   ),
 }

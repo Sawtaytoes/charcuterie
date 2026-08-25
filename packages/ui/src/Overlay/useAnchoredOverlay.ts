@@ -85,9 +85,33 @@ export type UseAnchoredOverlayOptions = {
    * floating-ui `useDismiss` options they carry.
    */
   isEscapeDismissable?: boolean
+  /**
+   * Clamp the panel to the space the viewport actually leaves below
+   * (or above) the trigger, with no fixed cap. The panel owes itself
+   * an `overflow`, or a clamped one simply hides its last rows.
+   *
+   * `maxHeightPx` implies this *and* caps it at a number — a `Listbox`
+   * never wants to be 900px tall even on a monitor that would allow
+   * it. A `Menu` wants the other half only: as tall as its items need,
+   * and never off the bottom of the screen.
+   */
+  isHeightClamped?: boolean
   isOutsidePressDismissable?: boolean
   /** Ports `PortalDropdown`'s anchor-width match, via `size`. */
   isTriggerWidthMatched?: boolean
+  /**
+   * Clamp the panel to the width the viewport actually leaves, with no
+   * fixed cap — the inline twin of `isHeightClamped`, and `maxWidthPx`
+   * without the number.
+   *
+   * A portalled panel is `position: fixed`, so its shrink-to-fit width
+   * already stops at the *viewport*, not at the space `shift` left it
+   * — which means a long label produces a panel exactly as wide as the
+   * window, positioned 8px in, with 8px of itself off the right edge.
+   * `availableWidth` is the shifted number, so this is what makes a
+   * long label wrap instead.
+   */
+  isWidthClamped?: boolean
   isVisible: boolean
   /** Clamps the panel to `min(this, available viewport space)`. */
   maxHeightPx?: number
@@ -120,9 +144,11 @@ const PLACEHOLDER_TRIGGER = createElement("span")
 export const useAnchoredOverlay = ({
   anchorRef,
   isEscapeDismissable = true,
+  isHeightClamped = false,
   isOutsidePressDismissable = true,
   isTriggerWidthMatched = false,
   isVisible,
+  isWidthClamped = false,
   maxHeightPx,
   maxWidthPx,
   offsetValue = 8,
@@ -138,7 +164,9 @@ export const useAnchoredOverlay = ({
   ]
 
   if (
+    isHeightClamped ||
     isTriggerWidthMatched ||
+    isWidthClamped ||
     maxHeightPx !== undefined ||
     maxWidthPx !== undefined
   ) {
@@ -158,11 +186,11 @@ export const useAnchoredOverlay = ({
 
           elements.floating.style.maxHeight = `${heightCap}px`
 
-          if (maxWidthPx !== undefined) {
-            const widthCap = Math.min(
-              maxWidthPx,
-              availableWidth,
-            )
+          if (isWidthClamped || maxWidthPx !== undefined) {
+            const widthCap =
+              maxWidthPx === undefined
+                ? availableWidth
+                : Math.min(maxWidthPx, availableWidth)
 
             elements.floating.style.maxWidth = `${widthCap}px`
           }

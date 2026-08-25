@@ -705,3 +705,49 @@ test("a windowed list reseeds its window on every open, not just the first", asy
     mounted.body.queryByRole("option", { name: "Track 1" }),
   ).toBeNull()
 })
+
+/**
+ * One panel, one row size.
+ *
+ * The owner's report was that the search field was visibly bigger
+ * than the options it filters — *"the button is huge, but the options
+ * don't match it"* — and two sizes inside one panel is the defect,
+ * not the field being wrong or the option being wrong. `itemSize`
+ * drives both, so this measures the pair rather than either number.
+ */
+test("the search row and an option are the same height", async () => {
+  const { body, canvas } = await mountStory(Interactive)
+
+  await userEvent.click(
+    expectAgentDrivable(canvas, {
+      name: "Search languages",
+      role: "button",
+    }),
+  )
+
+  const input = body.getByRole("combobox")
+
+  await waitFor(() => {
+    expect(input).toHaveFocus()
+  })
+
+  // The row is the input's *parent*: the input itself is a bare
+  // `flex-1` field, and the box that carries the row-size class — the
+  // height, the inline padding, the type — is the wrapper around it.
+  const searchRow = input.closest("div")
+
+  const [option] = body.getAllByRole("option")
+
+  expect(option).toBeDefined()
+
+  expect(searchRow?.getBoundingClientRect().height).toBe(
+    option?.getBoundingClientRect().height,
+  )
+
+  // And the query reads at the size of the options it is filtering,
+  // which is inherited from that wrapper rather than set on the input.
+  expect(globalThis.getComputedStyle(input).fontSize).toBe(
+    globalThis.getComputedStyle(option as HTMLElement)
+      .fontSize,
+  )
+})
