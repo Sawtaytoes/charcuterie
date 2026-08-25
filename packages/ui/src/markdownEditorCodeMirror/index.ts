@@ -16,6 +16,10 @@
  * is worth having and is not worth charging everybody for.
  */
 
+export {
+  toSafeImageUrl,
+  toSafeLinkUrl,
+} from "../safeUrls.ts"
 export type { LivePreviewOptions } from "./livePreview.ts"
 export {
   livePreview,
@@ -35,7 +39,3 @@ export type { MarkdownEditorCodeMirrorProps } from "./MarkdownEditorCodeMirror.t
 export { MarkdownEditorCodeMirror } from "./MarkdownEditorCodeMirror.tsx"
 export type { MarkdownViewProps } from "./MarkdownView.tsx"
 export { MarkdownView } from "./MarkdownView.tsx"
-export {
-  toSafeImageUrl,
-  toSafeLinkUrl,
-} from "./safeUrls.ts"

@@ -12,7 +12,7 @@ import { TextLink } from "../TextLink/TextLink.tsx"
 import { toClassName } from "../toClassName.ts"
 import { VisuallyHidden } from "../VisuallyHidden/VisuallyHidden.tsx"
 
-export type BoardItem = {
+type BoardItemFields = {
   /**
    * The leading colour bar. Priority, in the consumer this was built
    * for — *"Priority is styled as a leading colour bar, and **never**
@@ -36,8 +36,6 @@ export type BoardItem = {
    * line, a gate explanation, a due date. A `ProgressBar` goes here.
    */
   footer?: ReactNode
-  /** Where the title navigates. Routed through `RouterLinkProvider`. */
-  href?: string
   /**
    * Visibly present but not actionable — Docket's *gated*: a task
    * whose phase has not opened yet. Paint only; it does not disable
@@ -57,12 +55,66 @@ export type BoardItem = {
    * beside it when there is room. `Badge` is what goes here.
    */
   meta?: ReactNode
-  /** Fires when there is no `href` — for a board that opens a modal. */
-  onSelect?: () => void
+  /**
+   * The card's name, in **words**.
+   *
+   * Always a plain string, even when `titleContent` draws something
+   * richer, because this is what the move handle and the drag
+   * announcements are named after — and a control named after a
+   * `ReactNode` is a control with no name at all.
+   */
   title: string
   /** The trailing cluster: an assignee avatar, an elapsed-time chip. */
   trailing?: ReactNode
 }
+
+/**
+ * Who owns the card title's link — the board, or the caller.
+ *
+ * A union rather than three loose optionals, because the two halves
+ * genuinely cannot coexist. `href` wraps the title in a `TextLink`
+ * and `onSelect` wraps it in a `<button>`; a `titleContent` that
+ * contains its own anchor would then be an anchor inside an anchor
+ * (which the HTML parser silently un-nests, dropping the rest of the
+ * card's link) or an anchor inside a button (which is invalid and
+ * unreachable by keyboard). Both look completely correct on screen.
+ *
+ * So the type refuses the combination outright, and a caller who
+ * needs a rich title takes the navigation with it:
+ *
+ * ```tsx
+ * {
+ *   title: toPlainMarkdownText(task.title),
+ *   titleContent: (
+ *     <MarkdownLine href={`/tasks/${task.id}`} value={task.title} />
+ *   ),
+ * }
+ * ```
+ */
+type BoardItemTitleLink =
+  | {
+      /** Where the title navigates. Routed through `RouterLinkProvider`. */
+      href?: string
+      /** Fires when there is no `href` — for a board that opens a modal. */
+      onSelect?: () => void
+      titleContent?: never
+    }
+  | {
+      href?: never
+      onSelect?: never
+      /**
+       * Drawn instead of `title`, inside the card's own clamping box
+       * — so it still truncates the way every other card does.
+       *
+       * It **owns its navigation**: the board adds no link around it,
+       * which is why `href` and `onSelect` are refused beside it.
+       * `title` is still required, and is still the name every
+       * control on the card is announced by.
+       */
+      titleContent: ReactNode
+    }
+
+export type BoardItem = BoardItemFields & BoardItemTitleLink
 
 export type BoardCardProps = {
   item: BoardItem
@@ -137,12 +189,15 @@ export const BoardCard = ({
 }: BoardCardProps): ReactNode => {
   const [isMenuVisible, setIsMenuVisible] = useState(false)
 
-  const titleContent = (
+  const titleBlock = (
     // `line-clamp-none` before `truncate`, because `line-clamp-2`
     // sets `display: -webkit-box` and `text-overflow` has nothing to
     // ellipsise inside one.
+    //
+    // A `titleContent` is clamped by the same box as a plain one —
+    // it replaces the card's *words*, not the card's shape.
     <span className="line-clamp-2 cq-sm:line-clamp-none cq-sm:block cq-sm:truncate">
-      {item.title}
+      {item.titleContent ?? item.title}
     </span>
   )
 
@@ -191,7 +246,7 @@ export const BoardCard = ({
                   href={item.href}
                   intent="neutral"
                 >
-                  {titleContent}
+                  {titleBlock}
                 </TextLink>
               ) : item.onSelect ? (
                 <button
@@ -202,10 +257,10 @@ export const BoardCard = ({
                   onClick={item.onSelect}
                   type="button"
                 >
-                  {titleContent}
+                  {titleBlock}
                 </button>
               ) : (
-                titleContent
+                titleBlock
               )}
             </div>
 
