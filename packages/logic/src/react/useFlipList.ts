@@ -29,8 +29,10 @@ const itemsOf = (
     itemSelector,
   )
 
-const keyOf = (itemElement: HTMLElement) =>
-  itemElement.getAttribute(FLIP_KEY_ATTRIBUTE)
+const keyOf = (
+  itemElement: HTMLElement,
+  keyAttribute: string,
+) => itemElement.getAttribute(keyAttribute)
 
 /** Used only when the theme's motion tokens are not on the page. */
 const FALLBACK_DURATION_MS = 200
@@ -61,6 +63,20 @@ export type FlipListOptions = {
    * that must not be measured with its parent.
    */
   itemSelector?: string
+  /**
+   * Which attribute holds an item's identity.
+   *
+   * Defaults to `data-flip-key`, which is what `Stepper` emits and
+   * what a list written for this hook should use. Point it at an
+   * existing attribute when the markup ALREADY carries a stable
+   * key — queuepilot's poster tiles have had `data-key` since
+   * before this hook existed, and duplicating that value into a
+   * second attribute would be two places for one fact to drift.
+   *
+   * Set `itemSelector` to match when you change this: the default
+   * selector looks for `data-flip-key` and would find nothing.
+   */
+  keyAttribute?: string
 }
 
 /**
@@ -122,6 +138,7 @@ export const useFlipList = <
 >({
   isAnimating = true,
   itemSelector = DEFAULT_ITEM_SELECTOR,
+  keyAttribute = FLIP_KEY_ATTRIBUTE,
   signature,
 }: FlipListOptions) => {
   const containerRef = useRef<ContainerElement | null>(null)
@@ -140,6 +157,7 @@ export const useFlipList = <
    */
   const isAnimatingRef = useLatestRef(isAnimating)
   const itemSelectorRef = useLatestRef(itemSelector)
+  const keyAttributeRef = useLatestRef(keyAttribute)
 
   // "First" — see the note above on why this is a render-phase
   // read. The signature guard is what stops it re-measuring on a
@@ -155,7 +173,7 @@ export const useFlipList = <
       containerRef.current,
       itemSelector,
     )) {
-      const key = keyOf(itemElement)
+      const key = keyOf(itemElement, keyAttribute)
 
       if (key != null) {
         boxes.set(key, itemElement.getBoundingClientRect())
@@ -226,7 +244,10 @@ export const useFlipList = <
       containerElement,
       itemSelectorRef.current,
     )) {
-      const key = keyOf(itemElement)
+      const key = keyOf(
+        itemElement,
+        keyAttributeRef.current,
+      )
       const start = key == null ? undefined : first.get(key)
 
       // An item that was not in the previous commit has no box to
@@ -264,7 +285,12 @@ export const useFlipList = <
     }
     // `signature` is the whole dependency, and the refs above are
     // why that is complete rather than suppressed.
-  }, [isAnimatingRef, itemSelectorRef, signature])
+  }, [
+    isAnimatingRef,
+    itemSelectorRef,
+    keyAttributeRef,
+    signature,
+  ])
 
   return containerRef
 }
