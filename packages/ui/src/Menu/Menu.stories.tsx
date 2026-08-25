@@ -1,8 +1,12 @@
 import { useVisibility } from "@charcuterie/logic"
+import type { ControlSize } from "@charcuterie/tokens"
 import type { Meta, StoryObj } from "@storybook/react"
 import type { ReactNode } from "react"
 
-import { placementArgType } from "../argTypes.storyHelpers.ts"
+import {
+  controlSizeArgType,
+  placementArgType,
+} from "../argTypes.storyHelpers.ts"
 import { Button } from "../Button/Button.tsx"
 import {
   StoryCell,
@@ -79,11 +83,13 @@ const GROUPED_ACTIONS: MenuEntry[] = [
 const MenuHarness = ({
   emptyState,
   isInitiallyVisible = false,
+  itemSize,
   items = BAY_ACTIONS,
   triggerLabel,
 }: {
   emptyState?: ReactNode
   isInitiallyVisible?: boolean
+  itemSize?: ControlSize
   items?: MenuEntry[]
   triggerLabel: string
 }): ReactNode => {
@@ -95,6 +101,7 @@ const MenuHarness = ({
     <Menu
       emptyState={emptyState}
       isVisible={isVisible}
+      itemSize={itemSize}
       items={items}
       onDismiss={hide}
       trigger={
@@ -144,9 +151,13 @@ const meta = {
   title: "Components/Actions/Menu",
   component: Menu,
   parameters: { layout: "centered" },
-  argTypes: { placement: placementArgType },
+  argTypes: {
+    itemSize: controlSizeArgType,
+    placement: placementArgType,
+  },
   args: {
     items: BAY_ACTIONS,
+    itemSize: "lg",
     placement: "bottom-start",
   },
 } satisfies Meta<typeof Menu>
@@ -301,6 +312,106 @@ export const Empty: Story = {
       isInitiallyVisible
       items={[]}
       triggerLabel="Bay 7"
+    />
+  ),
+}
+
+/**
+ * The three row sizes, open side by side.
+ *
+ * `lg` is the **default** here and nowhere else in the library. The
+ * argument is that a menu item is a pointer target before it is a
+ * list row: it is read once and then aimed at, usually in a hurry,
+ * and a menu rarely holds more than about eight items — so it can
+ * spend the height a dense list cannot. At `comfortable` density `lg`
+ * is 2.75rem, which is also the 44px WCAG 2.5.5 target, and on the
+ * `kiosk` density it is 3.75rem with no prop change.
+ *
+ * `sm` is what every menu in the fleet rendered before this, so it is
+ * the row to compare the other two against rather than a smaller
+ * option nobody wants.
+ *
+ * A window shorter than 40rem steps each of these down one step on
+ * its own, and one shorter than 30rem takes them to `sm` — so a `lg`
+ * menu is never the reason its own last item is off the screen. Drag
+ * the preview's bottom edge up to watch it happen.
+ */
+export const ItemSizes: Story = {
+  args: {
+    isVisible: false,
+    onDismiss: noop,
+    trigger: <Button appearance="outline">Actions</Button>,
+  },
+  parameters: { layout: "padded" },
+  render: () => (
+    <StoryGrid columns={3}>
+      <StoryCell label="sm — the old row">
+        <MenuHarness
+          isInitiallyVisible
+          itemSize="sm"
+          triggerLabel="Bay 1"
+        />
+      </StoryCell>
+
+      <StoryCell label="md — matches a default Button">
+        <MenuHarness
+          isInitiallyVisible
+          itemSize="md"
+          triggerLabel="Bay 2"
+        />
+      </StoryCell>
+
+      <StoryCell label="lg — the default (44px)">
+        <MenuHarness
+          isInitiallyVisible
+          itemSize="lg"
+          triggerLabel="Bay 3"
+        />
+      </StoryCell>
+    </StoryGrid>
+  ),
+}
+
+/**
+ * A label longer than the panel, at the width it matters.
+ *
+ * A portalled panel is `position: fixed`, so its shrink-to-fit width
+ * stops at the **viewport** rather than at the space `shift` left it
+ * — which produced a menu exactly as wide as a 390px window,
+ * positioned 8px in, with 8px of itself off the right edge. It was
+ * pre-existing and size-independent; a `lg` row's larger type is what
+ * makes a real label reach it.
+ *
+ * The panel is clamped to the shifted `availableWidth` now, and the
+ * label wraps inside its row — which is also why a row's height is a
+ * `min-h-` rather than an `h-`.
+ */
+export const LongLabel: Story = {
+  args: {
+    isVisible: false,
+    onDismiss: noop,
+    trigger: <Button appearance="outline">Actions</Button>,
+  },
+  globals: { viewport: { value: "mobile1" } },
+  parameters: { layout: "padded" },
+  render: () => (
+    <MenuHarness
+      isInitiallyVisible
+      items={[
+        {
+          icon: <SettingsIcon />,
+          key: "forget",
+          label:
+            "Forget every remembered passcode on this device",
+          onSelect: noop,
+        },
+        {
+          key: "skip",
+          label: "Skip title",
+          onSelect: noop,
+        },
+      ]}
+      triggerLabel="Bay 8"
     />
   ),
 }

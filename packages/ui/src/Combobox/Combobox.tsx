@@ -1,3 +1,4 @@
+import type { ControlSize } from "@charcuterie/tokens"
 import {
   FloatingFocusManager,
   FloatingPortal,
@@ -11,9 +12,11 @@ import type {
 } from "react"
 import { useEffect, useRef, useState } from "react"
 
+import { PANEL_ITEM_SIZE_CLASS } from "../controlStyles.ts"
 import type { ListboxItem } from "../Listbox/Listbox.tsx"
 import { PANEL_SURFACE_CLASS } from "../Overlay/overlayPanelClass.ts"
 import { useAnchoredOverlay } from "../Overlay/useAnchoredOverlay.ts"
+import { usePanelItemSize } from "../Overlay/usePanelItemSize.ts"
 import { toClassName } from "../toClassName.ts"
 import { ComboboxOption } from "./ComboboxOption.tsx"
 
@@ -48,6 +51,18 @@ export type ComboboxProps = {
   /** Windowing. Auto-on above ~100 options when left undefined. */
   isVirtualized?: boolean
   isVisible: boolean
+  /**
+   * How tall each option — and the search field above them — is, from
+   * the same density-aware tokens a `Button` reads.
+   *
+   * It covers the search row deliberately. The owner's report was that
+   * the panel's own field was visibly bigger than the options under it
+   * (*"the button is huge, but the options don't match it"*), and two
+   * sizes inside one panel is the defect. One prop drives both.
+   *
+   * A short window steps it back down on its own (`usePanelItemSize`).
+   */
+  itemSize?: ControlSize
   onDismiss: () => void
   onSelect: (value: string) => void
   /**
@@ -70,6 +85,20 @@ export type ComboboxProps = {
 }
 
 const AUTO_VIRTUALIZE_THRESHOLD = 100
+
+/**
+ * The virtualizer's pre-measurement guess per row size, in px at
+ * `comfortable` density — `--control-height-*` plus the row's own
+ * `py-*`. Hardcoded because a virtualizer wants a number before the
+ * first paint, which is the one place a token cannot reach; every row
+ * is measured immediately afterwards, so a density that disagrees
+ * costs a frame rather than a wrong layout.
+ */
+const ROW_ESTIMATE_PX: Record<ControlSize, number> = {
+  sm: 40,
+  md: 48,
+  lg: 60,
+}
 
 /**
  * How many frames the open seed will wait for the panel to be capped
@@ -130,6 +159,7 @@ export const Combobox = ({
   isMultiple = false,
   isVirtualized,
   isVisible,
+  itemSize: requestedItemSize = "md",
   onDismiss,
   onQueryChange,
   onSelect,
@@ -139,6 +169,8 @@ export const Combobox = ({
   selectedValue,
   trigger,
 }: ComboboxProps): ReactNode => {
+  const itemSize = usePanelItemSize(requestedItemSize)
+
   // Attached-input mode: the consumer's `<input>` is the reference,
   // query source, focus holder and keyboard target; Combobox renders the
   // list-only panel.
@@ -254,7 +286,12 @@ export const Combobox = ({
 
   const rowVirtualizer = useVirtualizer({
     count: filtered.length,
-    estimateSize: () => 36,
+    // An *estimate*: every row is re-measured (`measureElement` on the
+    // wrapper below), so this only decides how far the scrollbar lies
+    // before the first measurement lands. It still has to track
+    // `itemSize`, or a `lg` list opens with a scrollbar a third too
+    // short and visibly settles.
+    estimateSize: () => ROW_ESTIMATE_PX[itemSize],
     getScrollElement: () => listElement.current,
     overscan: 8,
   })
@@ -735,6 +772,7 @@ export const Combobox = ({
       isActive={index === resolvedActiveIndex}
       isSelected={selected.includes(option.value)}
       item={option}
+      itemSize={itemSize}
       key={option.value}
       onSelect={commitValue}
       posInSet={isWindowed ? index + 1 : undefined}
@@ -806,29 +844,43 @@ export const Combobox = ({
               style={floatingStyles}
             >
               {isAttached ? null : (
-                // px-3 aligns the input's text start with the options
-                // below: each option sits at 0.75rem (listbox p-1 + option
-                // px-2), so the search row needs the same 0.75rem inset.
-                <div className="flex items-center gap-1 border-border-subtle border-b px-3 py-2">
-                  <input
-                    aria-activedescendant={
-                      activeDescendantId
-                    }
-                    aria-autocomplete="list"
-                    aria-controls={listboxId}
-                    aria-expanded="true"
-                    aria-labelledby={triggerId}
-                    className="min-w-24 flex-1 bg-transparent text-content-primary text-sm outline-none placeholder:text-content-muted"
-                    onChange={(changeEvent) => {
-                      setQuery(changeEvent.target.value)
-                    }}
-                    onKeyDown={handleKeyDown}
-                    placeholder={placeholder}
-                    ref={internalInputElement}
-                    role="combobox"
-                    type="text"
-                    value={currentQuery}
-                  />
+                // The `p-1` is the list container's own padding, repeated
+                // here so the search caret starts exactly where the option
+                // labels below it do — the alignment a hand-picked `px-3`
+                // used to approximate, and which broke the moment the row
+                // padding became a token. The border stays on the outer
+                // element, so it still spans the whole panel.
+                <div className="border-border-subtle border-b p-1">
+                  <div
+                    className={toClassName(
+                      "flex items-center",
+                      PANEL_ITEM_SIZE_CLASS[itemSize],
+                    )}
+                  >
+                    <input
+                      aria-activedescendant={
+                        activeDescendantId
+                      }
+                      aria-autocomplete="list"
+                      aria-controls={listboxId}
+                      aria-expanded="true"
+                      aria-labelledby={triggerId}
+                      // No `text-*` of its own: the wrapper's row-size
+                      // class sets the font size, and the input inherits
+                      // it — so the query reads at exactly the size of
+                      // the options it is filtering.
+                      className="min-w-24 flex-1 bg-transparent text-content-primary outline-none placeholder:text-content-muted"
+                      onChange={(changeEvent) => {
+                        setQuery(changeEvent.target.value)
+                      }}
+                      onKeyDown={handleKeyDown}
+                      placeholder={placeholder}
+                      ref={internalInputElement}
+                      role="combobox"
+                      type="text"
+                      value={currentQuery}
+                    />
+                  </div>
                 </div>
               )}
 

@@ -12,10 +12,15 @@ import { page } from "@vitest/browser/context"
  * fails intermittently — which is the worst possible property for
  * the one gate that says the shell does not scroll sideways.
  *
- * Polling `innerWidth` is the honest wait: it is the same number
- * the media queries and the layout resolved against, so when it
- * matches, the thing under test really is at the width the test
- * claims.
+ * Polling `innerWidth`/`innerHeight` is the honest wait: they are the
+ * same numbers the media queries and the layout resolved against, so
+ * when they match, the thing under test really is at the size the
+ * test claims.
+ *
+ * **Height counts too**, and it did not used to. A panel row's size
+ * steps down under `(height <= 40rem)` (`usePanelItemSize`), so a test
+ * that shrinks only the height would have raced the resize with
+ * nothing to wait on and measured the tall rows about half the time.
  */
 export const setViewport = async ({
   height,
@@ -28,10 +33,13 @@ export const setViewport = async ({
 
   const deadline = Date.now() + 2000
 
-  while (globalThis.innerWidth !== width) {
+  while (
+    globalThis.innerWidth !== width ||
+    globalThis.innerHeight !== height
+  ) {
     if (Date.now() > deadline) {
       throw new Error(
-        `The viewport never reached ${width}px — it is ${globalThis.innerWidth}px. Every width assertion after this point would be measuring the wrong page.`,
+        `The viewport never reached ${width}x${height}px — it is ${globalThis.innerWidth}x${globalThis.innerHeight}px. Every size assertion after this point would be measuring the wrong page.`,
       )
     }
 
@@ -45,3 +53,10 @@ export const setViewport = async ({
 export const PHONE = { height: 844, width: 390 }
 
 export const DESKTOP = { height: 900, width: 1440 }
+
+/**
+ * A window short enough to trip `usePanelItemSize`'s first step-down
+ * (`height <= 40rem`, so 640px) and wide enough that nothing else
+ * about the layout changes with it.
+ */
+export const SHORT_WINDOW = { height: 600, width: 1440 }

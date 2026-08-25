@@ -1,12 +1,16 @@
+import type { ControlSize } from "@charcuterie/tokens"
 import type { ReactNode } from "react"
 import { useEffect } from "react"
 
+import { PANEL_ITEM_SIZE_CLASS } from "../controlStyles.ts"
 import { FOCUS_RING_CLASS } from "../intentStyles.ts"
 import { toClassName } from "../toClassName.ts"
 import type { ListboxItem } from "./Listbox.tsx"
 
 export type ListboxOptionProps = {
   isSelected: boolean
+  /** Already stepped down for a short window by `usePanelItemSize`. */
+  itemSize: ControlSize
   item: ListboxItem
   onSelect: (value: string) => void
   /** `RovingFocus.register` — membership of the arrow-key group. */
@@ -44,6 +48,7 @@ export type ListboxOptionProps = {
 export const ListboxOption = ({
   isSelected,
   item,
+  itemSize,
   onSelect,
   registerFocus,
   registerSelection,
@@ -73,7 +78,11 @@ export const ListboxOption = ({
         // and silently won at equal specificity, so the selected option's
         // accent fill never showed (only its ✓ did). Default is
         // transparent anyway; the tints below add a fill.
-        "flex w-full cursor-pointer items-center justify-between gap-2 rounded-sm px-2 py-1.5 text-start text-sm transition-colors duration-(--duration-fast) ease-standard",
+        "flex w-full cursor-pointer items-center justify-between rounded-sm text-start transition-colors duration-(--duration-fast) ease-standard",
+        // Height, inline padding, gap and type from the row-size system,
+        // so an option is at least as tall as the control that opened it
+        // and a rich two-line label still grows past that floor.
+        PANEL_ITEM_SIZE_CLASS[itemSize],
         // The base sets no text colour: a plain `text-content-primary` in
         // it clobbers a conditional `text-content-disabled` at equal
         // specificity (Tailwind emits the base last), so a disabled option

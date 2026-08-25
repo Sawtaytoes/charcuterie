@@ -99,3 +99,29 @@ for a 4,000-item list. Below the threshold the list is plain DOM.
 <Canvas of={ComboboxStories.Virtualized} />
 
 <Canvas of={ComboboxStories.Interactive} />
+
+## One panel, one row size
+
+`itemSize` drives the search field **and** the options together, from the same
+density-aware `--control-height-*` tokens a `Button` reads. It defaults to `md`, so at the
+default a trigger, the search field and every option are all 2.25rem.
+
+Covering the search row is the point rather than a bonus. The report that started this was
+that a `Combobox`'s trigger was bigger than the options under it — but the panel's own
+field was bigger than them too, and **two sizes inside one panel** is the defect rather
+than either number being wrong.
+
+It also retires a hand-picked number. The search row used to carry `px-3` to line its caret
+up with the option labels below it, which worked only while the option padding was a
+hardcoded `px-2`; it is now wrapped in the list's own `p-1` and given the same row-size
+class, so the two cannot drift apart again.
+
+`lg` is the fat one — 2.75rem, the 44px WCAG 2.5.5 target. A window shorter than 40rem
+steps each size down one step on its own.
+
+The virtualizer's `estimateSize` tracks `itemSize` too. Every row is re-measured
+immediately, so the estimate only decides how far the scrollbar lies before the first
+measurement lands — but a `lg` list opening with a scrollbar a third too short and visibly
+settling is exactly the kind of thing nobody files a bug about.
+
+<Canvas of={ComboboxStories.ItemSizes} />
