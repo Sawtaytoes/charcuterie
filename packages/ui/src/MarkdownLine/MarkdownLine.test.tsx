@@ -24,6 +24,7 @@ const {
   AsALink,
   Default,
   FileNames,
+  InsideACardLink,
   RefusedUrl,
   Routed,
   TitleAsALink,
@@ -216,4 +217,25 @@ test("the accessible name keeps the spaces around a mark", async () => {
       name: "Ingest 53 movies from Downloads/MOVIES tonight",
     }),
   ).toBeInTheDocument()
+})
+
+/**
+ * `isInsideLink` emits no anchor of its own — not even for a bare
+ * URL, which is the case that makes it a prop rather than a
+ * convention. A captured note ending in a URL would otherwise nest
+ * an anchor inside the card's link with nobody having typed `[]()`.
+ */
+test("isInsideLink draws the marks and adds no anchor", async () => {
+  const { canvas, canvasElement } =
+    await mountStory(InsideACardLink)
+
+  await expect(canvasElement.querySelector("a a")).toBe(
+    null,
+  )
+
+  await expect(canvas.getAllByRole("link")).toHaveLength(1)
+
+  await expect(
+    canvasElement.querySelector("code")?.textContent,
+  ).toBe("Downloads/MOVIES")
 })

@@ -84,6 +84,19 @@ An in-app destination goes through the injected `RouterLinkProvider`; an off-ori
 does not, and opens in a new tab. A title that names a pull request is a reference, and
 following it should not lose the board the reader was on.
 
+## `isInsideLink` — when the card is already the link
+
+<Canvas of={MarkdownLineStories.InsideACardLink} />
+
+The third and last answer to *who owns the link here*. `href` says this component does;
+neither says the markdown links do; `isInsideLink` says **nobody** — draw the marks and emit
+no anchor at all.
+
+Reach for it whenever the line sits inside a link the caller already owns, which is what a
+whole-card link is. The trap it closes has teeth even when no author ever typed a link: a
+**bare URL autolinks**, so a captured note whose title ends in `https://…` would nest an
+anchor without anybody writing `[]()`.
+
 ## Anywhere a string is required
 
 `aria-label`, `title`, `document.title`, a confirmation sentence — call `toPlainMarkdownText`

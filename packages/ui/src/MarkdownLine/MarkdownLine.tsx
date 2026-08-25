@@ -41,6 +41,27 @@ export type MarkdownLineProps = {
    */
   href?: string
   /**
+   * The caller has already wrapped this line in a link — so draw the
+   * marks and emit **no anchors at all**, not even for a markdown
+   * link.
+   *
+   * The third and last answer to "who owns the link here", after
+   * `href` (this component does) and neither (the markdown links do,
+   * and nothing else is clickable). It exists because a whole-card
+   * link is a real and common shape — Docket's triage cards wrap the
+   * title *and* the body, so middle-click opens the proposal — and
+   * inside one, an anchor of any kind is an anchor inside an anchor.
+   *
+   * That trap has teeth even when no author ever typed a link: a
+   * **bare URL autolinks**, so a captured note whose title ends in
+   * `https://…` would nest one without anybody writing `[]()`.
+   *
+   * A markdown link's text still renders, with its marks; it simply
+   * does not navigate on its own. The card's link is what a click
+   * follows.
+   */
+  isInsideLink?: boolean
+  /**
    * The markdown. **Inline constructs only** — see
    * `inlineMarkdown.ts`; a `#` or a `- ` is a literal character
    * here, and a newline collapses to a space.
@@ -204,6 +225,7 @@ const toMarkedContent = (
 export const MarkdownLine = ({
   className,
   href,
+  isInsideLink = false,
   value,
 }: MarkdownLineProps): ReactNode => {
   const RouterLink = useRouterLink()
@@ -242,6 +264,19 @@ export const MarkdownLine = ({
     <span className={className}>
       {groups.map((group, groupIndex) => {
         const content = group.runs.map(toMarkedContent)
+
+        if (isInsideLink) {
+          // No anchor, and no link paint either: a word painted as
+          // a link that cannot be followed is worse than plain text.
+          return (
+            <Fragment
+              // biome-ignore lint/suspicious/noArrayIndexKey: position is the identity — see `toMarkedContent`
+              key={groupIndex}
+            >
+              {content}
+            </Fragment>
+          )
+        }
 
         if (group.href !== undefined) {
           // A destination the injected router cannot serve opens in

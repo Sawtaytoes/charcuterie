@@ -254,6 +254,37 @@ export const TitleAsALink: Story = {
   ),
 }
 
+/**
+ * INSIDE A WHOLE-CARD LINK.
+ *
+ * The card is the link — middle-click opens it, like anything else
+ * on the web — so the line inside it emits no anchor of its own. The
+ * marks still draw; a markdown link's text still reads; nothing
+ * inside navigates separately.
+ *
+ * The bare URL is the case that makes this a prop rather than a
+ * convention. It autolinks, so a captured note ending in a URL would
+ * nest an anchor without anybody having typed `[]()`.
+ */
+export const InsideACardLink: Story = {
+  render: () => (
+    <a
+      className="block max-w-sm rounded-lg border border-border-subtle bg-surface-raised p-3 hover:bg-surface-sunken"
+      href="/triage/7"
+    >
+      <MarkdownLine
+        className="block font-medium text-content-primary"
+        isInsideLink
+        value="Ingest 53 movies from `Downloads/MOVIES` — https://example.invalid/list"
+      />
+
+      <span className="mt-1 block text-content-secondary text-sm">
+        Filed from the capture inbox
+      </span>
+    </a>
+  ),
+}
+
 export const RefusedUrl: Story = {
   args: { value: "[click me](javascript:alert(1))" },
 }
