@@ -188,6 +188,45 @@ const ADA: [string, string] = ["AD", "Ada"]
 
 const WREN: [string, string] = ["WR", "Wren"]
 
+/**
+ * A categorical index per project, and the same four projects the
+ * rest of this file uses. The index is what a consumer's user
+ * PICKED — it is not derived here, and it is never a hex.
+ */
+const PROJECT_EDGE_ITEMS: BoardItem[] = (
+  [
+    [
+      PROJECTS.signal,
+      2,
+      "Retire the second scheduler and fold its jobs into the broker",
+    ],
+    [
+      PROJECTS.loom,
+      5,
+      "One composed Storybook for every app in the fleet",
+    ],
+    [
+      PROJECTS.atlas,
+      8,
+      "Fingerprint duplicate uploads before they reach the queue",
+    ],
+    [
+      PROJECTS.ferry,
+      10,
+      "Rewrite the ingest runbook against the new broker",
+    ],
+  ] as const
+).map(([project, categorical, title]) => ({
+  accentEdge: { categorical },
+  // The words the bar cannot say. A colour alone is a WCAG
+  // 1.4.1 failure and is silent to a screen reader.
+  accentLabel: project,
+  href: `#/task/${encodeURIComponent(title)}`,
+  key: title,
+  meta: <ProjectChip name={project} />,
+  title,
+}))
+
 const TODO_ITEMS: BoardItem[] = [
   toItem({
     assignee: WREN,
@@ -556,6 +595,67 @@ export const Responsive: Story = {
                 items: REVIEW_ITEMS.slice(0, 4),
                 key: "review",
                 label: "Needs Review",
+              },
+            ]}
+          />
+        </Frame>
+      </div>
+    </div>
+  ),
+}
+
+/**
+ * **The project on the leading edge**, in both of the shapes a card
+ * takes — and the reason `accentEdge` exists beside `accentIntent`.
+ *
+ * The pill arm is a `w-1` span INSIDE the card, so it is a straight
+ * rectangle next to a rounded box. The edge arm is `Card`'s own
+ * treatment: a pseudo-element taking `border-radius: inherit`, so it
+ * paints a straight stripe down a row that has no corner and wraps
+ * the corner once the lane passes `cq-lg` and the row becomes a
+ * card. One prop, correct in both shapes, and never a notch.
+ *
+ * The colours are CATEGORICAL — an identity, not a state. A project,
+ * a repo, a source. Priority stays on the pill arm, where an intent
+ * belongs.
+ */
+export const AccentEdge: Story = {
+  render: () => (
+    <div className="flex flex-col gap-8">
+      <div className="flex flex-col gap-2">
+        <span className="font-mono text-content-muted text-xs">
+          a narrow lane — rows, so the edge is a straight
+          stripe
+        </span>
+
+        <Frame inlineSize="22rem">
+          <Board
+            label="Today, by project"
+            lanes={[
+              {
+                items: PROJECT_EDGE_ITEMS,
+                key: "todo",
+                label: "Todo",
+              },
+            ]}
+          />
+        </Frame>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <span className="font-mono text-content-muted text-xs">
+          the same lane past --cq-lg (48rem) — cards, so the
+          edge wraps the corner
+        </span>
+
+        <Frame inlineSize="56rem">
+          <Board
+            label="Today, by project, wide"
+            lanes={[
+              {
+                items: PROJECT_EDGE_ITEMS,
+                key: "todo",
+                label: "Todo",
               },
             ]}
           />
