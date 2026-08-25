@@ -241,8 +241,8 @@ export type {
 export { MarkdownEditor } from "./MarkdownEditor/MarkdownEditor.tsx"
 export { toMarkdownImage } from "./MarkdownEditor/markdownCommands.ts"
 export type {
-  MarkdownLine,
-  MarkdownLineKind,
+  MarkdownEditorLine,
+  MarkdownEditorLineKind,
   MarkdownSpan,
   MarkdownSpanKind,
 } from "./MarkdownEditor/markdownSpans.ts"
@@ -250,6 +250,13 @@ export {
   toLineIndex,
   toMarkdownLines,
 } from "./MarkdownEditor/markdownSpans.ts"
+export type { InlineMarkdownRun } from "./MarkdownLine/inlineMarkdown.ts"
+export {
+  toInlineMarkdownRuns,
+  toPlainMarkdownText,
+} from "./MarkdownLine/inlineMarkdown.ts"
+export type { MarkdownLineProps } from "./MarkdownLine/MarkdownLine.tsx"
+export { MarkdownLine } from "./MarkdownLine/MarkdownLine.tsx"
 export type {
   MediaTileProps,
   MediaTileRatio,

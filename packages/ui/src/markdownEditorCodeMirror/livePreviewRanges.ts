@@ -52,7 +52,7 @@ import type {
 import {
   toSafeImageUrl,
   toSafeLinkUrl,
-} from "./safeUrls.ts"
+} from "../safeUrls.ts"
 
 /**
  * A block-level treatment applied to a whole line.
