@@ -2,10 +2,16 @@ import type { Meta, StoryObj } from "@storybook/react"
 
 import { controlSizeArgType } from "../argTypes.storyHelpers.ts"
 import {
+  ContainerBoard,
   StoryCell,
   StoryGrid,
   StorySection,
 } from "../board.storyHelpers.tsx"
+import {
+  InboxIcon,
+  PlayIcon,
+  SearchIcon,
+} from "../icons.storyHelpers.tsx"
 import type { RadioItem } from "./RadioGroup.tsx"
 import { RadioGroup } from "./RadioGroup.tsx"
 
@@ -23,6 +29,55 @@ const NAMING_ITEMS: RadioItem[] = [
   { label: "Use a custom pattern", value: "custom" },
 ]
 
+/**
+ * The same control with a name and a line of help per option — the
+ * shape four apps in the fleet had each hand-painted, and the reason
+ * none of them reached for this component.
+ */
+const IMPORT_ITEMS: RadioItem[] = [
+  {
+    hint: "Nothing is left behind at the source.",
+    label: "Move the files",
+    value: "move",
+  },
+  {
+    hint: "Twice the space, and the source is untouched.",
+    label: "Copy the files",
+    value: "copy",
+  },
+  {
+    hint: "One copy on disk, two names for it. Same volume only.",
+    label: "Hard link",
+    value: "link",
+  },
+  {
+    hint: "Catalogue them where they are.",
+    label: "Leave in place",
+    value: "leave",
+  },
+]
+
+const ICON_ITEMS: RadioItem[] = [
+  {
+    hint: "Everything that arrived since the last run.",
+    icon: <InboxIcon />,
+    label: "New arrivals",
+    value: "new",
+  },
+  {
+    hint: "Whatever the saved query matches today.",
+    icon: <SearchIcon />,
+    label: "Saved search",
+    value: "search",
+  },
+  {
+    hint: "Pick up where the last session stopped.",
+    icon: <PlayIcon />,
+    label: "Continue",
+    value: "continue",
+  },
+]
+
 const meta = {
   title: "Components/Controls/RadioGroup",
   component: RadioGroup,
@@ -31,7 +86,12 @@ const meta = {
   // The component's own defaults, restated — Storybook does not seed
   // `args` from docgen, so an unstated default shows in the props
   // table with nothing selected in its control.
-  args: { isReadOnly: false, size: "md" },
+  args: {
+    isReadOnly: false,
+    itemShape: "row",
+    minTileInlineSize: 200,
+    size: "md",
+  },
 } satisfies Meta<typeof RadioGroup>
 
 export default meta
@@ -59,6 +119,38 @@ export const AllVariants: Story = {
       </StoryGrid>
     </StorySection>
   ),
+}
+
+/**
+ * `itemShape="tile"` is the same `radiogroup` in a box: one choice
+ * out of several, exclusive, announced as "3 of 6", drawn as cards
+ * in a grid that gains columns with its **container**.
+ *
+ * The selected tile is an accent **edge** and a lifted surface, not
+ * a fill — the radio dot inside it is still the thing a screen
+ * reader reads, and a state told in colour alone is the one state a
+ * monochrome ePaper build cannot show.
+ */
+export const Tiles: Story = {
+  args: {
+    items: IMPORT_ITEMS,
+    itemShape: "tile",
+    label: "On import",
+  },
+}
+
+/**
+ * A tile may lead with an icon. The library ships none — these are
+ * story-only SVGs, exactly what an app passes — and the icon is
+ * `aria-hidden` by construction, because the name it sits above is
+ * in the same button.
+ */
+export const TilesWithIcons: Story = {
+  args: {
+    items: ICON_ITEMS,
+    itemShape: "tile",
+    label: "Where to start",
+  },
 }
 
 const STATE_ITEMS: RadioItem[] = [
@@ -125,8 +217,79 @@ export const AllStates: Story = {
             selectedValue="anidb"
           />
         </StoryCell>
+
+        <StoryCell align="stretch" label="a hint on a row">
+          <RadioGroup
+            {...controlProps}
+            items={IMPORT_ITEMS}
+            label="On import, as rows"
+          />
+        </StoryCell>
+
+        <StoryCell
+          align="stretch"
+          label="tiles, third chosen"
+        >
+          <RadioGroup
+            {...controlProps}
+            items={IMPORT_ITEMS}
+            itemShape="tile"
+            label="On import, as tiles"
+            selectedValue="link"
+          />
+        </StoryCell>
+
+        <StoryCell
+          align="stretch"
+          label="tiles, read-only and disabled"
+        >
+          <RadioGroup
+            {...controlProps}
+            isReadOnly
+            items={[
+              ...IMPORT_ITEMS.slice(0, 2),
+              {
+                hint: "The source volume is read-only.",
+                isDisabled: true,
+                label: "Hard link",
+                value: "link",
+              },
+            ]}
+            itemShape="tile"
+            label="On import, read-only tiles"
+            selectedValue="copy"
+          />
+        </StoryCell>
       </StoryGrid>
     </StorySection>
+  ),
+}
+
+/**
+ * Column count comes from the **container**, never the window — the
+ * standing rule for any list of cards, and the reason this board
+ * varies a wrapper's width rather than the viewport's.
+ *
+ * At the 200px default floor: one track at 15rem, one at 24rem, two
+ * at 34rem. `auto-fill` and deliberately not `auto-fit`, so the
+ * tiles keep their size in a container with room to spare instead of
+ * stretching to fill it.
+ */
+export const Responsive: Story = {
+  args: {
+    items: IMPORT_ITEMS,
+    itemShape: "tile",
+    label: "On import",
+  },
+  render: (controlProps) => (
+    <ContainerBoard>
+      {(width) => (
+        <RadioGroup
+          {...controlProps}
+          label={`On import at ${width}`}
+        />
+      )}
+    </ContainerBoard>
   ),
 }
 
