@@ -1,0 +1,135 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as MarkdownLineStories from "./MarkdownLine.stories";
+
+<Meta of={MarkdownLineStories} />
+
+# MarkdownLine
+
+**One line of markdown, drawn with its inline marks and nothing else.** Reach for it
+wherever a stored string is a *name* rather than a document — a card title, a lane heading,
+a table cell, a breadcrumb.
+
+<Canvas of={MarkdownLineStories.Default} />
+
+## Props
+
+<Controls />
+
+## Why marks belong in a title
+
+A grid of task names set in one flat weight is a wall. The parts that tell two cards apart —
+the path, the urgency, the thing that is already done — are exactly the parts markdown would
+have marked, so the marks are doing the same job the priority bar and the project colour do
+one layer up: making a list **scannable**.
+
+<Canvas of={MarkdownLineStories.WhyItHelps} />
+
+## It is inline-only, and it is one line
+
+| Rendered | Literal text |
+| --- | --- |
+| `**bold**`, `__bold__` | `# heading` |
+| `*italic*`, `_italic_` | `- list item`, `1. list item` |
+| `` `code` `` | `> blockquote` |
+| `~~strikethrough~~` | `\| table \| row \|` |
+| `[text](url)`, `<url>`, bare `https://…` and `www.…` | `![image](url)` |
+
+A newline collapses to a space. Every surface that draws one of these clamps to one or two
+lines anyway, so a hard break would only push the second half of a title out of a box that
+was measured for one line.
+
+## File names are not markup
+
+The case this component is most often asked to get wrong.
+
+<Canvas of={MarkdownLineStories.FileNames} />
+
+`ingest_the_files.sh` keeps its underscores because CommonMark's flanking rules say an
+underscore **inside a word** opens nothing — the rule that makes `_` and `*` genuinely
+different characters, and the one a hand-rolled "strip the markdown" regex always misses.
+`2 * 3 * 4` is arithmetic for the same reason: a delimiter followed by a space cannot open.
+
+## `href` — a link inside a link
+
+<Canvas of={MarkdownLineStories.AsALink} />
+
+A card title is usually a link to the card, and a title may also *contain* a link. An anchor
+inside an anchor is invalid HTML: the parser closes the outer one at the inner one's start
+tag, so the text after the inner link silently stops opening the card. It looks completely
+correct and half of it does not work.
+
+So `href` is a prop rather than something you wrap the component in. Given one, the plain
+runs become anchors to `href` and a markdown link stays a **sibling** anchor with its own
+destination:
+
+```tsx
+<MarkdownLine href={`/tasks/${task.id}`} value={task.title} />
+```
+
+Consecutive runs sharing a destination are merged into one anchor, so `**Ship** it` is a
+single tab stop and one entry in a screen reader's link list.
+
+A markdown link **splits** the line into more than one anchor, and each is named by the words
+it covers — `Ship`, `#53`, `tonight`. That is honest, and it is not good: `tonight` is a poor
+name for a link to a task. Naming all three after the whole line was tried and is worse — two
+links with the same name are ambiguous to anything driving the page by name, and this
+library's own `expectAgentDrivable` refuses it. The conclusion is a design one rather than an
+API one: **a link usually belongs in a task's description**, where it has a sentence around
+it, rather than in its title.
+
+<Canvas of={MarkdownLineStories.Routed} />
+
+An in-app destination goes through the injected `RouterLinkProvider`; an off-origin one
+does not, and opens in a new tab. A title that names a pull request is a reference, and
+following it should not lose the board the reader was on.
+
+## `isInsideLink` — when the card is already the link
+
+<Canvas of={MarkdownLineStories.InsideACardLink} />
+
+The third and last answer to *who owns the link here*. `href` says this component does;
+neither says the markdown links do; `isInsideLink` says **nobody** — draw the marks and emit
+no anchor at all.
+
+Reach for it whenever the line sits inside a link the caller already owns, which is what a
+whole-card link is. The trap it closes has teeth even when no author ever typed a link: a
+**bare URL autolinks**, so a captured note whose title ends in `https://…` would nest an
+anchor without anybody writing `[]()`.
+
+## Anywhere a string is required
+
+`aria-label`, `title`, `document.title`, a confirmation sentence — call `toPlainMarkdownText`
+rather than writing a regex that strips the markup:
+
+```ts
+import { toPlainMarkdownText } from "@charcuterie/ui"
+
+document.title = `${toPlainMarkdownText(task.title)} — Docket`
+```
+
+It is the **same parse** the component renders from, so it cannot drift. A second stripper is
+how a card comes to read `Ingest 53 movies` while its own tooltip reads
+``Ingest 53 movies from `Downloads/MOVIES` ``.
+
+## A refused URL keeps its source
+
+<Canvas of={MarkdownLineStories.RefusedUrl} />
+
+URLs cross `safeUrls.ts` — an allowlist of `http`, `https`, `mailto` and `tel` — before they
+reach an `href`, the same module `MarkdownView` and the CodeMirror editor use. A scheme that
+does not survive it produces **no anchor at all**, and every character of the source stays on
+screen. A reader who can see `[click me](javascript:…)` is better served than one shown a
+confident blue word that silently refuses to work.
+
+## Not a small `MarkdownView`
+
+`MarkdownView` renders a *document*, through CodeMirror, from the optional
+`@charcuterie/ui/markdown-editor-codemirror` entry point. Neither half suits a name: an
+editor state, a syntax tree and a decoration set per card is an absurd price for forty
+characters, and the main entry may not reach the CodeMirror stack at all.
+
+So this is a second parser, which is worth being nervous about — two parsers are two answers
+to "what does this markdown mean". Three things keep them honest: this one is **inline-only**,
+so there is no block level to disagree about; both call the **same** URL guard; and the
+flanking rules here are CommonMark's rather than a convenient approximation.
