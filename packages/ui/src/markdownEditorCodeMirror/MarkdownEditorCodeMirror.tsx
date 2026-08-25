@@ -834,8 +834,49 @@ export const MarkdownEditorCodeMirror = ({
         />
       </div>
 
+      {/*
+        The frame's height reaches the `contenteditable`, so the
+        whole box takes a click.
+
+        A `<textarea>` is one box: it is as tall as you make it and
+        every pixel of it accepts the caret. CodeMirror is a stack
+        — `.cm-editor` in this host, `.cm-scroller` in that, and
+        the `contenteditable` `.cm-content` in that — and each of
+        those was only as tall as the text. A frame with a
+        `min-height` and a two-line document therefore had a large
+        band that belonged to *this div*, and pressing it focused
+        nothing:
+
+          *"the markdown box isn't a textarea, it's an input field
+          or something. It should be the whole box that's clickable
+          to type into."*
+
+        So the height is handed down the stack, one utility per
+        step, and each one is there because the step above it does
+        not arrive on its own:
+
+         1. `flex flex-col` + `[&>.cm-editor]:flex-1` — a
+            `min-height` is not a definite height, so nothing
+            inside the editor could be a percentage *of* it.
+         2. `[&_.cm-scroller]:flex-1` — CodeMirror's base theme
+            gives the scroller `height: 100%`, and that percentage
+            does not resolve against a parent whose own height came
+            out of flexing. Stretching it by flex does.
+         3. `[&_.cm-content]:self-stretch` — the scroller is a flex
+            ROW pinned to `align-items: flex-start !important`, so
+            the content sits at its natural height. `align-self` is
+            the item's own property and is not what that
+            `!important` is on, which is why this is the one line
+            that reaches the box the caret actually lives in.
+
+        Everything here grows, and nothing clips: a document taller
+        than the frame still makes the frame taller rather than
+        scrolling inside it, which is what `min-height: auto` on a
+        flex item preserves. Measured both ways in
+        `MarkdownEditorCodeMirror.test.tsx`.
+      */}
       <div
-        className="min-h-32 px-1 text-md cq-md:min-h-48"
+        className="flex min-h-32 flex-col px-1 text-md cq-md:min-h-48 [&>.cm-editor]:flex-1 [&_.cm-scroller]:flex-1 [&_.cm-content]:self-stretch"
         ref={hostRef}
       />
 
