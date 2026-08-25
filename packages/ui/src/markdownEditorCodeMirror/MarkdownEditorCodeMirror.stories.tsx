@@ -5,6 +5,7 @@ import {
   StoryGrid,
 } from "../board.storyHelpers.tsx"
 import { Field } from "../Field/Field.tsx"
+import { MARKDOWN_ICONS } from "../icons.storyHelpers.tsx"
 import { MarkdownEditorCodeMirror } from "./MarkdownEditorCodeMirror.tsx"
 
 /**
@@ -186,4 +187,58 @@ export const Tables: Story = {
     defaultValue: TABLES,
     label: "Description",
   },
+}
+
+/**
+ * The same bar, with an app's icon set.
+ *
+ * Words are the default because the library ships no icons
+ * ([decision](../../../../docs/decisions/2026-07-29-ship-no-icons-and-no-symbol-glyphs.md)),
+ * and nine words is a bar that has already overflowed at the width
+ * a description field actually gets. Ten glyphs fit, so the
+ * overflow trigger is not drawn at all — and the words survive as
+ * the accessible names, which is what the toolbar test asserts.
+ *
+ * `overflow` is in the bag for the width where the bar *does* still
+ * collapse. Without it the row reads as nine icons and then the
+ * words "More actions".
+ */
+export const IconToolbar: Story = {
+  args: {
+    defaultValue: SAMPLE,
+    icons: MARKDOWN_ICONS,
+    label: "Description",
+  },
+}
+
+/**
+ * Icons and words at the width that separates them.
+ *
+ * Same component, same items, same container — the only difference
+ * is the `icons` bag. The word bar has collapsed most of its
+ * actions into "More actions"; the icon bar still shows all ten.
+ */
+export const IconsVersusWords: Story = {
+  args: { label: "Description" },
+  render: () => (
+    <StoryGrid columns={2}>
+      <StoryCell
+        align="stretch"
+        label="words (no icons passed)"
+      >
+        <MarkdownEditorCodeMirror
+          defaultValue="The default bar."
+          label="Words"
+        />
+      </StoryCell>
+
+      <StoryCell align="stretch" label="icons">
+        <MarkdownEditorCodeMirror
+          defaultValue="The same bar, iconed."
+          icons={MARKDOWN_ICONS}
+          label="Icons"
+        />
+      </StoryCell>
+    </StoryGrid>
+  ),
 }

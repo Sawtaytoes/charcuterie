@@ -50,6 +50,12 @@ export type MarkdownImageUpload = {
  * everywhere and collapses into the overflow menu early; an app
  * that brings lucide gets a compact bar and keeps the words as the
  * accessible names.
+ *
+ * `overflow` is the odd one out: it is not a markdown command, it
+ * is the **bar's own** trigger. It lives here because an app that
+ * passes the nine and not the tenth gets nine icons followed by
+ * the words *"More actions"* — which is the one width where an
+ * icon bar looks unfinished, and there was no prop to fix it with.
  */
 export type MarkdownEditorIcons = Partial<
   Record<
@@ -60,6 +66,7 @@ export type MarkdownEditorIcons = Partial<
     | "italic"
     | "link"
     | "numberedList"
+    | "overflow"
     | "quote"
     | "taskList",
     ReactNode
@@ -746,6 +753,7 @@ export const MarkdownEditor = ({
           ]}
           label={toolbarLabel}
           overflow="menu"
+          overflowIcon={icons?.overflow}
         />
       </div>
 

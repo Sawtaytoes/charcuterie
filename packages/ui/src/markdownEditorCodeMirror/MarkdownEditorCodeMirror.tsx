@@ -830,6 +830,7 @@ export const MarkdownEditorCodeMirror = ({
           ]}
           label={toolbarLabel}
           overflow="panel"
+          overflowIcon={icons?.overflow}
         />
       </div>
 

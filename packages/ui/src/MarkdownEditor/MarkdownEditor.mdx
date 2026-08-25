@@ -156,6 +156,18 @@ has to keep taking clicks as caret placement. So the editor handles its own drop
 
 <Canvas of={MarkdownEditorStories.Responsive} />
 
+## The toolbar is words until you bring icons
+
+The bar defaults to word buttons because this package ships **no icons**, and words render
+in every font on every target. Pass an `icons` bag and the row fits as glyphs, keeping the
+words as the accessible names and as the labels of whatever still collapses into the menu.
+
+`icons.overflow` is the tenth key. It is the **bar's own** trigger rather than a markdown
+command, and it is in the same bag so that an app cannot pass nine glyphs and be left with
+the words "More actions" at the end of the row.
+
+<Canvas of={MarkdownEditorStories.IconToolbar} />
+
 ## Keyboard
 
 | Key | Does |
