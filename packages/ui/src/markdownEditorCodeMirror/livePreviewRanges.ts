@@ -225,6 +225,26 @@ export type ToLivePreviewRangesOptions = {
    * the toggle is to see the markup, not to lose the highlighting.
    */
   isRawMode?: boolean
+  /**
+   * Re-point a link before it becomes an `href`.
+   *
+   * The document's own URL goes through `toSafeLinkUrl` first, so
+   * what arrives here has already been refused if it named an
+   * executable scheme. What comes BACK is the consumer's own string
+   * and is used as given — an app that returns a route is trusted
+   * about its own routes.
+   *
+   * Return `undefined` to leave the link alone, which is also what
+   * omitting this does. **Links only**: an image's `src` is not
+   * offered, because a consumer that maps a document path to a page
+   * URL would turn a working image into a broken one.
+   *
+   * The case it exists for: a relative path in a fetched or imported
+   * document. `[the runbook](../docs/runbook.md)` resolves against
+   * the page the reader is on, which is the consuming app, and lands
+   * on nothing. Only the app knows what that path means.
+   */
+  resolveUrl?: (url: string) => string | undefined
   selections: readonly LivePreviewSelection[]
   text: string
   to?: number
@@ -912,13 +932,27 @@ const isTableRendered = ({
  */
 const toWalker = ({
   isRawMode,
+  resolveUrl,
   selections,
   text,
 }: {
   isRawMode: boolean
+  resolveUrl:
+    | ((url: string) => string | undefined)
+    | undefined
   selections: readonly LivePreviewSelection[]
   text: string
 }) => {
+  /**
+   * The consumer's answer, or the document's own URL.
+   *
+   * Applied at the two places a LINK's URL is pushed, and nowhere
+   * else, so every downstream consumer — the anchor's `href`, the
+   * span the editor opens from, a link inside a table cell — gets
+   * the same answer without knowing this exists.
+   */
+  const toHref = (url: string) => resolveUrl?.(url) ?? url
+
   const toEnter = (ranges: LivePreviewRange[]) => {
     const pushMarker = (
       from: number,
@@ -1149,7 +1183,7 @@ const toWalker = ({
             markKind: "linkText",
             to: closeMark.from,
             type: "mark",
-            url: safeUrl,
+            url: toHref(safeUrl),
           })
         }
 
@@ -1189,7 +1223,7 @@ const toWalker = ({
             markKind: "autolink",
             to: nodeRef.to,
             type: "mark",
-            url: safeUrl,
+            url: toHref(safeUrl),
           })
         } else {
           ranges.push({
@@ -1316,6 +1350,7 @@ const toWalker = ({
 export const toLivePreviewRanges = ({
   from,
   isRawMode = false,
+  resolveUrl,
   selections,
   text,
   to,
@@ -1326,9 +1361,12 @@ export const toLivePreviewRanges = ({
   tree.iterate({
     from,
     to,
-    enter: toWalker({ isRawMode, selections, text })(
-      ranges,
-    ),
+    enter: toWalker({
+      isRawMode,
+      resolveUrl,
+      selections,
+      text,
+    })(ranges),
   })
 
   return ranges
@@ -1361,6 +1399,7 @@ const TABLE_CONTAINER_NAMES = new Set([
  */
 export const toLivePreviewTableRanges = ({
   isRawMode = false,
+  resolveUrl,
   selections,
   text,
   tree,
@@ -1370,7 +1409,12 @@ export const toLivePreviewTableRanges = ({
 >): LivePreviewTableRange[] => {
   const ranges: LivePreviewTableRange[] = []
 
-  const toEnter = toWalker({ isRawMode, selections, text })
+  const toEnter = toWalker({
+    isRawMode,
+    resolveUrl,
+    selections,
+    text,
+  })
 
   tree.iterate({
     enter: (nodeRef) => {
