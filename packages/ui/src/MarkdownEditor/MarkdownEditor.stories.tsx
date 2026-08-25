@@ -7,6 +7,7 @@ import {
   StoryGrid,
 } from "../board.storyHelpers.tsx"
 import { Field } from "../Field/Field.tsx"
+import { MARKDOWN_ICONS } from "../icons.storyHelpers.tsx"
 import { MarkdownEditor } from "./MarkdownEditor.tsx"
 
 /**
@@ -263,5 +264,21 @@ export const Blank: Story = {
     label: "Description",
     onChange: noop,
     placeholder: "Write it in markdown…",
+  },
+}
+
+/**
+ * The bar with an app's icon set, and the `overflow` glyph that
+ * finishes it.
+ *
+ * This editor's overflow is a `Menu` rather than a `Popover`, so
+ * the collapsed actions keep their words in the menu rows — the
+ * icons buy width in the bar without costing the names anywhere.
+ */
+export const IconToolbar: Story = {
+  args: {
+    defaultValue: SAMPLE,
+    icons: MARKDOWN_ICONS,
+    label: "Description",
   },
 }

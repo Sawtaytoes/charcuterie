@@ -155,6 +155,22 @@ from either edge, or flip the Markdown source toggle, which is exactly what it i
   a literal paste is worse than not linkifying one.
 - **Anything else** is left to the browser.
 
+## The toolbar is words until you bring icons
+
+This package ships **no icons**, so the bar defaults to ten word buttons — which is a bar
+that has already collapsed most of itself into "More actions" at the width a description
+field actually gets. Pass an `icons` bag and the whole row fits, with the words kept as the
+accessible names.
+
+<Canvas of={MarkdownEditorCodeMirrorStories.IconsVersusWords} />
+
+`icons.overflow` is the tenth key and the odd one out — it is the **bar's own** trigger,
+not a markdown command. It is in the same bag because an app that passes the nine and not
+the tenth gets nine glyphs followed by the words "More actions", and until now there was no
+prop to fix that with.
+
+<Canvas of={MarkdownEditorCodeMirrorStories.IconToolbar} />
+
 ## Accessibility, and the honest cost
 
 The `<textarea>` sibling gets caret movement, IME composition, spellcheck, the platform undo
