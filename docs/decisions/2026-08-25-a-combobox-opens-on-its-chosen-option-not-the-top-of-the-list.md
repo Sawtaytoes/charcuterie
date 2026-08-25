@@ -84,3 +84,27 @@ off the resolved index, so only the announcement waits, never the behaviour.
 The second trap is a pre-existing defect this change made reachable, not one it created:
 any jump far enough to move the window — `Home`/`End` on a long list, a query that
 collapses it — could already produce it.
+
+## Amended 2026-08-25: a third trap, and the fix shipped half-landed
+
+The decision above is unchanged. The first implementation of it was **not complete**, and
+it reached production before that was noticed.
+
+**The panel is not scrollable when the seed runs.** `useAnchoredOverlay` caps the panel's
+height by writing `style.maxHeight` straight onto the floating element inside
+floating-ui's `size` middleware — deliberate and documented there, because a `setState`
+in `apply` is a render loop and a value outside `floatingStyles` survives a keystroke.
+The write lands a frame after the open seed and re-renders nothing to announce it. Until
+then the list stands at its full content height, has nothing to scroll, and
+`scrollIntoView` is dropped silently. The seed now holds until the list is genuinely
+scrollable, retries for a few frames, then gives up so a short list cannot spin.
+
+**The test suite could not see it, and that is the more useful half.** The story asserted
+the *highlight* and set a static `max-h-48` on the panel, which made the list scrollable
+on first layout — removing the exact condition the bug needs. Every gate was green while
+the chosen row sat off screen in Docket. The story is 62 options under floating-ui's own
+cap now, and a test asserts the chosen row's rectangle lies inside the list's.
+
+The general lesson, and it is the same one the 2026-08-21 Biome record already recorded
+in another form: **a fixture that makes the failure impossible is not a fixture.** A
+picker test that supplies its own height cap is testing a panel no app renders.
