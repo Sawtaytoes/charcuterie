@@ -213,3 +213,65 @@ test("falls back to a real duration when no theme is on the page", () => {
 
   expect(list.animationsOf().length).toBeGreaterThan(0)
 })
+
+test("can key off an attribute the markup already carries", () => {
+  // An app that has keyed its DOM since before this hook existed
+  // should not have to carry a second attribute saying the same
+  // thing — queuepilot's poster tiles have had `data-key` for as
+  // long as they have had a drag. Two attributes for one fact is
+  // two places for it to drift.
+  container = document.createElement("div")
+  document.body.append(container)
+
+  const root = createRoot(container)
+  const Keyed = ({ ids }: { ids: readonly string[] }) => {
+    const listRef = useFlipList<HTMLUListElement>({
+      itemSelector: "li.tile",
+      keyAttribute: "data-key",
+      signature: ids.join(","),
+    })
+
+    return createElement(
+      "ul",
+      { ref: listRef, style: { margin: 0, padding: 0 } },
+      ids.map((id) =>
+        createElement("li", {
+          className: "tile",
+          "data-key": id,
+          key: id,
+          style: { height: "80px", listStyle: "none" },
+        }),
+      ),
+    )
+  }
+
+  act(() => {
+    root.render(
+      createElement(Keyed, { ids: ["a", "b", "c"] }),
+    )
+  })
+  act(() => {
+    root.render(
+      createElement(Keyed, { ids: ["c", "a", "b"] }),
+    )
+  })
+
+  const animations = [
+    ...container.querySelectorAll<HTMLElement>("li.tile"),
+  ].flatMap((tile) => tile.getAnimations())
+
+  expect(animations.length).toBeGreaterThan(0)
+
+  const effect = animations[0]?.effect
+
+  expect(effect).toBeInstanceOf(KeyframeEffect)
+
+  // Matched by KEY, so the first frame is a real offset. Matching
+  // by position instead would measure zero and animate nothing.
+  expect(
+    String(
+      (effect as KeyframeEffect).getKeyframes()[0]
+        ?.transform,
+    ),
+  ).toMatch(/translate\(-?\d/)
+})
