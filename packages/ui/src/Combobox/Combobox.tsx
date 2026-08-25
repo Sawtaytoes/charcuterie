@@ -187,6 +187,26 @@ export const Combobox = ({
 
   const listElement = useRef<HTMLDivElement>(null)
 
+  /**
+   * The same node as `listElement`, held in state as well as a ref.
+   *
+   * The panel's children mount a render *later* than `isVisible` flips —
+   * floating-ui's `FloatingPortal` renders nothing until its portal node
+   * exists — so an effect keyed on `isVisible` runs while the ref is
+   * still null. Anything that has to touch the list the moment it
+   * appears keys on this instead.
+   */
+  const [listNode, setListNode] =
+    useState<HTMLDivElement | null>(null)
+
+  const attachListElement = (
+    node: HTMLDivElement | null,
+  ) => {
+    listElement.current = node
+
+    setListNode(node)
+  }
+
   const isQueryControlled = query !== undefined
 
   const [internalQuery, setInternalQuery] = useState("")
@@ -320,6 +340,49 @@ export const Combobox = ({
             option.value === seedValue &&
             !option.isDisabled,
         )
+
+  /**
+   * The virtualizer outlives the panel, and its scroll offset does not
+   * come back with it.
+   *
+   * `Combobox` stays mounted while the list element is created and
+   * destroyed on every open, so `useVirtualizer` keeps the offset from
+   * the last time the list was on screen. The freshly mounted element is
+   * at 0. The window it renders is then the one for a scroll position
+   * that no longer exists: a blank band down the top of the panel, with
+   * the rows for the old offset stranded below it.
+   *
+   * Re-sync once per open, before the seed's own scroll (which lands a
+   * frame later, so it still wins where there is a chosen row to centre).
+   */
+  const hasResyncedVirtualizer = useRef(false)
+
+  useEffect(() => {
+    if (!isVisible) {
+      hasResyncedVirtualizer.current = false
+
+      return
+    }
+
+    if (
+      hasResyncedVirtualizer.current ||
+      !isWindowed ||
+      listNode === null
+    ) {
+      return
+    }
+
+    hasResyncedVirtualizer.current = true
+
+    // A `scroll` event, because that is the only thing the virtualizer
+    // listens to. `observeOffset` attaches its listener and never reads
+    // the element it just attached to, so a replaced element sitting at 0
+    // cannot correct an instance that still believes it is at 500 —
+    // nothing moves, so nothing fires. `scrollToOffset(0)` does not help
+    // for the same reason: it asks for a position the element already
+    // holds, which raises no event either.
+    listNode.dispatchEvent(new Event("scroll"))
+  }, [isVisible, isWindowed, listNode])
 
   const hasSeededOnOpen = useRef(false)
 
@@ -896,7 +959,7 @@ export const Combobox = ({
                 }
                 className="min-h-0 flex-1 overflow-auto p-1"
                 id={listboxId}
-                ref={listElement}
+                ref={attachListElement}
                 role="listbox"
               >
                 {isLoading ? (
