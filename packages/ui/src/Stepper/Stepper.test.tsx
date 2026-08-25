@@ -82,6 +82,23 @@ test("the last step draws no connector", async () => {
   await expect(connectors[2]).toBeNull()
 })
 
+test("each step carries its key into the DOM, so a re-order can animate", async () => {
+  const { canvas } = await mountStory(Default)
+
+  // React's `key` never reaches the markup. Without this attribute
+  // a caller who re-orders `steps` has no way to say which `<li>`
+  // is which, and `useFlipList` — which matches on exactly this
+  // attribute — would fall back to pairing items by POSITION,
+  // measure a delta of zero for every one, and animate nothing.
+  await expect(
+    canvas
+      .getAllByRole("listitem")
+      .map((item: HTMLElement) =>
+        item.getAttribute("data-flip-key"),
+      ),
+  ).toEqual(["rip", "tag", "file"])
+})
+
 test("advancing moves which step is current", async () => {
   const { canvas } = await mountStory(Interactive)
 
