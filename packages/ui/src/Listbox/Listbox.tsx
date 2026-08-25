@@ -3,6 +3,7 @@ import {
   useRovingFocus,
   useSinglePicker,
 } from "@charcuterie/logic"
+import type { ControlSize } from "@charcuterie/tokens"
 import type { Placement } from "@floating-ui/react"
 import {
   FloatingFocusManager,
@@ -13,6 +14,7 @@ import { useEffect, useRef } from "react"
 
 import { PANEL_SURFACE_CLASS } from "../Overlay/overlayPanelClass.ts"
 import { useAnchoredOverlay } from "../Overlay/useAnchoredOverlay.ts"
+import { usePanelItemSize } from "../Overlay/usePanelItemSize.ts"
 import { toClassName } from "../toClassName.ts"
 import { ListboxOption } from "./ListboxOption.tsx"
 
@@ -31,6 +33,17 @@ export type ListboxItem = {
 export type ListboxProps = {
   className?: string
   isVisible: boolean
+  /**
+   * How tall each option is, from the same density-aware tokens a
+   * `Button` reads — so a `md` option is exactly as tall as the `md`
+   * trigger that opened it. `lg` is the fat one: 2.75rem at
+   * `comfortable` density, and a bigger target to aim at.
+   *
+   * A short window steps it back down on its own
+   * (`usePanelItemSize`), so a `lg` list is never the reason the last
+   * option is off-screen.
+   */
+  itemSize?: ControlSize
   /** Outside press and Escape both land here. */
   onDismiss: () => void
   onSelect: (value: string) => void
@@ -79,6 +92,7 @@ const getOptionText = (item: ListboxItem) =>
 export const Listbox = ({
   className,
   isVisible,
+  itemSize: requestedItemSize = "md",
   onDismiss,
   onSelect,
   options,
@@ -86,6 +100,8 @@ export const Listbox = ({
   selectedValue,
   trigger,
 }: ListboxProps): ReactNode => {
+  const itemSize = usePanelItemSize(requestedItemSize)
+
   const optionElements = useRef(
     new Map<string, HTMLButtonElement>(),
   )
@@ -266,6 +282,7 @@ export const Listbox = ({
                     picker.selectedValue === option.value
                   }
                   item={option}
+                  itemSize={itemSize}
                   key={option.value}
                   onSelect={chooseValue}
                   registerFocus={focus.register}

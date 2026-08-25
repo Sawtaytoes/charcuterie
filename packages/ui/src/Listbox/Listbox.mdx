@@ -66,3 +66,27 @@ is no `heading` prop; the button names the widget. The panel height is clamped t
 viewport by floating-ui's `size` middleware and scrolls within it.
 
 <Canvas of={ListboxStories.Interactive} />
+
+## An option is the size of the control that opened it
+
+`itemSize` takes the same `sm` / `md` / `lg` a `Button` takes, from the same
+density-aware `--control-height-*` tokens. It **defaults to `md`** — 2.25rem, the height a
+default `Button` and a `Select` already take — so a picker's options measure the same as
+its trigger.
+
+That default is a fix, not a preference. The rows were a hardcoded `px-2 py-1.5 text-sm`
+that no control in the library shares, so an option was visibly the smaller thing inside
+its own panel; the owner's report was *"the button is huge, but the options don't match
+it"*.
+
+`lg` is the fat one: 2.75rem, the 44px WCAG 2.5.5 target, for a list that is aimed at
+rather than scanned. `sm` is what this component rendered before, kept for a genuinely
+dense list.
+
+The floor is a **minimum**, not a fixed height (`min-h-`, where a `Button` uses `h-`) — the
+rich option below, with a flag and a trailing `Badge`, still grows past it.
+
+A window shorter than 40rem steps each size down one step on its own, and one shorter than
+30rem takes them to `sm`.
+
+<Canvas of={ListboxStories.ItemSizes} />

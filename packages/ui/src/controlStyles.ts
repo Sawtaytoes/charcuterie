@@ -39,6 +39,44 @@ export const CONTROL_SIZE_CLASS: Record<
 }
 
 /**
+ * A row inside an overlay panel — a `Menu` item, a `Listbox` option,
+ * a `Combobox` option. The same three sizes as a control, read from
+ * the same density-aware tokens, so a `md` option row and a `md`
+ * `Button` are the same height.
+ *
+ * ### Why this is not `CONTROL_SIZE_CLASS`
+ *
+ * Two differences, and both are load-bearing.
+ *
+ * `min-h-`, not `h-`. A control on a form row holds one line by
+ * contract; an option may be rich — an icon, two lines, a trailing
+ * badge — and a fixed height clips it. The token is a **floor** here,
+ * which is what makes the row at least as big as the button that
+ * opened it while still growing for a label that wraps.
+ *
+ * `py-*`, which a control has none of. It is what a wrapped second
+ * line breathes on once `min-h-` stops being the binding constraint.
+ *
+ * ### The sizes are click targets, not decoration
+ *
+ * The owner's request is the whole reason this exists: *"I personally
+ * like larger click areas because it makes it easier to not mess up a
+ * click. I can be much faster the less precise I need to be when
+ * clicking."* At `comfortable` density `lg` is 2.75rem — 44px, the
+ * WCAG 2.5.5 target — and on the kiosk density it is 3.75rem with no
+ * prop change. See
+ * `docs/decisions/2026-08-25-a-panel-row-is-sized-by-itemsize-and-menus-default-to-lg.md`.
+ */
+export const PANEL_ITEM_SIZE_CLASS: Record<
+  ControlSize,
+  string
+> = {
+  sm: "min-h-(--control-height-sm) gap-(--control-gap-sm) px-(--control-padding-inline-sm) py-1 text-sm",
+  md: "min-h-(--control-height-md) gap-(--control-gap-md) px-(--control-padding-inline-md) py-1.5 text-md",
+  lg: "min-h-(--control-height-lg) gap-(--control-gap-lg) px-(--control-padding-inline-lg) py-2 text-lg",
+}
+
+/**
  * Square, and sized by the *height* token on both axes so an icon
  * button lines up with the text button beside it in a toolbar. No
  * inline padding at all — a glyph centres itself.

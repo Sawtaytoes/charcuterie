@@ -613,6 +613,15 @@ const ENTRY_POINT_RUNTIMES: Record<
     // and stays the default.
     "./markdown-editor-codemirror": [
       "@charcuterie/logic",
+      // The editor's toolbar renders a `Menu`, and every panel row now
+      // asks `usePanelItemSize` whether the window is short enough to
+      // step down — which is a `matchMedia` read, and `matchMedia` is
+      // behind this subpath by the same rule that keeps it out of
+      // `@charcuterie/logic`'s main entry. The main `ui` entry already
+      // reached it (`ColorSchemeSwitcher`); this one now does too. It is
+      // ~1 KB of feature-detected wrapper, not a runtime the subpath
+      // exists to keep out — that is the `@codemirror/*` set below.
+      "@charcuterie/logic/browser",
       "@charcuterie/tokens",
       "@codemirror/commands",
       "@codemirror/lang-markdown",
