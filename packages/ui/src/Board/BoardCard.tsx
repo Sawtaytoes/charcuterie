@@ -3,6 +3,11 @@ import type { ReactNode } from "react"
 import { useState } from "react"
 
 import { Button } from "../Button/Button.tsx"
+import type { CardAccentEdge } from "../Card/cardAccentEdge.ts"
+import {
+  getAccentEdgeClassName,
+  getAccentEdgeStyle,
+} from "../Card/cardAccentEdge.ts"
 import {
   FOCUS_RING_CLASS,
   INTENT_SOLID_FILL_CLASS,
@@ -13,23 +18,7 @@ import { toClassName } from "../toClassName.ts"
 import { VisuallyHidden } from "../VisuallyHidden/VisuallyHidden.tsx"
 
 type BoardItemFields = {
-  /**
-   * The leading colour bar. Priority, in the consumer this was built
-   * for — *"Priority is styled as a leading colour bar, and **never**
-   * a coloured word before the title."*
-   *
-   * Pair it with `accentLabel`. A bar is colour and nothing else, so
-   * on its own it fails WCAG 1.4.1 outright and is invisible to
-   * every screen reader; the label rides along in a
-   * `VisuallyHidden` so the same fact reaches both channels. Docket's
-   * first board painted these `--color-danger-9` — a Radix-style
-   * scale this token set has never had — so every bar was
-   * transparent while every "is it rendered" assertion passed. The
-   * families here are `--color-intent-<intent>-<role>`; there is no
-   * numeric scale to reach for.
-   */
-  accentIntent?: IntentName
-  /** What the bar means, in words. "Priority 0". */
+  /** What the bar means, in words. "Priority 0", "Movies and Shows". */
   accentLabel?: string
   /**
    * Under the title and metadata, spanning the card: a live run
@@ -67,6 +56,42 @@ type BoardItemFields = {
   /** The trailing cluster: an assignee avatar, an elapsed-time chip. */
   trailing?: ReactNode
 }
+
+/**
+ * The leading colour bar, in one of two shapes — and the second one
+ * exists because the first cannot follow a corner.
+ *
+ * `accentIntent` is an inset pill: a `w-1` span inside the card,
+ * beside the content. It was built for priority — *"Priority is
+ * styled as a leading colour bar, and **never** a coloured word
+ * before the title."* An intent is a claim the design system makes
+ * (`danger` says what happens if you press the thing), so this arm
+ * is for a bar that means a STATE.
+ *
+ * `accentEdge` is the card's own edge — `Card`'s treatment, the same
+ * pseudo-element, so it takes `border-radius: inherit` and wraps the
+ * corner at `cq-lg` where this card grows one. It carries a
+ * CATEGORICAL colour or a computed one, which is what an identity
+ * needs: a project, a repo, a source. The owner asked for exactly
+ * this on Docket's board — *"The Board has no colors. That could
+ * use project colors on the sides at least."* — after reporting the
+ * same treatment missing from the task rows.
+ *
+ * The two are mutually exclusive by type, not by convention. Both
+ * paint a leading bar in the same place, and a card wearing two of
+ * them is a card whose leading edge means two things.
+ *
+ * ⚠️ Either arm pairs with `accentLabel`. A bar is colour and
+ * nothing else, so on its own it fails WCAG 1.4.1 outright and is
+ * invisible to every screen reader; the label rides along in a
+ * `VisuallyHidden` so the same fact reaches both channels. Docket's
+ * first board painted its bars `--color-danger-9` — a Radix-style
+ * scale this token set has never had — so every bar was transparent
+ * while every "is it rendered" assertion passed.
+ */
+type BoardItemAccent =
+  | { accentEdge?: never; accentIntent?: IntentName }
+  | { accentEdge: CardAccentEdge; accentIntent?: never }
 
 /**
  * Who owns the card title's link — the board, or the caller.
@@ -114,7 +139,9 @@ type BoardItemTitleLink =
       titleContent: ReactNode
     }
 
-export type BoardItem = BoardItemFields & BoardItemTitleLink
+export type BoardItem = BoardItemAccent &
+  BoardItemFields &
+  BoardItemTitleLink
 
 export type BoardCardProps = {
   item: BoardItem
@@ -210,10 +237,36 @@ export const BoardCard = ({
         // cannot do this to itself — it is the container, and a
         // container query never matches its own container.
         "cq-lg:mb-2 cq-lg:rounded-lg cq-lg:border cq-lg:bg-surface-raised cq-lg:p-3 cq-lg:shadow-low",
+        // The edge is drawn on THIS box, which is why it needs no
+        // shape of its own: the box is a row below `cq-lg` and a
+        // rounded card above it, and `border-radius: inherit` gives
+        // the right answer at both — a straight stripe down a row
+        // that has no corner, and a bar that wraps the card's
+        // corner once it grows one.
+        //
+        // `ps-2` is what keeps the content off it. The bar is 3px
+        // and overlays rather than displaces, so without this the
+        // first mark sits on top of it; at `cq-lg` the card's own
+        // `p-3` is already wider than the bar.
+        item.accentEdge != null &&
+          toClassName(
+            "ps-2",
+            getAccentEdgeClassName(item.accentEdge),
+          ),
         item.isDimmed && "opacity-60",
       )}
       data-board-card={item.key}
+      {...(item.accentEdge == null
+        ? {}
+        : { style: getAccentEdgeStyle(item.accentEdge) })}
     >
+      {/* The label the bar cannot say. An edge has no content of
+          its own — it is a pseudo-element — so unlike the pill
+          arm below there is nowhere inside it to put the words. */}
+      {item.accentEdge != null && item.accentLabel ? (
+        <VisuallyHidden>{item.accentLabel}</VisuallyHidden>
+      ) : null}
+
       {item.accentIntent ? (
         <span
           className={toClassName(
