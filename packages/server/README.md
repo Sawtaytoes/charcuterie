@@ -73,6 +73,97 @@ TLS defaults on when the port is `8883` (`mqtt.octen.dev`). Pass `isTls` to over
 `truenas-mqtt`'s `trigger`/`status` tree is a legacy special case — new apps use
 `cmd`/`resp`. This does **not** belong in `@charcuterie/streams` (browser, push-only).
 
+## Outbound HTTP cache and throttle
+
+The opposite direction from everything above: this is about responses the app
+**receives** from somebody else's server. Import `@charcuterie/server/http`. Zero
+dependencies, no `fetch` of its own.
+
+**The library never owns storage.** Five apps in the fleet cache third-party HTTP and all
+five picked a different substrate — two SQLite tables, two directories of JSON files, one
+memory `Map` written through to a file — and every one is right where it sits. What
+repeats is the *policy*, so that is what moved here: how long an answer is still true,
+and how often we are allowed to ask.
+
+```ts
+import {
+  createHttpCache,
+  createThrottle,
+  ONE_DAY_MS,
+} from "@charcuterie/server/http"
+
+const cache = createHttpCache<string>({
+  fetchFromOrigin: async ({ etag, key }) => {
+    const response = await fetch(key, {
+      headers: etag == null ? {} : { "if-none-match": etag },
+    })
+
+    if (response.status === 304) return { outcome: "unchanged" }
+    if (response.status === 404) return { outcome: "missing" }
+    if (!response.ok) return { outcome: "unavailable" }
+
+    return {
+      etag: response.headers.get("etag"),
+      outcome: "payload",
+      payload: await response.text(),
+    }
+  },
+  lifetime: ONE_DAY_MS,
+  store: {
+    // Whatever the app already has. Synchronous is fine.
+    read: ({ key }) => selectRow(key),
+    write: ({ key, record }) => upsertRow(key, record),
+  },
+  throttle: createThrottle({ minIntervalMs: 1_000 }),
+})
+
+const { payload, source } = await cache.get({ key: url })
+```
+
+### Lifetime
+
+`"immutable" | "none" | number`. `"immutable"` is a **claim about the URL**, not a hint —
+a file at a 40-character commit hash cannot become a different file. `"none"` keeps a
+read out of the store entirely. A number is milliseconds, and it is set at the call site,
+because only the call site knows how fast its answer moves.
+
+### ⚠️ A 304 saves bandwidth. It does NOT save budget.
+
+Measured against the live GitHub API on 2026-08-24, unauthenticated: every conditional
+request came back 304 and `x-ratelimit-remaining` still fell by one. GitHub documents a
+304 as free against the **primary** rate limit, and the unauthenticated per-address limit
+is not that limit. An `ETag` buys the body back, never the budget. **Only a lifetime that
+has not run out saves budget**, because the only free request is the one never sent.
+
+### The four politeness axes are four different things
+
+| Option | Means |
+| --- | --- |
+| `minIntervalMs` | The minimum gap between two starts. |
+| `maxConcurrent` | How many may be in flight at once. |
+| `maxPerWindow` + `windowMs` | A budget that refills. |
+| `cooldownMs` | Everything stops after a failure. |
+
+A gap is not a budget: one request per second permits 3600 an hour, and a 60-an-hour
+budget permits three in the first second. `run` queues for a slot; `tryRun` returns
+`null` rather than queueing, for a caller on a poll loop that would rather drop the work
+and pick it up next tick.
+
+### Also handled
+
+- **Negative caching.** `missLifetime` remembers "the origin had no such thing", which
+  one app already depends on. Defaults to `"none"`.
+- **Stale-while-revalidate.** `isStaleWhileRevalidate` returns the stale body at once and
+  refreshes behind it. Off by default.
+- **Single flight.** Concurrent reads of one key collapse into one request.
+- **Failures are values.** An `"unavailable"` origin is never written down, serves the
+  stale body, and starts the cooldown. Store errors degrade to a miss and go to
+  `onError`; a cache is never the reason a page fails to render.
+
+Naming is settled — `fetchedAt` / `expiresAt` / `etag`, no `Ms` suffix on a `*At` field,
+`Ms` kept on every duration
+([decision](../../docs/decisions/2026-08-25-an-outbound-http-cache-names-its-fields-fetchedat-and-expiresat.md)).
+
 ## What you get
 
 | | |
@@ -188,4 +279,5 @@ Set headers in a middleware *before* `serveStatic`, which is what this package d
 `hono` and `@hono/node-server` are required peers — the app owns the versions. `vite` is
 an **optional** peer needed only by the `/vite` entry point, so a server never resolves
 Vite and a build never resolves Hono. `mqtt` is an **optional** peer needed only by the
-`/mqtt` entry point, so a static-only app never resolves a broker client.
+`/mqtt` entry point, so a static-only app never resolves a broker client. The `/http`
+entry point has **no dependencies at all** — not even Hono.
