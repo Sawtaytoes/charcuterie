@@ -616,3 +616,92 @@ test("the chosen row is scrolled into view, not merely highlighted", async () =>
     )
   })
 })
+
+test("reopening without picking still lands on the chosen row", async () => {
+  const mounted = await mountStory(ChosenValueOnOpen)
+
+  const trigger = expectAgentDrivable(mounted.canvas, {
+    name: "Search languages",
+    role: "button",
+  })
+
+  const isChosenRowInView = () => {
+    const row = mounted.body.getByRole("option", {
+      name: "Item 58",
+    })
+
+    const list = row.closest(
+      "[role=listbox]",
+    ) as HTMLElement
+
+    const listBox = list.getBoundingClientRect()
+    const rowBox = row.getBoundingClientRect()
+
+    return (
+      rowBox.top >= listBox.top &&
+      rowBox.bottom <= listBox.bottom
+    )
+  }
+
+  await userEvent.click(trigger)
+
+  await waitFor(() => {
+    expect(isChosenRowInView()).toBe(true)
+  })
+
+  // Close it the way a misclick-free dismissal does — no pick, so the
+  // chosen value and therefore the seed index are both unchanged.
+  await userEvent.keyboard("{Escape}")
+
+  await waitFor(() => {
+    expect(mounted.body.queryByRole("combobox")).toBeNull()
+  })
+
+  await userEvent.click(trigger)
+
+  // The seed must run again. It nearly did not: `activeIndex` already
+  // held the seeded index from the first open, so setting it was a no-op
+  // and the re-render the scroll rides on never happened.
+  await waitFor(() => {
+    expect(isChosenRowInView()).toBe(true)
+  })
+})
+
+test("a windowed list reseeds its window on every open, not just the first", async () => {
+  const mounted = await mountStory(VirtualizedChosenValue)
+
+  const trigger = expectAgentDrivable(mounted.canvas, {
+    name: "Search 500 tracks",
+    role: "button",
+  })
+
+  // The story opens already showing the window around Track 400.
+  await waitFor(() => {
+    expect(
+      mounted.body.getByRole("option", {
+        name: "Track 400",
+      }),
+    ).toBeInTheDocument()
+  })
+
+  await userEvent.click(trigger)
+
+  await waitFor(() => {
+    expect(mounted.body.queryByRole("combobox")).toBeNull()
+  })
+
+  await userEvent.click(trigger)
+
+  // Rows 1–12 would be the window if the seed had run only once.
+  await waitFor(() => {
+    expect(
+      mounted.body.getByRole("option", {
+        name: "Track 400",
+      }),
+    ).toBeInTheDocument()
+  })
+
+  await expect(
+    mounted.body.queryByRole("option", { name: "Track 1" }),
+  ).toBeNull()
+})

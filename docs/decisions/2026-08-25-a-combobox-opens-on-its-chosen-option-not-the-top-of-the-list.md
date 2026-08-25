@@ -108,3 +108,29 @@ cap now, and a test asserts the chosen row's rectangle lies inside the list's.
 The general lesson, and it is the same one the 2026-08-21 Biome record already recorded
 in another form: **a fixture that makes the failure impossible is not a fixture.** A
 picker test that supplies its own height cap is testing a panel no app renders.
+
+
+## Amended again 2026-08-25: the seed has to run on every open
+
+The decision is still unchanged. The implementation was wrong a second time, and the
+owner found it a second time — *"if I close the combobox and open it again, it's back to
+the top again."*
+
+**A no-op `setState` is not a re-render, and the scroll was riding on one.** The seed set
+`activeIndex` and let the scroll follow from that index changing. Reopen the same picker
+without choosing anything and `activeIndex` already holds the index the last open seeded,
+so the set is a no-op, nothing re-renders, and the scroll never runs. The first open was
+correct, which is exactly what made it look finished.
+
+The outstanding scroll is **state now, a fresh object per open**, so it cannot collapse
+into a no-op. The seed's centred scroll is also the only one allowed to run until it
+lands — previously an arrow move's `block: "nearest"` could settle the list somewhere the
+seed then had to undo.
+
+**Three tests passed while the bug was live, and the reason is the same each time.** The
+suite asserted the *first* open. A picker is a thing you open, misjudge, and open again —
+that second open is the whole reason this decision exists, and nothing exercised it. The
+pattern across all three rounds is one lesson: **assert the state the user complained
+about, not the state that is easy to reach.** First open, a fixture with its own height
+cap, and a highlight instead of a scroll position were all easy; none of them was the
+complaint.
