@@ -1,5 +1,7 @@
+import type { ControlSize } from "@charcuterie/tokens"
 import type { ReactNode } from "react"
 
+import { PANEL_ITEM_SIZE_CLASS } from "../controlStyles.ts"
 import type { ListboxItem } from "../Listbox/Listbox.tsx"
 import { toClassName } from "../toClassName.ts"
 
@@ -8,6 +10,8 @@ export type ComboboxOptionProps = {
   id: string
   isActive: boolean
   isSelected: boolean
+  /** Already stepped down for a short window by `usePanelItemSize`. */
+  itemSize: ControlSize
   item: ListboxItem
   onSelect: (value: string) => void
   /**
@@ -41,6 +45,7 @@ export const ComboboxOption = ({
   isActive,
   isSelected,
   item,
+  itemSize,
   onSelect,
   posInSet,
   setSize,
@@ -60,7 +65,12 @@ export const ComboboxOption = ({
         // fill and the keyboard cursor was invisible (it read as "arrows
         // do nothing"). A button's background is transparent by default;
         // the tint classes only ever add one.
-        "flex w-full cursor-pointer items-center justify-between gap-2 rounded-sm px-2 py-1.5 text-start text-sm",
+        "flex w-full cursor-pointer items-center justify-between rounded-sm text-start",
+        // Height, inline padding, gap and type from the row-size system,
+        // so an option matches the search field above it and the trigger
+        // that opened it, rather than being visibly the smaller thing in
+        // its own panel.
+        PANEL_ITEM_SIZE_CLASS[itemSize],
         // The base sets no text colour: a plain `text-content-primary`
         // clobbers a conditional `text-content-disabled` at equal
         // specificity (Tailwind emits the base last), so a disabled option

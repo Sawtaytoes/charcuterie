@@ -5,6 +5,12 @@ import { test } from "vitest"
 import { expectNoAxeViolations } from "../expectNoAxeViolations.testHelpers.ts"
 import { mountStory } from "../mountStory.testHelpers.ts"
 import { expectAgentDrivable } from "../testing/index.ts"
+import {
+  DESKTOP,
+  PHONE,
+  SHORT_WINDOW,
+  setViewport,
+} from "../viewport.testHelpers.ts"
 import * as stories from "./Menu.stories.tsx"
 
 const {
@@ -13,6 +19,7 @@ const {
   Empty,
   Grouped,
   Interactive,
+  LongLabel,
   SharedTrigger,
 } = composeStories(stories)
 
@@ -421,4 +428,126 @@ test("an empty menu shows a disabled note, not an actionable item", async () => 
   await expect(items[0]?.tabIndex).toBe(-1)
 
   await expectNoAxeViolations(menu)
+})
+
+/**
+ * `--control-height-<size>` in px.
+ *
+ * The token is declared in `rem`, and `getComputedStyle` hands back a
+ * custom property's *declared* value rather than a used length — so
+ * the conversion happens here, against the live root font size. That
+ * keeps the assertions below written against the token instead of
+ * against a `44` typed in this file, so a density change moves them
+ * with it.
+ */
+const getControlHeightPx = (size: "lg" | "md" | "sm") => {
+  const root = globalThis.document.documentElement
+
+  const declared = globalThis
+    .getComputedStyle(root)
+    .getPropertyValue(`--control-height-${size}`)
+
+  return (
+    Number.parseFloat(declared) *
+    Number.parseFloat(
+      globalThis.getComputedStyle(root).fontSize,
+    )
+  )
+}
+
+/**
+ * The click target, measured rather than described.
+ *
+ * `itemSize` defaults to `lg` on a menu and nothing else in the
+ * library, which is the point: a menu item is aimed at in a hurry and
+ * there are rarely more than about eight of them, so it can afford
+ * the height a dense list cannot. `--control-height-lg` is 2.75rem at
+ * `comfortable` density — 44px, the WCAG 2.5.5 target — and the
+ * assertion is against the token rather than against 44, so the kiosk
+ * density does not have to be special-cased here.
+ */
+test("a menu item is as tall as an `lg` control", async () => {
+  await setViewport(DESKTOP)
+
+  const { body } = await mountStory(AllStates)
+
+  const item = expectAgentDrivable(body, {
+    name: "Retry title",
+    role: "menuitem",
+  })
+
+  expect(
+    item.getBoundingClientRect().height,
+  ).toBeGreaterThanOrEqual(getControlHeightPx("lg"))
+})
+
+/**
+ * The other half of the same request: bigger rows, *unless* the
+ * window cannot spend the height. Nine `lg` rows are 400px of panel,
+ * which on a half-height window is the difference between a menu read
+ * at a glance and a menu scrolled.
+ */
+test("a short window steps the item size back down", async () => {
+  await setViewport(SHORT_WINDOW)
+
+  try {
+    const { body } = await mountStory(AllStates)
+
+    const item = expectAgentDrivable(body, {
+      name: "Retry title",
+      role: "menuitem",
+    })
+
+    expect(
+      item.getBoundingClientRect().height,
+    ).toBeLessThan(getControlHeightPx("lg"))
+  } finally {
+    // Every later test in this file measures against the tall rows,
+    // and the viewport is shared across the file.
+    await setViewport(DESKTOP)
+  }
+})
+
+/**
+ * The panel stays inside the window, and the label wraps to do it.
+ *
+ * `position: fixed` makes a panel's shrink-to-fit width stop at the
+ * *viewport* rather than at the space `shift` left it, so a long label
+ * produced a menu exactly as wide as a 390px window at `left: 8` —
+ * with 8px of itself off the right edge, clipped and unreachable. The
+ * assertion is against `shift`'s own 8px padding on both sides, so it
+ * fails if either the clamp or the padding goes away.
+ */
+test("a long label wraps rather than pushing the panel off screen", async () => {
+  await setViewport(PHONE)
+
+  try {
+    const { body } = await mountStory(LongLabel)
+
+    const menu = expectAgentDrivable(body, {
+      name: "Bay 8",
+      role: "menu",
+    })
+
+    const panel = menu.getBoundingClientRect()
+
+    expect(panel.left).toBeGreaterThanOrEqual(8)
+
+    expect(panel.right).toBeLessThanOrEqual(
+      globalThis.innerWidth - 8,
+    )
+
+    // Wrapped, not truncated and not one long line: the row is taller
+    // than the single-line floor it would otherwise sit at.
+    const item = expectAgentDrivable(body, {
+      name: "Forget every remembered passcode on this device",
+      role: "menuitem",
+    })
+
+    expect(
+      item.getBoundingClientRect().height,
+    ).toBeGreaterThan(getControlHeightPx("lg"))
+  } finally {
+    await setViewport(DESKTOP)
+  }
 })
