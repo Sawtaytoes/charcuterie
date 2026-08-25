@@ -1,3 +1,4 @@
+import { FLIP_KEY_ATTRIBUTE } from "@charcuterie/logic"
 import type { ReactNode } from "react"
 
 import { toClassName } from "../toClassName.ts"
@@ -138,7 +139,27 @@ export const Stepper = ({
           const isLast = index === steps.length - 1
 
           return (
+            /*
+             * `data-flip-key` carries `step.key` into the DOM so a
+             * re-ordered stepper can animate with `useFlipList`
+             * from `@charcuterie/logic`, which matches items on
+             * exactly this attribute.
+             *
+             * Emitted always, not behind a prop. React's `key` is
+             * invisible to the DOM, so without this a caller who
+             * re-orders `steps` has no way to say which `<li>` is
+             * which — and FLIP matched by POSITION pairs every item
+             * with whatever now sits where it used to be, measures
+             * a delta of zero, and animates nothing. Docket's phase
+             * list is the case: the owner reported *"when I move
+             * them up and down, there's no animation"*, and the
+             * step's identity never reached the markup.
+             *
+             * A data attribute on a list item costs nothing when
+             * nobody reads it, which is why it is not opt-in.
+             */
             <li
+              {...{ [FLIP_KEY_ATTRIBUTE]: step.key }}
               className={toClassName(
                 "relative grid grid-cols-[auto_minmax(0,1fr)] grid-rows-[auto_minmax(0,1fr)] gap-x-3",
                 isHorizontal &&
