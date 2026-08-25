@@ -286,32 +286,40 @@ export const Combobox = ({
 
   const hasSeededOnOpen = useRef(false)
 
-  // The seed sets the index and the in-view effect further down scrolls
-  // to it, one commit later — the virtualizer measures its scroll
-  // element in an effect of its own, so a `scrollToIndex` issued any
-  // earlier has nothing to scroll and is dropped. That effect must not
-  // scroll the *stale* highlight in the meantime, which would undo the
-  // centring, so it is told which index to wait for and skips every pass
-  // short of it.
-  const pendingSeedIndex = useRef<null | number>(null)
-
-  // Retrying the seed's centring scroll. `useAnchoredOverlay` caps the
-  // panel's height by writing `style.maxHeight` straight onto the
-  // floating element inside floating-ui's `size` middleware —
-  // deliberately outside the `floatingStyles` React manages, so a
-  // keystroke cannot wipe it. The cost lands here: it arrives a frame
-  // after the open seed, announces itself with no re-render, and until
-  // it does the list stands at its full content height with **nothing to
-  // scroll**. A seed scroll issued then is dropped without a trace,
-  // which is how the first build of this fix highlighted the chosen row
-  // and still left it off screen in a real app.
-  const [seedScrollAttempt, setSeedScrollAttempt] =
-    useState(0)
+  /**
+   * The open seed's outstanding scroll — the row to centre, and how many
+   * frames it has waited for a panel it can move.
+   *
+   * **State, and a fresh object on every open.** The obvious build hangs
+   * the scroll off `activeIndex` changing, and that is a bug the second
+   * time the same picker opens: `activeIndex` still holds the index the
+   * *last* open seeded, so setting it again is a no-op, React re-renders
+   * nothing, and the effect that would have scrolled never runs. The
+   * first open worked and every reopen showed the top of the list.
+   *
+   * A new object per open cannot be a no-op, so the scroll no longer
+   * depends on the highlight having moved.
+   *
+   * The wait exists because `useAnchoredOverlay` caps the panel's height
+   * by writing `style.maxHeight` straight onto the floating element
+   * inside floating-ui's `size` middleware — deliberately outside the
+   * `floatingStyles` React manages, so a keystroke cannot wipe it. It
+   * lands a frame after the seed and re-renders nothing to announce
+   * itself, and until it does the list stands at its full content height
+   * with **nothing to scroll**, so a scroll issued then is dropped
+   * without a trace.
+   */
+  const [seedScroll, setSeedScroll] = useState<null | {
+    attempt: number
+    index: number
+    value: string
+  }>(null)
 
   useEffect(() => {
     if (!isVisible) {
       hasSeededOnOpen.current = false
-      pendingSeedIndex.current = null
+
+      setSeedScroll(null)
 
       return
     }
@@ -337,9 +345,15 @@ export const Combobox = ({
 
     hasSeededOnOpen.current = true
 
-    pendingSeedIndex.current = openSeedIndex
-
-    setSeedScrollAttempt(0)
+    setSeedScroll({
+      attempt: 0,
+      index: openSeedIndex,
+      // Carried rather than looked up in the effect. `filtered` is a new
+      // array on every render, and as a dependency it would cancel and
+      // reschedule the pending frame each time — a wait that can never
+      // end while anything else re-renders.
+      value: seedValue,
+    })
 
     setActiveIndex(openSeedIndex)
   }, [
@@ -540,38 +554,41 @@ export const Combobox = ({
     }
   }
 
-  // Keep the active row in view — a real bug in every fleet picker:
-  // arrowing past the panel edge did not scroll.
+  // The open seed's own scroll, centred, and the only one allowed to run
+  // until it lands — an arrow move's `block: "nearest"` would drag the
+  // list straight back off the chosen row.
   useEffect(() => {
-    if (!isVisible) {
-      return
-    }
-
-    const isSeeding = pendingSeedIndex.current !== null
-
-    if (
-      isSeeding &&
-      pendingSeedIndex.current !== resolvedActiveIndex
-    ) {
-      // The seeded index has not reached this render yet. Scrolling the
-      // stale highlight now would drag the list off the chosen row.
+    if (!isVisible || seedScroll === null) {
       return
     }
 
     const list = listElement.current
 
+    if (list === null) {
+      return
+    }
+
     if (
-      isSeeding &&
-      seedScrollAttempt < SEED_SCROLL_ATTEMPTS &&
-      list !== null &&
-      list.scrollHeight <= list.clientHeight
+      seedScroll.attempt < SEED_SCROLL_ATTEMPTS &&
+      (seedScroll.attempt === 0 ||
+        list.scrollHeight <= list.clientHeight)
     ) {
-      // Nothing to scroll yet — the panel is still at its full height.
-      // Hold the seed and look again next frame rather than scroll a
-      // container that cannot move. Bounded, so a list that genuinely
-      // fits its panel stops instead of spinning.
+      // Never scroll on the opening commit. Two separate things are
+      // still missing then, and each drops the scroll silently: the
+      // panel has no height cap yet, so the list stands at full height
+      // with nothing to move; and the virtualizer measures its scroll
+      // element in an effect of its own, so `scrollToIndex` has nothing
+      // to measure against. One frame settles both.
+      //
+      // After that, keep waiting only while the list cannot move.
+      // Bounded, so a list that genuinely fits its panel stops instead
+      // of spinning.
       const frame = requestAnimationFrame(() => {
-        setSeedScrollAttempt((attempt) => attempt + 1)
+        setSeedScroll({
+          attempt: seedScroll.attempt + 1,
+          index: seedScroll.index,
+          value: seedScroll.value,
+        })
       })
 
       return () => {
@@ -579,17 +596,43 @@ export const Combobox = ({
       }
     }
 
-    pendingSeedIndex.current = null
-
-    // The open seed centres its row; an arrow move only pulls the next
-    // one just into view. "nearest" on open would park the chosen row
-    // against the panel's bottom edge with nothing after it, so the
-    // neighbours the list was reopened to reach stay off screen.
+    // Centred, where an arrow move only pulls the next row just into
+    // view. "nearest" on open would park the chosen row against the
+    // panel's bottom edge with nothing after it, so the neighbours the
+    // list was reopened to reach would still be off screen.
     if (isWindowed) {
-      rowVirtualizer.scrollToIndex(
-        resolvedActiveIndex,
-        isSeeding ? { align: "center" } : undefined,
-      )
+      rowVirtualizer.scrollToIndex(seedScroll.index, {
+        align: "center",
+      })
+    } else {
+      list
+        .querySelector(
+          `#${CSS.escape(`${listboxId}-opt-${seedScroll.value}`)}`,
+        )
+        ?.scrollIntoView({ block: "center" })
+    }
+
+    setSeedScroll(null)
+  }, [
+    seedScroll,
+    isVisible,
+    isWindowed,
+    listboxId,
+    rowVirtualizer.scrollToIndex,
+  ])
+
+  // Keep the active row in view — a real bug in every fleet picker:
+  // arrowing past the panel edge did not scroll.
+  useEffect(() => {
+    // While the seed is outstanding the row it wants is not on screen
+    // yet, and pulling the highlight into view with `nearest` would
+    // settle the list somewhere the seed then has to undo.
+    if (!isVisible || seedScroll !== null) {
+      return
+    }
+
+    if (isWindowed) {
+      rowVirtualizer.scrollToIndex(resolvedActiveIndex)
 
       return
     }
@@ -599,9 +642,7 @@ export const Combobox = ({
         ?.querySelector(
           `#${CSS.escape(`${listboxId}-opt-${activeValue}`)}`,
         )
-        ?.scrollIntoView({
-          block: isSeeding ? "center" : "nearest",
-        })
+        ?.scrollIntoView({ block: "nearest" })
     }
   }, [
     resolvedActiveIndex,
@@ -610,7 +651,7 @@ export const Combobox = ({
     isWindowed,
     listboxId,
     rowVirtualizer.scrollToIndex,
-    seedScrollAttempt,
+    seedScroll,
   ])
 
   // ─── Attached mode: drive the consumer's input ──────────────────────
