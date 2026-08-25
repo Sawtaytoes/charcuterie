@@ -17,6 +17,7 @@ const {
   Default,
   InBoardScreen,
   Interactive,
+  MarkdownTitles,
   LinkedLaneHeadings,
   Responsive,
 } = composeStories(stories)
@@ -369,4 +370,38 @@ test("a linked lane still names itself in the move menu and the overflow line", 
   await expect(
     canvas.getByText("+ 11 more in Needs Review"),
   ).toBeInTheDocument()
+})
+
+/**
+ * A rich title draws the markdown and still NAMES the card's
+ * controls after the words.
+ *
+ * The move handle is the assertion that matters. It is named after
+ * `item.title`, and if a board ever let `titleContent` stand in for
+ * that, thirty handles would go back to being thirty controls called
+ * "Move" — the exact regression `BoardCard`'s own comment says the
+ * name exists to prevent.
+ */
+test("a titleContent title still names the move handle", async () => {
+  const { canvas } = await mountStory(MarkdownTitles)
+
+  await expect(
+    canvas.getByRole("link", {
+      name: "Deduplicate ~/archive by content hash",
+    }),
+  ).toBeInTheDocument()
+
+  await expect(
+    canvas.getByRole("button", {
+      name: "Move Deduplicate ~/archive by content hash, currently in In Progress",
+    }),
+  ).toBeInTheDocument()
+})
+
+test("the board adds no link of its own around a rich title", async () => {
+  const { canvasElement } = await mountStory(MarkdownTitles)
+
+  await expect(canvasElement.querySelector("a a")).toBe(
+    null,
+  )
 })

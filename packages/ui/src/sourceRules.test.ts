@@ -473,7 +473,23 @@ test("the barrel is the only place components are re-exported", async () => {
   // `getCategoricalIndex`, which already lives in
   // `@charcuterie/tokens` because a Node service and a Satori render
   // both need to answer the colour question with no React in scope.
-  expect(componentNames.length).toBe(55)
+  //
+  // `MarkdownLine` — one line of markdown, drawn with its inline
+  // marks and nothing else — is +1 -> 56. It is the second markdown
+  // renderer in the package and the first outside the optional
+  // CodeMirror entry point, which is the whole reason it exists: a
+  // *name* cannot afford an editor state and a syntax tree per card,
+  // and the main entry may not reach the CodeMirror stack at all.
+  // `inlineMarkdown.ts` is its member and stays out of this count by
+  // the `<Name>/<Name>.tsx` rule, while still being exported from the
+  // barrel — `toPlainMarkdownText` is what every `aria-label` and
+  // `title` attribute naming one of these lines has to call, and it
+  // must be the same parse or the tooltip drifts from the card.
+  //
+  // It is also why `safeUrls.ts` moved up out of
+  // `markdownEditorCodeMirror/`: two surfaces taking a URL out of a
+  // document and putting it in an `href` is one allowlist, not two.
+  expect(componentNames.length).toBe(56)
 
   for (const name of componentNames) {
     expect(barrel).toContain(`export { ${name} }`)

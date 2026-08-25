@@ -69,7 +69,20 @@ export type MarkdownSpan = {
   text: string
 }
 
-export type MarkdownLineKind =
+/**
+ * `MarkdownEditorLine`, not `MarkdownLine` — renamed in 3.18.0 when
+ * `MarkdownLine` became a **component**, and a barrel cannot export
+ * one name as both a type and a value.
+ *
+ * The editor's name gave way rather than the component's for two
+ * reasons. It is the lower-level of the two — the painted layer's
+ * view of one line of a *document*, which is a thing only
+ * `MarkdownEditor` has ever needed — and it had no consumer outside
+ * this package in any repo in the fleet, checked before the rename.
+ * A component that renders a title is the name a call site reaches
+ * for; a line-kind union is not.
+ */
+export type MarkdownEditorLineKind =
   | "blockquote"
   | "code"
   | "heading"
@@ -78,8 +91,8 @@ export type MarkdownLineKind =
   | "table"
   | "thematicBreak"
 
-export type MarkdownLine = {
-  kind: MarkdownLineKind
+export type MarkdownEditorLine = {
+  kind: MarkdownEditorLineKind
   spans: MarkdownSpan[]
 }
 
@@ -352,7 +365,7 @@ const toTableSpans = (text: string): MarkdownSpan[] => {
   return spans
 }
 
-const toBlockLine = (line: string): MarkdownLine => {
+const toBlockLine = (line: string): MarkdownEditorLine => {
   const spans: MarkdownSpan[] = []
 
   const indent = INDENT_PATTERN.exec(line)?.[0] ?? ""
@@ -440,7 +453,7 @@ const toBlockLine = (line: string): MarkdownLine => {
  */
 export const toMarkdownLines = (
   text: string,
-): MarkdownLine[] => {
+): MarkdownEditorLine[] => {
   let isInsideFence = false
 
   return text.split("\n").map((line) => {
