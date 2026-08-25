@@ -1,0 +1,90 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as DropRailStories from "./DropRail.stories";
+
+<Meta of={DropRailStories} />
+
+# DropRail
+
+Every destination at once, brought to the pointer instead of the pointer being carried to
+it.
+
+<Canvas of={DropRailStories.Default} />
+
+## Props
+
+<Controls />
+
+## The measurement this exists for
+
+`Board` moves a card with a `Menu` on the card, and for a board that is the right control:
+three or four lanes, all of them on screen, and the menu opens where your hand already is.
+
+It stops being the right control at the size the fleet's real lists reach. Docket's Backlog
+draws **34 project groups down one page**, of which about four fit on a display. Dragging a
+card from the first group to the thirty-fourth means holding a pointer down while the page
+scrolls under it, and a menu of 34 items is a scrolling list inside a popup — which is the
+same problem in a smaller box.
+
+A rail answers both halves. It pins to the top for the length of the move, so no destination
+is ever off screen, and there is no travel: every destination is the same short distance
+away.
+
+<Canvas of={DropRailStories.ManyTargets} />
+
+## One control, three drivers
+
+WCAG 2.5.7 (AA since 2.2) requires a single-pointer alternative to any dragging movement,
+and `FileDropZone` says the same thing about its own gesture: build the accessible path
+first and let the drag be the enhancement.
+
+So this is **not** a drag affordance with a fallback bolted on. It is a listbox that three
+things drive, all committing through one `onPick`:
+
+| Driver | Active chip | Commits on |
+| --- | --- | --- |
+| Pointer | the chip under the pointer, while a button is held | release over a chip |
+| Tap | the chip you touch | the tap |
+| Keyboard | walked with the arrow keys | <kbd>Enter</kbd> |
+
+The rail does not know which of the three opened it, and the host does not have to say. It
+reads `event.buttons` on the first pointer event it sees — a button already down means a
+drag is in flight.
+
+<Canvas of={DropRailStories.InAList} />
+
+## It takes no drag-and-drop dependency
+
+The [board's decision](https://github.com/Sawtaytoes/charcuterie) priced four drag-and-drop
+libraries and took none of them, because a published library's dependency list is inherited
+by every consumer — including one with 60 KB gzipped to spend in total. Nothing here changes
+that arithmetic, and this component needs far less than `Board` does: a chip is a box under
+the pointer, so `elementFromPoint` answers the only geometric question there is. No
+snapshot, no collision strategy, no sortable transform.
+
+## It is not `Rail`
+
+`Rail` is the app shell's side rail — a landmark, an `<aside>` or a `<nav>`, permanent
+furniture down one edge of a page. `DropRail` is a horizontal strip of drop targets that
+exists only for the length of a move, and it is a `listbox`. They share four letters and
+nothing else; `FileDropZone` is the precedent for the prefix carrying the distinction.
+
+## The three chip states
+
+<Canvas of={DropRailStories.AllStates} />
+
+The destination the item is **already in** stays visible and unofferable rather than being
+filtered out. A rail whose contents change depending on what you grabbed is a rail whose
+chips move under the pointer between one move and the next, and muscle memory is the only
+reason this control is faster than a menu.
+
+Neither that state nor the disabled one is marked by colour alone. The current chip carries
+visually hidden text — *"— where it is now"* — and both carry `aria-disabled`, because the
+one chip a person must not aim for is exactly the one that must not rely on being dimmer
+(WCAG 1.4.1).
+
+## What it deliberately does not do
+
+It does not render the thing being dragged, own the handle, or know what a move means. The
+host keeps all three, which is what lets the same rail sit above a board, a card grid, or a
+list of accordions without any of them being modelled here.
