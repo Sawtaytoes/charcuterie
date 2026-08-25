@@ -7,6 +7,7 @@ import { mountStory } from "../mountStory.testHelpers.ts"
 import { expectAgentDrivable } from "../testing/index.ts"
 import {
   DESKTOP,
+  PHONE,
   SHORT_WINDOW,
   setViewport,
 } from "../viewport.testHelpers.ts"
@@ -18,6 +19,7 @@ const {
   Empty,
   Grouped,
   Interactive,
+  LongLabel,
   SharedTrigger,
 } = composeStories(stories)
 
@@ -502,6 +504,50 @@ test("a short window steps the item size back down", async () => {
   } finally {
     // Every later test in this file measures against the tall rows,
     // and the viewport is shared across the file.
+    await setViewport(DESKTOP)
+  }
+})
+
+/**
+ * The panel stays inside the window, and the label wraps to do it.
+ *
+ * `position: fixed` makes a panel's shrink-to-fit width stop at the
+ * *viewport* rather than at the space `shift` left it, so a long label
+ * produced a menu exactly as wide as a 390px window at `left: 8` —
+ * with 8px of itself off the right edge, clipped and unreachable. The
+ * assertion is against `shift`'s own 8px padding on both sides, so it
+ * fails if either the clamp or the padding goes away.
+ */
+test("a long label wraps rather than pushing the panel off screen", async () => {
+  await setViewport(PHONE)
+
+  try {
+    const { body } = await mountStory(LongLabel)
+
+    const menu = expectAgentDrivable(body, {
+      name: "Bay 8",
+      role: "menu",
+    })
+
+    const panel = menu.getBoundingClientRect()
+
+    expect(panel.left).toBeGreaterThanOrEqual(8)
+
+    expect(panel.right).toBeLessThanOrEqual(
+      globalThis.innerWidth - 8,
+    )
+
+    // Wrapped, not truncated and not one long line: the row is taller
+    // than the single-line floor it would otherwise sit at.
+    const item = expectAgentDrivable(body, {
+      name: "Forget every remembered passcode on this device",
+      role: "menuitem",
+    })
+
+    expect(
+      item.getBoundingClientRect().height,
+    ).toBeGreaterThan(getControlHeightPx("lg"))
+  } finally {
     await setViewport(DESKTOP)
   }
 })

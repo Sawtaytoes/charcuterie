@@ -234,6 +234,14 @@ export const Menu = ({
     // way to reach the last item. It scrolls instead.
     isHeightClamped: true,
     isVisible,
+    // And the inline twin. A portalled panel is `position: fixed`, so
+    // its shrink-to-fit width stops at the *viewport* rather than at
+    // the space `shift` left it — measured at 390px, a menu holding
+    // Mail Sifter's "Lock unlocks — forget passcodes on this device"
+    // came out 390px wide at `left: 8`, hanging 8px off the right
+    // edge. Pre-existing and size-independent, but a `lg` row's larger
+    // type is what makes a real label reach it.
+    isWidthClamped: true,
     offsetValue: 4,
     onDismiss,
     placement,

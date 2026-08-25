@@ -26,5 +26,11 @@ takes it to `sm`. `Menu`'s panel is now also clamped to the space the viewport l
 scrolls inside that — it had no clamp at all before, which was survivable at a 32px row and
 is not at 44px.
 
+A `Menu`'s panel is also clamped to the viewport's **width**. A portalled panel is
+`position: fixed`, so its shrink-to-fit width stopped at the window rather than at the
+space `shift` left it — a long label produced a panel exactly as wide as a 390px viewport
+at `left: 8`, with 8px of itself off the right edge. Pre-existing and size-independent, but
+a `lg` row's larger type is what makes a real label reach it.
+
 `MenuAction`'s hover tint moves to `intent-neutral-surface-hover` and loses its base
 `bg-transparent`, the correction already applied to `ListboxOption` and `ComboboxOption`.

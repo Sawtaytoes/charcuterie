@@ -157,3 +157,17 @@ Independently, the panel is now clamped to the space the viewport actually left 
 scrolls inside that. A menu had **no** clamp before — survivable at a 32px row, and not at
 44px, where nine items are 400px and the panel simply ran off the bottom of the screen with
 no way to reach the last one.
+
+## A long label wraps, rather than pushing the panel off screen
+
+A portalled panel is `position: fixed`, so its shrink-to-fit width stops at the
+**viewport** — not at the space `shift` left it. A label long enough to reach that cap
+therefore produced a menu exactly as wide as the window, positioned 8px in, with 8px of
+itself off the right edge: clipped and unreachable. Measured at 390px.
+
+That was pre-existing and size-independent, but a `lg` row's larger type is what makes a
+real label reach it, so the clamp lands in the same change. `isWidthClamped` caps the panel
+at floating-ui's shifted `availableWidth`, and the label wraps inside its row — which is
+also why a row's height is a `min-h-` rather than an `h-`.
+
+<Canvas of={MenuStories.LongLabel} />

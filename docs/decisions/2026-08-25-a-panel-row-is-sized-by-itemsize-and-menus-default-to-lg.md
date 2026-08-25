@@ -94,11 +94,18 @@ literal class string per size**, which is also the only form `tailwindCandidates
 can see. The cost is a re-render on window resize, which is not the axis the library
 protects; a scheme, density or variant flip is still a repaint.
 
-**Why the menu panel needed a clamp in the same change.** It had none — no
+**Why the menu panel needed *two* clamps in the same change.** It had none — no
 `maxHeightPx`, so no `size` middleware at all. That was survivable at a 32px row and is
 not at 44px: nine items are 400px, and the panel simply ran off the bottom of a short
 window with no way to reach the last one. The size step-down and the scroll clamp answer
 different failures and neither substitutes for the other.
+
+The width is the same shape of bug. A portalled panel is `position: fixed`, so its
+shrink-to-fit width stops at the **viewport** rather than at the space `shift` left it
+— so a long label produced a panel exactly as wide as a 390px window at `left: 8`,
+with 8px of itself off the right edge. Also pre-existing, also size-independent, and
+also made reachable by a larger row's type: measured with a real Mail Sifter label,
+which is the case that prompted the request.
 
 ## Evidence
 

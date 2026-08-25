@@ -109,7 +109,12 @@ export const MenuAction = ({
         </span>
       )}
 
-      {label}
+      {/*
+        `min-w-0`, so a label longer than the panel wraps instead of
+        forcing the flex line wider than its container. The icon beside
+        it is `shrink-0` and keeps its width.
+      */}
+      <span className="min-w-0">{label}</span>
     </button>
   )
 }

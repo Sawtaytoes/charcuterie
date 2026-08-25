@@ -371,3 +371,47 @@ export const ItemSizes: Story = {
     </StoryGrid>
   ),
 }
+
+/**
+ * A label longer than the panel, at the width it matters.
+ *
+ * A portalled panel is `position: fixed`, so its shrink-to-fit width
+ * stops at the **viewport** rather than at the space `shift` left it
+ * — which produced a menu exactly as wide as a 390px window,
+ * positioned 8px in, with 8px of itself off the right edge. It was
+ * pre-existing and size-independent; a `lg` row's larger type is what
+ * makes a real label reach it.
+ *
+ * The panel is clamped to the shifted `availableWidth` now, and the
+ * label wraps inside its row — which is also why a row's height is a
+ * `min-h-` rather than an `h-`.
+ */
+export const LongLabel: Story = {
+  args: {
+    isVisible: false,
+    onDismiss: noop,
+    trigger: <Button appearance="outline">Actions</Button>,
+  },
+  globals: { viewport: { value: "mobile1" } },
+  parameters: { layout: "padded" },
+  render: () => (
+    <MenuHarness
+      isInitiallyVisible
+      items={[
+        {
+          icon: <SettingsIcon />,
+          key: "forget",
+          label:
+            "Forget every remembered passcode on this device",
+          onSelect: noop,
+        },
+        {
+          key: "skip",
+          label: "Skip title",
+          onSelect: noop,
+        },
+      ]}
+      triggerLabel="Bay 8"
+    />
+  ),
+}
