@@ -4,12 +4,16 @@ import { useEffect } from "react"
 
 import { FOCUS_RING_CLASS } from "../intentStyles.ts"
 import { toClassName } from "../toClassName.ts"
-import type { RadioItem } from "./RadioGroup.tsx"
+import type {
+  RadioItem,
+  RadioItemShape,
+} from "./RadioGroup.tsx"
 
 export type RadioGroupOptionProps = {
   isChecked: boolean
   isReadOnly: boolean
   item: RadioItem
+  itemShape: RadioItemShape
   onChoose: (value: string) => void
   /** `RovingFocus.register` — membership of the arrow-key group. */
   registerFocus: (value: string) => () => void
@@ -45,6 +49,36 @@ const TEXT_SIZE_CLASS: Record<ControlSize, string> = {
 }
 
 /**
+ * One step down from the option's own text, and never below `xs`:
+ * a hint that keeps shrinking with the density axis is the 11px
+ * caption the 2026-08-10 ramp rebuild exists to have removed.
+ */
+const HINT_TEXT_CLASS: Record<ControlSize, string> = {
+  sm: "text-xs",
+  md: "text-xs",
+  lg: "text-sm",
+}
+
+/**
+ * A tile is a card, so its padding is a card's rather than a
+ * control's — enough that the border reads as a box around content
+ * and not as an outline on a line of text.
+ */
+const TILE_PADDING_CLASS: Record<ControlSize, string> = {
+  sm: "px-3 py-2.5",
+  md: "px-3.5 py-3",
+  lg: "px-4 py-3.5",
+}
+
+/**
+ * The box, and only the box. Every state below it is a **border and
+ * a surface**, never colour alone — the same reason `Stepper`
+ * refuses to say "done" with a hue.
+ */
+const TILE_BOX_CLASS =
+  "rounded-lg border border-border-subtle bg-surface-raised"
+
+/**
  * Its own file for the same reason `SegmentedOption` is: **both
  * registrations are effects**, and an effect cannot run in a loop.
  *
@@ -52,11 +86,22 @@ const TEXT_SIZE_CLASS: Record<ControlSize, string> = {
  * with a background, so the checked dot can be centred by the grid
  * and sized independently of the ring — a filled `bg-intent-accent`
  * ring with no inner dot reads as a checkbox, not a radio.
+ *
+ * ### The tile shape is the same element with a border
+ *
+ * `itemShape="tile"` swaps `inline-flex` for `flex` — a grid item
+ * stretches to its track, and an inline box would sit at
+ * max-content inside it — adds the card's padding and border, and
+ * moves the ring to the top of a two-line label. The radio dot is
+ * still there and is still the thing a screen reader reads: a tile
+ * with its border taken away is this row, which is why the two are
+ * one component.
  */
 export const RadioGroupOption = ({
   isChecked,
   isReadOnly,
   item,
+  itemShape,
   onChoose,
   registerFocus,
   registerSelection,
@@ -64,7 +109,15 @@ export const RadioGroupOption = ({
   tabIndex,
   trackElement,
 }: RadioGroupOptionProps): ReactNode => {
-  const { isDisabled = false, label, value } = item
+  const {
+    hint,
+    icon,
+    isDisabled = false,
+    label,
+    value,
+  } = item
+
+  const isTile = itemShape === "tile"
 
   useEffect(
     () => registerSelection(value),
@@ -84,7 +137,21 @@ export const RadioGroupOption = ({
     <button
       aria-checked={isChecked}
       className={toClassName(
-        "inline-flex items-center gap-2 rounded-sm text-content-secondary text-start transition-colors duration-(--duration-fast) ease-standard",
+        "gap-2 text-content-secondary text-start transition-colors duration-(--duration-fast) ease-standard",
+        isTile
+          ? toClassName(
+              "flex min-w-0 items-start",
+              TILE_BOX_CLASS,
+              TILE_PADDING_CLASS[size],
+            )
+          : toClassName(
+              "inline-flex rounded-sm",
+              // A hint puts a second line under the label, and a ring
+              // centred against both sits beside neither.
+              hint === undefined
+                ? "items-center"
+                : "items-start",
+            ),
         TEXT_SIZE_CLASS[size],
         // Disabled turns the whole option down with `opacity-60`, the
         // same family treatment as `Checkbox` and `Switch`, rather than
@@ -95,7 +162,18 @@ export const RadioGroupOption = ({
           ? "cursor-not-allowed opacity-60"
           : isReadOnly
             ? "cursor-default"
-            : "cursor-pointer hover:text-content-primary",
+            : isTile
+              ? "cursor-pointer hover:border-border-strong"
+              : "cursor-pointer hover:text-content-primary",
+        // The selected tile carries the accent on its EDGE and lifts
+        // its surface. A tile that said "chosen" with a background
+        // alone would be the one state a monochrome ePaper build
+        // cannot show at all.
+        isTile && isChecked
+          ? isReadOnly
+            ? "border-intent-neutral-solid bg-surface-overlay"
+            : "border-intent-accent-solid bg-surface-overlay"
+          : "",
         FOCUS_RING_CLASS,
       )}
       disabled={isDisabled}
@@ -142,7 +220,46 @@ export const RadioGroupOption = ({
         />
       </span>
 
-      <span>{label}</span>
+      {hint === undefined && !isTile ? (
+        <span>{label}</span>
+      ) : (
+        // `min-w-0` and `wrap-anywhere` together, because a grid
+        // item's automatic minimum is its min-content width: one
+        // unbroken token — a path, a URL, a title with no spaces —
+        // otherwise sets the track's floor and shoves the grid out
+        // of its container.
+        <span className="flex min-w-0 flex-col gap-0.5 wrap-anywhere">
+          {icon !== undefined && isTile ? (
+            // Decorative by construction: the name it sits beside is
+            // in the same button, so an announced icon is the label
+            // read twice.
+            <span aria-hidden className="flex">
+              {icon}
+            </span>
+          ) : null}
+
+          <span
+            className={
+              isTile
+                ? "font-semibold text-content-primary"
+                : undefined
+            }
+          >
+            {label}
+          </span>
+
+          {hint === undefined ? null : (
+            <span
+              className={toClassName(
+                "font-normal text-content-muted",
+                HINT_TEXT_CLASS[size],
+              )}
+            >
+              {hint}
+            </span>
+          )}
+        </span>
+      )}
     </button>
   )
 }
