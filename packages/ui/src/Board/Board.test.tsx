@@ -13,6 +13,7 @@ import { expectAgentDrivable } from "../testing/index.ts"
 import * as stories from "./Board.stories.tsx"
 
 const {
+  AccentEdge,
   AllStates,
   Default,
   InBoardScreen,
@@ -403,5 +404,66 @@ test("the board adds no link of its own around a rich title", async () => {
 
   await expect(canvasElement.querySelector("a a")).toBe(
     null,
+  )
+})
+
+/**
+ * The edge is drawn on the card's OWN box, which is the whole
+ * difference between it and the `accentIntent` pill.
+ *
+ * A pill is a `w-1` span inside the card: a straight rectangle
+ * beside a rounded box, which is the notch three apps grew
+ * independently before `Card` took the shape over. The edge is a
+ * pseudo-element taking `border-radius: inherit`, so it is correct
+ * in both of a board card's shapes without being told which one it
+ * is in — a straight stripe down a row that has no corner, and a
+ * wrapped bar once the lane passes `cq-lg`.
+ *
+ * The class is what is asserted rather than a painted pixel: the
+ * bar is a `box-shadow` on a `::before`, and the radius it inherits
+ * comes from a container query the runner's own width does not
+ * decide. `cardAccentEdge.test.ts` owns what the class contains.
+ */
+test("draws a project's colour on the card's own edge", async () => {
+  const { canvas } = await mountStory(AccentEdge)
+
+  const cards = canvas
+    .getAllByRole("listitem")
+    .filter(
+      (item: HTMLElement) => item.dataset.boardCard != null,
+    )
+
+  expect(cards.length).toBeGreaterThan(0)
+
+  for (const card of cards) {
+    // The overlay, and the radius it takes from the card.
+    expect(card.className).toContain("before:absolute")
+    expect(card.className).toContain(
+      "before:rounded-[inherit]",
+    )
+
+    // A categorical colour, never an intent — an edge is an
+    // identity and an intent is a claim about what happens.
+    expect(card.className).toMatch(
+      /before:shadow-\[inset_3px_0_0_var\(--color-categorical-\d+-solid\)\]/,
+    )
+
+    // And it never eats a press on the card it covers.
+    expect(card.className).toContain(
+      "before:pointer-events-none",
+    )
+  }
+
+  // The colour reaches a screen reader as words. Each card names
+  // its project through `accentLabel`, so the bar is not the only
+  // channel carrying the fact.
+  expect(
+    canvas.getAllByText("Ferry Docs").length,
+  ).toBeGreaterThan(1)
+
+  await expectNoAxeViolations(
+    canvas.getByRole("region", {
+      name: "Today, by project",
+    }),
   )
 })
