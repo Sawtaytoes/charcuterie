@@ -77,6 +77,28 @@ The last two are new in v2; see
 `createLinkedIds` sits alongside them as shared `aria-controls` / `aria-labelledby`
 bookkeeping — it holds no user-facing state, so it is not a sixth kind.
 
+### `useFlipList` is not a kind either
+
+It holds no state at all. It reads layout before a commit, reads it again after, and
+plays the difference back as a transform — so there is no core, no store, and no Preact
+twin to keep in step. It lives in the React entry because that is where its two halves
+(a render-phase measurement, a layout effect) have to sit.
+
+```tsx
+const listRef = useFlipList({ signature: ids.join(",") })
+
+<ul ref={listRef}>
+  {ids.map((id) => <li data-flip-key={id} key={id}>…</li>)}
+</ul>
+```
+
+Two apps had grown this independently — queuepilot's poster grid and Docket's phase
+list — which is the threshold for it belonging here rather than in either of them.
+Duration and easing come from `--duration-normal` / `--easing-standard`, so a re-order
+moves at the same speed as everything around it and `prefers-reduced-motion` is already
+handled: `@charcuterie/tokens` collapses every duration to `0ms` inside that query, and
+the hook returns early on a zero.
+
 ## Shape
 
 Every core is `{ getState, subscribe, ...commands }` plus pure selectors:
