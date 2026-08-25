@@ -24,6 +24,11 @@ export {
 export { useClonedChild } from "./useClonedChild.ts"
 export type { UseColorSchemeOptions } from "./useColorScheme.ts"
 export { useColorScheme } from "./useColorScheme.ts"
+export type { FlipListOptions } from "./useFlipList.ts"
+export {
+  FLIP_KEY_ATTRIBUTE,
+  useFlipList,
+} from "./useFlipList.ts"
 export { useLatestRef } from "./useLatestRef.ts"
 export { useLinkedIds } from "./useLinkedIds.ts"
 export { useMediaQuery } from "./useMediaQuery.ts"
