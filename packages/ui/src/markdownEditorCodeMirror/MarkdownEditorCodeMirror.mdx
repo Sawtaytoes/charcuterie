@@ -148,7 +148,9 @@ from either edge, or flip the Markdown source toggle, which is exactly what it i
 
 ## Pasting
 
-- **An image** (or a drop) runs `onUploadImage` and inserts `![alt](url)` at the caret, then
+- **An image** — pasted, dropped, or picked with the toolbar's **Image** action, which
+  appears only when `onUploadImage` is wired and is the only way in on a tablet — runs
+  `onUploadImage` and inserts `![alt](url)` at the caret, then
   renders it in place. The component does not own storage — it hands you a `File`.
 - **A URL over selected text** becomes `[selection](url)`, the way it does in every other
   editor. Deliberately strict: one absolute `http(s)` URL and nothing else, because mangling
