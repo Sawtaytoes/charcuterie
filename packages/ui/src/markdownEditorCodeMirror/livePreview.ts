@@ -1120,6 +1120,27 @@ const livePreviewTheme = EditorView.theme({
     fontFamily: "var(--font-sans)",
   },
   /**
+   * Prose leading, not code leading.
+   *
+   * CodeMirror's base theme sets `line-height: 1.4` on the
+   * content, which is right for the thing it was written for: a
+   * file of short lines you scan down. It is too tight for a
+   * document of wrapped paragraphs, where the eye has to find the
+   * start of the next line across the full measure — and this
+   * surface is the one place in the fleet that renders long-form
+   * prose. Docket's own body copy has used 1.6 since it shipped;
+   * this is the same number, in the component that owns the
+   * document.
+   *
+   * On `.cm-content` rather than `.cm-line`: CodeMirror measures
+   * line height to size its viewport, and a per-line override is
+   * how a document ends up with a scrollbar that does not match
+   * it.
+   */
+  ".cm-content": {
+    lineHeight: "1.6",
+  },
+  /**
    * …except in raw mode, where monospace is the honest choice:
    * "Markdown source" is a *source* view, and source is code.
    */
@@ -1135,6 +1156,20 @@ const livePreviewTheme = EditorView.theme({
   ".cm-md-code": {
     color: "var(--color-intent-info-content)",
     fontFamily: "var(--font-mono)",
+    /**
+     * A monospace face at the SAME `font-size` as the prose
+     * around it reads bigger than the prose: it is drawn on a
+     * fixed advance width and carries a taller x-height, so
+     * `Victor Mono` at 17px next to `Outfit` at 17px looks like an
+     * emphasis nobody asked for. In an agent-written description —
+     * where a third of the nouns are file names in backticks —
+     * that is the difference between a document with code in it
+     * and a wall of shouting.
+     *
+     * `em`, so it tracks whatever size the block is: a code span
+     * inside a heading stays proportional to the heading.
+     */
+    fontSize: "0.9em",
   },
   ".cm-md-codeblock": {
     backgroundColor: "var(--color-surface-sunken)",
