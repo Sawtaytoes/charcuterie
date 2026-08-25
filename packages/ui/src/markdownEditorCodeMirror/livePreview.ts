@@ -104,6 +104,13 @@ export type LivePreviewOptions = {
   hasDocumentSemantics?: boolean
   /** Whether a `- [ ]` checkbox can be ticked. Defaults to `true`. */
   isTaskListInteractive?: boolean
+  /**
+   * Re-point a link before it becomes an `href` — see
+   * `ToLivePreviewRangesOptions.resolveUrl`, which this is handed
+   * to. Links only, and the document's URL has already been through
+   * the scheme guard when it arrives.
+   */
+  resolveUrl?: (url: string) => string | undefined
 }
 
 /**
@@ -130,10 +137,12 @@ export const livePreviewOptions = Facet.define<
         isTaskListInteractive:
           value.isTaskListInteractive ??
           merged.isTaskListInteractive,
+        resolveUrl: value.resolveUrl ?? merged.resolveUrl,
       }),
       {
         hasDocumentSemantics: false,
         isTaskListInteractive: true,
+        resolveUrl: () => undefined,
       },
     ),
 })
@@ -672,8 +681,11 @@ const toDecorations = (view: EditorView): DecorationSet => {
     false,
   )
 
-  const { hasDocumentSemantics, isTaskListInteractive } =
-    toOptions(view.state)
+  const {
+    hasDocumentSemantics,
+    isTaskListInteractive,
+    resolveUrl,
+  } = toOptions(view.state)
 
   const text = view.state.doc.toString()
 
@@ -709,6 +721,7 @@ const toDecorations = (view: EditorView): DecorationSet => {
     for (const range of toLivePreviewRanges({
       from: visible.from,
       isRawMode: isRawMode ?? false,
+      resolveUrl,
       selections,
       text,
       to: visible.to,
@@ -838,7 +851,8 @@ const toTableDecorations = (state: EditorState) => {
     false,
   )
 
-  const { hasDocumentSemantics } = toOptions(state)
+  const { hasDocumentSemantics, resolveUrl } =
+    toOptions(state)
 
   const selections =
     state.field(isEditorFocusedField, false) &&
@@ -854,6 +868,7 @@ const toTableDecorations = (state: EditorState) => {
   return Decoration.set(
     toLivePreviewTableRanges({
       isRawMode: isRawMode ?? false,
+      resolveUrl,
       selections,
       text,
       tree: syntaxTree(state),
