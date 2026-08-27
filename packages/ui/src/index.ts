@@ -316,6 +316,12 @@ export type {
   RailSide,
 } from "./Rail/Rail.tsx"
 export { Rail } from "./Rail/Rail.tsx"
+export type {
+  ReorderListItem,
+  ReorderListProps,
+  ReorderListRenderArguments,
+} from "./ReorderList/ReorderList.tsx"
+export { ReorderList } from "./ReorderList/ReorderList.tsx"
 export { AnchorLink } from "./RouterLink/AnchorLink.tsx"
 export {
   RouterLinkProvider,
