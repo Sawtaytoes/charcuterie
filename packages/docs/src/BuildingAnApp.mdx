@@ -33,6 +33,7 @@ Start here. Find the row that matches what you are about to build.
 | Pick from many, or the user should be able to type to find it | `Combobox` (`isMultiple` for multi-select) | a `<select>` with 400 `<option>` |
 | Label, describe or error-annotate any control | `Field` | a bare `<label>` + hand-wired `aria-describedby` |
 | Page chrome — header, rails, the content column | `Shell` / `Header` / `Rail` / `Main` | a new `AppShell.tsx` |
+| The app's destinations across the top of the header | `NavBar` — real `<a href>`s, folding whole into one menu | a `Toolbar` of `onSelect` items; the same nav rendered twice behind `hidden md:flex` |
 | A grid of cards that should reflow | `AdaptiveGrid` | `grid-cols-*` breakpoints; `auto-fill, minmax()` |
 | Anything with a glyph in it | your own icon (lucide, ISC, is the fleet pick) | expecting the library to ship one |
 
@@ -195,6 +196,51 @@ Three things worth knowing before you reach past them:
   `"complementary"` (default) or `"navigation"`; `side` is `"start"` (default) or `"end"`.
 
 `Main` is the `<main>` landmark, the capped content column, and the skip link's target.
+
+### The top nav: `NavBar`
+
+`Rail` is the **side** nav. A row of destinations across the header is `NavBar`, and it is a
+separate component because the two collapse differently: a rail becomes a
+horizontally-scrolling strip, and a bar folds into a menu button.
+
+```tsx
+import { NavBar } from "@charcuterie/ui"
+
+<Header actions={<Button intent="accent">Add Task</Button>} heading="Docket">
+  <NavBar
+    currentHref={useLocation().pathname}
+    items={[
+      { href: "/triage", label: "Triage" },
+      { href: "/backlog", label: "Backlog" },
+    ]}
+    label="Main"
+    menuAlign="end"
+    menuIcon={<MenuIcon />}
+    menuLabel="Main menu"
+  />
+</Header>
+```
+
+Four things to know before you reach past it:
+
+- **It folds WHOLE.** Every destination is in the bar, or every destination is in the menu.
+  `Toolbar` collapses progressively because its items are *ranked*; a nav's order is the
+  shape of the product, and half of it behind a button is a rule no reader can learn.
+- **It is measured, not breakpointed.** No `collapseAt`, no media query — so a longer label,
+  one more destination, or a reader at 175% zoom moves the fold on its own.
+- **It must not be sized by its own contents**, because it measures its own box to decide
+  what to put in it. `Header`'s row already gives it a `flex-1 min-w-0` box; a hand-built
+  grid needs `minmax(0, 1fr)` on the nav's track, never `auto`.
+- **A fold control belongs at an edge.** `menuAlign="end"` puts the folded trigger beside
+  the header's own actions rather than hugging the wordmark. It reaches only the folded row.
+- **`currentHref` is a string you supply**, and `getIsCurrentHref` decides the rest — a
+  parent path is current for its children, `/` is exact, and the query string is not part of
+  the answer. The library is router-agnostic, so it cannot ask a router which link is active.
+
+Do **not** build this out of `Toolbar`. A `ToolbarAction` is `{ label, onSelect }` and a
+collapsed one becomes a `MenuItem`, which is the same shape — so the folded nav would be a
+row of `<button>`s, which is the defect at the top of this page, appearing only below a
+certain width and screenshotting identically to the correct thing.
 
 ### `AdaptiveGrid`: columns are bought with height
 
