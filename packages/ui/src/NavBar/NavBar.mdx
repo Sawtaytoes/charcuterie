@@ -6,6 +6,32 @@ import * as NavBarStories from "./NavBar.stories";
 
 # NavBar
 
+> ## ⚠️ Deprecated — use [`Nav`](?path=/docs/components-layout-nav--docs)
+>
+> **Removed in the next major.** `NavBar` is now a thin adapter over `Nav` and keeps every
+> behaviour documented on this page, so nothing breaks today.
+>
+> ```tsx
+> // Before
+> <NavBar currentHref={pathname} items={DESTINATIONS} label="Main" />
+>
+> // After — `bar` is Nav's default layout
+> <Nav activeHref={pathname} items={DESTINATIONS} label="Main" />
+> ```
+>
+> `currentHref` is `activeHref`. Every other prop keeps its name.
+>
+> **Two items can no longer both be current.** This component asked the question once per
+> item, so a bar holding `/settings` and `/settings/labels` marked *both* while the reader was
+> on the deeper one — against the decision record below, which says a nav with two current
+> items has stopped saying anything. `Nav` takes the deepest match.
+>
+> **Why it went away:** it answered half the question. A horizontal row that folds is one
+> shape an app's destinations take; a labelled side rail, a collapsed icon rail and a
+> Narrow-View bottom strip are the others, and this component could not become any of them —
+> so an app that wanted a rail was back to hand-rolling, which is the state it was built to
+> end.
+
 The app's destinations as real links, in one line — folding into a single menu button,
 **whole**, when that line does not fit.
 

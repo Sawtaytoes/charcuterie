@@ -4,7 +4,10 @@
 **Date:** 2026-08-26
 **Type:** Component · Navigation · Accessibility
 **Supersedes:** —
-**Superseded by:** —
+**Superseded by:**
+[`Nav` is the one navigation component, and `NavBar` is deprecated](2026-08-27-nav-is-the-one-navigation-component-and-navbar-is-deprecated.md)
+— the fold rules below survive verbatim and are now `Nav`'s `bar` layout; the separate
+`NavBar` component is deprecated and is removed in the next major.
 
 ## Decision
 

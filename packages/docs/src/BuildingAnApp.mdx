@@ -33,7 +33,7 @@ Start here. Find the row that matches what you are about to build.
 | Pick from many, or the user should be able to type to find it | `Combobox` (`isMultiple` for multi-select) | a `<select>` with 400 `<option>` |
 | Label, describe or error-annotate any control | `Field` | a bare `<label>` + hand-wired `aria-describedby` |
 | Page chrome — header, rails, the content column | `Shell` / `Header` / `Rail` / `Main` | a new `AppShell.tsx` |
-| The app's destinations across the top of the header | `NavBar` — real `<a href>`s, folding whole into one menu | a `Toolbar` of `onSelect` items; the same nav rendered twice behind `hidden md:flex` |
+| The app's destinations, wherever they sit, and how they collapse | `Nav` + `useNavLayout` | `NavBar` (deprecated); a `Toolbar` of `onSelect` items; a row of `NavLink`s and a `flex-wrap` in your own stylesheet; the same nav rendered twice behind `hidden md:flex` |
 | A grid of cards that should reflow | `AdaptiveGrid` | `grid-cols-*` breakpoints; `auto-fill, minmax()` |
 | Anything with a glyph in it | your own icon (lucide, ISC, is the fleet pick) | expecting the library to ship one |
 
@@ -162,13 +162,13 @@ Do not write another `AppShell.tsx`. Ten of twelve UI repos hand-roll the page c
 of the ten has a skip link, and the duplication is the fleet's largest single surface.
 
 ```tsx
-import { ColorSchemeSwitcher, Header, Main, Rail, Shell } from "@charcuterie/ui"
+import { ColorSchemeSwitcher, Header, Main, Nav, Rail, Shell } from "@charcuterie/ui"
 
 <Shell>
   <Header actions={<ColorSchemeSwitcher icons={ICONS} />} heading="Rip Deck" />
 
   <Rail label="Sections" landmark="navigation">
-    <SectionNav />
+    <Nav activeHref={pathname} items={NAV_ITEMS} layout="rail" />
   </Rail>
 
   <Main>
@@ -197,45 +197,85 @@ Three things worth knowing before you reach past them:
 
 `Main` is the `<main>` landmark, the capped content column, and the skip link's target.
 
-### The top nav: `NavBar`
+### The destinations: `Nav` and `useNavLayout`
 
-`Rail` is the **side** nav. A row of destinations across the header is `NavBar`, and it is a
-separate component because the two collapse differently: a rail becomes a
-horizontally-scrolling strip, and a bar folds into a menu button.
+The rail above needs something in it, and for eleven years of fleet habit that something has
+been hand-rolled. Two of the twelve UI repos have a `<nav>` at all, and the two disagree
+about what happens when the window narrows — Docket's wraps to three lines on a phone,
+mail-sifter's collapses at `40rem`.
+
+`Nav` is **one** component for all of it: a header row (`bar`, the default), a labelled side
+rail (`rail`), a collapsed icon rail (`railIcons`), a Narrow-View strip (`bottom`), and a
+panel behind a control you supply (`menu`).
+
+> ⚠️ **`NavBar` is deprecated** and is removed in the next major. It was the `bar` half of
+> this, shipped on its own. `<Nav activeHref={…} items={…} label="Main" />` is the whole
+> migration — `bar` is the default layout, `currentHref` is now `activeHref`, and every other
+> prop keeps its name and its behaviour.
 
 ```tsx
-import { NavBar } from "@charcuterie/ui"
+import { Nav, useNavLayout } from "@charcuterie/ui"
 
-<Header actions={<Button intent="accent">Add Task</Button>} heading="Docket">
-  <NavBar
-    currentHref={useLocation().pathname}
-    items={[
-      { href: "/triage", label: "Triage" },
-      { href: "/backlog", label: "Backlog" },
-    ]}
-    label="Main"
-    menuAlign="end"
-    menuIcon={<MenuIcon />}
-    menuLabel="Main menu"
-  />
-</Header>
+const NAV_ITEMS = [
+  { href: "/board", icon: <BoardIcon />, key: "board", label: "Board" },
+  { href: "/settings", icon: <SettingsIcon />, key: "settings", label: "Settings" },
+]
+
+const nav = useNavLayout({ storageKey: "rip-deck-nav" })
+
+<Shell>
+  <Header heading="Rip Deck">
+    {nav.layout === "menu" ? (
+      <Nav
+        activeHref={pathname}
+        isVisible={isNavVisible}
+        items={NAV_ITEMS}
+        layout="menu"
+        onDismiss={hideNav}
+        trigger={<IconButton label="Menu"><MenuIcon /></IconButton>}
+      />
+    ) : null}
+  </Header>
+
+  {nav.layout === "menu" ? null : (
+    <Rail label="Sections" landmark="navigation">
+      <Nav activeHref={pathname} items={NAV_ITEMS} layout={nav.layout} />
+    </Rail>
+  )}
+
+  <Main>
+    <PageContent />
+  </Main>
+</Shell>
 ```
 
-Four things to know before you reach past it:
+- **`useNavLayout` owns the width rule** — `rail` at `64rem`, `railIcons` at `48rem`, `menu`
+  below — plus `toggle()` and where the choice is remembered. You place it; you do not pick
+  the breakpoints.
+- **Annotate a rail's array as `NavRailItem[]`.** It is `NavItem` with `icon` made required,
+  and `railIcons` takes the label away — so an item without a glyph is a blank square that
+  still navigates. A `bar` keeps `icon` optional, because there the label never leaves.
+- **An app with three or four destinations wants `layout="bar"` in the `Header` instead**,
+  and no rail at all. A 212px column costs a dashboard more than it returns.
+- Items are real `<a href>`. Inject your router once with `RouterLinkProvider` and they all
+  route.
+- **`activeHref` is a string you supply**, and `resolveActiveKey` decides the rest — a parent
+  path is current for its children, `/` is exact, the query string is not part of the answer,
+  and the **deepest** match wins so `/settings` and `/settings/labels` never both light up.
+  The library is router-agnostic, so it cannot ask a router which link is active.
 
-- **It folds WHOLE.** Every destination is in the bar, or every destination is in the menu.
-  `Toolbar` collapses progressively because its items are *ranked*; a nav's order is the
-  shape of the product, and half of it behind a button is a rule no reader can learn.
-- **It is measured, not breakpointed.** No `collapseAt`, no media query — so a longer label,
-  one more destination, or a reader at 175% zoom moves the fold on its own.
+**`bar` folds whole, and it is measured.** Four things to know before you reach past it:
+
+- **Every destination is in the bar, or every destination is in the menu.** `Toolbar`
+  collapses progressively because its items are *ranked*; a nav's order is the shape of the
+  product, and half of it behind a button is a rule no reader can learn.
+- **No `collapseAt`, no media query** on that axis — so a longer label, one more destination,
+  or a reader at 175% zoom moves the fold on its own.
 - **It must not be sized by its own contents**, because it measures its own box to decide
   what to put in it. `Header`'s row already gives it a `flex-1 min-w-0` box; a hand-built
   grid needs `minmax(0, 1fr)` on the nav's track, never `auto`.
-- **A fold control belongs at an edge.** `menuAlign="end"` puts the folded trigger beside
-  the header's own actions rather than hugging the wordmark. It reaches only the folded row.
-- **`currentHref` is a string you supply**, and `getIsCurrentHref` decides the rest — a
-  parent path is current for its children, `/` is exact, and the query string is not part of
-  the answer. The library is router-agnostic, so it cannot ask a router which link is active.
+- **A fold control belongs at an edge.** `menuAlign="end"` puts the folded trigger beside the
+  header's own actions rather than hugging the wordmark. It reaches only the folded row.
 
 Do **not** build this out of `Toolbar`. A `ToolbarAction` is `{ label, onSelect }` and a
 collapsed one becomes a `MenuItem`, which is the same shape — so the folded nav would be a
@@ -471,6 +511,7 @@ The short version:
   and `Picker` takes the same `label` / `options` / `value` / `onChange`.
 - Labels, descriptions and errors come from `Field`, which clones **any** child control.
 - Page chrome is `Shell` / `Header` / `Rail` / `Main`. Do not add an `AppShell.tsx`.
+- Destinations are `Nav`, and the width rule is `useNavLayout`. Do not write the breakpoint.
 - Reflowing grids are `AdaptiveGrid`.
 - The library ships no icons; bring your own (lucide).
 

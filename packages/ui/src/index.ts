@@ -277,11 +277,30 @@ export { Menu } from "./Menu/Menu.tsx"
 export type { ModalProps } from "./Modal/Modal.tsx"
 export { Modal } from "./Modal/Modal.tsx"
 export type {
+  NavLayout,
+  NavProps,
+} from "./Nav/Nav.tsx"
+export { Nav } from "./Nav/Nav.tsx"
+export type {
+  NavItem,
+  NavRailItem,
+} from "./Nav/navItems.ts"
+export {
+  getIsCurrentHref,
+  resolveActiveKey,
+} from "./Nav/navItems.ts"
+export type {
+  NavLayoutMode,
+  NavLayoutState,
+  ResolvedNavLayout,
+  UseNavLayoutOptions,
+} from "./Nav/useNavLayout.ts"
+export { useNavLayout } from "./Nav/useNavLayout.ts"
+export type {
   NavBarItem,
   NavBarProps,
 } from "./NavBar/NavBar.tsx"
 export { NavBar } from "./NavBar/NavBar.tsx"
-export { getIsCurrentHref } from "./NavBar/navBarCurrent.ts"
 export type {
   PickerOption,
   PickerProps,
