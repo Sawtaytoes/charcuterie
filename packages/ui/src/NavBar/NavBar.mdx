@@ -1,0 +1,150 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as NavBarStories from "./NavBar.stories";
+
+<Meta of={NavBarStories} />
+
+# NavBar
+
+The app's destinations as real links, in one line — folding into a single menu button,
+**whole**, when that line does not fit.
+
+<Canvas of={NavBarStories.Default} />
+
+## Props
+
+<Controls />
+
+## It folds whole, and that is the decision
+
+`Toolbar` collapses **progressively**: items drop off the end one at a time, because its
+items are ranked — the two things you do to a running job matter more than the two you do
+to the deck.
+
+A nav is not ranked. Its order is the shape of the product. Docket's reads as the pipeline
+work moves along — Triage → Backlog → Phases → Lanes → Board → Archives — and a
+half-collapsed bar splits that shape across two places with no rule a reader can learn.
+"Some of the app is up here and the rest is behind a button" is worse than either whole
+answer.
+
+So the bar shows **every** destination or **none**, and the menu is the complete list in
+the product's own order.
+
+<Canvas of={NavBarStories.AllVariants} />
+
+## Why this is not a folded `Toolbar`
+
+`Toolbar` already solves collapse-into-an-overflow, and this component **reuses its
+measurement** — `useToolbarOverflow`, the same tape measure — rather than growing a second
+one.
+
+What it cannot reuse is the rendering. A `ToolbarAction` is `{ label, onSelect }`, and a
+collapsed one becomes a `MenuItem`, which is also `{ label, onSelect }`. A nav folded into
+one is a row of `<button>`s:
+
+| | `<button onClick={navigate}>` | `<a href>` |
+| --- | --- | --- |
+| Middle-click, ctrl-click | nothing | opens a tab |
+| "Open link in new tab" | absent from the menu | there |
+| "Copy link address" | absent | there |
+| Status bar on hover | blank | the destination |
+| Visited styling, the back button's idea of history | none | the platform's |
+
+`BuildingAnApp.mdx` names `<button onClick={navigate}>` as the fleet's most common
+navigation defect. A collapse mechanism that introduced it below a certain width would be
+that defect on a timer — and it screenshots identically, which is how it would survive
+review.
+
+The panel is a `Popover` (`role="dialog"`) rather than a `Menu` for the same reason:
+`role="menu"` permits only the `menuitem` family, and a `menuitem` is something you **do**,
+not somewhere you **go**.
+
+## Measured, not breakpointed
+
+There is no `collapseAt` prop and no media query. The bar reads the width its links
+actually have and folds when their sum stops fitting — so a longer label, a tenth
+destination, `data-density="kiosk"`, or a reader at 175% browser zoom each move the fold on
+their own.
+
+mux-magic collapses at a hardcoded `480px` and plex-channels at `760px`. Neither number has
+a reason, and both are wrong the first time anything about the content changes.
+
+<Canvas of={NavBarStories.Responsive} />
+
+## ⚠️ The bar must not be sized by its own contents
+
+It measures its own box to decide what to draw in it, so a container that shrink-wraps
+makes the answer its own input: fewer links → a narrower box → fewer links.
+
+The root carries `min-w-0 flex-1`, which is the whole fix inside a flex row. A grid track is
+the caller's to declare:
+
+```css
+grid-template-columns: auto minmax(0, 1fr) auto; /* brand, nav, actions */
+```
+
+`auto` on that middle track is the bug — it floors at the nav's min-content width, which is
+the sum of every link.
+
+## Which destination is current
+
+The library is router-agnostic (see `RouterLinkProvider`), so it cannot ask a router which
+link is active. The app hands it one string:
+
+```tsx
+<NavBar currentHref={useLocation().pathname} items={DESTINATIONS} label="Main" />
+```
+
+`getIsCurrentHref` decides the rest, and it is exported so an app can ask the same question
+elsewhere:
+
+- **A parent path is current for its children.** `/tasks` is current on `/tasks/41`,
+  because a nav item names a section and a section does not stop being the one you are in
+  when you open something inside it. The match is on whole segments, so `/task` is not
+  current for `/tasks`.
+- **`/` is exact.** react-router's `<NavLink to="/">` is active on *every* route unless the
+  caller remembers `end`, which is the footgun behind every "why is Home always
+  highlighted" bug. There is no prop to change it here: a nav with two current items has
+  stopped saying anything.
+- **The query string and the fragment are not part of the answer.**
+  `/backlog?focus=search` is still the Backlog.
+
+The current destination gets `aria-current="page"` as well as the fill, because a highlight
+is invisible to a screen reader and to anyone who cannot separate the two surfaces.
+
+## Mounted exactly once
+
+A destination is in the bar or in the panel, never both.
+
+The fleet's habit is to render the whole nav twice and hide one copy with `hidden md:flex`
+— mux-magic's `PageHeader` across two ~55-line blocks, mail-sifter's `TriageQueue` again.
+Every link is then in the DOM at every width, so an agent driving the page finds two of
+each and cannot tell which one a human can see, the two copies drift, and every test has to
+be defensively scoped.
+
+<Canvas of={NavBarStories.AllStates} />
+
+## The trigger's glyph is the app's
+
+The library ships no icons, so `menuIcon` has no default — U+2630 renders as nothing where
+the font lacks it, which includes this sandbox's chromium and the kiosk image. With no icon
+the trigger is a text button reading `menuLabel`, which works everywhere.
+
+`menuLabel` names the trigger **and** the panel it opens: a `role="dialog"` takes no
+accessible name from its content.
+
+## Keyboard
+
+Every link in the bar is its own tab stop, which is what a `<nav>` is — this is not a
+`role="toolbar"`, and there is no roving focus to learn.
+
+Folded, it is one tab stop: Enter or Space opens the panel, focus moves into it, Escape
+closes it and hands focus back to the trigger. Choosing a destination closes it too —
+unless the click was modified, because a ctrl-click leaves the reader exactly where they
+were and shutting the menu they are still reading is how people stop ctrl-clicking.
+
+<Canvas of={NavBarStories.Interactive} />
+
+## In a shell
+
+<Canvas of={NavBarStories.InAppShell} />
