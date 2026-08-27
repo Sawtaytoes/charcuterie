@@ -525,7 +525,19 @@ test("the barrel is the only place components are re-exported", async () => {
   // `VirtualizedGrid` calls `useAdaptiveColumns`. It renders no
   // row, no handle and no buttons; `renderItem` is what lets one
   // component serve three grids that have nothing in common.
-  expect(componentNames.length).toBe(59)
+  //
+  // `Nav` — the destinations as a rail, a collapsed icon rail or a
+  // bottom strip — is +1 -> 60. It is the other half of `NavBar`,
+  // which folds a horizontal row and cannot become a vertical one:
+  // no media query moves an element across `Shell`'s grid, so the
+  // rail is a different corner of the page rather than a restyling
+  // of the same one. Two members stay out of this count by the
+  // `<Name>/<Name>.tsx` rule and are exported from the barrel
+  // anyway — `navItems.ts`, because `resolveActiveKey` is the
+  // active-path rule an app's tests want to assert directly, and
+  // `useNavLayout.ts`, because the app has to read the width rule to
+  // know which corner to render into.
+  expect(componentNames.length).toBe(60)
 
   for (const name of componentNames) {
     expect(barrel).toContain(`export { ${name} }`)
