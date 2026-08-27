@@ -211,6 +211,38 @@ test("a route no destination owns marks nothing", async () => {
 })
 
 /**
+ * A fold control belongs at an edge. `menuAlign="end"` puts it
+ * beside the header's own actions instead of hugging the wordmark
+ * with the whole track empty after it — and it reaches only the
+ * folded row, so the links' own position is not a prop.
+ */
+test("the folded trigger can sit at the end of the track", async () => {
+  const { canvas } = await mountStory(AllVariants)
+
+  const aligned = expectAgentDrivable(canvas, {
+    name: "Main, trigger at the end",
+    role: "navigation",
+  })
+
+  const start = expectAgentDrivable(canvas, {
+    name: "Main, narrow",
+    role: "navigation",
+  })
+
+  await waitFor(() => {
+    expect(
+      within(aligned)
+        .getByRole("button", { name: "Main menu" })
+        .getBoundingClientRect().left,
+    ).toBeGreaterThan(
+      within(start)
+        .getByRole("button", { name: "Main menu" })
+        .getBoundingClientRect().left,
+    )
+  })
+})
+
+/**
  * The trigger advertises what it opens, and gets focus back when it
  * closes — both from `useRole` and `FloatingFocusManager` inside
  * `Popover`, so neither can be forgotten here.

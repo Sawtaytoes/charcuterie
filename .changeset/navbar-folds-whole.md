@@ -16,5 +16,7 @@ no status bar, nothing to copy, and identical in a screenshot.
 
 The fold is measured rather than breakpointed: it reuses `Toolbar`'s `useToolbarOverflow`,
 so there is no `collapseAt` and no media query, and a longer label or a reader at 175% zoom
-moves the fold on its own. `getIsCurrentHref` is exported alongside it — a parent path is
+moves the fold on its own. `menuAlign="end"` puts the folded trigger beside the header's own actions instead of
+hugging the wordmark; it reaches only the folded row, so the links' own position stays out
+of the API. `getIsCurrentHref` is exported alongside it — a parent path is
 current for its children, `/` is exact, and the query string is not part of the answer.

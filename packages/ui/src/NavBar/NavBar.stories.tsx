@@ -176,6 +176,24 @@ export const AllVariants: Story = {
         </Frame>
       </StoryCell>
 
+      <StoryCell
+        label={
+          'Folded, menuAlign="end" — the trigger joins the header\'s own actions'
+        }
+      >
+        <Frame inlineSize="18rem">
+          <NavBar
+            currentHref={currentHref}
+            items={DESTINATIONS}
+            label="Main, trigger at the end"
+            menuAlign="end"
+            menuIcon={<MenuIcon />}
+            menuLabel="Main menu"
+            size={size}
+          />
+        </Frame>
+      </StoryCell>
+
       <StoryCell label="No icon — the trigger is its own label">
         <Frame inlineSize="18rem">
           <NavBar
@@ -311,6 +329,10 @@ const AppShellHarness = (): ReactNode => (
         currentHref="/board"
         items={DESTINATIONS}
         label="Main"
+        // The header's own action is at the far edge, so the fold
+        // control joins it rather than hugging the wordmark with
+        // the whole track empty after it.
+        menuAlign="end"
         menuIcon={<MenuIcon />}
         menuLabel="Main menu"
       />

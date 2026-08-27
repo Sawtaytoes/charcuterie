@@ -124,6 +124,13 @@ be defensively scoped.
 
 <Canvas of={NavBarStories.AllStates} />
 
+## A fold control belongs at an edge
+
+`menuAlign="end"` puts the trigger beside the header's own actions rather than leaving it
+hugging the wordmark with the whole track empty after it. It reaches **only** the folded
+row, which holds exactly one item — so where the links sit when the bar is whole is not a
+prop, and cannot be made inconsistent with the rest of the header.
+
 ## The trigger's glyph is the app's
 
 The library ships no icons, so `menuIcon` has no default — U+2630 renders as nothing where

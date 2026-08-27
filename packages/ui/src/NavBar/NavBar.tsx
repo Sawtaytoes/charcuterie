@@ -54,6 +54,17 @@ export type NavBarProps = {
    */
   label: string
   /**
+   * Where the trigger sits in the bar's track once the row has
+   * folded. `"end"` when the header puts its own actions at the
+   * far edge, so the fold control joins them instead of hugging
+   * the wordmark with the whole track empty after it.
+   *
+   * It reaches **only** the folded row, which holds exactly one
+   * item — so it cannot disturb where the links sit when the bar
+   * is whole, and there is deliberately no prop that can.
+   */
+  menuAlign?: "end" | "start"
+  /**
    * The collapsed trigger's glyph. **No default** — the library
    * ships no icons, and `☰` renders as nothing where the font lacks
    * it. With no icon the trigger is a text button reading
@@ -134,6 +145,7 @@ export const NavBar = ({
   isMenuVisible = false,
   items,
   label,
+  menuAlign = "start",
   menuIcon,
   menuLabel = "Menu",
   menuPlacement = "bottom-start",
@@ -214,6 +226,12 @@ export const NavBar = ({
       aria-label={label}
       className={toClassName(
         "flex min-w-0 flex-1 items-center gap-1",
+        // Two written-out entries rather than one interpolated
+        // string: Tailwind's scanner cannot see a class that
+        // exists only at runtime.
+        isCollapsed && menuAlign === "end"
+          ? "justify-end"
+          : "justify-start",
         className,
       )}
       ref={containerRef}

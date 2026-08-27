@@ -214,6 +214,7 @@ import { NavBar } from "@charcuterie/ui"
       { href: "/backlog", label: "Backlog" },
     ]}
     label="Main"
+    menuAlign="end"
     menuIcon={<MenuIcon />}
     menuLabel="Main menu"
   />
@@ -230,6 +231,8 @@ Four things to know before you reach past it:
 - **It must not be sized by its own contents**, because it measures its own box to decide
   what to put in it. `Header`'s row already gives it a `flex-1 min-w-0` box; a hand-built
   grid needs `minmax(0, 1fr)` on the nav's track, never `auto`.
+- **A fold control belongs at an edge.** `menuAlign="end"` puts the folded trigger beside
+  the header's own actions rather than hugging the wordmark. It reaches only the folded row.
 - **`currentHref` is a string you supply**, and `getIsCurrentHref` decides the rest — a
   parent path is current for its children, `/` is exact, and the query string is not part of
   the answer. The library is router-agnostic, so it cannot ask a router which link is active.
