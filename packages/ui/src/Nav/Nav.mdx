@@ -1,0 +1,169 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as NavStories from "./Nav.stories";
+
+<Meta of={NavStories} />
+
+# Nav
+
+The app's destinations. A header row, a side rail, a collapsed rail, a strip along the foot
+of a phone, or a panel behind one control — the same list, drawn where it fits.
+
+> **This replaces [`NavBar`](?path=/docs/components-layout-navbar--docs)**, which shipped the
+> header row on its own and is deprecated as of this release. `bar` is `Nav`'s default
+> layout and behaves identically, down to the measured whole-row fold — see *`bar` folds
+> whole* below.
+
+<Canvas of={NavStories.Default} />
+
+## Props
+
+<Controls />
+
+## What was actually missing
+
+`Shell` / `Header` / `Rail` / `Main` shipped the page frame on 2026-08-10 and left **the
+rail empty**. Twelve UI repos, and exactly two have a `<nav>` at all: Docket hand-rolled a
+row of `NavLink`s with the collapse rule in its own stylesheet, Folio hand-rolled another,
+and the other ten have no destinations anywhere.
+
+The two that exist already disagree. Docket *wraps* below its breakpoint, so its header
+stands three lines tall on a phone — which is not a decision anybody made, it is what
+`flex-wrap` does when nobody writes the other rule.
+
+## Every item is a real link
+
+<Canvas of={NavStories.AllVariants} />
+
+`<a href>`, through the injected `RouterLinkProvider` — the same seam `TextLink` and
+`ButtonLink` take, so an app injects its router once and every destination in the library
+routes.
+
+Not a `<button onClick={navigate}>`. That is what mux-magic and QueuePilot do today, it is
+**identical in a screenshot**, and it loses middle-click, ctrl-click, "open in a new tab",
+the status bar preview, and "copy link address". See
+[buttons are actions, links are navigation](?path=/docs/guides-routing--docs).
+
+An `isExternal` item is the exception the seam already knows: a plain anchor,
+`target="_blank"`, `rel="noopener noreferrer"`. Pushing `https://…` onto a router's history
+navigates the SPA to a route that does not exist.
+
+## `icon`, and `NavRailItem`
+
+`NavItem` keeps `icon` optional, because a `bar` never takes the label away — Docket's nine
+destinations are words, and inventing nine glyphs to satisfy a type would be worse than the
+problem.
+
+A rail is the other case. `railIcons` is one `--control-height-lg` square and shows nothing
+else, so an item with no glyph is a blank square that still navigates, and there is no visual
+defect to notice because the row reads as padding. **Annotate a rail's array as
+`NavRailItem[]`** — the same shape with `icon` made required — and the type checker catches
+it before somebody drags a window narrow.
+
+`items` is deliberately **not** discriminated on `layout`. The main call site passes
+`layout={navLayout.layout}` straight from `useNavLayout`, which is a variable and not a
+literal, so a union that split the item type by layout would force a `switch` at the one
+place this component exists to make short.
+
+The library still ships no icons — lucide (ISC) is the fleet recommendation, and a glyph in
+a default renders as nothing where the font lacks it.
+
+## `bar` folds whole, and it is measured
+
+There is no `collapseAt` and no media query on this axis. The bar reads the width its links
+actually have and folds when their sum stops fitting, so a longer label, a tenth destination,
+a `data-density="kiosk"` or a reader at 175% browser zoom each move the fold on their own.
+mux-magic collapses at a hardcoded `480px` and plex-channels at `760px`, and neither number
+has a reason.
+
+It folds **whole** rather than progressively, unlike `Toolbar`. `Toolbar`'s items are ranked;
+a nav's order is the shape of the product — Docket's reads as the pipeline, Triage → Backlog
+→ Phases → Board → Archives — and half of that behind a button is a rule no reader can learn.
+
+⚠️ **A `bar` must not be sized by its own contents.** It measures its own box to decide what
+to draw in it, so a container that shrink-wraps makes the answer its own input: put it in a
+`minmax(0, 1fr)` grid track or a `flex-1 min-w-0` row.
+
+## The current destination is announced
+
+<Canvas of={NavStories.AllStates} />
+
+`aria-current="page"`, and a background. One without the other is WCAG 1.4.1, and a
+`font-weight` swap alone is exactly that failure.
+
+Matching is two rules:
+
+1. An exact path wins — `/board` on `/board`.
+2. Otherwise the **longest path-segment prefix** wins. `/board` matches `/board/inProgress`
+   and does **not** match `/boardgames`, because `games` is not a new segment. Longest, so
+   an app with `/settings` and `/settings/labels` marks the deeper one.
+
+The root is exempt from rule 2: `/` prefixes every path in the app, so a permissive root
+would mark Home current on every screen and the state would carry no information.
+
+Query and fragment are stripped first. A destination and a filtered view of it are the same
+place — `/board?lane=todo` is still Board, which is the case that breaks first in a real app.
+
+**And exactly one item is current.** `getIsCurrentHref` answers for a single link, so a nav
+holding both `/settings` and `/settings/labels` gets `true` twice while the reader is on the
+deeper one — which is what `NavBar` shipped. `resolveActiveKey` is the whole-list answer and
+takes the **deepest** match, by path rather than by array position, so the product's own
+order never decides which destination lights up.
+
+Both are exported, so an app can assert its own table without mounting anything.
+
+## Three widths, one rule — `useNavLayout`
+
+<Canvas of={NavStories.Responsive} />
+
+```tsx
+const nav = useNavLayout({ storageKey: "queuepilot-nav" })
+
+// nav.layout: "rail" | "railIcons" | "menu"
+// nav.isCollapsed, nav.mode, nav.setMode, nav.toggle
+```
+
+| Width | `layout` | What the app renders |
+| --- | --- | --- |
+| `>= 64rem` | `rail` | a `Rail` holding a `Nav` |
+| `>= 48rem` | `railIcons` | the same `Rail`, narrower |
+| below | `menu` | a trigger in the `Header` |
+
+`toggle()` overrides the width and the choice is remembered under `storageKey`. The
+override does **not** reach the narrow state — `expanded` on a 390px screen is a 212px rail
+beside 178px of content — and the remembered value is kept rather than cleared, so rotating
+a tablet back to landscape restores the rail the reader asked for.
+
+**Why the app still places it.** The placement genuinely differs and the rule does not. The
+`menu` state puts a control in the header, which is a different corner of `Shell`'s grid
+from a side rail, and no amount of restyling moves an element across a grid. So the library
+owns *which* state is right, at what width, with what override, remembered where; the app
+owns two `if`s.
+
+## The narrow panel is a `Popover`, not a `Menu`
+
+<Canvas of={NavStories.Interactive} />
+
+`Menu`'s items are `onSelect` callbacks on `<button>`s. That is right for what a menu
+usually holds — undo, redo, a scheme cycle — and wrong for a destination, for every reason
+in *Every item is a real link* above.
+
+So `layout="menu"` is a `Popover`: anchored, dismissable, portalled to the body, and
+`modal={false}` so the caret is not trapped. It is a disclosure, not a dialog somebody has
+to answer. Escape and an outside press both close it.
+
+Give the trigger a real name. A bare hamburger is a glyph, and a glyph is not a name — the
+reason `IconButton` requires `label`.
+
+## When to use which layout
+
+| Layout | For |
+| --- | --- |
+| `bar` | three to six destinations, and a grid that wants every pixel — ai-usage, folio, mux-magic, portly-controllers. Folds itself; needs no `useNavLayout`. |
+| `rail` / `railIcons` | seven or more, or a pipeline you read down — Docket, mail-sifter, QueuePilot |
+| `bottom` | three or four you switch between constantly, in the Narrow View only |
+| `menu` | the Narrow View of a `rail` app |
+
+`bottom` is deliberately not the default narrow answer. It costs a permanent strip of the
+screen, and it earns that only when the destinations are few and the switching is constant.
+An app you settle into for an evening wants the panel.
