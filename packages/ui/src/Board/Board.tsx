@@ -44,12 +44,15 @@ export type BoardProps = {
   label: string
   lanes: readonly BoardLane[]
   /**
-   * What the move handle shows instead of the word "Move". The
-   * library ships no icons and no symbol glyphs in a default —
+   * What the move handle shows **while the lanes are side by side**.
+   * Below `cq-lg` the handle says "Move" whatever this is, because
+   * there is nowhere to drag to — see `BoardCard`.
+   *
+   * The library ships no icons and no symbol glyphs in a default —
    * they render as nothing where the font lacks them, which
    * includes this sandbox's chromium, the kiosk image and the
    * ePaper build — so the default is a word and an app that owns a
-   * glyph set passes one. On a dense board it is worth ~55px a row.
+   * glyph set passes one. On a dense board it is worth ~35px a row.
    */
   moveIcon?: ReactNode
   /**
@@ -216,7 +219,24 @@ export const Board = ({
   return (
     <section
       aria-label={label}
-      className={toClassName("@container", className)}
+      /*
+       * `@container/board`, and the NAME is what a card's move
+       * handle needs.
+       *
+       * An unnamed container query matches the nearest ancestor
+       * container, and between this box and a card there is a
+       * second one — the lane's, one level down, which decides what
+       * shape a card is. So a `cq-lg:` written inside `BoardCard`
+       * asks about the LANE, and the answer is inverted against the
+       * question the handle has to ask: in a three-up board a lane
+       * is ~280px, and in the Narrow View the single lane is the
+       * whole board. Naming this one lets the handle query past the
+       * lane to the box that actually decides how many lanes are on
+       * screen. Naming changes nothing else — a named container
+       * still answers an unnamed query, which is why the segmented
+       * control and the lanes below keep their plain `cq-lg:`.
+       */
+      className={toClassName("@container/board", className)}
     >
       <div className="flex flex-col gap-3">
         {/*

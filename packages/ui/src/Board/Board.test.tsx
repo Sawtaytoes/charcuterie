@@ -20,6 +20,7 @@ const {
   Interactive,
   MarkdownTitles,
   LinkedLaneHeadings,
+  MoveHandleByWidth,
   Responsive,
 } = composeStories(stories)
 
@@ -466,4 +467,85 @@ test("draws a project's colour on the card's own edge", async () => {
       name: "Today, by project",
     }),
   )
+})
+
+/**
+ * The handle wears the gesture that can succeed, and nothing else.
+ *
+ * This is the bug QueuePilot shipped twice, from both directions. A
+ * `≡` grip in a one-lane board taught a drag with nowhere to land —
+ * *"There's no right-click or anything. How do I move these?"* — and
+ * taking the grip away at every width broke the wide board, where
+ * dragging is exactly what a person reaches for.
+ *
+ * Both affordances are in the DOM at both widths and CSS decides,
+ * so this asserts on what is PAINTED. A container query is the only
+ * honest way to ask: the two boards below sit in a 72rem frame and a
+ * 24rem frame inside one window that never moves.
+ */
+test("a wide board's handle is the app's grip, not the word", async () => {
+  const { canvas } = await mountStory(MoveHandleByWidth)
+
+  const handle = within(
+    canvas.getByRole("region", {
+      name: "Today, wide enough to drag",
+    }),
+  ).getByRole("button", {
+    name: "Move Retire the second scheduler and fold its jobs into the broker, currently in Todo",
+  })
+
+  await expect(
+    within(handle).getByText("Move"),
+  ).not.toBeVisible()
+
+  await expect(handle.querySelector("svg")).toBeVisible()
+
+  // And it is still the SQUARE icon button it was before the word
+  // joined it in the DOM. `sizing` is a prop and cannot be two
+  // values, so the button is `control`-sized underneath and takes
+  // `ICON_CONTROL_SIZE_CLASS`'s width and `px-0` back at this width.
+  // Getting that wrong costs every card in every lane ~20px of
+  // title, silently — this board renders pixel-identically to the
+  // one before the change, and that is the assertion.
+  await expect(handle.offsetWidth).toBe(handle.offsetHeight)
+})
+
+test("a one-lane board's handle says Move, whatever the app passed", async () => {
+  const { canvas } = await mountStory(MoveHandleByWidth)
+
+  const handle = within(
+    canvas.getByRole("region", {
+      name: "Today, one lane at a time",
+    }),
+  ).getByRole("button", {
+    name: "Move Retire the second scheduler and fold its jobs into the broker, currently in Todo",
+  })
+
+  await expect(
+    within(handle).getByText("Move"),
+  ).toBeVisible()
+
+  await expect(
+    handle.querySelector("svg"),
+  ).not.toBeVisible()
+})
+
+/**
+ * The name is the same sentence at both widths, and that is the
+ * point of putting the whole of it in a `VisuallyHidden` while both
+ * visible affordances are `aria-hidden`.
+ *
+ * Left to the visible text, the handle would be called "Move X"
+ * wide and "Move Move X" narrow — one control with two names, one
+ * `getByRole` query that works in one layout and not the other, and
+ * a screen-reader user hearing the word twice.
+ */
+test("the handle has one name at both widths", async () => {
+  const { canvas } = await mountStory(MoveHandleByWidth)
+
+  await expect(
+    canvas.getAllByRole("button", {
+      name: "Move Retire the second scheduler and fold its jobs into the broker, currently in Todo",
+    }),
+  ).toHaveLength(2)
 })
