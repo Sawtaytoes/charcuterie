@@ -191,6 +191,11 @@ export type {
 } from "./Dialog/Dialog.tsx"
 export { Dialog } from "./Dialog/Dialog.tsx"
 export type {
+  DropRailProps,
+  DropRailTarget,
+} from "./DropRail/DropRail.tsx"
+export { DropRail } from "./DropRail/DropRail.tsx"
+export type {
   EmptyStateProps,
   EmptyStateSize,
 } from "./EmptyState/EmptyState.tsx"

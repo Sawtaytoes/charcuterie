@@ -48,6 +48,17 @@ Moving a card takes **no drag-and-drop dependency**: one handle per card, a `Men
 other lanes as the primary path, Pointer-Event dragging at 1.4 KB gzip beside it
 ([decision](../../docs/decisions/2026-08-19-the-board-owns-the-move-and-takes-no-drag-and-drop-dependency.md)).
 
+**`DropRail` is the move control for a page `Board`'s `Menu` cannot serve.** A menu of the
+other lanes is right at three lanes; it is wrong at thirty-four groups, where it becomes a
+scrolling list inside a popup and a drag becomes a scroll with the button held down. The
+rail pins every destination to the top for the length of a move — no travel, nothing off
+screen — as a `listbox` driven by pointer, tap **or** the arrow keys, all committing through
+one `onPick`. It reads `event.buttons` to tell a drag from a tap, so a host says only
+whether a move is in flight. It holds the same line on dependencies: `elementFromPoint` over
+its own chips is the only geometry a rail needs. Not to be confused with `Rail`, the app
+shell's side landmark — `FileDropZone` is the precedent for the prefix carrying the
+distinction.
+
 **`BadgeButton` is a `Badge` you can press**, and it came from a consumer rather than from a
 plan: QueuePilot has six pill-shaped controls — per-entry setting tags, an Edit chip, two
 start-point chips, a group chip, a pool's Exclude chip — that were hand-rolled
