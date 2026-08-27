@@ -193,6 +193,18 @@ export const MoreIcon = (): ReactNode => (
 )
 
 /**
+ * The three-line "open the nav" glyph, for `NavBar`'s collapsed
+ * trigger. U+2630 TRIGRAM FOR HEAVEN — the character a repo reaches
+ * for instead — measures blank in this sandbox's chromium, exactly
+ * like the three-dot glyph above.
+ */
+export const MenuIcon = (): ReactNode => (
+  <svg {...iconProps} aria-hidden="true">
+    <path d="M4 6h16M4 12h16M4 18h16" />
+  </svg>
+)
+
+/**
  * The markdown toolbar's nine, plus the bar's own overflow above.
  *
  * They are here rather than in the editor's story file because the
