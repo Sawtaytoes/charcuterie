@@ -489,7 +489,15 @@ test("the barrel is the only place components are re-exported", async () => {
   // It is also why `safeUrls.ts` moved up out of
   // `markdownEditorCodeMirror/`: two surfaces taking a URL out of a
   // document and putting it in an `href` is one allowlist, not two.
-  expect(componentNames.length).toBe(56)
+  //
+  // `DropRail` — every move destination at once, as a listbox that a
+  // pointer, a tap or the arrow keys all drive — is +1 -> 57. It has
+  // no members, and it takes no drag-and-drop dependency: the
+  // hit test is `elementFromPoint` over its own chips, which is the
+  // only geometric question a rail has. `Board` keeps its `Menu`,
+  // which is the right control at three lanes; this is the one for a
+  // page with thirty-four groups on it.
+  expect(componentNames.length).toBe(57)
 
   for (const name of componentNames) {
     expect(barrel).toContain(`export { ${name} }`)
