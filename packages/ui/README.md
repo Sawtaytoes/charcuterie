@@ -59,6 +59,17 @@ its own chips is the only geometry a rail needs. Not to be confused with `Rail`,
 shell's side landmark — `FileDropZone` is the precedent for the prefix carrying the
 distinction.
 
+**`ReorderList` is the same shape a fourth time, so it is the last time.** A vertical list
+put in a different order by two buttons or by dragging a handle. Docket had written it
+twice — a subtask checklist on HTML5 `draggable`, which does not fire on touch at all, and
+a phase queue with the buttons and no drag — and `Board` had written it once correctly. So
+this component **calls** `useBoardDrag` with a single registered lane rather than forking
+its geometry, the way `VirtualizedGrid` calls `useAdaptiveColumns`; the snapshot, the
+threshold and the pointer capture exist once. The two move buttons are the PRIMARY path and
+the drag is the enhancement, per WCAG 2.5.7 — a host that draws no handle is supported. It
+renders no row, no handle and no buttons: `renderItem` receives `moveBy` and `gripProps`,
+which is what lets one component serve three CSS grids that have nothing in common.
+
 **`BadgeButton` is a `Badge` you can press**, and it came from a consumer rather than from a
 plan: QueuePilot has six pill-shaped controls — per-entry setting tags, an Edit chip, two
 start-point chips, a group chip, a pool's Exclude chip — that were hand-rolled

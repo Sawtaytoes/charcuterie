@@ -512,7 +512,20 @@ test("the barrel is the only place components are re-exported", async () => {
   // is too, while still being exported from the barrel — an app that
   // marks a destination current anywhere else must ask the same
   // question the same way.
-  expect(componentNames.length).toBe(58)
+  //
+  // `ReorderList` — a vertical list put in a different order, by
+  // two buttons or by dragging a handle — is +1 -> 59. It is the
+  // clearest case yet for the fleet's build-it-here rule: Docket
+  // had written the shape twice (a subtask checklist on HTML5
+  // `draggable`, which does not fire on touch at all, and a phase
+  // queue with the buttons and no drag), and `Board` had written
+  // it a third time correctly. So this one does not fork the
+  // geometry — it CALLS `useBoardDrag` with a single registered
+  // lane and the item selector pointed at its own rows, the way
+  // `VirtualizedGrid` calls `useAdaptiveColumns`. It renders no
+  // row, no handle and no buttons; `renderItem` is what lets one
+  // component serve three grids that have nothing in common.
+  expect(componentNames.length).toBe(59)
 
   for (const name of componentNames) {
     expect(barrel).toContain(`export { ${name} }`)

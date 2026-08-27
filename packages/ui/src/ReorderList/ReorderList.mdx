@@ -1,0 +1,83 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as ReorderListStories from "./ReorderList.stories";
+
+<Meta of={ReorderListStories} />
+
+# ReorderList
+
+A vertical list put in a different order — by two buttons, or by dragging a handle.
+
+<Canvas of={ReorderListStories.Default} />
+
+## Props
+
+<Controls />
+
+## Why the library owns this
+
+The shape had been written four times before this file existed. Docket wrote it twice: a
+subtask checklist on HTML5 `draggable`, and a phase queue with the buttons and no drag at
+all. `Board` wrote it once, properly, on Pointer Events. Four implementations of one
+behaviour is the case the fleet's build-it-here rule exists for.
+
+So this component does not fork the geometry — it **calls** `useBoardDrag` with a single
+registered lane and the item selector pointed at its own rows, the same way
+`VirtualizedGrid` calls `useAdaptiveColumns`. The snapshot, the movement threshold, the
+pointer capture and the drop-index arithmetic exist once in this package, and a fix to any
+of them reaches the board and the list together.
+
+## The buttons are primary, the drag is the enhancement
+
+WCAG 2.5.7 requires a single-pointer alternative to any dragging movement, and the board's
+[decision](https://github.com/Sawtaytoes/charcuterie/blob/master/docs/decisions/2026-08-19-the-board-owns-the-move-and-takes-no-drag-and-drop-dependency.md)
+argues the stronger version: the buttons are not a fallback bolted onto a drag. They are the
+only path that works from a keyboard, under a screen reader, or under a thumb in the Narrow
+View.
+
+`renderItem` therefore receives `moveBy`, `isFirst` and `isLast` **before** it receives
+`gripProps`, and a host that draws no handle at all is a supported host.
+
+## `draggable="true"` is the instinct this replaces
+
+Native HTML5 drag-and-drop costs nothing and is the wrong answer. It **does not fire on
+touch at all**, so a checklist built on it cannot be reordered on a tablet; its drag image is
+a browser-drawn ghost with no styling hook worth using; and `dataTransfer` is readable only
+inside a real `drop`, which makes a live drop indicator awkward for no gain.
+
+Pointer Events cost the same — nothing — and are one code path for mouse, touch and pen.
+`setPointerCapture` keeps the drag alive after the row has moved out from under the finger.
+
+The handle carries `touch-action: none`. Without it the browser claims the gesture for a
+scroll and the `pointermove` stream stops one frame in, which reads as "the drag works on my
+desktop and not on my tablet".
+
+## One row gets no controls
+
+<Canvas of={ReorderListStories.SingleItem} />
+
+A single item cannot be put anywhere else. `gripProps` comes back empty and `moveBy` does
+nothing, so a host cannot leave a dead handle on a one-row list by forgetting to check —
+which is the part every hand-rolled copy of this shape did forget.
+
+## What it deliberately does not render
+
+No row, no handle, no buttons and no glyph. The host renders all four through `renderItem`,
+which is what lets one component serve a checklist, a phase queue and a card list whose CSS
+grids have nothing in common. The library ships no icons either, so the position number
+doubling as the handle is the pattern to copy: a list that is ordered wants the number
+printed anyway.
+
+## The move is announced, with its position
+
+Every commit writes a sentence into a named `role="status"` region: *"Moved Sand the cut
+edge to position 2 of 5."* The **position** is there because "moved" leaves a screen-reader
+user unable to tell the top of a list from the bottom of thirty — the one piece of feedback
+a sighted user gets free from watching the row land, and the one every drag implementation
+forgets to say out loud.
+
+## `toIndex` is already corrected
+
+`onReorder(fromIndex, toIndex)` hands back an index into `items` that has already accounted
+for the row's own removal, so a handler is `splice(from, 1)` then `splice(to, 0, row)` with
+no arithmetic of its own. That is `toSettledIndex`, shared with `Board`.
