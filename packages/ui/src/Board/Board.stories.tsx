@@ -477,7 +477,7 @@ export const AllVariants: Story = {
 
       <StoryCell
         align="stretch"
-        label="movable, with the app's own `moveIcon` — ~55px a row cheaper"
+        label="movable, with the app's own `moveIcon` — ~35px a row cheaper"
       >
         <Board
           {...boardProps}
@@ -896,5 +896,56 @@ export const MarkdownTitles: Story = {
         }))}
       />
     </Frame>
+  ),
+}
+
+/**
+ * **The handle wears the gesture that can actually succeed**, and
+ * the two panels below are the same board at two widths.
+ *
+ * Wide, the lanes are side by side: there is somewhere to drop, so
+ * the handle is the app's `moveIcon` — a grip, which is what teaches
+ * a drag. Narrow, there is one lane and a segmented control: nothing
+ * on screen to drop onto, so the handle says **Move**, which is the
+ * gesture that works there. Pressing it opens the same menu at both
+ * widths, and the accessible name is the same sentence at both.
+ *
+ * QueuePilot is why this is not a preference. It shipped `≡` in a
+ * one-lane board and the owner could not move anybody — *"There's
+ * no right-click or anything. How do I move these?"* — and the
+ * first fix took the glyph away at every width, which broke the
+ * half that had been right.
+ */
+export const MoveHandleByWidth: Story = {
+  render: (boardProps) => (
+    <div className="flex flex-col gap-8">
+      <StoryCell
+        align="stretch"
+        label="past --cq-lg — three lanes, so the handle is a grip"
+      >
+        <Frame inlineSize="72rem">
+          <Board
+            {...boardProps}
+            label="Today, wide enough to drag"
+            moveIcon={<MoreIcon />}
+            onMove={() => undefined}
+          />
+        </Frame>
+      </StoryCell>
+
+      <StoryCell
+        align="stretch"
+        label="under --cq-lg — one lane, so the handle says Move"
+      >
+        <Frame inlineSize="34rem">
+          <Board
+            {...boardProps}
+            label="Today, one lane at a time"
+            moveIcon={<MoreIcon />}
+            onMove={() => undefined}
+          />
+        </Frame>
+      </StoryCell>
+    </div>
   ),
 }
