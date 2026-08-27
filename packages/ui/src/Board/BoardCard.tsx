@@ -147,13 +147,16 @@ export type BoardCardProps = {
   item: BoardItem
   laneLabel: string
   /**
-   * Shown on the move handle instead of the word "Move". The
-   * library ships no icons, so the default is words — a `⋮` renders
-   * as nothing where the font lacks it, which includes the kiosk
-   * image and the ePaper build. An app that already owns a glyph
-   * set passes one and buys back the ~55px per row that a word
-   * costs, which in a 500px lane is the difference between twenty
-   * characters of title and thirty.
+   * Shown on the move handle **while the lanes are side by side**,
+   * instead of the word "Move". Below the board's `cq-lg` the word
+   * comes back whatever this is — see the handle section below.
+   *
+   * The library ships no icons, so the default is words — a `⋮`
+   * renders as nothing where the font lacks it, which includes the
+   * kiosk image and the ePaper build. An app that already owns a
+   * glyph set passes one and buys back the ~35px per row that a
+   * word costs, which in a 500px lane is several characters of
+   * title.
    */
   moveIcon?: ReactNode
   /** The lanes this card can be sent to — never its own. */
@@ -205,6 +208,38 @@ export type BoardCardProps = {
  * on screen at all. Dragging from it moves the card directly. Both
  * commit through the same callback, so there is no second code path
  * to keep honest and neither is a fallback for the other.
+ *
+ * ### What it WEARS depends on whether a drag can succeed
+ *
+ * The two drivers are not equally available at every width, so the
+ * handle does not claim they are:
+ *
+ * | The board is | The handle shows | Because |
+ * | --- | --- | --- |
+ * | `cq-lg` and wider — lanes side by side | the app's `moveIcon` | the other lanes are on screen, so a drag has somewhere to land, and a grip glyph teaches that gesture |
+ * | narrower — one lane and a segmented control | the word **Move** | there is nothing on screen to drop onto, so the only gesture the glyph teaches is the one that cannot work |
+ *
+ * That table is a bug report. QueuePilot shipped a `≡` handle in a
+ * one-lane board and the owner could not move anybody: *"I can't
+ * seem to drag 'n drop the names from Everyone Else anywhere else.
+ * There's no right-click or anything. How do I move these?"* The
+ * first fix took the glyph away everywhere, which was the wrong
+ * half — *"I think the drag handles were fine, but now you have it
+ * in a 3-column mode, so dragging would work, but it has this
+ * 'move' button instead."*
+ *
+ * Both are in the DOM and CSS picks; neither is rendered from a
+ * measurement. A `ResizeObserver` would get the first paint wrong,
+ * and a kiosk Pi shows that. Both are `aria-hidden`, and the
+ * handle's whole accessible name comes from the `VisuallyHidden`
+ * beside them — so the name is the same sentence at every width,
+ * which is what keeps one `getByRole` query working in both
+ * layouts.
+ *
+ * The query is against the **board's** container, named `board`,
+ * not the lane's. A lane in a three-up board is narrow and the
+ * Narrow View's single lane is wide, so the nearer container
+ * answers this question exactly backwards.
  */
 export const BoardCard = ({
   item,
@@ -346,12 +381,29 @@ export const BoardCard = ({
                     <Button
                       appearance="ghost"
                       intent="neutral"
-                      // `touch-none` so a touch drag is a drag
-                      // rather than a page scroll. Only the handle
-                      // needs it; the rest of the gesture is covered
-                      // by `preventDefault` on the captured
-                      // `pointermove`.
-                      className="touch-none opacity-70 group-hover:opacity-100"
+                      className={toClassName(
+                        // `touch-none` so a touch drag is a drag
+                        // rather than a page scroll. Only the handle
+                        // needs it; the rest of the gesture is
+                        // covered by `preventDefault` on the
+                        // captured `pointermove`.
+                        "touch-none opacity-70 group-hover:opacity-100",
+                        // `sizing` is a prop and cannot be two
+                        // things at once, so the button stays
+                        // `control`-sized — which is what the word
+                        // needs — and takes `icon` sizing back at
+                        // the width where the glyph is what is
+                        // showing. These are the two utilities
+                        // `ICON_CONTROL_SIZE_CLASS.sm` is, minus the
+                        // height `CONTROL_SIZE_CLASS.sm` already
+                        // set. Deterministic rather than a
+                        // specificity coin-flip: Tailwind orders a
+                        // variant after the utility it varies, which
+                        // is the same thing the lane's own
+                        // `cq-lg:p-0` relies on.
+                        moveIcon != null &&
+                          "@min-[48rem]/board:w-(--control-height-sm) @min-[48rem]/board:px-0",
+                      )}
                       onClick={() => {
                         setIsMenuVisible(
                           (isVisible) => !isVisible,
@@ -361,23 +413,53 @@ export const BoardCard = ({
                         onStartDrag?.(pointerEvent)
                       }}
                       size="sm"
-                      sizing={moveIcon ? "icon" : "control"}
+                      sizing="control"
                     >
-                      {moveIcon ?? "Move"}
+                      {moveIcon == null ? null : (
+                        // `hidden` first, so a browser with no
+                        // container-query support — and every test
+                        // renderer that does not lay out — keeps the
+                        // word, which is the affordance that works
+                        // everywhere.
+                        //
+                        // `contents` rather than `inline`: the glyph
+                        // stays a direct flex child of the button,
+                        // so it centres the way it did when it was
+                        // the button's only content.
+                        <span
+                          aria-hidden="true"
+                          className="hidden @min-[48rem]/board:contents"
+                        >
+                          {moveIcon}
+                        </span>
+                      )}
+
+                      <span
+                        aria-hidden="true"
+                        className={toClassName(
+                          moveIcon != null &&
+                            "@min-[48rem]/board:hidden",
+                        )}
+                      >
+                        Move
+                      </span>
 
                       {/*
                        * Thirty controls all named "Move" is thirty
                        * indistinguishable buttons to a screen reader
                        * and to `getByRole("button", { name })`, so
                        * the accessible name says *which* card and
-                       * where it currently is. With an icon this is
-                       * the whole name; with the word it qualifies
-                       * it.
+                       * where it currently is.
+                       *
+                       * The whole name lives here, and both visible
+                       * affordances are `aria-hidden`, because which
+                       * of them is painted is a CSS answer that the
+                       * accessible name must not depend on — a
+                       * handle called "Move X" wide and "Move Move
+                       * X" narrow is one control with two names.
                        */}
                       <VisuallyHidden>
-                        {moveIcon
-                          ? `Move ${item.title}, currently in ${laneLabel}`
-                          : ` ${item.title}, currently in ${laneLabel}`}
+                        {`Move ${item.title}, currently in ${laneLabel}`}
                       </VisuallyHidden>
                     </Button>
                   }

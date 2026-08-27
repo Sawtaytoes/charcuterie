@@ -103,10 +103,33 @@ awkward. Pointer Events cost the same (nothing) and cover every input.
 `Board` ships **no icon**, because a `⋮` renders as nothing where the font lacks it — this
 sandbox's chromium, the kiosk image, the ePaper build
 ([decision](https://github.com/Sawtaytoes/charcuterie/blob/master/docs/decisions/2026-07-29-ship-no-icons-and-no-symbol-glyphs.md)).
-An app that already owns a glyph set passes `moveIcon` and buys back ~55px a row, which in a
-500px lane is the difference between twenty characters of title and thirty.
+An app that already owns a glyph set passes `moveIcon` and buys back ~35px a row.
 
 <Canvas of={BoardStories.AllVariants} />
+
+### …and it takes the word back the moment a drag cannot work
+
+`moveIcon` applies **while the lanes are side by side**. Under `cq-lg` the board is one lane
+and a segmented control, there is nothing on screen to drop onto, and a grip glyph there
+teaches the one gesture that cannot succeed. So the handle says **Move** again, which is the
+gesture that does work: pressing it opens the same menu of the other lanes.
+
+<Canvas of={BoardStories.MoveHandleByWidth} />
+
+QueuePilot is the report behind this, from both directions. It shipped `≡` in a one-lane
+board and the owner could not move anybody — *"There's no right-click or anything. How do I
+move these?"* — and the first fix dropped the glyph at every width, which broke the wide
+board where dragging is exactly what a person reaches for
+([decision](https://github.com/Sawtaytoes/charcuterie/blob/master/docs/decisions/2026-08-27-the-move-handle-wears-the-gesture-that-can-succeed.md)).
+
+Both affordances are in the DOM and CSS picks between them — no `ResizeObserver`, so the
+first paint is right on a kiosk Pi. Both are `aria-hidden`, and the handle's whole
+accessible name is a `VisuallyHidden` sentence beside them, so **the name is the same at
+every width** and one `getByRole` query drives both layouts.
+
+The query is against the **board's** container, which is named `board` for this one reason.
+An unnamed `cq-lg:` inside a card asks the *lane*, and the lane answers backwards: a lane in
+a three-up board is ~280px, and the Narrow View's single lane is the whole board.
 
 ## A lane heading can be a link
 
