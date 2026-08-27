@@ -277,6 +277,12 @@ export { Menu } from "./Menu/Menu.tsx"
 export type { ModalProps } from "./Modal/Modal.tsx"
 export { Modal } from "./Modal/Modal.tsx"
 export type {
+  NavBarItem,
+  NavBarProps,
+} from "./NavBar/NavBar.tsx"
+export { NavBar } from "./NavBar/NavBar.tsx"
+export { getIsCurrentHref } from "./NavBar/navBarCurrent.ts"
+export type {
   PickerOption,
   PickerProps,
 } from "./Picker/Picker.tsx"

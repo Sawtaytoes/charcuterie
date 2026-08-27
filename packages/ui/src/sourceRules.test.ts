@@ -497,7 +497,22 @@ test("the barrel is the only place components are re-exported", async () => {
   // only geometric question a rail has. `Board` keeps its `Menu`,
   // which is the right control at three lanes; this is the one for a
   // page with thirty-four groups on it.
-  expect(componentNames.length).toBe(57)
+  //
+  // `NavBar` — the app's destinations as real links, folding whole
+  // into one menu button when the row stops fitting — is +1 -> 58.
+  // It **reuses** `Toolbar`'s `useToolbarOverflow` rather than
+  // forking the measurement, and exists as its own component for one
+  // reason the type system makes plain: a `ToolbarAction` is
+  // `{ label, onSelect }` and a collapsed one becomes a `MenuItem`,
+  // which is also `{ label, onSelect }` — so a nav folded into a
+  // `Toolbar` is a row of `<button>`s, which is the fleet's most
+  // common navigation defect and screenshots identically to the
+  // correct thing. `NavBarLink.tsx` is its member and stays out of
+  // this count by the `<Name>/<Name>.tsx` rule; `navBarCurrent.ts`
+  // is too, while still being exported from the barrel — an app that
+  // marks a destination current anywhere else must ask the same
+  // question the same way.
+  expect(componentNames.length).toBe(58)
 
   for (const name of componentNames) {
     expect(barrel).toContain(`export { ${name} }`)
