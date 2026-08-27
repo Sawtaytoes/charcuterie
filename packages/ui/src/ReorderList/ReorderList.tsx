@@ -1,4 +1,4 @@
-import type { ReactNode } from "react"
+import type { ReactNode, Ref } from "react"
 import { useCallback, useState } from "react"
 
 import {
@@ -83,6 +83,16 @@ export type ReorderListProps<
    * it.
    */
   elementType?: "div" | "ol" | "ul"
+  /**
+   * The container element, for a host that needs it too.
+   *
+   * The component keeps its own hold on that element — the drag
+   * measures its rows off it — so this is MERGED rather than
+   * forwarded. Docket plays a FLIP animation off the same
+   * element, and without this the two uses would have to fight
+   * over one `ref`.
+   */
+  elementRef?: Ref<HTMLElement>
   itemClassName?: string
   items: readonly TItem[]
   /** The list's accessible name. */
@@ -151,6 +161,7 @@ export type ReorderListProps<
  */
 export const ReorderList = <TItem extends ReorderListItem>({
   className,
+  elementRef,
   elementType = "ul",
   itemClassName,
   items,
@@ -215,7 +226,19 @@ export const ReorderList = <TItem extends ReorderListItem>({
       <ListElement
         aria-label={label}
         className={toClassName("relative", className)}
-        ref={registerLane(LANE_KEY)}
+        ref={(element: HTMLElement | null) => {
+          registerLane(LANE_KEY)(element)
+
+          if (typeof elementRef === "function") {
+            elementRef(element)
+
+            return
+          }
+
+          if (elementRef) {
+            elementRef.current = element
+          }
+        }}
       >
         {items.map((item, index) => (
           <ItemElement

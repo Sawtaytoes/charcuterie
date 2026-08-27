@@ -28,6 +28,9 @@ before it receives `gripProps`, and a host that draws no handle at all is suppor
 one-row list gets an empty `gripProps`, so no host can leave a dead handle on it by
 forgetting to check, which is the part every hand-rolled copy did forget.
 
+`elementRef` merges a host's own ref with the one the drag measures rows off, because a
+consumer animating the same element must not have to fight the component for it.
+
 It renders no row, no handle, no buttons and no glyph. That is what lets one component serve
 a checklist, a queue and a card list whose CSS grids have nothing in common.
 
