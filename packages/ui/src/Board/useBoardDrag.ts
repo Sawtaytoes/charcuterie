@@ -140,8 +140,23 @@ export const getIndicatorOffset = (
 }
 
 export const useBoardDrag = ({
+  itemSelector = "[data-board-card]",
   onDrop,
 }: {
+  /**
+   * How a registered list's draggable children are found, so a
+   * consumer that is not a board can reuse this geometry instead
+   * of forking it. `ReorderList` passes `[data-reorder-item]` and
+   * registers a single lane; the default is the board's own
+   * marker, so `Board` reads exactly as it did before this
+   * parameter existed.
+   *
+   * It is a `data-` attribute on both sides rather than a class,
+   * for the reason `BoardCard` already gives: a class is a style
+   * and a consumer's tooling may rename it, and this is a
+   * contract with a hit test.
+   */
+  itemSelector?: string
   onDrop: (
     origin: BoardDragOrigin,
     target: BoardDropTarget,
@@ -207,7 +222,7 @@ export const useBoardDrag = ({
       laneElements.current,
       ([key, element]) => {
         const cardElements = Array.from(
-          element.querySelectorAll("[data-board-card]"),
+          element.querySelectorAll(itemSelector),
         )
 
         return {
@@ -222,7 +237,7 @@ export const useBoardDrag = ({
         }
       },
     )
-  }, [])
+  }, [itemSelector])
 
   const moveTo = useCallback(
     (point: { x: number; y: number }) => {
