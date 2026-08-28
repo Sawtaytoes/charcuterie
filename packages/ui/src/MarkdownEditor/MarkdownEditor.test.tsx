@@ -625,3 +625,111 @@ test("the hint stays described when the container is narrow", async () => {
 
   await expectNoAxeViolations(canvasElement)
 })
+
+/**
+ * THE IMAGE BUTTON, and the reason it is in the toolbar rather
+ * than beside the editor.
+ *
+ * The editor already took a paste and a drop. Neither exists on a
+ * tablet, so the only way in there was a `FileDropZone` under the
+ * box — which appends to the END of the document, because pressing
+ * it moves focus out of the editor. An image in prose belongs at
+ * the point it is explained, so the control has to be one the
+ * editor owns.
+ *
+ * ⚠️ It is the FOURTH action, before the lists, because `Toolbar`
+ * overflows from the end and last put it behind "More actions" at
+ * 900px. It still collapses on a narrow enough surface, so a test
+ * cannot assume the button is on the bar.
+ */
+const openImageButton = async (
+  canvas: Canvas,
+  body: Canvas,
+) => {
+  const onTheBar = canvas.queryByRole("button", {
+    name: "Image",
+  })
+
+  if (onTheBar) {
+    return onTheBar
+  }
+
+  await userEvent.click(
+    canvas.getByRole("button", { name: "More actions" }),
+  )
+
+  // The menu is PORTALLED, so it is on `body` and not inside the
+  // story's canvas.
+  return body.getByRole("menuitem", { name: "Image" })
+}
+
+test("the toolbar offers Image when uploads are wired", async () => {
+  const { body, canvas } = await mountStory(Interactive)
+
+  await expect(
+    await openImageButton(canvas, body),
+  ).not.toBeNull()
+})
+
+/** A button that opens a file picker and then has nowhere to send
+ * the file is worse than no button. */
+test("the toolbar hides Image when nothing can take the file", async () => {
+  const { body, canvas } = await mountStory(NoUpload)
+
+  const overflow = canvas.queryByRole("button", {
+    name: "More actions",
+  })
+
+  if (overflow) {
+    await userEvent.click(overflow)
+  }
+
+  await expect(
+    body.queryByRole("button", { name: "Image" }),
+  ).toBeNull()
+
+  await expect(
+    body.queryByRole("menuitem", { name: "Image" }),
+  ).toBeNull()
+})
+
+test("a picked file uploads and lands at the caret", async () => {
+  const { body, canvas } = await mountStory(Interactive)
+
+  const editor = getEditor(canvas, "Task description")
+
+  await userEvent.click(editor)
+
+  editor.setSelectionRange(0, 0)
+
+  await userEvent.click(await openImageButton(canvas, body))
+
+  const picker = canvas
+    .getByRole("toolbar")
+    .parentElement?.querySelector(
+      'input[type="file"]',
+    ) as HTMLInputElement
+
+  await expect(picker).not.toBeNull()
+
+  // The picker itself is the browser's; what this drives is the
+  // `change` it fires on the way back.
+  await userEvent.upload(
+    picker,
+    new File(["binary"], "jig.png", { type: "image/png" }),
+  )
+
+  await waitFor(() => {
+    expect(editor.value).toContain(
+      "![jig.png](https://example.invalid/blobs/jig.png)",
+    )
+  })
+
+  // At the caret — offset 0 — not appended to the end.
+  await expect(editor.value.startsWith("![jig.png](")).toBe(
+    true,
+  )
+
+  // And it is still markdown, with no tag anywhere.
+  await expect(editor.value).not.toContain("<img")
+})
