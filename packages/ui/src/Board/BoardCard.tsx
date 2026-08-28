@@ -135,8 +135,8 @@ type BoardItemTitleLink =
       href?: never
       onSelect?: never
       /**
-       * Drawn instead of `title`, inside the card's own clamping box
-       * — so it still truncates the way every other card does.
+       * Drawn instead of `title`, inside the card's own two-line
+       * clamping box — so it wraps the way every other card does.
        *
        * It **owns its navigation**: the board adds no link around it,
        * which is why `href` and `onSelect` are refused beside it.
@@ -294,13 +294,15 @@ export const BoardCard = ({
   const menuLabel = isMovable ? "Move" : "More"
 
   const titleBlock = (
-    // `line-clamp-none` before `truncate`, because `line-clamp-2`
-    // sets `display: -webkit-box` and `text-overflow` has nothing to
-    // ellipsise inside one.
-    //
     // A `titleContent` is clamped by the same box as a plain one —
     // it replaces the card's *words*, not the card's shape.
-    <span className="line-clamp-2 cq-sm:line-clamp-none cq-sm:block cq-sm:truncate">
+    //
+    // A card gets more readable room as its lane grows. It must not
+    // spend that room by returning to a single ellipsised line: task
+    // titles are the card's primary text. Two lines cap card height,
+    // and `wrap-anywhere` keeps an unbroken URL or identifier from
+    // widening a row past its lane.
+    <span className="line-clamp-2 wrap-anywhere">
       {item.titleContent ?? item.title}
     </span>
   )
