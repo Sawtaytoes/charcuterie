@@ -2,4 +2,4 @@
 "@charcuterie/ui": minor
 ---
 
-Let a horizontal Stepper stay compact inside a card when its labels are short enough not to need the responsive vertical layout.
+Add the compact dot-and-line Stepper appearance, and let a horizontal Stepper stay inside a card when its short labels do not need the responsive vertical layout.

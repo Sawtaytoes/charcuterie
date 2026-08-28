@@ -43,6 +43,8 @@ export type Step = {
 export type StepperOrientation = "horizontal" | "vertical"
 
 export type StepperProps = {
+  /** `compact` is the dot-and-line ladder for short status labels in cards. */
+  readonly appearance?: "default" | "compact"
   readonly className?: string
   /**
    * What level the step labels are. The caller's, because only the
@@ -106,6 +108,7 @@ export type StepperProps = {
  * `:not(:last-child)` selector nobody remembers to write.
  */
 export const Stepper = ({
+  appearance = "default",
   className,
   headingLevel = 3,
   isResponsive = true,
@@ -115,6 +118,7 @@ export const Stepper = ({
 }: StepperProps) => {
   const Heading = `h${headingLevel}` as "h3"
   const isHorizontal = orientation === "horizontal"
+  const isCompact = appearance === "compact"
 
   return (
     // The container is a WRAPPER, never the `<ol>` itself.
@@ -177,6 +181,7 @@ export const Stepper = ({
                   (isResponsive
                     ? "cq-md:flex cq-md:min-w-0 cq-md:flex-1 cq-md:flex-col cq-md:gap-y-2"
                     : "flex min-w-0 flex-1 flex-col gap-y-2"),
+                isCompact && "gap-y-1",
                 // Blocked and upcoming recede; the step you can act
                 // on is the one that keeps full contrast. Opacity
                 // rather than a muted token so the step's own
@@ -190,7 +195,9 @@ export const Stepper = ({
             >
               <span
                 className={toClassName(
-                  "col-start-1 row-start-1 grid size-7 place-items-center rounded-full border text-sm tabular-nums",
+                  isCompact
+                    ? "col-start-1 row-start-1 grid size-3 place-items-center rounded-full border text-xs tabular-nums"
+                    : "col-start-1 row-start-1 grid size-7 place-items-center rounded-full border text-sm tabular-nums",
                   STATUS_MARKER_CLASS[status],
                   isHorizontal &&
                     (isResponsive
@@ -198,7 +205,13 @@ export const Stepper = ({
                       : "col-start-1"),
                 )}
               >
-                {step.marker ?? index + 1}
+                {isCompact ? (
+                  <VisuallyHidden>
+                    {step.marker ?? index + 1}
+                  </VisuallyHidden>
+                ) : (
+                  (step.marker ?? index + 1)
+                )}
               </span>
 
               {/* Absent on the last step, so nothing draws a line
@@ -215,9 +228,13 @@ export const Stepper = ({
                       ? "bg-intent-success-solid"
                       : "bg-border-subtle",
                     isHorizontal &&
-                      (isResponsive
-                        ? "cq-md:absolute cq-md:top-3.5 cq-md:start-7 cq-md:my-0 cq-md:h-0.5 cq-md:w-[calc(100%-1.75rem)]"
-                        : "absolute top-3.5 start-7 my-0 h-0.5 w-[calc(100%-1.75rem)]"),
+                      (isCompact
+                        ? isResponsive
+                          ? "cq-md:absolute cq-md:top-1.5 cq-md:start-3 cq-md:my-0 cq-md:h-0.5 cq-md:w-[calc(100%-0.75rem)]"
+                          : "absolute top-1.5 start-3 my-0 h-0.5 w-[calc(100%-0.75rem)]"
+                        : isResponsive
+                          ? "cq-md:absolute cq-md:top-3.5 cq-md:start-7 cq-md:my-0 cq-md:h-0.5 cq-md:w-[calc(100%-1.75rem)]"
+                          : "absolute top-3.5 start-7 my-0 h-0.5 w-[calc(100%-1.75rem)]"),
                   )}
                 />
               )}
@@ -231,7 +248,12 @@ export const Stepper = ({
                       : "col-start-1"),
                 )}
               >
-                <Heading className="m-0 flex flex-wrap items-center gap-2 text-md font-medium text-content-primary">
+                <Heading
+                  className={toClassName(
+                    "m-0 flex flex-wrap items-center gap-2 font-medium text-content-primary",
+                    isCompact ? "text-xs" : "text-md",
+                  )}
+                >
                   {step.label}
 
                   {/* The status as a WORD. Four marker colours is

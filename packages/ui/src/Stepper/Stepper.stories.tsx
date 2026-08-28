@@ -174,6 +174,7 @@ export const Responsive: Story = {
  * compact status ladder inside a card. */
 export const CompactCard: Story = {
   args: {
+    appearance: "compact",
     isResponsive: false,
     orientation: "horizontal",
     steps: [
