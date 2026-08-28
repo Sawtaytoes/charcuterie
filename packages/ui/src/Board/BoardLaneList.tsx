@@ -89,6 +89,7 @@ export type BoardLaneListProps = {
   headingLevel: 2 | 3 | 4 | 5
   isVisibleWhenNarrow: boolean
   lane: BoardLane
+  laneLayout: "columns" | "rows"
   moveIcon?: ReactNode
   moveTargets: readonly { key: string; label: string }[]
   onMoveToLane?: (
@@ -144,6 +145,7 @@ export const BoardLaneList = ({
   headingLevel,
   isVisibleWhenNarrow,
   lane,
+  laneLayout,
   moveIcon,
   moveTargets,
   onMoveToLane,
@@ -189,7 +191,11 @@ export const BoardLaneList = ({
         // queries the **board**, not the list below — an element
         // carrying `container-type` still resolves its own container
         // queries against its nearest ancestor container.
-        isVisibleWhenNarrow ? "flex" : "hidden cq-lg:flex",
+        laneLayout === "rows"
+          ? "flex"
+          : isVisibleWhenNarrow
+            ? "flex"
+            : "hidden cq-lg:flex",
       )}
     >
       {/*
@@ -201,8 +207,20 @@ export const BoardLaneList = ({
        * treatment becomes expressible.
        */}
       <div className="@container">
-        <div className="flex flex-col gap-2 rounded-lg border border-border-subtle bg-surface-raised px-3 py-2 cq-lg:border-0 cq-lg:bg-transparent cq-lg:p-0">
-          <header className="flex items-center gap-2">
+        <div
+          className={toClassName(
+            "gap-2 rounded-lg border border-border-subtle px-3 py-2",
+            laneLayout === "rows"
+              ? "grid bg-surface-raised cq-lg:grid-cols-[12rem_minmax(0,1fr)] cq-lg:items-start cq-lg:gap-x-3"
+              : "flex flex-col bg-surface-raised cq-lg:border-0 cq-lg:bg-transparent cq-lg:p-0",
+          )}
+        >
+          <header
+            className={toClassName(
+              "flex items-center gap-2",
+              laneLayout === "rows" && "flex-wrap",
+            )}
+          >
             <Heading
               className="font-semibold text-content-primary text-sm"
               id={headingId}
@@ -245,7 +263,12 @@ export const BoardLaneList = ({
           </header>
 
           <ul
-            className="relative flex flex-col"
+            className={toClassName(
+              "relative",
+              laneLayout === "rows"
+                ? "grid grid-cols-[repeat(auto-fit,minmax(min(100%,14rem),1fr))] gap-2"
+                : "flex flex-col",
+            )}
             ref={registerListElement}
           >
             {lane.items.length === 0 ? (
@@ -266,6 +289,7 @@ export const BoardLaneList = ({
             ) : (
               lane.items.map((item, index) => (
                 <BoardCard
+                  isInGrid={laneLayout === "rows"}
                   item={item}
                   key={item.key}
                   laneLabel={lane.label}
@@ -304,7 +328,13 @@ export const BoardLaneList = ({
           </ul>
 
           {hiddenCount > 0 ? (
-            <p className="text-content-muted text-xs">
+            <p
+              className={toClassName(
+                "text-content-muted text-xs",
+                laneLayout === "rows" &&
+                  "cq-lg:col-start-2",
+              )}
+            >
               {lane.onShowMore ? (
                 <Button
                   appearance="ghost"
