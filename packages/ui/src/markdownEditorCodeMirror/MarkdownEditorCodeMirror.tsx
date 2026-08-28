@@ -300,6 +300,12 @@ export const MarkdownEditorCodeMirror = ({
 
   const uploadCount = useRef(0)
 
+  /** The toolbar's Image button presses this. A real
+   * `<input type="file">` because nothing else opens a file
+   * picker, and it is the only way in on a touch device — there
+   * is nothing to paste from and nothing to drag. */
+  const imageInputRef = useRef<HTMLInputElement>(null)
+
   const editabilityRef = useRef(new Compartment())
 
   const [isRawMode, setIsRawMode] = useState(
@@ -732,6 +738,34 @@ export const MarkdownEditorCodeMirror = ({
                 )
               },
             },
+            /*
+              IMAGE, and only when the consumer can actually take
+              one. A button that opens a file picker and then has
+              nowhere to send the file is worse than no button.
+
+              Spread rather than a `filter(Boolean)`, so the array
+              stays a `ToolbarItem[]` without a cast.
+
+              ⚠️ FOURTH, and the position is load-bearing rather
+              than aesthetic — same reason as the textarea
+              sibling's. `Toolbar` overflows from the END, so the
+              order IS the priority order, and last put Image
+              behind "More actions" at 900px. The whole point of
+              the button is that adding an image is not buried.
+            */
+            ...(onUploadImage
+              ? [
+                  {
+                    icon: icons?.image,
+                    isDisabled: isDisabled || isReadOnly,
+                    key: "image",
+                    label: "Image",
+                    onSelect: () => {
+                      imageInputRef.current?.click()
+                    },
+                  },
+                ]
+              : []),
             {
               icon: icons?.bulletedList,
               isDisabled: isDisabled || isReadOnly,
@@ -832,6 +866,56 @@ export const MarkdownEditorCodeMirror = ({
           overflow="panel"
           overflowIcon={icons?.overflow}
         />
+
+        {/*
+          The Image button's actual control.
+
+          `hidden`, not `sr-only`: `display: none` takes it out of
+          the accessibility tree, which is what is wanted — the
+          toolbar button is the named control, and a second
+          unlabelled file input announced beside it would be one
+          control too many.
+
+          The insertion lands at the CARET, not at the end of the
+          document, because `readSelection(view)` reads
+          CodeMirror's own selection and the view keeps it while
+          the picker is open. That is the whole reason this is a
+          toolbar button rather than a drop zone under the box.
+        */}
+        {onUploadImage ? (
+          <input
+            accept="image/*"
+            aria-hidden="true"
+            className="hidden"
+            multiple
+            onChange={(changeEvent) => {
+              const view = viewRef.current
+
+              if (view) {
+                for (const file of Array.from(
+                  changeEvent.target.files ?? [],
+                ).filter(isImageFile)) {
+                  uploadCount.current += 1
+
+                  void uploadImage({
+                    count: uploadCount.current,
+                    file,
+                    handlers: handlersRef.current,
+                    setMessage: setUploadMessage,
+                    view,
+                  })
+                }
+              }
+
+              // Cleared so choosing the SAME file twice fires
+              // `change` the second time.
+              changeEvent.target.value = ""
+            }}
+            ref={imageInputRef}
+            tabIndex={-1}
+            type="file"
+          />
+        ) : null}
       </div>
 
       {/*

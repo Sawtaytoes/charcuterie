@@ -242,3 +242,34 @@ export const IconsVersusWords: Story = {
     </StoryGrid>
   ),
 }
+
+/**
+ * With an upload wired, so the **Image** toolbar action appears.
+ *
+ * The editor already took a paste and a drop; neither exists on a
+ * tablet, and a `FileDropZone` beside the box appends to the end of
+ * the document because pressing it moves focus out. The toolbar
+ * button keeps the insertion at the caret, which is the whole point
+ * of an image in prose.
+ *
+ * The upload here is a fake that resolves after a beat, so the
+ * placeholder is visible while it runs. A real consumer returns a
+ * URL from its own blob storage.
+ */
+export const Uploading: Story = {
+  args: {
+    defaultValue:
+      "Press Image, or paste one, and it lands where the caret is.\n",
+    label: "Task description",
+    onUploadImage: async (file: File) => {
+      await new Promise((resolve) => {
+        setTimeout(resolve, 600)
+      })
+
+      return {
+        alt: file.name,
+        url: `https://example.invalid/blobs/${encodeURIComponent(file.name)}`,
+      }
+    },
+  },
+}
