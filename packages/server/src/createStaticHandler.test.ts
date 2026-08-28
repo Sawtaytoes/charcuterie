@@ -163,6 +163,59 @@ describe("cache headers", () => {
   })
 })
 
+describe("deployment marker", () => {
+  test("serves a no-cache build marker outside the SPA fallback", async () => {
+    const response = await request(
+      "/__charcuterie/deployment",
+    )
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get("cache-control")).toBe(
+      "no-cache",
+    )
+    await expect(response.json()).resolves.toEqual({
+      buildId: expect.stringMatching(/^[a-f0-9]{64}$/),
+    })
+  })
+
+  test("publishes the current build when an SSE client connects", async () => {
+    const response = await request(
+      "/__charcuterie/deployment/events",
+    )
+    const reader = response.body?.getReader()
+    const first = await reader?.read()
+    await reader?.cancel()
+
+    expect(response.headers.get("content-type")).toContain(
+      "text/event-stream",
+    )
+    expect(new TextDecoder().decode(first?.value)).toMatch(
+      /^event: deployment\ndata: {"buildId":"[a-f0-9]{64}"}\n\n$/,
+    )
+  })
+
+  test("can turn deployment endpoints off for an asset-only origin", async () => {
+    const assetOnly = new Hono()
+    assetOnly.use(
+      "*",
+      createStaticHandler({
+        deploymentEventsPath: false,
+        deploymentPath: false,
+        hasSpaFallback: false,
+        rootDir,
+      }),
+    )
+    assetOnly.notFound((context) =>
+      context.json({ error: "not found" }, 404),
+    )
+
+    const response = await assetOnly.request(
+      "/__charcuterie/deployment",
+    )
+    expect(response.status).toBe(404)
+  })
+})
+
 describe("revalidation", () => {
   test("the revalidating bucket gets an ETag", async () => {
     const response = await request("/index.html")

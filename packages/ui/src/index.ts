@@ -186,6 +186,15 @@ export {
   toIsoDate,
 } from "./DatePicker/plainDate.ts"
 export type {
+  DeploymentUpdate,
+  UseDeploymentUpdateOptions,
+} from "./DeploymentUpdate/useDeploymentUpdate.ts"
+export {
+  DEFAULT_DEPLOYMENT_EVENTS_PATH,
+  DEFAULT_DEPLOYMENT_PATH,
+  useDeploymentUpdate,
+} from "./DeploymentUpdate/useDeploymentUpdate.ts"
+export type {
   DialogProps,
   DialogSize,
 } from "./Dialog/Dialog.tsx"
