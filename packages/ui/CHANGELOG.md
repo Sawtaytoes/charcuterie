@@ -1,5 +1,11 @@
 # @charcuterie/ui
 
+## 3.27.1
+
+### Patch Changes
+
+- 9de00a7: Board card titles now wrap to two lines at every lane width. Wide cards no longer replace the second line with a one-line ellipsis.
+
 ## 3.27.0
 
 ### Minor Changes
