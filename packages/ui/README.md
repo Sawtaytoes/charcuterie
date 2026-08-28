@@ -40,8 +40,10 @@ nothing is provided. Recipe: **Guides/Routing** in Storybook.
 
 **`Board` is the first component whose own operation is a write**, and the first to declare
 two nested containers. Lanes with honest counts, priority bars, per-card footers for a live
-run line, real empty states and a `+ n more` overflow — the board's own box decides how many
-lanes are on screen, each lane's box decides whether a card is two lines, one line, or a card.
+run line, real empty states and a `+ n more` overflow — `laneLayout="columns"` places workflow
+lanes beside each other, while `laneLayout="rows"` makes every project pool a horizontal band
+with a responsive card grid. Each lane's box decides whether a card is two lines, one line,
+or a card.
 There is **no media query in it**, because a lane in a three-up board is ~500px on a maximised
 1600px window and a browser at 175% zoom reports ~860 effective pixels for a 1500px one.
 Moving a card takes **no drag-and-drop dependency**: one handle per card, a `Menu` of the
