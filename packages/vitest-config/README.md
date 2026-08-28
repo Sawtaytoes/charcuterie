@@ -1,8 +1,8 @@
 # @charcuterie/vitest-config
 
 A shared Vitest config **factory** for the Charcuterie fleet. Config that is code ships
-as a function, not a static file — the shared 80% (globals, excludes, v8 coverage) comes
-from here; each app supplies its 20% delta.
+as a function, not a static file — the shared defaults use Chromium through Playwright,
+with globals, excludes, and v8 coverage; each app supplies its own delta.
 
 ## Usage
 
@@ -13,7 +13,6 @@ import { createVitestConfig } from "@charcuterie/vitest-config"
 export default createVitestConfig({
   test: {
     setupFiles: ["./src/test/setup.ts"],
-    environment: "jsdom",
   },
 })
 ```
@@ -21,8 +20,9 @@ export default createVitestConfig({
 Overrides are **deep-merged** over the base (via Vitest's own `mergeConfig`), so passing
 `test.exclude` extends rather than replaces the shared excludes only where you intend.
 
-`vitest` is a peer dependency — the app owns the Vitest version, and Renovate bumps this
-package's range fleet-wide when the shared defaults change.
+`vitest`, `@vitest/browser`, `@vitest/browser-playwright`, and `playwright` are peer
+dependencies. The app owns their versions. Renovate bumps this package's ranges fleet-wide
+when the shared defaults change.
 
 ## `optimizeDeps.include` drift — the parity check
 
