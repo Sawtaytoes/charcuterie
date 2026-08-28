@@ -23,6 +23,7 @@ const {
   LinkedLaneHeadings,
   MoveHandleByWidth,
   Responsive,
+  RowLayout,
 } = composeStories(stories)
 
 /**
@@ -73,6 +74,30 @@ test("a board wider than cq-lg shows every lane at once", async () => {
   await expect(
     canvas.queryAllByRole("radiogroup"),
   ).toHaveLength(0)
+})
+
+test("the row layout keeps every lane visible and grids the cards inside it", async () => {
+  const { canvas } = await mountStory(RowLayout)
+
+  await expect(canvas.getAllByRole("group")).toHaveLength(8)
+  await expect(
+    canvas.queryAllByRole("radiogroup"),
+  ).toHaveLength(0)
+
+  const repair = expectAgentDrivable(canvas, {
+    name: "Repair source",
+    role: "group",
+  })
+  const list = within(repair).getByRole("list")
+  const columns = getComputedStyle(list)
+    .gridTemplateColumns.split(" ")
+    .filter(Boolean)
+
+  await expect(getComputedStyle(list).display).toBe("grid")
+  await expect(columns.length).toBeGreaterThan(1)
+  await expect(
+    within(repair).getByText("+ 80 more in Repair source"),
+  ).toBeInTheDocument()
 })
 
 /**

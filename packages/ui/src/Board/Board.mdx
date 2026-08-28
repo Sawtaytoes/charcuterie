@@ -45,6 +45,18 @@ The narrow panel there is **not a phone**. It is the same board in a sidebar, in
 window, or on a display somebody has zoomed to 175% — and a media query cannot tell any of
 those apart from a maximised 4K window.
 
+## Workflow columns and project-pool rows
+
+The default `laneLayout="columns"` is for workflow stages. At `cq-lg` the lanes sit side by
+side; below it, one selected lane stays on screen and a segmented control names the others.
+
+`laneLayout="rows"` is for parallel project pools. Every lane becomes one horizontal band,
+every lane stays visible, and the cards form a responsive grid inside their band. A consumer
+can pass a short `items` array with the true `itemCount`; the remaining count stays explicit
+instead of making one large pool determine the page height. Neither layout scrolls sideways.
+
+<Canvas of={BoardStories.RowLayout} />
+
 ### The three card shapes
 
 Straight from the consumer requirement, which is specific because the owner answered *"which

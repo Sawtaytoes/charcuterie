@@ -42,6 +42,16 @@ export type BoardProps = {
   headingLevel?: 2 | 3 | 4 | 5
   /** The board's accessible name. Required — it is a landmark. */
   label: string
+  /**
+   * How the lanes themselves are arranged.
+   *
+   * `columns` is the workflow shape: lanes sit side by side above
+   * `cq-lg`, and the Narrow View selects one lane. `rows` is the
+   * project-pool shape: every lane is one horizontal band, its cards
+   * form a responsive grid inside that band, and every lane stays on
+   * screen at every width.
+   */
+  laneLayout?: "columns" | "rows"
   lanes: readonly BoardLane[]
   /**
    * What the move handle shows **while the lanes are side by side**.
@@ -91,9 +101,11 @@ export type BoardProps = {
  * So there are **two nested containers**, and they answer two
  * different questions:
  *
- *  - The board's own box decides *how many lanes are on screen* —
- *    three-up at `cq-lg` and wider, one lane plus a segmented
- *    control below it.
+ *  - The board's own box decides *how workflow lanes are shown* —
+ *    side by side at `cq-lg` and wider, one lane plus a segmented
+ *    control below it. A project-pool board with
+ *    `laneLayout="rows"` keeps every lane on screen and grids the
+ *    cards inside each horizontal band instead.
  *  - Each lane's list decides *what shape a card is* — two lines,
  *    one line, or its own card. See `BoardCard`.
  *
@@ -105,9 +117,10 @@ export type BoardProps = {
  * *"No horizontal scroll, ever. The board becomes a segmented
  * control, never a pan surface."* A board that pans sideways hides
  * lanes behind a gesture with no affordance, and on a trackpad it
- * fights the browser's own back-navigation. So the narrow layout
- * shows one lane at a time and names the others in a `radiogroup`
- * that says how many cards each holds.
+ * fights the browser's own back-navigation. So the narrow workflow
+ * layout shows one lane at a time and names the others in a
+ * `radiogroup` that says how many cards each holds. A row layout
+ * wraps its cards inside each lane and also never pans.
  *
  * ### Moving a card is a first-class operation, and it is not a drag
  *
@@ -137,6 +150,7 @@ export const Board = ({
   className,
   headingLevel = 3,
   label,
+  laneLayout = "columns",
   lanes,
   moveIcon,
   narrowLaneKey,
@@ -249,7 +263,12 @@ export const Board = ({
          * board has no stray radiogroup in it.
          */}
         <SegmentedControl
-          className="max-w-full flex-wrap cq-lg:hidden"
+          className={toClassName(
+            "max-w-full flex-wrap",
+            laneLayout === "rows"
+              ? "hidden"
+              : "cq-lg:hidden",
+          )}
           items={lanes.map((lane) => ({
             // Stacked rather than `Todo (6)`, because the count is
             // the reason to look: a lane picker that reads
@@ -276,7 +295,13 @@ export const Board = ({
           selectedValue={visibleLaneKey}
         />
 
-        <div className="flex flex-col gap-4 cq-lg:flex-row cq-lg:items-start">
+        <div
+          className={toClassName(
+            "flex flex-col gap-4",
+            laneLayout === "columns" &&
+              "cq-lg:flex-row cq-lg:items-start",
+          )}
+        >
           {lanes.map((lane) => (
             <BoardLaneList
               headingLevel={headingLevel}
@@ -290,6 +315,7 @@ export const Board = ({
               }
               key={lane.key}
               lane={lane}
+              laneLayout={laneLayout}
               moveIcon={moveIcon}
               moveTargets={lanes
                 .filter((one) => one.key !== lane.key)
