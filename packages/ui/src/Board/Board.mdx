@@ -11,6 +11,8 @@ Lanes of cards, sized by their **container**, moved by keyboard or by pointer â€
 
 <Canvas of={BoardStories.Default} />
 
+<Canvas of={BoardStories.CardMenuItems} />
+
 ## Props
 
 <Controls />
@@ -83,6 +85,9 @@ The move is one control with two drivers, and they commit through the same `onMo
 2. **Pointer dragging from the same handle.** Pointer Events, so mouse, touch and pen are one
    code path, with `setPointerCapture` so the drag survives the pointer leaving the card.
    Escape abandons it.
+
+An item can append actions to that existing menu with `menuItems`. The Board inserts a
+separator after the lane destinations, so a card action does not need a second trigger.
 
 <Canvas of={BoardStories.Interactive} />
 

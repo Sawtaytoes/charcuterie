@@ -15,6 +15,7 @@ import * as stories from "./Board.stories.tsx"
 const {
   AccentEdge,
   AllStates,
+  CardMenuItems,
   Default,
   InBoardScreen,
   Interactive,
@@ -406,6 +407,46 @@ test("the board adds no link of its own around a rich title", async () => {
   await expect(canvasElement.querySelector("a a")).toBe(
     null,
   )
+})
+
+/**
+ * Extra card actions share the existing move menu. A second
+ * trigger would make the card look busy and would split related
+ * actions across two controls, so the component owns the separator
+ * between the lane destinations and the consumer's items.
+ */
+test("a card can append an action to its existing menu", async () => {
+  const { body, canvas } = await mountStory(CardMenuItems)
+
+  const todo = expectAgentDrivable(canvas, {
+    name: "Todo",
+    role: "group",
+  })
+
+  await userEvent.click(
+    within(todo).getByRole("button", {
+      name: /^Move Retire the second scheduler/,
+    }),
+  )
+
+  const menu = await waitFor(() =>
+    expectAgentDrivable(body, {
+      name: /Move Retire the second scheduler/,
+      role: "menu",
+    }),
+  )
+
+  expect(
+    within(menu).getByRole("menuitem", {
+      name: "In Progress",
+    }),
+  ).toBeInTheDocument()
+  expect(
+    within(menu).getByRole("menuitem", {
+      name: "Send to Backlog",
+    }),
+  ).toBeInTheDocument()
+  expect(menu.querySelector("hr")).not.toBeNull()
 })
 
 /**

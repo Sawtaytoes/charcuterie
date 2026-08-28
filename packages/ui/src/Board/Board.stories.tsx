@@ -751,6 +751,46 @@ export const Interactive: Story = {
 }
 
 /**
+ * A consumer can add a card action to the same menu as the lane
+ * moves. The separator is supplied by `BoardCard`, so the action
+ * does not need a second trigger beside the existing one.
+ */
+export const CardMenuItems: Story = {
+  render: () => (
+    <Frame inlineSize="72rem">
+      <Board
+        label="Today, with card actions"
+        lanes={[
+          {
+            items: [
+              {
+                ...TODO_ITEMS[0],
+                menuItems: [
+                  {
+                    key: "send-to-backlog",
+                    label: "Send to Backlog",
+                    onSelect: () => undefined,
+                  },
+                ],
+              },
+            ],
+            key: "todo",
+            label: "Todo",
+          },
+          {
+            items: IN_PROGRESS_ITEMS.slice(0, 1),
+            key: "in-progress",
+            label: "In Progress",
+          },
+        ]}
+        moveIcon={<MoreIcon />}
+        onMove={() => undefined}
+      />
+    </Frame>
+  ),
+}
+
+/**
  * Where it actually goes, and what the consumer still owns.
  *
  * The **"needs attention"** banner is not part of `Board`, and that
