@@ -63,6 +63,7 @@ export type MarkdownEditorIcons = Partial<
     | "bulletedList"
     | "code"
     | "heading"
+    | "image"
     | "italic"
     | "link"
     | "numberedList"
@@ -285,6 +286,12 @@ export const MarkdownEditor = ({
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   const layerRef = useRef<HTMLDivElement>(null)
+
+  /** The toolbar's Image button presses this. It is a real
+   * `<input type="file">` because nothing else opens a file
+   * picker, and it is the only way in on a touch device — there
+   * is nothing to paste from and nothing to drag. */
+  const imageInputRef = useRef<HTMLInputElement>(null)
 
   const uploadCount = useRef(0)
 
@@ -674,6 +681,54 @@ export const MarkdownEditor = ({
                 )
               },
             },
+            /*
+              IMAGE, and only when the consumer can actually take
+              one. A button that opens a file picker and then has
+              nowhere to send the file is worse than no button.
+
+              Spread rather than a `filter(Boolean)` so the array
+              stays a `ToolbarItem[]` without a cast.
+
+              ⚠️ FOURTH, and the position is load-bearing rather
+              than aesthetic. `Toolbar` overflows from the END of
+              this list, so the order IS the priority order. Put
+              last, beside Link where it reads most naturally, and
+              Image was the first thing to collapse into "More
+              actions" — at 900px it was already hidden, and in a
+              comment box in a rail it never appeared at all. That
+              is the complaint this button exists to answer:
+              *"adding an image is way at the bottom"*. Hiding it
+              behind an overflow trigger moves the problem rather
+              than fixing it.
+
+              Fourth is visible wherever four actions fit — at
+              900px the bar carries eight. It still collapses on a
+              genuinely narrow editor (at 460px the bar carries
+              three), which is why a comment box in a rail keeps a
+              `FileDropZone` beside it. It also reads: emphasis,
+              then structure, then insert.
+
+              The caret is why this belongs in the toolbar at all
+              rather than beside the editor. A `FileDropZone` under
+              the box appends to the end of the document, because
+              pressing it moves focus out; the textarea keeps its
+              `selectionStart` while blurred, so the insertion
+              lands where the user last was — which is the whole
+              point of an image in prose.
+            */
+            ...(onUploadImage
+              ? [
+                  {
+                    icon: icons?.image,
+                    isDisabled: isDisabled || isReadOnly,
+                    key: "image",
+                    label: "Image",
+                    onSelect: () => {
+                      imageInputRef.current?.click()
+                    },
+                  },
+                ]
+              : []),
             {
               icon: icons?.bulletedList,
               isDisabled: isDisabled || isReadOnly,
@@ -755,6 +810,40 @@ export const MarkdownEditor = ({
           overflow="menu"
           overflowIcon={icons?.overflow}
         />
+
+        {/*
+          The Image button's actual control.
+
+          `hidden`, not `sr-only`: `display: none` takes it out of
+          the accessibility tree, which is what is wanted here —
+          the toolbar button is the named control, and a second
+          unlabelled file input announced beside it would be one
+          control too many. `.click()` on a hidden input opens the
+          picker in every browser the fleet runs.
+
+          `multiple`, because a drop already takes several and the
+          two ways in should not disagree. The value is cleared
+          after each pick so choosing the SAME file twice fires
+          `change` the second time.
+        */}
+        {onUploadImage ? (
+          <input
+            accept="image/*"
+            aria-hidden="true"
+            className="hidden"
+            multiple
+            onChange={(changeEvent) => {
+              uploadImages(
+                Array.from(changeEvent.target.files ?? []),
+              )
+
+              changeEvent.target.value = ""
+            }}
+            ref={imageInputRef}
+            tabIndex={-1}
+            type="file"
+          />
+        ) : null}
       </div>
 
       <div className="grid">
