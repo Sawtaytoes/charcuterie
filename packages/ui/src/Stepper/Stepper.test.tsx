@@ -6,8 +6,13 @@ import { expectNoAxeViolations } from "../expectNoAxeViolations.testHelpers.ts"
 import { mountStory } from "../mountStory.testHelpers.ts"
 import * as stories from "./Stepper.stories.tsx"
 
-const { AllStates, Default, Interactive, Responsive } =
-  composeStories(stories)
+const {
+  AllStates,
+  CompactCard,
+  Default,
+  Interactive,
+  Responsive,
+} = composeStories(stories)
 
 test("the sequence is an ordered list with a name", async () => {
   const { canvas } = await mountStory(Default)
@@ -126,4 +131,14 @@ test("no axe violations, in either orientation", async () => {
   const horizontal = await mountStory(Responsive)
 
   await expectNoAxeViolations(horizontal.canvasElement)
+})
+
+test("a compact card can keep the horizontal ladder below cq-md", async () => {
+  const { canvas } = await mountStory(CompactCard)
+
+  await expect(
+    getComputedStyle(
+      canvas.getByRole("list", { name: "Ingest sequence" }),
+    ).flexDirection,
+  ).toBe("row")
 })
