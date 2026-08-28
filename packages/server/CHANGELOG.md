@@ -1,5 +1,11 @@
 # @charcuterie/server
 
+## 0.5.1
+
+### Patch Changes
+
+- 6b52de5: Let static handlers initialise before their Vite output exists. Deployment marker routes now fall through until `index.html` is available.
+
 ## 0.5.0
 
 ### Minor Changes
