@@ -1,5 +1,11 @@
 # @charcuterie/ui
 
+## 3.28.0
+
+### Minor Changes
+
+- 105797f: Add the compact dot-and-line Stepper appearance, and let a horizontal Stepper stay inside a card when its short labels do not need the responsive vertical layout.
+
 ## 3.27.1
 
 ### Patch Changes
