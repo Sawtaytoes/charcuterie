@@ -55,11 +55,27 @@ export const createDeploymentHandler = ({
   index = "index.html",
   rootDir,
 }: DeploymentHandlerOptions): MiddlewareHandler => {
-  const buildId = createHash("sha256")
-    .update(readFileSync(resolve(rootDir, index)))
-    .digest("hex")
+  let buildId: string | undefined
+  try {
+    buildId = createHash("sha256")
+      .update(readFileSync(resolve(rootDir, index)))
+      .digest("hex")
+  } catch (error) {
+    // A handler can be constructed before a Vite build has created
+    // its output directory. Let static handling fall through in that
+    // case, rather than making server construction fail.
+    if (
+      !(error instanceof Error) ||
+      !("code" in error) ||
+      error.code !== "ENOENT"
+    ) {
+      throw error
+    }
+  }
 
-  const deploymentInfo: DeploymentInfo = { buildId }
+  const deploymentInfo = buildId
+    ? ({ buildId } satisfies DeploymentInfo)
+    : undefined
   const encodedEvent = new TextEncoder().encode(
     `event: deployment\ndata: ${JSON.stringify(deploymentInfo)}\n\n`,
   )
@@ -68,6 +84,10 @@ export const createDeploymentHandler = ({
   )
 
   return async (context, next) => {
+    if (!deploymentInfo) {
+      return next()
+    }
+
     if (context.req.path === deploymentPath) {
       return context.json(deploymentInfo, 200, {
         "Cache-Control": "no-cache",
