@@ -170,6 +170,32 @@ export const Responsive: Story = {
   ),
 }
 
+/** Short labels can opt out of the collapse when the sequence is a
+ * compact status ladder inside a card. */
+export const CompactCard: Story = {
+  args: {
+    isResponsive: false,
+    orientation: "horizontal",
+    steps: [
+      { key: "ordered", label: "Ordered", status: "done" },
+      { key: "shipped", label: "Shipped", status: "done" },
+      { key: "out", label: "Out today", status: "current" },
+      {
+        key: "delivered",
+        label: "Delivered",
+        status: "upcoming",
+      },
+    ],
+  },
+  render: (stepperProps) => (
+    <div className="w-[22rem] max-w-full">
+      <Card>
+        <Stepper {...stepperProps} />
+      </Card>
+    </div>
+  ),
+}
+
 /**
  * The whole keyboard path, which is the point of the headings: a
  * stepper is a document outline, not a widget. There is nothing to

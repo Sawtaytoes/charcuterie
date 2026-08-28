@@ -56,6 +56,13 @@ export type StepperProps = {
    * numbers is a sequence of numbers. */
   readonly label: string
   /**
+   * Whether a requested horizontal sequence collapses below `cq-md`.
+   * Keep this on for prose-sized steps. Turn it off only when the
+   * caller supplies short labels that are designed to remain a compact
+   * ladder inside a card.
+   */
+  readonly isResponsive?: boolean
+  /**
    * `horizontal` is a REQUEST, not a promise: it collapses to
    * vertical below `cq-md`, because four steps side by side in a
    * narrow container squash into unreadable slivers (`2. / De- /
@@ -101,6 +108,7 @@ export type StepperProps = {
 export const Stepper = ({
   className,
   headingLevel = 3,
+  isResponsive = true,
   label,
   orientation = "vertical",
   steps,
@@ -131,7 +139,10 @@ export const Stepper = ({
           // `Board` follows and for the same reason: the owner
           // browses zoomed in, so a window's width is not the
           // number of pixels anything actually has.
-          isHorizontal && "cq-md:flex-row cq-md:gap-0",
+          isHorizontal &&
+            (isResponsive
+              ? "cq-md:flex-row cq-md:gap-0"
+              : "flex-row gap-0"),
         )}
       >
         {steps.map((step, index) => {
@@ -163,7 +174,9 @@ export const Stepper = ({
               className={toClassName(
                 "relative grid grid-cols-[auto_minmax(0,1fr)] grid-rows-[auto_minmax(0,1fr)] gap-x-3",
                 isHorizontal &&
-                  "cq-md:flex cq-md:min-w-0 cq-md:flex-1 cq-md:flex-col cq-md:gap-y-2",
+                  (isResponsive
+                    ? "cq-md:flex cq-md:min-w-0 cq-md:flex-1 cq-md:flex-col cq-md:gap-y-2"
+                    : "flex min-w-0 flex-1 flex-col gap-y-2"),
                 // Blocked and upcoming recede; the step you can act
                 // on is the one that keeps full contrast. Opacity
                 // rather than a muted token so the step's own
@@ -179,7 +192,10 @@ export const Stepper = ({
                 className={toClassName(
                   "col-start-1 row-start-1 grid size-7 place-items-center rounded-full border text-sm tabular-nums",
                   STATUS_MARKER_CLASS[status],
-                  isHorizontal && "cq-md:col-start-1",
+                  isHorizontal &&
+                    (isResponsive
+                      ? "cq-md:col-start-1"
+                      : "col-start-1"),
                 )}
               >
                 {step.marker ?? index + 1}
@@ -199,7 +215,9 @@ export const Stepper = ({
                       ? "bg-intent-success-solid"
                       : "bg-border-subtle",
                     isHorizontal &&
-                      "cq-md:absolute cq-md:top-3.5 cq-md:start-7 cq-md:my-0 cq-md:h-0.5 cq-md:w-[calc(100%-1.75rem)]",
+                      (isResponsive
+                        ? "cq-md:absolute cq-md:top-3.5 cq-md:start-7 cq-md:my-0 cq-md:h-0.5 cq-md:w-[calc(100%-1.75rem)]"
+                        : "absolute top-3.5 start-7 my-0 h-0.5 w-[calc(100%-1.75rem)]"),
                   )}
                 />
               )}
@@ -207,7 +225,10 @@ export const Stepper = ({
               <div
                 className={toClassName(
                   "col-start-2 row-span-2 row-start-1 min-w-0",
-                  isHorizontal && "cq-md:col-start-1",
+                  isHorizontal &&
+                    (isResponsive
+                      ? "cq-md:col-start-1"
+                      : "col-start-1"),
                 )}
               >
                 <Heading className="m-0 flex flex-wrap items-center gap-2 text-md font-medium text-content-primary">
