@@ -12,7 +12,8 @@
     "test:ui-dom": "vitest run --config vitest.ui.config.ts",
     "typecheck": "tsc --noEmit",
     "vrt:capture": "node scripts/vrtCapture.mjs",
-    "vrt:compare": "reg-suit run",
+    "vrt:configure": "node scripts/writeRegConfig.mjs",
+    "vrt:compare": "reg-suit --config .regconfig.json run",
     "vrt:notify": "node scripts/vrtReportStatus.mjs"
   },
   "dependencies": {
