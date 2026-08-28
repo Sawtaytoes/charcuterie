@@ -45,6 +45,34 @@ app.use("*", createStaticHandler({ rootDir: webDistDir }))
 Adopting them in either order is safe: with no `.br`/`.gz` siblings on disk the handler
 serves the originals, and the siblings are inert until something looks for them.
 
+## Deploy updates in open tabs
+
+`createStaticHandler` also serves a no-cache build marker at
+`/__charcuterie/deployment` and an SSE marker stream at
+`/__charcuterie/deployment/events`. The marker is a SHA-256 hash of the deployed
+`index.html`. A Vite build changes the shell when it names a new asset set.
+
+An `EventSource` reconnects after the container replacement. Its first event from the new
+container contains the new marker. Pair the server with `useDeploymentUpdate` from
+`@charcuterie/ui`; it reports `isUpdateAvailable` and gives the app a `reload` action. The
+hook does **not** reload a tab by itself because the tab can have unsaved work.
+
+An app that already has an SSE connection can avoid a second stream:
+
+```tsx
+const { checkForUpdate, isUpdateAvailable, reload } = useDeploymentUpdate({
+  isEventSourceEnabled: false,
+})
+
+// In the existing SSE source's successful reconnect callback:
+void checkForUpdate()
+```
+
+Render an accessible button when `isUpdateAvailable` is true, and call `reload` from that
+button. The static shell already sends `Cache-Control: no-cache`, so the reload fetches the
+new shell and its new immutable asset URLs. Set both `deploymentPath` and
+`deploymentEventsPath` to `false` only for an asset-only origin with no browser client.
+
 ## MQTT cmd/resp
 
 Node-only. Import `@charcuterie/server/mqtt`, not the main barrel, and add `mqtt` as a
