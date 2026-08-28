@@ -117,6 +117,24 @@ CSS `@import` that misses fails **silently**: no error, no utilities, an unstyle
 
 The testing gates are at `@charcuterie/ui/testing`.
 
+## Detect a new deployment
+
+`useDeploymentUpdate` detects that a static SPA has been replaced. It works with
+`createStaticHandler` from `@charcuterie/server`, which provides a no-cache build marker
+and an SSE marker stream by default.
+
+```tsx
+const { isUpdateAvailable, reload } = useDeploymentUpdate()
+
+return isUpdateAvailable ? (
+  <Button onClick={reload}>Update this app</Button>
+) : null
+```
+
+The hook never reloads without the user's action. A page can have unsaved state. If the app
+already owns an SSE connection, set `isEventSourceEnabled: false` and call
+`checkForUpdate()` after that source reconnects.
+
 ### While the packages are unpublished: three lines, and you need all three
 
 A consumer links by `portal:` until this publishes

@@ -7,6 +7,11 @@ import {
   getIsImmutablePath,
   resolveCacheControl,
 } from "./cachePolicy.ts"
+import {
+  createDeploymentHandler,
+  DEFAULT_DEPLOYMENT_EVENTS_PATH,
+  DEFAULT_DEPLOYMENT_PATH,
+} from "./deployment.ts"
 
 /**
  * A path ending in `.something`. Used to tell a missing **asset**
@@ -71,6 +76,20 @@ export type StaticHandlerOptions = {
    * `rootDir` directly, so a rewrite cannot misdirect the shell.
    */
   rewriteRequestPath?: (path: string) => string
+
+  /**
+   * Path for the no-cache JSON build marker. Set to `false` only for
+   * an asset origin that has no browser client. Defaults to
+   * `/__charcuterie/deployment`.
+   */
+  deploymentPath?: string | false
+
+  /**
+   * Path for the build-marker SSE stream. Set to `false` with
+   * `deploymentPath` for an asset-only origin. Defaults to
+   * `/__charcuterie/deployment/events`.
+   */
+  deploymentEventsPath?: string | false
 }
 
 /**
@@ -112,12 +131,25 @@ export type StaticHandlerOptions = {
  * `immutable` that never reached a browser.
  */
 export const createStaticHandler = ({
+  deploymentEventsPath = DEFAULT_DEPLOYMENT_EVENTS_PATH,
+  deploymentPath = DEFAULT_DEPLOYMENT_PATH,
   hasSpaFallback = true,
   immutablePathPrefixes = DEFAULT_IMMUTABLE_PATH_PREFIXES,
   index = "index.html",
   rewriteRequestPath,
   rootDir,
 }: StaticHandlerOptions): MiddlewareHandler => {
+  const deploymentHandler =
+    !hasSpaFallback ||
+    deploymentPath === false ||
+    deploymentEventsPath === false
+      ? undefined
+      : createDeploymentHandler({
+          deploymentEventsPath,
+          deploymentPath,
+          index,
+          rootDir,
+        })
   const serveFile = serveStatic({
     precompressed: true,
     root: rootDir,
@@ -136,6 +168,23 @@ export const createStaticHandler = ({
   const addEtag = etag()
 
   return async (context, next) => {
+    if (deploymentHandler) {
+      let hasFallenThrough = false
+      const continueToStatic = async () => {
+        hasFallenThrough = true
+      }
+      const deploymentResponse = await deploymentHandler(
+        context,
+        continueToStatic,
+      )
+
+      // Hono middleware returns the response it wrote. A fallthrough
+      // invokes our local next, then returns undefined.
+      if (deploymentResponse && !hasFallenThrough) {
+        return deploymentResponse
+      }
+    }
+
     const { path } = context.req
 
     const isImmutable = getIsImmutablePath({
