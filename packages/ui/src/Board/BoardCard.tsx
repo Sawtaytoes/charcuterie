@@ -12,6 +12,7 @@ import {
   FOCUS_RING_CLASS,
   INTENT_SOLID_FILL_CLASS,
 } from "../intentStyles.ts"
+import type { MenuProps } from "../Menu/Menu.tsx"
 import { Menu } from "../Menu/Menu.tsx"
 import { TextLink } from "../TextLink/TextLink.tsx"
 import { toClassName } from "../toClassName.ts"
@@ -55,6 +56,12 @@ type BoardItemFields = {
   title: string
   /** The trailing cluster: an assignee avatar, an elapsed-time chip. */
   trailing?: ReactNode
+  /**
+   * Extra actions in the card's existing menu, after the lane moves.
+   * A separator is added when both sets have entries, so a consumer
+   * can add a card action without creating a second trigger.
+   */
+  menuItems?: MenuProps["items"]
 }
 
 /**
@@ -251,6 +258,34 @@ export const BoardCard = ({
 }: BoardCardProps): ReactNode => {
   const [isMenuVisible, setIsMenuVisible] = useState(false)
 
+  const isMovable =
+    onMoveToLane != null && moveTargets.length > 0
+  const hasMenuItems = (item.menuItems?.length ?? 0) > 0
+  const hasMenu =
+    onMoveToLane != null && (isMovable || hasMenuItems)
+  const menuItems: MenuProps["items"] = [
+    ...(isMovable
+      ? moveTargets.map((target) => ({
+          key: target.key,
+          label: target.label,
+          onSelect: () => {
+            onMoveToLane?.(target.key)
+          },
+        }))
+      : []),
+    ...(hasMenuItems && isMovable
+      ? [
+          {
+            key: "board-extra-actions",
+            type: "separator" as const,
+          },
+        ]
+      : []),
+    ...(item.menuItems ?? []),
+  ]
+
+  const menuLabel = isMovable ? "Move" : "More"
+
   const titleBlock = (
     // `line-clamp-none` before `truncate`, because `line-clamp-2`
     // sets `display: -webkit-box` and `text-overflow` has nothing to
@@ -359,20 +394,14 @@ export const BoardCard = ({
             ) : null}
           </div>
 
-          {item.trailing || onMoveToLane ? (
+          {item.trailing || hasMenu ? (
             <div className="flex shrink-0 items-center gap-1">
               {item.trailing}
 
-              {onMoveToLane && moveTargets.length > 0 ? (
+              {hasMenu ? (
                 <Menu
                   isVisible={isMenuVisible}
-                  items={moveTargets.map((target) => ({
-                    key: target.key,
-                    label: target.label,
-                    onSelect: () => {
-                      onMoveToLane(target.key)
-                    },
-                  }))}
+                  items={menuItems}
                   onDismiss={() => {
                     setIsMenuVisible(false)
                   }}
@@ -409,9 +438,13 @@ export const BoardCard = ({
                           (isVisible) => !isVisible,
                         )
                       }}
-                      onPointerDown={(pointerEvent) => {
-                        onStartDrag?.(pointerEvent)
-                      }}
+                      onPointerDown={
+                        isMovable
+                          ? (pointerEvent) => {
+                              onStartDrag?.(pointerEvent)
+                            }
+                          : undefined
+                      }
                       size="sm"
                       sizing="control"
                     >
@@ -441,7 +474,7 @@ export const BoardCard = ({
                             "@min-[48rem]/board:hidden",
                         )}
                       >
-                        Move
+                        {menuLabel}
                       </span>
 
                       {/*
@@ -459,7 +492,9 @@ export const BoardCard = ({
                        * X" narrow is one control with two names.
                        */}
                       <VisuallyHidden>
-                        {`Move ${item.title}, currently in ${laneLabel}`}
+                        {isMovable
+                          ? `Move ${item.title}, currently in ${laneLabel}`
+                          : `More actions for ${item.title}, currently in ${laneLabel}`}
                       </VisuallyHidden>
                     </Button>
                   }
