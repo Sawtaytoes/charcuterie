@@ -295,6 +295,16 @@ export const LinkIcon = (): ReactNode => (
   </svg>
 )
 
+export const ImageIcon = (): ReactNode => (
+  <svg {...iconProps} aria-hidden="true">
+    <rect height="16" rx="2" width="18" x="3" y="4" />
+
+    <path d="M3 15l5-5 4 4 3-3 6 6" />
+
+    <circle cx="8.5" cy="9" r="1.2" />
+  </svg>
+)
+
 /**
  * The whole `MarkdownEditorIcons` bag, ready to spread into either
  * editor's `icons` prop.
@@ -304,6 +314,7 @@ export const MARKDOWN_ICONS = {
   bulletedList: <BulletedListIcon />,
   code: <CodeIcon />,
   heading: <HeadingIcon />,
+  image: <ImageIcon />,
   italic: <ItalicIcon />,
   link: <LinkIcon />,
   numberedList: <NumberedListIcon />,

@@ -114,7 +114,7 @@ A consumer that must swap the whole document — Docket opening a different task
 with a `key`. That is one line, and it is honest about the fact that the old undo history
 belonged to the old document.
 
-## Paste an image at the cursor
+## Put an image at the cursor — paste, drop, or press **Image**
 
 ```tsx
 <MarkdownEditor
@@ -137,8 +137,35 @@ during an upload and the insertion point has to move with what they type. It car
 counter so two files of the same name do not resolve into each other's slot, and a failed
 upload leaves a document the user can read and fix rather than a dangling widget.
 
-Omit `onUploadImage` and image paste is simply not offered. A `<textarea>` ignores a pasted
-image on its own, which is the correct fallback rather than a broken one.
+Omit `onUploadImage` and none of the three is offered — no toolbar button, and a paste left
+to the browser. A `<textarea>` ignores a pasted image on its own, which is the correct
+fallback rather than a broken one.
+
+### The **Image** button, and why it is in the toolbar
+
+Paste and drop are both mouse-and-keyboard gestures. On a tablet there is nothing to paste
+from and nothing to drag, so wiring `onUploadImage` also puts an **Image** action in the
+toolbar: it opens the platform file picker, which on a phone is where the camera is offered.
+
+It is a toolbar action rather than a `FileDropZone` under the box **because of the caret**.
+Pressing anything outside the editor moves focus out of it, so a control beside the editor
+can only append to the end of the document — and an image in prose belongs at the point it
+is explained, not stapled to the bottom. The `<textarea>` keeps its `selectionStart` while
+blurred, so the insertion lands where the user last was.
+
+**It is the fourth action, and the position is load-bearing.** `Toolbar` overflows from the
+**end** of the list, so the order in that list is the priority order. Placed last — beside
+Link, where it reads most naturally — Image was the first thing to collapse, hidden behind
+"More actions" at 900px. A control nobody can find does not fix "adding an image is buried";
+it moves the problem. Fourth is visible wherever four actions fit, and it reads as a group:
+emphasis, structure, insert.
+
+⚠️ **It still collapses on a genuinely narrow editor, and that is not a bug to route around.**
+Measured on the `Interactive` story: at 900px the bar carries eight actions and Image is one
+of them; at 460px it carries three, and everything after Heading is in the overflow. A
+comment box in a rail is that width. Keep a `FileDropZone` beside such an editor as well —
+appending to the end of the document is the right trade when the alternative is a control
+nobody can reach.
 
 ## Composition, and the one component that did not fit
 
@@ -152,7 +179,8 @@ component.
 `<label>` around a file input covering its whole area — correct for "drop a disc image here",
 and wrong for a text surface, where the drop has to land *at a character offset* and the area
 has to keep taking clicks as caret placement. So the editor handles its own drop, and
-`FileDropZone` stays the right answer for the attachment list beside it.
+`FileDropZone` stays the right answer for the attachment list beside it — and for a
+narrow editor whose toolbar has collapsed the Image action away.
 
 <Canvas of={MarkdownEditorStories.Responsive} />
 
