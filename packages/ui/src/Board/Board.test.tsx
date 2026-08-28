@@ -76,6 +76,24 @@ test("a board wider than cq-lg shows every lane at once", async () => {
   ).toHaveLength(0)
 })
 
+/**
+ * Width changes a card's chrome and metadata layout. It does not
+ * turn the task title back into one ellipsised line: a wider board
+ * is purchased to read more of the work, not less.
+ */
+test("wide Board cards keep task titles wrapped to two lines", async () => {
+  const { canvas } = await mountStory(MarkdownTitles)
+
+  const titleLink = canvas.getByRole("link", {
+    name: /deduplicate .*archive by content hash/i,
+  })
+  const title = titleLink.closest(".line-clamp-2")
+
+  await expect(title).toHaveClass("line-clamp-2")
+  await expect(title).toHaveClass("wrap-anywhere")
+  await expect(title).not.toHaveClass("truncate")
+})
+
 test("the row layout keeps every lane visible and grids the cards inside it", async () => {
   const { canvas } = await mountStory(RowLayout)
 
