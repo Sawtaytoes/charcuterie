@@ -17,3 +17,10 @@ export {
   createStaticHandler,
   type StaticHandlerOptions,
 } from "./createStaticHandler.ts"
+export {
+  createDeploymentHandler,
+  DEFAULT_DEPLOYMENT_EVENTS_PATH,
+  DEFAULT_DEPLOYMENT_PATH,
+  type DeploymentHandlerOptions,
+  type DeploymentInfo,
+} from "./deployment.ts"
