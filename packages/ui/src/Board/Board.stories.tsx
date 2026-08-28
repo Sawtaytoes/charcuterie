@@ -405,6 +405,35 @@ const LANES: BoardLane[] = [
 ]
 
 /**
+ * Eight parallel project pools, not workflow steps. The repeated
+ * source items are cloned with lane-qualified keys so the story can
+ * put realistic card density in every row without claiming that one
+ * card belongs to eight pools.
+ */
+const POOL_LANES: BoardLane[] = [
+  ["repair", "Repair source", 83],
+  ["add", "Add media", 78],
+  ["replace", "Replace copy", 66],
+  ["review", "Review retention", 38],
+  ["find", "Find source", 31],
+  ["extras", "Specials and films", 18],
+  ["difficult", "Difficult repair", 14],
+  ["unfiled", "Not in a lane", 1],
+].map(([key, label, itemCount]) => ({
+  itemCount: Number(itemCount),
+  items: TODO_ITEMS.slice(
+    0,
+    Math.min(3, Number(itemCount)),
+  ).map((item) => ({
+    ...item,
+    key: `${String(key)}-${item.key}`,
+  })),
+  key: String(key),
+  label: String(label),
+  onShowMore: () => undefined,
+}))
+
+/**
  * A **fixed** inline size, because the three-up layout is a
  * measurement of the board's own box. A story that inherited the
  * canvas width would show three lanes on one machine and one lane
@@ -445,6 +474,25 @@ type Story = StoryObj<typeof meta>
  * display should not be advertising affordances nobody can use.
  */
 export const Default: Story = {}
+
+/**
+ * Parallel project pools as horizontal bands. Every lane stays on
+ * screen; the cards form a responsive grid inside their own lane,
+ * and the honest overflow keeps a large pool from making the page
+ * endless.
+ */
+export const RowLayout: Story = {
+  render: (boardProps) => (
+    <Frame inlineSize="72rem">
+      <Board
+        {...boardProps}
+        label="Project pools"
+        laneLayout="rows"
+        lanes={POOL_LANES}
+      />
+    </Frame>
+  ),
+}
 
 /**
  * Read-only against movable, side by side.
