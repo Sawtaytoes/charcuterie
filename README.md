@@ -19,23 +19,6 @@ one line apart, so **the layer stands**
 ([verdict](docs/decisions/2026-07-30-state-layer-is-charcuterie-on-floating-ui.md), as
 [corrected in M5](docs/decisions/2026-07-30-tab-selection-is-a-single-picker.md)).
 
-**M5 put it into its first consumer, [Rip Deck](../rip-deck/).** `TONE_CLASS` is declared
-zero times; four unnamed progress bars became four named ones; light mode became reachable
-at all. The library **grew** in the process — `Alert` and `SegmentedControl` came out of
-the consumer rather than out of the plan
-([the rule](docs/decisions/2026-07-30-a-consumer-milestone-adds-components.md)) — and
-`portal:` earned its keep by finding three packaging holes that all fail silently.
-**Start from [the M5 handoff](docs/2026-07-30-m5-ripdeck-the-first-consumer.md).**
-
-**M5b put it into a second one, [castkit](../castkit/).** Tokens and logic both reached it
-through seams built for it by name — `variables.css` for a consumer with no Tailwind,
-`createStoreFromSignals` for one with a 60 KB budget — and **the component layer did not
-reach it at all**, because `@charcuterie/ui` is React and slatecast is Preact. It also
-found that this repo's Spectra 6 palette was **invented**: five of six values were colours
-the hardware cannot render, measured against a white it cannot produce
-([decision](docs/decisions/2026-07-31-epaper-is-exempt-from-the-contrast-gate.md)).
-**Start from [the M5b handoff](docs/2026-07-31-m5b-castkit-the-second-consumer.md).**
-
 Next is M6. Behind it:
 [the M4 handoff](docs/2026-07-30-m4-overlays-and-the-tabs-thesis-test.md) and
 [the Storybook review that followed it](docs/2026-07-30-m4-followup-storybook-review-before-m5.md)
@@ -101,18 +84,7 @@ beside each component, mounting the composed story through `run()` in the same c
 ([decision](docs/decisions/2026-07-30-stories-are-demos-tests-are-tests.md), superseding
 M3's). `yarn test` runs both, as the `storybook` and `ui-dom` projects.
 
-Yarn 4, `node-modules` linker, TypeScript 6, Vitest 4, Biome 2, ESLint 10 — matching
-`mux-magic`, the reference app for every convention here. Copy its conventions rather
-than inventing new ones.
-
-Browser-mode tests — Storybook's, and `@charcuterie/logic`'s React/Preact conformance run —
-need a chromium matching **this repo's** Playwright. The agent sandbox bakes its own set at
-`/opt/pw-browsers`, and as of 2026-08-24 the two agree, so no override is needed. They agree
-**by coincidence**: the image pins one Playwright and this repo pins another, and two repos
-in the fleet already disagree. When a run dies naming a build number that is not there,
-install this repo's build into `/tmp/pw-browsers` and point the run at it — never bump the
-repo to match the image. Recipe and reasoning: the note in
-[`packages/logic/README.md`](packages/logic/README.md#testing).
+Yarn 4, `node-modules` linker, TypeScript 6, Vitest 4, Biome 2, ESLint 10.
 
 ## Where the reasoning lives
 
@@ -127,23 +99,18 @@ repo to match the image. Recipe and reasoning: the note in
   here before proposing a change**; a decision on file overrides a default instinct, and
   a past one is superseded by a new dated file rather than edited.
 - Milestone handoffs, which supersede the plan where they disagree:
-  [M1 tokens](docs/2026-07-29-m1-mux-magic-token-swap.md) ·
   [M2 logic](docs/2026-07-29-m2-logic-conformance.md) ·
   [M3 components](docs/2026-07-29-m3-p0-components.md) ·
   [M4 overlays](docs/2026-07-30-m4-overlays-and-the-tabs-thesis-test.md) ·
-  [the M4 Storybook review](docs/2026-07-30-m4-followup-storybook-review-before-m5.md) ·
-  [M5 rip-deck](docs/2026-07-30-m5-ripdeck-the-first-consumer.md) ·
-  [M5b castkit](docs/2026-07-31-m5b-castkit-the-second-consumer.md).
-- The plan and phasing:
-  `agentic/docs/research/2026-07-29-charcuterie-component-library-plan.md`.
+  [the M4 Storybook review](docs/2026-07-30-m4-followup-storybook-review-before-m5.md).
 - [`docs/previews/`](docs/previews/) — the archived M0 bake-off board, the M1 swap
   measurements, and M3's component boards. Rebuild the bake-off with
   `yarn preview:themes`.
 
 ## The three things most likely to get "fixed" by mistake
 
-**`colour` in TypeScript, `--color-*` in CSS.** TS identifiers match `e6Colour` /
-`colourMode` in castkit, per the house rule about existing nomenclature. CSS custom
+**`colour` in TypeScript, `--color-*` in CSS.** TypeScript uses the fleet's British
+spelling. CSS custom
 properties must be `--color-*` because Tailwind v4's `@theme` only generates utilities
 from that namespace — renaming them produces a stylesheet with no utilities and no
 error.
