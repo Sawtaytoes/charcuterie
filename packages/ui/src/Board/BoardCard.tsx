@@ -151,6 +151,12 @@ export type BoardItem = BoardItemAccent &
   BoardItemTitleLink
 
 export type BoardCardProps = {
+  /**
+   * A grid card measures its own inline size for its inner layout.
+   * A list card inherits the lane's measurement, which is almost
+   * the same width and avoids an unnecessary nested container.
+   */
+  isInGrid: boolean
   item: BoardItem
   laneLabel: string
   /**
@@ -182,25 +188,25 @@ export type BoardCardProps = {
  * One row on the board — and *row* is only what it is at some
  * widths.
  *
- * ### The three shapes are one component, chosen by the lane
+ * ### The three shapes are one component, chosen by available space
  *
  * The requirement this was built against is unusually specific, and
  * it is specific because the owner answered "which row style?" with
  * *"all three, depending"*:
  *
- * | The lane is | The card is |
+ * | The card's available width is | The card is |
  * | --- | --- |
  * | narrower than `cq-sm` (24rem) | **two lines** — title clamped to two, metadata underneath, only the trailing slot beside it |
  * | `cq-sm` to `cq-lg` | **one line** — title ellipsised, metadata right-aligned |
  * | `cq-lg` (48rem) and wider | **a card** — its own border, surface and elevation, instead of a divider in a list |
  *
- * Every one of those is a **container** query against the lane's
- * list, never a media query, and the difference is not pedantry: a
- * lane in a three-up board is narrow on a 4K display, and the owner
- * browses zoomed in, so a 1500px window at 175% zoom is ~860
- * effective CSS pixels. Window width is not a proxy for the space
- * this card has. A `@media (max-width: …)` anywhere in this file
- * would be a defect.
+ * Every one of those is a **container** query, never a media query.
+ * A list card reads the lane because it fills that lane. A grid card
+ * is its own container because several cards share a wide row. A
+ * lane in a three-up board is narrow on a 4K display, and a zoomed
+ * browser can report far fewer effective CSS pixels than its window
+ * has. Window width is not a proxy for the space this card has. A
+ * `@media (max-width: …)` anywhere in this file would be a defect.
  *
  * It also dissolved a bug rather than only satisfying a preference:
  * a *fixed* two-line row collapsed its title to `a…` inside a narrow
@@ -249,6 +255,7 @@ export type BoardCardProps = {
  * answers this question exactly backwards.
  */
 export const BoardCard = ({
+  isInGrid,
   item,
   laneLabel,
   moveIcon,
@@ -302,6 +309,7 @@ export const BoardCard = ({
     <li
       className={toClassName(
         "group relative flex gap-2 border-border-subtle border-b py-2 pe-1 last:border-b-0",
+        isInGrid && "@container",
         // At `cq-lg` the list stops being a list of rows: the
         // divider goes and each card grows its own box. The *list*
         // cannot do this to itself — it is the container, and a
