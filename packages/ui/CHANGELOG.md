@@ -1,5 +1,11 @@
 # @charcuterie/ui
 
+## 3.26.0
+
+### Minor Changes
+
+- 71ec7a0: Allow Board cards to append consumer actions to their existing menu.
+
 ## 3.25.0
 
 ### Minor Changes
