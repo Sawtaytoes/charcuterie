@@ -103,8 +103,8 @@ jobs:
 
   # **Visual regression — its own job, on a SELF-HOSTED LAN runner.**
   #
-  # Why not `ubuntu-latest`: the baseline store is Garage (self-hosted S3) at
-  # `garage.octen.dev` / `10.1.0.6:3900`, which resolves only on the LAN — a
+  # Why not `ubuntu-latest`: the baseline store is an S3-compatible service on
+  # the LAN. Its connection details come from repository secrets, and a
   # GitHub-hosted runner cannot reach it. A LAN runner also pins fonts and the
   # browser build, so a re-render of an unchanged story is pixel-identical;
   # that determinism is the single biggest lever against reg-suit flake. The
@@ -113,7 +113,7 @@ jobs:
   #
   # Baselines never touch git (that's the whole design — no LFS on a public
   # repo): capture renders each story light+dark, reg-suit diffs against the
-  # baseline it pulls from Garage and re-publishes actual+diff+report there,
+  # baseline it pulls from the S3 service and re-publishes actual+diff+report there,
   # and we post the verdict back as a commit status + PR comment ourselves —
   # NOT via reg-notify-github-plugin, which would route through reg-suit's
   # third-party hosted GitHub App. `vrtReportStatus.mjs` exits non-zero on a
@@ -131,6 +131,12 @@ jobs:
       contents: read
       statuses: write
       pull-requests: write
+    env:
+      VRT_REPORT_BASE_URL: ${{ secrets.VRT_REPORT_BASE_URL }}
+      VRT_S3_BUCKET: ${{ secrets.VRT_S3_BUCKET }}
+      VRT_S3_PUBLIC_URL: ${{ secrets.VRT_S3_PUBLIC_URL }}
+      VRT_S3_ENDPOINT: ${{ secrets.VRT_S3_ENDPOINT }}
+      VRT_S3_REGION: ${{ secrets.VRT_S3_REGION }}
     steps:
       # fetch-depth 0: reg-keygen-git-hash-plugin walks history to find the
       # commit whose snapshot is the baseline — a shallow clone starves it.
@@ -162,17 +168,18 @@ jobs:
       - run: yarn workspace @charcuterie/docs exec playwright install chromium
       - run: yarn build:storybook
       - run: yarn workspace @charcuterie/docs vrt:capture
+      - run: yarn workspace @charcuterie/docs vrt:configure
 
-      - name: Compare against baseline and publish to Garage
+      - name: Compare against baseline and publish to S3
         id: regsuit
         working-directory: packages/docs
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.GARAGE_S3_ACCESS_KEY }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.GARAGE_S3_SECRET_KEY }}
-          AWS_REGION: garage
+          AWS_REGION: ${{ secrets.VRT_S3_REGION }}
         run: |
           set -o pipefail
-          yarn reg-suit run | tee reg-out.txt
+          yarn vrt:compare | tee reg-out.txt
           echo "key=$(grep -oP "current snapshot key: '\K[0-9a-f]+" reg-out.txt | tail -1)" >> "$GITHUB_OUTPUT"
           echo "url=$(grep -oP 'Report URL: \K\S+' reg-out.txt | tail -1)" >> "$GITHUB_OUTPUT"
 
