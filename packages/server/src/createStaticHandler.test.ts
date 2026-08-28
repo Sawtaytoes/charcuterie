@@ -164,6 +164,28 @@ describe("cache headers", () => {
 })
 
 describe("deployment marker", () => {
+  test("falls through when the build output does not exist yet", async () => {
+    const missingOutput = new Hono()
+    missingOutput.use(
+      "*",
+      createStaticHandler({
+        rootDir: join(rootDir, "not-built-yet"),
+      }),
+    )
+    missingOutput.notFound((context) =>
+      context.json({ error: "not found" }, 404),
+    )
+
+    const deploymentResponse = await missingOutput.request(
+      "/__charcuterie/deployment",
+    )
+    const routeResponse =
+      await missingOutput.request("/settings")
+
+    expect(deploymentResponse.status).toBe(404)
+    expect(routeResponse.status).toBe(404)
+  })
+
   test("serves a no-cache build marker outside the SPA fallback", async () => {
     const response = await request(
       "/__charcuterie/deployment",
