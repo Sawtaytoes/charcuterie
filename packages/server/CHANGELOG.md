@@ -1,5 +1,11 @@
 # @charcuterie/server
 
+## 0.5.0
+
+### Minor Changes
+
+- 5c044d2: Detect replaced static-SPA deployments with no-cache build markers and an SSE reconnect signal. `useDeploymentUpdate` exposes a safe user-controlled reload action.
+
 ## 0.4.0
 
 ### Minor Changes
