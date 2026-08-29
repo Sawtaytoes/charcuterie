@@ -16,6 +16,7 @@ const {
   Default,
   Interactive,
   Responsive,
+  Scrollable,
   WithBothRails,
   WithStartRail,
 } = composeStories(stories)
@@ -150,6 +151,34 @@ test("the shell fills the viewport at desktop width without overflowing it", asy
   await mountStory(WithBothRails)
 
   await expectNoHorizontalScroll()
+})
+
+test("only main scrolls vertically, keeping the rail available", async () => {
+  await setViewport(DESKTOP)
+
+  const { canvas, canvasElement } =
+    await mountStory(Scrollable)
+
+  const shell =
+    canvasElement.firstElementChild as HTMLElement
+  const main = canvas.getByRole("main")
+  const rail = canvas.getByRole("navigation", {
+    name: "Sections",
+  })
+
+  await expect(shell.clientHeight).toBe(DESKTOP.height)
+  await expect(main.scrollHeight).toBeGreaterThan(
+    main.clientHeight,
+  )
+  await expect(
+    globalThis.getComputedStyle(main).overflowY,
+  ).toBe("auto")
+
+  main.scrollTo({ top: main.scrollHeight })
+
+  await expect(main.scrollTop).toBeGreaterThan(0)
+  await expect(rail.scrollTop).toBe(0)
+  await expectNoAxeViolations(canvasElement)
 })
 
 test("the shell is one banner, one main, and two uniquely-named rails", async () => {

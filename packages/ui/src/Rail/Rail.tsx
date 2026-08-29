@@ -89,7 +89,7 @@ export const Rail = ({
       {...railProps}
       aria-label={label}
       className={toClassName(
-        "flex min-w-0 gap-2 overflow-x-auto border-border-subtle p-4 md:row-start-2 md:w-64 md:flex-col md:overflow-x-visible",
+        "flex min-w-0 gap-2 overflow-x-auto border-border-subtle p-4 md:row-start-2 md:min-h-0 md:w-64 md:flex-col md:overflow-x-visible",
         side === "start"
           ? "row-start-2 border-b md:col-start-1 md:border-b-0 md:border-e"
           : "row-start-4 border-t md:col-start-3 md:border-t-0 md:border-s",
