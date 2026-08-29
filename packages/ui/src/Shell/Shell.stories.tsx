@@ -10,6 +10,7 @@ import {
   PageContent,
   RailDetail,
   RailNavigation,
+  ScrollFiller,
 } from "../shell.storyHelpers.tsx"
 import { Shell } from "./Shell.tsx"
 
@@ -179,6 +180,29 @@ export const Interactive: Story = {
 
       <Main>
         <PageContent />
+      </Main>
+    </Shell>
+  ),
+}
+
+/** A long page leaves the header and rail in place. */
+export const Scrollable: Story = {
+  render: (shellProps) => (
+    <Shell {...shellProps}>
+      <Header
+        actions={<HeaderSchemeToggle />}
+        heading="Rip Deck"
+      />
+
+      <Rail label="Sections" landmark="navigation">
+        <RailNavigation />
+      </Rail>
+
+      <Main>
+        <PageContent />
+        <div style={{ minBlockSize: "150vh" }}>
+          <ScrollFiller />
+        </div>
       </Main>
     </Shell>
   ),
