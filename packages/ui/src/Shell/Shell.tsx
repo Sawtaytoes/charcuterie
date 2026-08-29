@@ -140,7 +140,7 @@ export const Shell = ({
       <div
         {...divProps}
         className={toClassName(
-          "relative grid min-h-dvh grid-cols-1 grid-rows-[auto_auto_1fr_auto] overflow-x-clip bg-surface-base text-content-primary md:grid-cols-[auto_minmax(0,1fr)_auto] md:grid-rows-[auto_1fr]",
+          "relative grid h-dvh grid-cols-1 grid-rows-[auto_auto_minmax(0,1fr)_auto] overflow-x-clip bg-surface-base text-content-primary md:grid-cols-[auto_minmax(0,1fr)_auto] md:grid-rows-[auto_minmax(0,1fr)]",
           className,
         )}
       >
