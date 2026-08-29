@@ -1,5 +1,11 @@
 # @charcuterie/ui
 
+## 3.28.1
+
+### Patch Changes
+
+- 689fd66: Keep the app frame visible while `Main` scrolls long page content.
+
 ## 3.28.0
 
 ### Minor Changes
