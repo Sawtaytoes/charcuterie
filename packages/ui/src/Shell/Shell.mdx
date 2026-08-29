@@ -127,6 +127,14 @@ rail that only changes *position* uses a media query and nothing else.
 
 <Canvas of={ShellStories.Responsive} />
 
+## The page content scrolls; the frame stays available
+
+The shell fills the viewport. `Main` is the only vertical scroll region, so a long page does
+not scroll the header or either rail away. This keeps navigation actions available, including
+an app's rail-collapse control. The rail is not a second vertical scroll area.
+
+<Canvas of={ShellStories.Scrollable} />
+
 ## It does not scroll sideways, and that is a test
 
 Plex Channels' narrow view scrolls left and right as wide as its content area. The usual

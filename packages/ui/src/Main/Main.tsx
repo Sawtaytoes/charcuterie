@@ -146,7 +146,7 @@ export const Main = ({
     <main
       {...mainProps}
       className={toClassName(
-        "col-start-1 row-start-3 min-w-0 md:col-start-2 md:row-start-2",
+        "charcuterie-scrollbar col-start-1 row-start-3 min-h-0 min-w-0 overflow-y-auto md:col-start-2 md:row-start-2",
         className,
       )}
       id={id ?? shell?.mainId ?? fallbackId}
