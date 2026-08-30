@@ -1,5 +1,12 @@
 # @charcuterie/ui
 
+## 3.28.2
+
+### Patch Changes
+
+- 8e6a596: Make `VirtualizedGrid` follow the nearest vertical scroll region, including `Main` inside an
+  app `Shell`, instead of always observing the browser window.
+
 ## 3.28.1
 
 ### Patch Changes
