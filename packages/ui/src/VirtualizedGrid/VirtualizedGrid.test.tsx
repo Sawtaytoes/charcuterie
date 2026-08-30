@@ -33,7 +33,8 @@ import * as stories from "./VirtualizedGrid.stories.tsx"
  *    on.
  */
 
-const { AllStates, Default } = composeStories(stories)
+const { AllStates, Default, InShellScrollRegion } =
+  composeStories(stories)
 
 const getLists = (canvasElement: HTMLElement) => [
   ...canvasElement.querySelectorAll<HTMLElement>("ul"),
@@ -144,6 +145,64 @@ test("scrolling changes which rows exist", async () => {
     // in the next one.
     window.scrollTo(0, 0)
   }
+})
+
+test("a grid inside Shell follows Main's one scroll region", async () => {
+  const { canvasElement } = await mountStory(
+    InShellScrollRegion,
+  )
+  const main =
+    canvasElement.querySelector<HTMLElement>("main")
+
+  if (!main) {
+    throw new Error("The shell story has no Main element.")
+  }
+
+  await waitFor(async () => {
+    await expect(
+      getRowIndexes(canvasElement).length,
+    ).toBeGreaterThan(0)
+  })
+
+  await expect(getComputedStyle(main).overflowY).toBe(
+    "auto",
+  )
+  await expect(main.scrollHeight).toBeGreaterThan(
+    main.clientHeight,
+  )
+
+  const before = getRowIndexes(canvasElement)
+
+  main.scrollTop = 6000
+  main.dispatchEvent(new Event("scroll"))
+
+  await waitFor(async () => {
+    await expect(
+      getRowIndexes(canvasElement).some((index) =>
+        before.includes(index),
+      ),
+    ).toBe(false)
+  })
+
+  // The last row must replace the virtual spacer. This is the
+  // reported failure's visible half: the old window observer left
+  // tens of thousands of blank pixels below the first mounted rows
+  // when Main scrolled.
+  main.scrollTop = main.scrollHeight
+  main.dispatchEvent(new Event("scroll"))
+
+  await waitFor(async () => {
+    await expect(
+      getCells(canvasElement).some(
+        (cell) =>
+          cell.getAttribute("aria-posinset") === "2000",
+      ),
+    ).toBe(true)
+  })
+
+  await expect(
+    getList(canvasElement).style.paddingBlockEnd,
+  ).toBe("0px")
 })
 
 test("a screen reader is told the real length", async () => {

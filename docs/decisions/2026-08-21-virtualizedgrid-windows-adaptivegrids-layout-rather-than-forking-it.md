@@ -4,7 +4,7 @@
 - **Date:** 2026-08-21
 - **Type:** Component
 - **Supersedes:** —
-- **Superseded by:** —
+- **Superseded by:** [VirtualizedGrid follows the nearest vertical scroll region](2026-08-30-virtualizedgrid-follows-the-nearest-vertical-scroll-region.md) (point 5 only)
 
 ## Decision
 
