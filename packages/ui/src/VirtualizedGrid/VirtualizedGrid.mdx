@@ -47,16 +47,17 @@ commitment — every mounted row is measured and the estimate corrected. It stil
 be close, because it is what the scrollbar is sized from before anything has been
 measured. A bad guess makes the bar jump under the thumb on the first scroll.
 
-## It scrolls the page, not a box of its own
+## It follows the page's scroll region
 
-`useWindowVirtualizer`, so the page scrolls the way every other page in the fleet
-scrolls — the header leaves, the scrollbar is the browser's, `Ctrl+End` works. A
-component that grew its own `overflow: auto` well would trap the wheel and strand the
-page header above it.
+The grid never creates a scroll box. It follows the nearest ancestor whose vertical
+overflow is `auto` or `scroll`. Inside `Shell`, that is `Main`, so the header and rail stay
+available while the grid scrolls. A standalone grid falls back to the browser window.
 
-The cost is that the grid has to know how far down the document it starts, which it
-measures in a layout effect and feeds to the virtualizer as `scrollMargin`. Get that
-wrong and every row is offset by the height of the header above it.
+The cost is that the grid has to know how far down its scroll region it starts. It measures
+that offset in a layout effect and feeds it to the virtualizer as `scrollMargin`. Get that
+wrong and every row is offset by the chrome above it.
+
+<Canvas of={VirtualizedGridStories.InShellScrollRegion} />
 
 ## The column rule is inherited, not reimplemented
 
