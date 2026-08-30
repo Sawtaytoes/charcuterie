@@ -3,9 +3,13 @@ import { useState } from "react"
 
 import { getColumnChoices } from "../AdaptiveGrid/chooseColumns.ts"
 import type { BlockSizeResolver } from "../AdaptiveGrid/useAdaptiveColumns.ts"
+import { Button } from "../Button/Button.tsx"
 import { StorySection } from "../board.storyHelpers.tsx"
 import { Card } from "../Card/Card.tsx"
+import { Header } from "../Header/Header.tsx"
+import { Main } from "../Main/Main.tsx"
 import { SegmentedControl } from "../SegmentedControl/SegmentedControl.tsx"
+import { Shell } from "../Shell/Shell.tsx"
 import { VirtualizedGrid } from "./VirtualizedGrid.tsx"
 
 /**
@@ -103,6 +107,28 @@ type Story = StoryObj<typeof meta>
  * screen plus `overscanRows` above and below.
  */
 export const Default: Story = {}
+
+/**
+ * The app-shell contract: `Main` is the one vertical scroll region,
+ * and the grid follows it rather than adding document height.
+ *
+ * This is QueuePilot's Pending shape. It is a separate story because
+ * a standalone grid still follows the browser window and both paths
+ * need a real consumer.
+ */
+export const InShellScrollRegion: Story = {
+  parameters: { layout: "fullscreen" },
+  render: (gridProps) => (
+    <Shell contentWidth="full">
+      <Header heading="Pending" />
+
+      <Main>
+        <Button onClick={() => {}}>Mark all seen</Button>
+        <VirtualizedGrid {...gridProps} />
+      </Main>
+    </Shell>
+  ),
+}
 
 /**
  * The same 2,000 items at three window heights.

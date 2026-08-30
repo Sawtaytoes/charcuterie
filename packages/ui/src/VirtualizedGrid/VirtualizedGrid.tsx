@@ -1,17 +1,17 @@
-import { useWindowVirtualizer } from "@tanstack/react-virtual"
 import type { ReactNode } from "react"
-import {
-  useCallback,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react"
+import { useLayoutEffect, useState } from "react"
 
-import { getContentMaxInlineSize } from "../AdaptiveGrid/chooseColumns.ts"
 import type { BlockSizeResolver } from "../AdaptiveGrid/useAdaptiveColumns.ts"
 import { useAdaptiveColumns } from "../AdaptiveGrid/useAdaptiveColumns.ts"
 import { toClassName } from "../toClassName.ts"
+import { ElementGrid } from "./ElementGrid.tsx"
 import { DEFAULT_GRID_GAP_PX } from "./gridGap.ts"
+import { findScrollOwner } from "./virtualizedGridScroll.ts"
+import type {
+  GridWindowProps,
+  ScrollOwner,
+} from "./virtualizedGridTypes.ts"
+import { WindowGrid } from "./WindowGrid.tsx"
 
 export type VirtualizedGridProps<Item> = {
   /**
@@ -140,15 +140,13 @@ export type VirtualizedGridProps<Item> = {
  * idea of the distance from one row to the next and the browser's
  * the same number.
  *
- * ### Why the window and not a scroll box of its own
+ * ### It follows the page's existing scroll owner
  *
- * `useWindowVirtualizer`, so the page scrolls the way every other
- * page in the fleet scrolls — the header leaves, the scrollbar is
- * the browser's, `Ctrl+End` works. A component that grew its own
- * `overflow: auto` well would trap the wheel and strand the page
- * header above it. The cost is `scrollMargin`: the virtualizer has
- * to be told how far down the document the grid starts, which is
- * measured below.
+ * A standalone grid follows the browser window. Inside `Shell`, it
+ * follows `Main`, which is the shell's one vertical scroll region.
+ * It never creates a scroll box of its own. The cost is
+ * `scrollMargin`: the virtualizer has to be told how far down its
+ * scroll owner the grid starts, which is measured below.
  *
  * ### What windowing costs, and what is done about it
  *
@@ -188,85 +186,38 @@ export const VirtualizedGrid = <Item,>({
 
   const drawnColumns = columns ?? layout.columns
 
-  // Folded from what is DRAWN rather than read off the hook, so an
-  // override widens the page cap with it — the same rule
-  // `AdaptiveGrid` follows, and wrong in the same way if it does
-  // not.
-  const contentMaxInlineSize = getContentMaxInlineSize({
-    columns: drawnColumns,
-  })
-
   const rowCount = Math.ceil(items.length / drawnColumns)
 
   /**
-   * How far down the document the grid starts.
-   *
-   * `useWindowVirtualizer` measures against the document, so
-   * without this every row is placed as though the grid began at
-   * the top of the page, and the whole list sits shifted by the
-   * height of the header above it.
-   *
-   * State and not a ref, because it feeds `scrollMargin` and a
-   * change has to re-render. Measured on every commit rather than
-   * on a dependency list: a filter row that grows a line moves the
-   * grid down the page, and nothing in this component's own props
-   * would report that.
+   * Main owns vertical scrolling inside an app Shell. Older pages
+   * and a standalone grid still use the window. Resolve the owner
+   * from the actual tree rather than making every app wire a ref
+   * between two Charcuterie components.
    */
-  const gridElement = useRef<HTMLUListElement>(null)
-  const [scrollMargin, setScrollMargin] = useState(0)
+  const [scrollOwner, setScrollOwner] =
+    useState<ScrollOwner | null>(null)
 
   useLayoutEffect(() => {
-    const element = gridElement.current
+    const element = layout.containerRef.current
 
     if (!element) {
       return
     }
 
-    const next =
-      element.getBoundingClientRect().top + window.scrollY
+    setScrollOwner(findScrollOwner(element))
+  }, [layout.containerRef])
 
-    setScrollMargin((current) =>
-      current === next ? current : next,
-    )
-  })
-
-  /**
-   * A row's height, plus the gap that follows it.
-   *
-   * The gap is added here rather than left to the estimate because
-   * it is real distance the next row starts after: leave it out
-   * and the virtualizer's offsets drift by one gap per row, which
-   * on a list of two thousand is a scrollbar off by half a page.
-   */
-  const measureRow = useCallback(
-    (element: Element) =>
-      element.getBoundingClientRect().height + gap,
-    [gap],
-  )
-
-  const rowVirtualizer = useWindowVirtualizer({
-    count: rowCount,
-    estimateSize: () => itemBlockSize + gap,
-    measureElement: measureRow,
-    overscan: overscanRows,
-    scrollMargin,
-  })
-
-  const virtualRows = rowVirtualizer.getVirtualItems()
-
-  const firstRow = virtualRows[0]
-  const lastRow = virtualRows[virtualRows.length - 1]
-
-  // Everything scrolled past, and everything still to come. The two
-  // numbers that stand in for the rows that do not exist.
-  const paddingBlockStart = firstRow?.start ?? 0
-
-  const paddingBlockEnd = lastRow
-    ? Math.max(
-        0,
-        rowVirtualizer.getTotalSize() - lastRow.end,
-      )
-    : 0
+  const gridProps: GridWindowProps<Item> = {
+    drawnColumns,
+    gap,
+    getItemKey,
+    itemBlockSize,
+    items,
+    label,
+    overscanRows,
+    renderItem,
+    rowCount,
+  }
 
   return (
     <div
@@ -276,65 +227,14 @@ export const VirtualizedGrid = <Item,>({
       )}
       ref={layout.containerRef}
     >
-      <ul
-        aria-label={label}
-        className="grid w-full list-none p-0 [&>*]:min-w-0"
-        ref={gridElement}
-        style={{
-          gap: `${gap}px`,
-          gridTemplateColumns: `repeat(${drawnColumns}, minmax(0, 1fr))`,
-          maxInlineSize: contentMaxInlineSize,
-          // Offset by `scrollMargin` because `start` is measured
-          // from the top of the document, and this padding is
-          // measured from the top of the grid.
-          paddingBlockEnd: `${paddingBlockEnd}px`,
-          paddingBlockStart: `${Math.max(0, paddingBlockStart - scrollMargin)}px`,
-        }}
-      >
-        {virtualRows.flatMap((row) => {
-          const firstIndex = row.index * drawnColumns
-
-          return items
-            .slice(firstIndex, firstIndex + drawnColumns)
-            .map((item, offset) => {
-              const index = firstIndex + offset
-
-              return (
-                <li
-                  aria-posinset={index + 1}
-                  aria-setsize={items.length}
-                  // `data-index` names the ROW, so it goes on
-                  // every cell in it — they all sit in that row
-                  // and the attribute is true of all of them.
-                  //
-                  // Putting it only on the measured cell is the
-                  // version that looks tidier and warns on every
-                  // resize: the virtualizer keeps a
-                  // `ResizeObserver` on whatever it measured and
-                  // re-reads the attribute whenever that node
-                  // changes size. Let the node stop being the
-                  // leading cell — a column count change is all it
-                  // takes — and it is still observed, now with no
-                  // attribute to resolve.
-                  data-index={row.index}
-                  key={getItemKey?.(item, index) ?? index}
-                  // Measured on the leading cell alone. A CSS grid
-                  // stretches every cell to its row's height, so
-                  // one is enough — and measuring all of them
-                  // would have the virtualizer record the same row
-                  // once per column.
-                  ref={
-                    offset === 0
-                      ? rowVirtualizer.measureElement
-                      : undefined
-                  }
-                >
-                  {renderItem(item, index)}
-                </li>
-              )
-            })
-        })}
-      </ul>
+      {scrollOwner?.kind === "element" ? (
+        <ElementGrid
+          {...gridProps}
+          scrollOwner={scrollOwner}
+        />
+      ) : scrollOwner?.kind === "window" ? (
+        <WindowGrid {...gridProps} />
+      ) : null}
     </div>
   )
 }
