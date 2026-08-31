@@ -127,5 +127,5 @@ that an external tab gets `target` and `rel` and is never current; that an `acti
 bar does not contain marks nothing rather than guessing; and that the routed and panel
 triggers agree on seven computed style properties.
 
-Gates on this branch: `build`, `typecheck`, `lint`, `test` (1,748 passing), `check:contrast`
-(113 pairs per scheme, 0 failing), `build:storybook`, and `smoke:storybook` (431 entries).
+Gates on this branch: `build`, `typecheck`, `lint`, `test` (1,757 passing), `check:contrast`
+(113 pairs per scheme, 0 failing), `build:storybook`, and `smoke:storybook` (433 entries).
