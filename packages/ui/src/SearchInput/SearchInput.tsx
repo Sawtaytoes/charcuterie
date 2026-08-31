@@ -12,8 +12,9 @@ import {
 } from "../intentStyles.ts"
 import { toClassName } from "../toClassName.ts"
 
-const INPUT_SIZE_CLASS: Record<ControlSize, string> = {
-  sm: "h-(--control-height-sm) ps-(--control-padding-inline-sm) pe-(--control-height-sm) text-sm",
+export type SearchInputSize = Exclude<ControlSize, "sm">
+
+const INPUT_SIZE_CLASS: Record<SearchInputSize, string> = {
   md: "h-(--control-height-md) ps-(--control-padding-inline-md) pe-(--control-height-md) text-md",
   lg: "h-(--control-height-lg) ps-(--control-padding-inline-lg) pe-(--control-height-lg) text-lg",
 }
@@ -28,7 +29,8 @@ export type SearchInputProps = Omit<
   /** Override value-derived visibility for an uncontrolled input. */
   isClearVisible?: boolean
   onClear: () => void
-  size?: ControlSize
+  /** Search and clear targets are never smaller than the medium control size. */
+  size?: SearchInputSize
 }
 
 /**

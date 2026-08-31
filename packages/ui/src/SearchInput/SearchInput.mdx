@@ -9,6 +9,9 @@ The search field with a labelled icon button for clearing its value. The app sup
 glyph and owns the query. The component owns the field skin, the full control-sized target,
 the native cancel-widget suppression, and focus return after a clear.
 
+Search fields accept medium and large sizes. They do not offer the small control variant,
+because the clear button is a primary pointer target rather than a compact toolbar action.
+
 Use `Field` for a visible label, or pass `aria-label` when the surrounding layout already
 names the search.
 
