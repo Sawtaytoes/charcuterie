@@ -360,6 +360,8 @@ export type {
   RouterLinkProps,
 } from "./RouterLink/routerLink.ts"
 export { getIsRoutedHref } from "./RouterLink/routerLink.ts"
+export type { SearchInputProps } from "./SearchInput/SearchInput.tsx"
+export { SearchInput } from "./SearchInput/SearchInput.tsx"
 export type {
   SegmentedControlProps,
   SegmentedItem,

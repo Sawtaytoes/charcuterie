@@ -1,0 +1,15 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import * as Stories from "./SearchInput.stories";
+
+<Meta of={Stories} />
+
+# SearchInput
+
+The search field with a labelled icon button for clearing its value. The app supplies the
+glyph and owns the query. The component owns the field skin, the full control-sized target,
+the native cancel-widget suppression, and focus return after a clear.
+
+Use `Field` for a visible label, or pass `aria-label` when the surrounding layout already
+names the search.
+
+<Canvas of={Stories.Default} />
