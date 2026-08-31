@@ -1,32 +1,12 @@
 import type { ReactNode } from "react"
 import { useEffect } from "react"
 
-import { FOCUS_RING_CLASS } from "../intentStyles.ts"
 import { toClassName } from "../toClassName.ts"
-import type { TabItem, TabsOrientation } from "./Tabs.tsx"
-
-/**
- * The selected marker runs along the edge the tab list itself
- * sits on — under a horizontal bar, down the inline-end of a
- * vertical rail — and the negative margin pulls it over the
- * list's own border so the two read as one line rather than two.
- *
- * Logical properties throughout, which is the house rule and also
- * the only way a vertical rail lands on the correct side in RTL.
- */
-const ORIENTATION_EDGE_CLASS: Record<
+import type {
+  TabItem,
   TabsOrientation,
-  { base: string; selected: string }
-> = {
-  horizontal: {
-    base: "-mb-px border-b-2",
-    selected: "border-b-intent-accent-solid",
-  },
-  vertical: {
-    base: "-me-px border-e-2 text-start",
-    selected: "border-e-intent-accent-solid",
-  },
-}
+} from "./tabItems.ts"
+import { toTabTriggerClass } from "./tabStyles.ts"
 
 export type TabTriggerProps = {
   id: string
@@ -74,8 +54,6 @@ export const TabTrigger = ({
 }: TabTriggerProps): ReactNode => {
   const { isDisabled = false, key, label } = tab
 
-  const edge = ORIENTATION_EDGE_CLASS[orientation]
-
   useEffect(
     () => registerSelection(key),
     [key, registerSelection],
@@ -94,19 +72,12 @@ export const TabTrigger = ({
       aria-controls={panelId}
       aria-selected={isSelected}
       className={toClassName(
-        "cursor-pointer border-transparent px-3 py-2 font-medium text-sm whitespace-nowrap transition-colors duration-(--duration-fast) ease-standard",
-        edge.base,
-        // Two entries rather than one interpolated string:
-        // `tailwindCandidates.test.ts` rejects a template literal
-        // in a className outright, because Tailwind's scanner
-        // cannot see a class that only exists at runtime.
-        isSelected && edge.selected,
-        isSelected
-          ? "text-content-primary"
-          : "text-content-secondary hover:text-content-primary",
-        isDisabled &&
-          "cursor-not-allowed text-content-disabled hover:text-content-disabled",
-        FOCUS_RING_CLASS,
+        "cursor-pointer",
+        toTabTriggerClass({
+          isDisabled,
+          isSelected,
+          orientation,
+        }),
       )}
       disabled={isDisabled}
       id={id}

@@ -33,6 +33,7 @@ Start here. Find the row that matches what you are about to build.
 | Pick from many, or the user should be able to type to find it | `Combobox` (`isMultiple` for multi-select) | a `<select>` with 400 `<option>` |
 | Label, describe or error-annotate any control | `Field` | a bare `<label>` + hand-wired `aria-describedby` |
 | Page chrome — header, rails, the content column | `Shell` / `Header` / `Rail` / `Main` | a new `AppShell.tsx` |
+| The sections of ONE screen, each with its own address | `Tabs` with `href` items + `activeHref` | a `Nav` (that is the app's destinations, and its current item is a pill); a `Tabs` whose choice is state, so reload and Back lose the section |
 | The app's destinations, wherever they sit, and how they collapse | `Nav` + `useNavLayout` | `NavBar` (deprecated); a `Toolbar` of `onSelect` items; a row of `NavLink`s and a `flex-wrap` in your own stylesheet; the same nav rendered twice behind `hidden md:flex` |
 | A grid of cards that should reflow | `AdaptiveGrid` | `grid-cols-*` breakpoints; `auto-fill, minmax()` |
 | Anything with a glyph in it | your own icon (lucide, ISC, is the fleet pick) | expecting the library to ship one |

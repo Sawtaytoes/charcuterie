@@ -13,6 +13,9 @@ const {
   Default,
   Manual,
   Responsive,
+  Routed,
+  RoutedAllStates,
+  RoutedAllVariants,
 } = composeStories(stories)
 
 test("selecting a tab wires the panel back to it", async () => {
@@ -280,4 +283,170 @@ test("automatic activation selects as focus moves, and wraps", async () => {
   await waitFor(() => {
     expect(tabs[0]).toHaveAttribute("aria-selected", "true")
   })
+})
+
+/**
+ * The routed bar is a **navigation**, not a tablist, and this is the
+ * assertion that says so. `role="tab"` on an anchor overrides the
+ * link role: a screen reader announces a disclosure, the reader
+ * waits for a panel, and the address changes under them instead.
+ *
+ * A screenshot cannot tell the two apart — the paint is deliberately
+ * identical — so nothing but this catches a regression to it.
+ */
+test("a routed tab is a link in a nav, never a tab in a tablist", async () => {
+  const { canvas, canvasElement } = await mountStory(Routed)
+
+  const nav = expectAgentDrivable(canvas, {
+    name: "Bay 3 sections",
+    role: "navigation",
+  })
+
+  await expect(
+    canvas.queryByRole("tablist"),
+  ).not.toBeInTheDocument()
+
+  await expect(
+    canvas.queryByRole("tab"),
+  ).not.toBeInTheDocument()
+
+  // No panels either: the sections are the router's, rendered
+  // through an `<Outlet />` this component cannot see.
+  await expect(
+    canvas.queryByRole("tabpanel"),
+  ).not.toBeInTheDocument()
+
+  const links = Array.from(
+    nav.querySelectorAll<HTMLAnchorElement>("a[href]"),
+  )
+
+  await expect(links).toHaveLength(4)
+
+  await expectNoAxeViolations(canvasElement)
+})
+
+test("exactly one routed tab is current, and it is the deepest match", async () => {
+  const { canvas } = await mountStory(RoutedAllVariants)
+
+  // `/tasks` and the project root both match `/…/tasks`, and only
+  // the deeper one may light up — a bar with two current items has
+  // stopped saying anything. The rule is `resolveActiveKey`, shared
+  // with `Nav` rather than reimplemented here.
+  const nav = expectAgentDrivable(canvas, {
+    name: "Routed horizontal",
+    role: "navigation",
+  })
+
+  const current = nav.querySelectorAll(
+    '[aria-current="page"]',
+  )
+
+  await expect(current).toHaveLength(1)
+
+  await expect(current[0]).toHaveTextContent("Titles")
+
+  // A child route is still inside the section it belongs to.
+  const child = expectAgentDrivable(canvas, {
+    name: "Routed on a child route",
+    role: "navigation",
+  })
+
+  const childCurrent = child.querySelectorAll(
+    '[aria-current="page"]',
+  )
+
+  await expect(childCurrent).toHaveLength(1)
+
+  await expect(childCurrent[0]).toHaveTextContent("Titles")
+})
+
+/**
+ * A disabled anchor is the defect this guards. `<a>` has no
+ * `disabled` attribute, so the tempting version — a real `href` plus
+ * `aria-disabled` — greys out and still navigates on Enter and on a
+ * middle click.
+ */
+test("a disabled routed tab has no href, and an external one is never current", async () => {
+  const { canvas, canvasElement } =
+    await mountStory(RoutedAllStates)
+
+  const nav = expectAgentDrivable(canvas, {
+    name: "Bay 3 states",
+    role: "navigation",
+  })
+
+  const reports = canvas.getByText("Reports")
+
+  await expect(reports).toHaveAttribute(
+    "aria-disabled",
+    "true",
+  )
+
+  await expect(reports.closest("a")).toBeNull()
+
+  const handbook = expectAgentDrivable(canvas, {
+    name: /Handbook/u,
+    role: "link",
+  })
+
+  await expect(handbook).toHaveAttribute("target", "_blank")
+
+  await expect(handbook).toHaveAttribute(
+    "rel",
+    "noopener noreferrer",
+  )
+
+  // Never current: no address inside this app can be a place
+  // outside it, and a plain string compare would match one.
+  await expect(handbook).not.toHaveAttribute("aria-current")
+
+  // `activeHref` points at `/overview`, which no tab owns — so the
+  // bar honestly marks nothing rather than guessing the closest.
+  await expect(
+    nav.querySelectorAll('[aria-current="page"]'),
+  ).toHaveLength(0)
+
+  await expectNoAxeViolations(canvasElement)
+})
+
+/**
+ * The reason both modes live in one component: a routed tab and a
+ * panel tab are one shape doing one job, and Docket shipped them on
+ * adjacent screens wearing different paint because the routed one
+ * had to be built out of `Nav`.
+ */
+test("a routed tab and a panel tab are painted identically", async () => {
+  const { canvas } = await mountStory(RoutedAllVariants)
+
+  const routedCurrent = expectAgentDrivable(canvas, {
+    name: "Routed horizontal",
+    role: "navigation",
+  }).querySelector('[aria-current="page"]')
+
+  const panelSelected = expectAgentDrivable(canvas, {
+    name: "Panel horizontal",
+    role: "tablist",
+  }).querySelector('[aria-selected="true"]')
+
+  const routedStyle = globalThis.getComputedStyle(
+    routedCurrent as HTMLElement,
+  )
+
+  const panelStyle = globalThis.getComputedStyle(
+    panelSelected as HTMLElement,
+  )
+
+  for (const property of [
+    "borderBottomColor",
+    "borderBottomWidth",
+    "color",
+    "fontSize",
+    "fontWeight",
+    "paddingInlineStart",
+    "paddingBlockStart",
+  ] as const) {
+    await expect(routedStyle[property]).toBe(
+      panelStyle[property],
+    )
+  }
 })
