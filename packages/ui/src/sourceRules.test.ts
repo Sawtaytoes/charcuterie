@@ -537,7 +537,7 @@ test("the barrel is the only place components are re-exported", async () => {
   // active-path rule an app's tests want to assert directly, and
   // `useNavLayout.ts`, because the app has to read the width rule to
   // know which corner to render into.
-  expect(componentNames.length).toBe(60)
+  expect(componentNames.length).toBe(61)
 
   for (const name of componentNames) {
     expect(barrel).toContain(`export { ${name} }`)
