@@ -4,7 +4,7 @@ Status: Accepted
 Date: 2026-08-30
 Type: UI component
 Supersedes: None
-Superseded by: None
+Superseded by: [2026-08-31](2026-08-31-a-search-field-is-never-a-small-clear-target.md)
 
 ## Decision
 
