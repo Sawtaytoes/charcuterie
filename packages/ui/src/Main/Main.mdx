@@ -147,3 +147,56 @@ region, so the table is announced as a thing rather than as loose content.
 `<main>` accepts focus so `Shell`'s skip link moves **focus** and not merely the scroll
 position. Without it, Safari and Firefox scroll to `<main>` and leave the next Tab back up
 in the header — which looks exactly like a skip link that works.
+
+## `scrollKey` — the reader's place, kept
+
+<Canvas of={MainStories.ScrollMemory} />
+
+`Shell` gives this element the page's only vertical scrollport, so the header and the rails
+stay put while the content moves. That is what `Shell.test.tsx` asserts, and this is what it
+costs.
+
+**The browser will not put the offset back.** A browser remembers the **document scroller's**
+position per history entry, and `<main>` is not the document scroller. It also restores
+nothing at all across a same-document `pushState` navigation, which is every link press in a
+single-page app. So Back lands at the top of a list the reader had scrolled half-way down,
+`history.scrollRestoration` has no bearing on it, and there is no browser setting that
+changes it. The owner, on Docket:
+
+> "If I scroll, click on an item, then go back, it resets me to the top. […] It should
+> remember where the scroll position was previously. Isn't this handled by Chrome already?"
+
+Pass the history entry's key and it is:
+
+```tsx
+const location = useLocation()
+
+<Main scrollKey={location.key}>
+  <Outlet />
+</Main>
+```
+
+Omit it and nothing is remembered, which is right for a page with no history to remember.
+
+### It has to wait for the content
+
+<Canvas of={MainStories.ScrollMemoryWithLateContent} />
+
+A one-shot `scrollTop = offset` does **nothing** on a real page. The commit that changes the
+route draws a skeleton, the rows land a fetch later, and an offset written against an empty
+scrollport is clamped to `0` by the browser. Every check a one-shot restore could make still
+passes — the offset was remembered, the write happened — and the reader is looking at the top
+of the list.
+
+So the restore re-applies through a `ResizeObserver` on the scrollport and on its content
+column, and stops at the first of three things:
+
+1. **The offset lands.** Anything past that would only fight the reader.
+2. **The reader scrolls.** Any `wheel`, `touchstart`, `keydown` or `pointerdown` on the
+   scrollport ends it, because a page that jumps out from under somebody who has already
+   started reading is a worse bug than the one being fixed.
+3. **Three seconds pass.** A page that slow has been read from the top already.
+
+The offsets live in memory, not in `sessionStorage`. A history key survives a reload; the DOM
+it described does not, and a pixel offset from before the reload points at a different row.
+Restoring a stale number is worse than restoring nothing, because it looks deliberate.
