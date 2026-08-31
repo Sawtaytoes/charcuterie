@@ -1,5 +1,11 @@
 # @charcuterie/ui
 
+## 3.29.1
+
+### Patch Changes
+
+- 762d3dc: Remove the small `SearchInput` variant so clear buttons stay at least medium-sized.
+
 ## 3.29.0
 
 ### Minor Changes
