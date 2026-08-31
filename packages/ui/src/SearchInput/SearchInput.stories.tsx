@@ -25,7 +25,7 @@ const ClearIcon = () => (
 const ControlledSearch = ({
   size = "md",
 }: {
-  size?: "sm" | "md" | "lg"
+  size?: "md" | "lg"
 }) => {
   const [value, setValue] = useState("filter paper")
 
@@ -69,7 +69,7 @@ export const AllVariants: Story = {
   render: () => (
     <StorySection title="The field and its clear button share one density-aware control size.">
       <StoryGrid columns={3}>
-        {(["sm", "md", "lg"] as const).map((size) => (
+        {(["md", "lg"] as const).map((size) => (
           <StoryCell key={size} label={size}>
             <ControlledSearch size={size} />
           </StoryCell>
