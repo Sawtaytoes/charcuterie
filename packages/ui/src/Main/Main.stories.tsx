@@ -1,11 +1,14 @@
 import type { Meta, StoryObj } from "@storybook/react"
+import { useEffect, useState } from "react"
 
 import { toStoryChoice } from "../argTypes.storyHelpers.ts"
+import { Button } from "../Button/Button.tsx"
 import { Card } from "../Card/Card.tsx"
 import { Header } from "../Header/Header.tsx"
 import { Rail } from "../Rail/Rail.tsx"
 import { toMaxInlineSize } from "../Shell/contentWidth.ts"
 import { Shell } from "../Shell/Shell.tsx"
+import { Spinner } from "../Spinner/Spinner.tsx"
 import {
   HeaderSchemeToggle,
   OverflowingContent,
@@ -161,4 +164,153 @@ export const Interactive: Story = {
       </Main>
     </Shell>
   ),
+}
+
+const EPISODE_TITLES = Array.from(
+  { length: 40 },
+  (_unused, index) => `Episode ${index + 1}`,
+)
+
+type HistoryEntry = {
+  episode: string | null
+  key: string
+}
+
+/**
+ * A history stack, small enough to read and honest about the one
+ * thing that matters: **Back returns to the entry it left, with
+ * the key it had.** That key is what the offset is filed under,
+ * and reusing it is the whole mechanism.
+ *
+ * `contentDelayMs` is the second half of the problem. A real list
+ * is fetched, so the commit that changes the route draws an empty
+ * scrollport and the rows land later — an offset applied against
+ * that clamps to `0`. Set it and the restore has to wait for the
+ * content, which is the case the `ResizeObserver` in
+ * `useScrollMemory` exists for.
+ */
+const ScrollMemoryDemo = ({
+  contentDelayMs,
+}: {
+  contentDelayMs: number
+}) => {
+  const [entries, setEntries] = useState<HistoryEntry[]>([
+    { episode: null, key: "entry-1" },
+  ])
+  const [entryIndex, setEntryIndex] = useState(0)
+  const [isContentReady, setIsContentReady] = useState(
+    contentDelayMs === 0,
+  )
+
+  const entry = entries[entryIndex]
+
+  useEffect(() => {
+    if (contentDelayMs === 0) {
+      return undefined
+    }
+
+    setIsContentReady(false)
+
+    const timer = globalThis.setTimeout(() => {
+      setIsContentReady(true)
+    }, contentDelayMs)
+
+    return () => {
+      globalThis.clearTimeout(timer)
+    }
+  }, [contentDelayMs])
+
+  const open = (episode: string) => {
+    const opened = [
+      ...entries.slice(0, entryIndex + 1),
+      { episode, key: `entry-${entries.length + 1}` },
+    ]
+
+    setEntries(opened)
+    setEntryIndex(opened.length - 1)
+  }
+
+  return (
+    <Shell>
+      <Header
+        actions={
+          <Button
+            appearance="outline"
+            isDisabled={entryIndex === 0}
+            onClick={() => {
+              setEntryIndex(entryIndex - 1)
+            }}
+            size="sm"
+          >
+            Back
+          </Button>
+        }
+        heading="Library"
+      />
+
+      <Main scrollKey={entry?.key}>
+        {!isContentReady && <Spinner label="Loading" />}
+
+        {isContentReady && entry?.episode == null && (
+          <div className="flex flex-col gap-3">
+            {EPISODE_TITLES.map((title) => (
+              <Card
+                heading={title}
+                key={title}
+                padding="sm"
+              >
+                <Button
+                  appearance="ghost"
+                  onClick={() => {
+                    open(title)
+                  }}
+                  size="sm"
+                >
+                  Open {title}
+                </Button>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        {isContentReady && entry?.episode != null && (
+          <Card heading={entry.episode}>
+            <p className="text-content-secondary text-sm">
+              A page short enough that the scrollport
+              collapses behind it. Press Back: the list
+              returns to where it was, not to the top.
+            </p>
+          </Card>
+        )}
+      </Main>
+    </Shell>
+  )
+}
+
+/**
+ * The reader's place, kept.
+ *
+ * `Shell` makes `<main>` the page's only vertical scrollport, and
+ * a browser restores the **document** scroller and nothing else —
+ * so without `scrollKey` this list comes back at the top every
+ * time, in every browser, with no setting that changes it.
+ *
+ * Scroll the list, open an episode, then press Back.
+ */
+export const ScrollMemory: Story = {
+  render: () => <ScrollMemoryDemo contentDelayMs={0} />,
+}
+
+/**
+ * The same thing, with the rows arriving 250ms late — which is
+ * what a fetched list does, and what makes a naive
+ * `scrollTop = offset` do nothing at all.
+ *
+ * Back lands on an empty scrollport with no room for the offset,
+ * so the browser clamps it to `0`. The restore therefore re-applies
+ * as the content grows and stops the moment the offset lands, or
+ * the moment the reader scrolls.
+ */
+export const ScrollMemoryWithLateContent: Story = {
+  render: () => <ScrollMemoryDemo contentDelayMs={250} />,
 }

@@ -1,7 +1,12 @@
-import { useUniqueId } from "@charcuterie/logic"
+import {
+  type MergeableRef,
+  mergeRefs,
+  useUniqueId,
+} from "@charcuterie/logic"
 import {
   type ComponentPropsWithRef,
   type ReactNode,
+  type RefCallback,
   useContext,
 } from "react"
 
@@ -12,9 +17,20 @@ import {
 } from "../Shell/contentWidth.ts"
 import { ShellContext } from "../Shell/shellContext.ts"
 import { toClassName } from "../toClassName.ts"
+import { useScrollMemory } from "./useScrollMemory.ts"
 
 export type MainProps = ComponentPropsWithRef<"main"> & {
   contentWidth?: ContentWidth
+  /**
+   * The history entry this page belongs to — react-router's
+   * `useLocation().key`, and the same value under a different
+   * router. Given it, `<main>` remembers where each entry was
+   * scrolled to and puts the offset back on Back and Forward.
+   *
+   * Omit it and nothing is remembered, which is the right default
+   * for a page with no history to remember.
+   */
+  scrollKey?: string
 }
 
 /**
@@ -94,6 +110,30 @@ export type MainProps = ComponentPropsWithRef<"main"> & {
  *    an app's own fixed chrome belongs in `Shell`, beside `Main`
  *    rather than in it.
  *
+ * ## It remembers where each history entry was scrolled to
+ *
+ * `Shell` gives this element the page's only vertical scrollport,
+ * so the header and the rails stay put while the content moves.
+ * The browser's own scroll restoration does not follow it there: a
+ * browser remembers **the document scroller's** offset per history
+ * entry, and `<main>` is not the document scroller. It also does
+ * not restore anything at all across a same-document `pushState`
+ * navigation, which is every link press in a single-page app. Back
+ * therefore lands at the top of a list the reader had scrolled
+ * half-way down, and no browser setting changes that.
+ *
+ * Pass `scrollKey` — react-router's `useLocation().key` — and the
+ * offset comes back. `useScrollMemory.ts` holds the mechanism and
+ * `scrollMemory.ts` the reasoning.
+ *
+ * ```tsx
+ * const location = useLocation()
+ *
+ * <Main scrollKey={location.key}>
+ *   <Outlet />
+ * </Main>
+ * ```
+ *
  * ## Two more things it does, both one line
  *
  * `tabIndex={-1}` so `Shell`'s skip link moves **focus** and not
@@ -128,9 +168,12 @@ export const Main = ({
   className,
   contentWidth,
   id,
+  ref,
+  scrollKey,
   ...mainProps
 }: MainProps): ReactNode => {
   const shell = useContext(ShellContext)
+  const setScrollport = useScrollMemory(scrollKey)
 
   // Always called, never conditionally: a `Main` outside a `Shell`
   // still needs an id an app can point its own skip link at.
@@ -150,6 +193,20 @@ export const Main = ({
         className,
       )}
       id={id ?? shell?.mainId ?? fallbackId}
+      // A caller's `ref` is a subscription, not a value, so the
+      // scroll memory composes with it rather than replacing it.
+      //
+      // The cast is `mergeRefs`' prop-merging signature, where
+      // every value is `unknown`; a caller's `ref` is narrower than
+      // that, never wider.
+      ref={
+        ref
+          ? (mergeRefs(
+              ref as MergeableRef,
+              setScrollport,
+            ) as RefCallback<HTMLElement>)
+          : setScrollport
+      }
       tabIndex={-1}
     >
       {/*

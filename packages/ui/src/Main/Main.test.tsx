@@ -1,6 +1,6 @@
 import { composeStories } from "@storybook/react"
-import { expect, userEvent } from "storybook/test"
-import { afterAll, test } from "vitest"
+import { expect, userEvent, waitFor } from "storybook/test"
+import { afterAll, afterEach, test } from "vitest"
 
 import { expectNoAxeViolations } from "../expectNoAxeViolations.testHelpers.ts"
 import { mountStory } from "../mountStory.testHelpers.ts"
@@ -11,12 +11,24 @@ import {
   setViewport,
 } from "../viewport.testHelpers.ts"
 import * as stories from "./Main.stories.tsx"
+import { forgetScrollOffsets } from "./scrollMemory.ts"
 
-const { Default, Interactive, Responsive } =
-  composeStories(stories)
+const {
+  Default,
+  Interactive,
+  Responsive,
+  ScrollMemory,
+  ScrollMemoryWithLateContent,
+} = composeStories(stories)
 
 afterAll(async () => {
   await setViewport(DESKTOP)
+})
+
+// The offsets are module state, so they outlive a mount. A test
+// must not.
+afterEach(() => {
+  forgetScrollOffsets()
 })
 
 test("the content column is capped at the token, not at the window", async () => {
@@ -164,4 +176,183 @@ test("main takes focus from a skip link without joining the tab order", async ()
   )
 
   await expectNoAxeViolations(canvasElement)
+})
+
+/**
+ * A `scroll` event is dispatched at the next rendering step, not
+ * at the assignment, so a test that scrolls and immediately
+ * navigates measures the listener before it has been told
+ * anything.
+ */
+const scrollTo = async (
+  element: HTMLElement,
+  offset: number,
+) => {
+  element.scrollTop = offset
+
+  await waitFor(async () => {
+    await expect(element.scrollTop).toBe(offset)
+  })
+
+  await new Promise((resolve) => {
+    globalThis.requestAnimationFrame(() => {
+      globalThis.requestAnimationFrame(resolve)
+    })
+  })
+}
+
+/**
+ * The whole point, and the thing no browser does for you.
+ *
+ * `Shell` makes `<main>` the page's only vertical scrollport.
+ * `history.scrollRestoration` governs the **document** scroller, so
+ * it has nothing to say about this element — and it says nothing at
+ * all about a same-document navigation, which is every link press
+ * in a single-page app.
+ */
+test("back returns the list to where it was scrolled, not to the top", async () => {
+  await setViewport(DESKTOP)
+
+  const { canvas, canvasElement } =
+    await mountStory(ScrollMemory)
+
+  const main = canvas.getByRole("main")
+
+  // The fixture genuinely scrolls, or the assertion below would
+  // pass against a page that was never long enough to lose a
+  // place in.
+  await expect(main.scrollHeight).toBeGreaterThan(
+    main.clientHeight + 900,
+  )
+
+  await scrollTo(main, 900)
+
+  await userEvent.click(
+    expectAgentDrivable(canvas, {
+      name: "Open Episode 12",
+      role: "button",
+    }),
+  )
+
+  await expect(
+    canvas.getByRole("heading", { name: "Episode 12" }),
+  ).toBeVisible()
+
+  await userEvent.click(
+    expectAgentDrivable(canvas, {
+      name: "Back",
+      role: "button",
+    }),
+  )
+
+  await waitFor(async () => {
+    await expect(main.scrollTop).toBe(900)
+  })
+
+  await expectNoAxeViolations(canvasElement)
+})
+
+/**
+ * The failure a naive `scrollTop = offset` produces, and the
+ * reason `useScrollMemory` keeps a `ResizeObserver` rather than
+ * writing the number once.
+ *
+ * Back commits before the rows arrive, so the scrollport has no
+ * room for the offset and the browser clamps the write to `0`.
+ * Every assertion a one-shot restore could make still passes — the
+ * offset was remembered, the write happened — and the reader is
+ * looking at the top of the list.
+ */
+test("a restore waits for content that arrives after the navigation", async () => {
+  await setViewport(DESKTOP)
+
+  const { canvas } = await mountStory(
+    ScrollMemoryWithLateContent,
+  )
+
+  const main = await waitFor(() => canvas.getByRole("main"))
+
+  await waitFor(async () => {
+    await expect(
+      canvas.getByRole("heading", { name: "Episode 1" }),
+    ).toBeVisible()
+  })
+
+  await scrollTo(main, 900)
+
+  await userEvent.click(
+    expectAgentDrivable(canvas, {
+      name: "Open Episode 12",
+      role: "button",
+    }),
+  )
+
+  await userEvent.click(
+    expectAgentDrivable(canvas, {
+      name: "Back",
+      role: "button",
+    }),
+  )
+
+  // No assertion on the intermediate `0`: whether the rows have
+  // landed by this line depends on how loaded the machine is, and
+  // a test that reads the clock is a test that fails on CI. What
+  // proves the wait is load-bearing is that deleting the
+  // `ResizeObserver` from `useScrollMemory` fails **this** test and
+  // no other.
+  await waitFor(async () => {
+    await expect(main.scrollTop).toBe(900)
+  })
+})
+
+/**
+ * A restore that outlives the reader's first scroll is a page that
+ * fights them. Anything the reader does to the scrollport ends it.
+ */
+test("a reader scrolling during a restore keeps their own position", async () => {
+  await setViewport(DESKTOP)
+
+  const { canvas } = await mountStory(
+    ScrollMemoryWithLateContent,
+  )
+
+  await waitFor(async () => {
+    await expect(
+      canvas.getByRole("heading", { name: "Episode 1" }),
+    ).toBeVisible()
+  })
+
+  const main = canvas.getByRole("main")
+
+  await scrollTo(main, 900)
+
+  await userEvent.click(
+    expectAgentDrivable(canvas, {
+      name: "Open Episode 12",
+      role: "button",
+    }),
+  )
+
+  await userEvent.click(
+    expectAgentDrivable(canvas, {
+      name: "Back",
+      role: "button",
+    }),
+  )
+
+  // Before the rows land, so the restore is still pending.
+  main.dispatchEvent(
+    new WheelEvent("wheel", { bubbles: true }),
+  )
+
+  await waitFor(async () => {
+    await expect(
+      canvas.getByRole("heading", { name: "Episode 1" }),
+    ).toBeVisible()
+  })
+
+  await scrollTo(main, 200)
+
+  // Given up, rather than dragging the reader back to 900.
+  await expect(main.scrollTop).toBe(200)
 })
