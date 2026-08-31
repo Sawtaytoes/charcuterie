@@ -427,12 +427,17 @@ export {
   getIsConnectionBusy,
 } from "./statusIntent.ts"
 export type {
-  TabItem,
-  TabsActivation,
-  TabsOrientation,
+  TabsLinkProps,
+  TabsPanelProps,
   TabsProps,
 } from "./Tabs/Tabs.tsx"
 export { Tabs } from "./Tabs/Tabs.tsx"
+export type {
+  TabItem,
+  TabLinkItem,
+  TabsActivation,
+  TabsOrientation,
+} from "./Tabs/tabItems.ts"
 export type {
   TextLinkAppearance,
   TextLinkProps,
