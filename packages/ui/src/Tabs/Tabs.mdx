@@ -19,6 +19,76 @@ It did not come out ugly. The composition is two hooks and one decision.
 
 <Controls />
 
+## Two bars, and the question is not "how does it look"
+
+**Does this section have an address?**
+
+| | Panel tab | Routed tab |
+| --- | --- | --- |
+| The item carries | `content` | `href` |
+| Each trigger is | `<button role="tab">` | `<a href>` |
+| The bar is | `role="tablist"` | `<nav aria-label>` |
+| The section is drawn by | this component | the router, through your `<Outlet />` |
+| Which one is on | `Tabs` owns it | the address does, via `activeHref` |
+| Reload, Back, new tab | start over | land on the same section |
+
+```tsx
+// A disclosure inside one screen. Nothing outside knows about it.
+<Tabs label="Bay 3" tabs={[{ key: "log", label: "Log", content: <Log /> }]} />
+
+// A section that has an address.
+<Tabs
+  activeHref={pathname}
+  label="Bay 3 sections"
+  tabs={[{ href: "/projects/1/tasks", label: "Tasks" }]}
+/>
+<Outlet />
+```
+
+`activeHref` is the discriminant, and it is required in the routed mode. `tabs` alone
+could not carry the split: TypeScript does not narrow a union by the shape of an array's
+elements, so a bar mixing the two would type-check and then render half a navigation.
+
+<Canvas of={TabsStories.Routed} />
+
+### The paint is shared, and that is the point
+
+Docket had one of each on adjacent screens wearing **different paint** — a filled pill on
+the project bar, this underline on Settings — because a routed section switcher had to be
+built out of `Nav`, and `Nav`'s current item is a pill. `toTabTriggerClass` is now the one
+definition both triggers read, and `Tabs.test.tsx` compares the two computed styles
+property by property, because a screenshot cannot tell them apart on purpose.
+[Decision](../../../docs/decisions/2026-08-31-a-routed-tab-is-a-tab-with-an-href.md).
+
+<Canvas of={TabsStories.RoutedAllVariants} />
+
+### The routed bar is not a `tablist`
+
+`role="tab"` on an anchor **overrides** the link role. A screen reader announces a
+disclosure, the reader waits for a panel to appear beside it, and instead the address
+changes and the page under them is replaced. `aria-controls` has nothing to point at
+either — the section's content comes from the router, somewhere this component cannot see.
+
+So the routed bar is what it actually is: a named `<nav>` of real links with
+`aria-current="page"` on the one you are on. Which one that is comes from `Nav`'s
+`resolveActiveKey`, imported rather than restated — whole-segment matching, deepest match
+wins, the root is exact, an external item is never current, and the query string is not
+part of the answer.
+
+<Canvas of={TabsStories.RoutedAllStates} />
+
+A **disabled** routed tab is not a link at all. `<a>` has no `disabled` attribute, so the
+tempting version — a real `href` plus `aria-disabled` — greys out and still navigates on
+Enter and on a middle click; it renders as a `<span aria-disabled>` instead.
+
+### This is sub-navigation. `Nav` is still the app's destinations
+
+The header row, the side rail and the Narrow View's menu are `Nav` + `useNavLayout`, and
+that has not moved.
+[Decision](../../../docs/decisions/2026-08-27-nav-is-the-one-navigation-component-and-navbar-is-deprecated.md).
+A routed `Tabs` divides **one screen** into sections, so it renders no rail, no fold and
+no menu — a bar inside a screen has nowhere to fold to.
+
 ## The composition
 
 ```ts

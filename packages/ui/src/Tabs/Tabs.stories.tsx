@@ -8,8 +8,8 @@ import {
   StoryGrid,
 } from "../board.storyHelpers.tsx"
 import { ProgressBar } from "../ProgressBar/ProgressBar.tsx"
-import type { TabItem } from "./Tabs.tsx"
 import { Tabs } from "./Tabs.tsx"
+import type { TabItem, TabLinkItem } from "./tabItems.ts"
 
 const BAY_TABS: TabItem[] = [
   {
@@ -184,4 +184,136 @@ export const Manual: Story = {
     label: "Bay 3 manual",
     tabs: BAY_TABS,
   },
+}
+
+const BAY_ROUTE_TABS: TabLinkItem[] = [
+  {
+    href: "/bays/3",
+    label: "Overview",
+  },
+  {
+    href: "/bays/3/titles",
+    label: "Titles",
+  },
+  {
+    href: "/bays/3/tracks",
+    label: "Tracks",
+  },
+  {
+    href: "/bays/3/log",
+    label: "Log",
+  },
+]
+
+/**
+ * A tab that is a **place**. Every trigger is a real `<a href>`, so
+ * middle-click, ctrl-click, "open in a new tab" and "copy link
+ * address" all work — and reloading the page comes back to the same
+ * section, which is the whole reason to route one.
+ *
+ * The bar is a named `<nav>`, not a `tablist`: `role="tab"` on an
+ * anchor overrides the link role, so a screen reader would announce
+ * a disclosure and then the address would change instead. The
+ * *paint* is shared with the panel bar above through
+ * `toTabTriggerClass`, which is what this mode was added to fix.
+ *
+ * The sections themselves are rendered by the router — an
+ * `<Outlet />` under the bar — so this component draws no panels
+ * here at all.
+ */
+export const Routed: Story = {
+  args: { label: "Bay 3", tabs: BAY_TABS },
+  render: () => (
+    <Tabs
+      activeHref="/bays/3/log"
+      label="Bay 3 sections"
+      tabs={BAY_ROUTE_TABS}
+    />
+  ),
+}
+
+/**
+ * Routed and panel bars side by side — the comparison this mode
+ * exists for. They are one shape doing one job, and before `href`
+ * existed the routed one had to be built out of `Nav`, whose current
+ * item is a filled pill.
+ *
+ * The third cell is the matching rule, which is `Nav`'s
+ * `resolveActiveKey` rather than a second implementation: the
+ * deepest matching path wins, so `/tasks` stands down while the
+ * reader is on `/tasks` *and* nothing lights up twice.
+ */
+export const RoutedAllVariants: Story = {
+  args: { label: "Bay 3", tabs: BAY_TABS },
+  render: () => (
+    <StoryGrid columns={2}>
+      <StoryCell label="routed · horizontal">
+        <Tabs
+          activeHref="/bays/3/titles"
+          label="Routed horizontal"
+          tabs={BAY_ROUTE_TABS}
+        />
+      </StoryCell>
+
+      <StoryCell label="panel · horizontal">
+        <Tabs label="Panel horizontal" tabs={BAY_TABS} />
+      </StoryCell>
+
+      <StoryCell label="routed · vertical">
+        <Tabs
+          activeHref="/bays/3/tracks"
+          label="Routed vertical"
+          orientation="vertical"
+          tabs={BAY_ROUTE_TABS}
+        />
+      </StoryCell>
+
+      <StoryCell label="routed · a child route is still the section">
+        <Tabs
+          activeHref="/bays/3/titles/4"
+          label="Routed on a child route"
+          tabs={BAY_ROUTE_TABS}
+        />
+      </StoryCell>
+    </StoryGrid>
+  ),
+}
+
+const ROUTED_STATE_TABS: TabLinkItem[] = [
+  ...BAY_ROUTE_TABS,
+  {
+    href: "/bays/3/reports",
+    isDisabled: true,
+    label: "Reports",
+  },
+  {
+    href: "https://mkdocs.octen.dev/workspace/docket/",
+    isExternal: true,
+    label: "Handbook",
+  },
+]
+
+/**
+ * A disabled routed tab is **not a link at all** — a `<span>` with
+ * `aria-disabled`, because an anchor has no `disabled` attribute and
+ * `aria-disabled` alone still navigates on Enter. That is the
+ * version of this that looks right and is not.
+ *
+ * An external tab is a plain anchor with `target="_blank"` and
+ * `rel="noopener noreferrer"`, and it is **never current** — no
+ * address inside this app can be a place outside it.
+ *
+ * `activeHref` here is a screen the bar does not contain, which is
+ * the third state: **nothing** is current. A bar that guessed the
+ * closest tab instead would be lying on every modal route.
+ */
+export const RoutedAllStates: Story = {
+  args: { label: "Bay 3", tabs: BAY_TABS },
+  render: () => (
+    <Tabs
+      activeHref="/settings"
+      label="Bay 3 states"
+      tabs={ROUTED_STATE_TABS}
+    />
+  ),
 }
