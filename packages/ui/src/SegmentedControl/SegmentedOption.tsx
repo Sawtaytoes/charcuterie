@@ -9,6 +9,7 @@ import type { SegmentedItem } from "./SegmentedControl.tsx"
 
 export type SegmentedOptionProps = {
   isChecked: boolean
+  isFullWidth: boolean
   item: SegmentedItem
   onChoose: (value: string) => void
   /** `RovingFocus.register` — membership of the arrow-key group. */
@@ -36,6 +37,7 @@ export type SegmentedOptionProps = {
  */
 export const SegmentedOption = ({
   isChecked,
+  isFullWidth,
   item,
   onChoose,
   registerFocus,
@@ -65,6 +67,7 @@ export const SegmentedOption = ({
       aria-checked={isChecked}
       className={toClassName(
         "cursor-pointer rounded-sm border border-transparent font-medium tabular-nums transition-colors duration-(--duration-fast) ease-standard",
+        isFullWidth && "min-w-0 flex-1 basis-0",
         CONTROL_SIZE_CLASS[size],
         // Two entries rather than one interpolated string:
         // `tailwindCandidates.test.ts` rejects a template literal in

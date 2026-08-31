@@ -140,6 +140,33 @@ export const Responsive: Story = {
 }
 
 /**
+ * A board's lane selector is a route selector, not a compact
+ * preference. It reaches the board's edges and each route gets the
+ * same hit area, even when the labels have different lengths.
+ */
+export const FullWidth: Story = {
+  args: {
+    isFullWidth: true,
+    items: [
+      { label: "Todo", value: "todo" },
+      { label: "In Progress", value: "in-progress" },
+      { label: "Needs Review", value: "needs-review" },
+    ],
+    label: "Board lanes",
+  },
+  render: (controlProps) => (
+    <ContainerBoard>
+      {(width) => (
+        <SegmentedControl
+          {...controlProps}
+          label={`Board lanes at ${width}`}
+        />
+      )}
+    </ContainerBoard>
+  ),
+}
+
+/**
  * The complete keyboard path. Tab enters the group **once** — the
  * roving-tabindex rule — then the arrow keys move and check
  * together, which is what a radio group does and what `Tabs`'

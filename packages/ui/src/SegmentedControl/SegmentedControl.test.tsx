@@ -7,7 +7,7 @@ import { mountStory } from "../mountStory.testHelpers.ts"
 import { expectAgentDrivable } from "../testing/index.ts"
 import * as stories from "./SegmentedControl.stories.tsx"
 
-const { AllStates, Default, Interactive } =
+const { AllStates, Default, FullWidth, Interactive } =
   composeStories(stories)
 
 /**
@@ -205,4 +205,26 @@ test("selectedValue decides the first render and nothing after", async () => {
       group.querySelector('[aria-checked="true"]'),
     ).toHaveTextContent("3")
   })
+})
+
+test("full-width mode fills its container with equal options", async () => {
+  const { canvas } = await mountStory(FullWidth)
+
+  for (const group of canvas.getAllByRole("radiogroup", {
+    name: /Board lanes at/,
+  })) {
+    const options = getOptions(group)
+    const widths = options.map(
+      (option) => option.getBoundingClientRect().width,
+    )
+
+    expect(
+      group.getBoundingClientRect().width,
+    ).toBeGreaterThan(
+      widths.reduce((sum, width) => sum + width, 0),
+    )
+    expect(
+      Math.max(...widths) - Math.min(...widths),
+    ).toBeLessThan(1)
+  }
 })

@@ -269,6 +269,7 @@ export const Board = ({
               ? "hidden"
               : "cq-lg:hidden",
           )}
+          isFullWidth
           items={lanes.map((lane) => ({
             // Stacked rather than `Todo (6)`, because the count is
             // the reason to look: a lane picker that reads
