@@ -67,7 +67,11 @@ export const SegmentedOption = ({
       aria-checked={isChecked}
       className={toClassName(
         "cursor-pointer rounded-sm border border-transparent font-medium tabular-nums transition-colors duration-(--duration-fast) ease-standard",
-        isFullWidth && "min-w-0 flex-1 basis-0",
+        // In a very narrow board, three full labels cannot share
+        // one row. The minimum lets two fit, then the final option
+        // takes a full second row instead of wrapping its label or
+        // leaving unused space beside it.
+        isFullWidth && "min-w-28 flex-1 basis-28",
         CONTROL_SIZE_CLASS[size],
         // Two entries rather than one interpolated string:
         // `tailwindCandidates.test.ts` rejects a template literal in

@@ -207,7 +207,7 @@ test("selectedValue decides the first render and nothing after", async () => {
   })
 })
 
-test("full-width mode fills its container with equal options", async () => {
+test("full-width mode fills its container without wrapping labels", async () => {
   const { canvas } = await mountStory(FullWidth)
 
   for (const group of canvas.getAllByRole("radiogroup", {
@@ -218,13 +218,26 @@ test("full-width mode fills its container with equal options", async () => {
       (option) => option.getBoundingClientRect().width,
     )
 
-    expect(
-      group.getBoundingClientRect().width,
-    ).toBeGreaterThan(
-      widths.reduce((sum, width) => sum + width, 0),
-    )
-    expect(
-      Math.max(...widths) - Math.min(...widths),
-    ).toBeLessThan(1)
+    if (
+      group.getAttribute("aria-label")?.includes("15rem")
+    ) {
+      // Two equal targets fit on the first row. The third fills the
+      // second row, so every label stays intact and there is no gap.
+      expect(widths[0]).toBeCloseTo(widths[1] ?? 0, 0)
+      expect(widths[2]).toBeGreaterThan(widths[0] ?? 0)
+      expect(
+        group.getBoundingClientRect().width -
+          (widths[2] ?? 0),
+      ).toBeLessThanOrEqual(8)
+    } else {
+      expect(
+        group.getBoundingClientRect().width,
+      ).toBeGreaterThan(
+        widths.reduce((sum, width) => sum + width, 0),
+      )
+      expect(
+        Math.max(...widths) - Math.min(...widths),
+      ).toBeLessThan(1)
+    }
   }
 })

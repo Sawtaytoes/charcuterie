@@ -164,7 +164,7 @@ export const SegmentedControl = ({
       aria-label={label}
       className={toClassName(
         "inline-flex items-center rounded-md border border-border-subtle bg-surface-sunken p-0.5",
-        isFullWidth && "w-full",
+        isFullWidth && "w-full flex-wrap",
         GAP_CLASS[size],
         className,
       )}
