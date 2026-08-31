@@ -298,7 +298,7 @@ test("a routed tab is a link in a nav, never a tab in a tablist", async () => {
   const { canvas, canvasElement } = await mountStory(Routed)
 
   const nav = expectAgentDrivable(canvas, {
-    name: "Anime Release Watch sections",
+    name: "Bay 3 sections",
     role: "navigation",
   })
 
@@ -343,7 +343,7 @@ test("exactly one routed tab is current, and it is the deepest match", async () 
 
   await expect(current).toHaveLength(1)
 
-  await expect(current[0]).toHaveTextContent("Tasks")
+  await expect(current[0]).toHaveTextContent("Titles")
 
   // A child route is still inside the section it belongs to.
   const child = expectAgentDrivable(canvas, {
@@ -357,7 +357,7 @@ test("exactly one routed tab is current, and it is the deepest match", async () 
 
   await expect(childCurrent).toHaveLength(1)
 
-  await expect(childCurrent[0]).toHaveTextContent("Tasks")
+  await expect(childCurrent[0]).toHaveTextContent("Titles")
 })
 
 /**
@@ -371,7 +371,7 @@ test("a disabled routed tab has no href, and an external one is never current", 
     await mountStory(RoutedAllStates)
 
   const nav = expectAgentDrivable(canvas, {
-    name: "Anime Release Watch states",
+    name: "Bay 3 states",
     role: "navigation",
   })
 

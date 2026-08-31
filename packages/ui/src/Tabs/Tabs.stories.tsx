@@ -186,22 +186,22 @@ export const Manual: Story = {
   },
 }
 
-const PROJECT_TABS: TabLinkItem[] = [
+const BAY_ROUTE_TABS: TabLinkItem[] = [
   {
-    href: "/projects/anime-release-watch",
+    href: "/bays/3",
     label: "Overview",
   },
   {
-    href: "/projects/anime-release-watch/tasks",
-    label: "Tasks",
+    href: "/bays/3/titles",
+    label: "Titles",
   },
   {
-    href: "/projects/anime-release-watch/lanes",
-    label: "Lanes",
+    href: "/bays/3/tracks",
+    label: "Tracks",
   },
   {
-    href: "/projects/anime-release-watch/phases",
-    label: "Phases",
+    href: "/bays/3/log",
+    label: "Log",
   },
 ]
 
@@ -225,9 +225,9 @@ export const Routed: Story = {
   args: { label: "Bay 3", tabs: BAY_TABS },
   render: () => (
     <Tabs
-      activeHref="/projects/anime-release-watch/phases"
-      label="Anime Release Watch sections"
-      tabs={PROJECT_TABS}
+      activeHref="/bays/3/log"
+      label="Bay 3 sections"
+      tabs={BAY_ROUTE_TABS}
     />
   ),
 }
@@ -249,9 +249,9 @@ export const RoutedAllVariants: Story = {
     <StoryGrid columns={2}>
       <StoryCell label="routed · horizontal">
         <Tabs
-          activeHref="/projects/anime-release-watch/tasks"
+          activeHref="/bays/3/titles"
           label="Routed horizontal"
-          tabs={PROJECT_TABS}
+          tabs={BAY_ROUTE_TABS}
         />
       </StoryCell>
 
@@ -261,18 +261,18 @@ export const RoutedAllVariants: Story = {
 
       <StoryCell label="routed · vertical">
         <Tabs
-          activeHref="/projects/anime-release-watch/lanes"
+          activeHref="/bays/3/tracks"
           label="Routed vertical"
           orientation="vertical"
-          tabs={PROJECT_TABS}
+          tabs={BAY_ROUTE_TABS}
         />
       </StoryCell>
 
       <StoryCell label="routed · a child route is still the section">
         <Tabs
-          activeHref="/projects/anime-release-watch/tasks/41"
+          activeHref="/bays/3/titles/4"
           label="Routed on a child route"
-          tabs={PROJECT_TABS}
+          tabs={BAY_ROUTE_TABS}
         />
       </StoryCell>
     </StoryGrid>
@@ -280,9 +280,9 @@ export const RoutedAllVariants: Story = {
 }
 
 const ROUTED_STATE_TABS: TabLinkItem[] = [
-  ...PROJECT_TABS,
+  ...BAY_ROUTE_TABS,
   {
-    href: "/projects/anime-release-watch/reports",
+    href: "/bays/3/reports",
     isDisabled: true,
     label: "Reports",
   },
@@ -312,7 +312,7 @@ export const RoutedAllStates: Story = {
   render: () => (
     <Tabs
       activeHref="/settings"
-      label="Anime Release Watch states"
+      label="Bay 3 states"
       tabs={ROUTED_STATE_TABS}
     />
   ),

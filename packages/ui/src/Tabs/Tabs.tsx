@@ -75,7 +75,7 @@ const getIsRoutedProps = (
  * // A section that has an address.
  * <Tabs
  *   activeHref={pathname}
- *   label="Anime Release Watch sections"
+ *   label="Bay 3 sections"
  *   tabs={[{ href: "/projects/1/tasks", label: "Tasks" }]}
  * />
  * <Outlet />

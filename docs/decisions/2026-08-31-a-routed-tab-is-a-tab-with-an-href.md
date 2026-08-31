@@ -19,7 +19,7 @@ divides one screen. Every other clause of that record stands.
 ```tsx
 <Tabs
   activeHref={pathname}
-  label="Anime Release Watch sections"
+  label="Bay 3 sections"
   tabs={[
     { href: `${base}`, label: "Overview" },
     { href: `${base}/tasks`, label: "Tasks" },
