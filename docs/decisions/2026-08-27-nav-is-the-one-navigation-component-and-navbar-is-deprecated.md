@@ -9,6 +9,10 @@
 Completes
 [the app shell is `Shell` / `Header` / `Rail` / `Main`](2026-08-10-the-app-shell-is-shell-header-rail-main.md).
 **Superseded by:** —
+**Amended by:**
+[A routed tab is a `Tabs` tab with an `href`](2026-08-31-a-routed-tab-is-a-tab-with-an-href.md)
+— Decision 0 below is scoped to the app's **destinations**. A bar that divides one screen
+into sections is sub-navigation and is a routed `Tabs`. Every other clause here stands.
 
 ## Decision
 
