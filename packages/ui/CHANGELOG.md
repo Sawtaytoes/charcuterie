@@ -1,5 +1,11 @@
 # @charcuterie/ui
 
+## 3.29.0
+
+### Minor Changes
+
+- d4f465b: Add `SearchInput`, with an app-owned clear icon inside a labelled `IconButton`.
+
 ## 3.28.2
 
 ### Patch Changes
