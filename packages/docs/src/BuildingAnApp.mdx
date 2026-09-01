@@ -28,6 +28,8 @@ Start here. Find the row that matches what you are about to build.
 | Send the user somewhere, but it should *look* like a button | `ButtonLink` — a real `<a href>` painted as a button | `Button` with an `onClick` that navigates |
 | Do something on this page — submit, open, retry, delete | `Button` | `<button>`; a `<div onClick>` |
 | Do something on this page, and the control is icon-only | `IconButton` — `label` is **required** | `Button` with only a glyph inside |
+| Offer two or three ways forward, each needing a sentence to explain it | `ActionTiles` — a set of pressable or linking tiles | a `Button` with `height: auto` (a `Button` has **no** block padding; the override leaves `padding: 0` and a title flush against the border) |
+| The same tiles, but one stays chosen and something below reads the value | `RadioGroup itemShape="tile"` | `ActionTiles` plus your own selected state; a `<div>` of `aria-pressed` buttons |
 | Pick one of a handful of options | `Picker` — a `Listbox` with the trigger attached | `Select`; a hand-rolled `role="listbox"`; a raw `<select>` |
 | Pick one, but the trigger is a tile, a table header, something that is not a button | `Listbox` | wrapping `Picker` in something that is not a button |
 | Pick from many, or the user should be able to type to find it | `Combobox` (`isMultiple` for multi-select) | a `<select>` with 400 `<option>` |
