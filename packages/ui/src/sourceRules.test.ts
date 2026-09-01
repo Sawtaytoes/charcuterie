@@ -537,7 +537,15 @@ test("the barrel is the only place components are re-exported", async () => {
   // active-path rule an app's tests want to assert directly, and
   // `useNavLayout.ts`, because the app has to read the width rule to
   // know which corner to render into.
-  expect(componentNames.length).toBe(61)
+  //
+  // `ActionTiles` is +1 -> 62. It is `RadioGroup itemShape="tile"`
+  // with the radio taken away: the box is shared through
+  // `tileStyles.ts`, and nothing else is. The 2026-08-25 record that
+  // made the choice tile a `RadioGroup` shape named this case under
+  // what it deliberately does not cover — a tile that navigates is
+  // not a radio, and giving one `aria-checked` would be worse than
+  // the paint it replaced.
+  expect(componentNames.length).toBe(62)
 
   for (const name of componentNames) {
     expect(barrel).toContain(`export { ${name} }`)
