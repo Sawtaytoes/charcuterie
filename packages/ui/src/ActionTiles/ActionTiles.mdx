@@ -1,0 +1,131 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as ActionTilesStories from "./ActionTiles.stories";
+
+<Meta of={ActionTilesStories} />
+
+# ActionTiles
+
+A set of **actions** drawn as tiles — a bordered card carrying a name and a line of help, in
+a grid that gains columns with its container.
+
+This is [`RadioGroup`](/docs/components-controls-radiogroup--docs)'s `itemShape="tile"` with
+the radio taken away. The 2026-08-25 record that made the choice tile a `RadioGroup` shape
+named this case under *"What this deliberately does not cover"*: mux-magic's "Pick a tool"
+tiles are `<a href>` and points-market's are `<Link>`, and *"a link is not a radio, and
+giving one `aria-checked` would be worse than the paint it replaced"*.
+
+<Canvas of={ActionTilesStories.Default} />
+
+## Props
+
+<Controls />
+
+## Which of the two you want
+
+Ask what a press does.
+
+- It **records a value** the user will then submit, or that filters what is below it —
+  `RadioGroup itemShape="tile"`. The set announces "3 of 6", the arrow keys move the choice,
+  and one tile stays selected.
+- It **goes somewhere or starts something** — this. Nothing stays selected, because nothing
+  was chosen: the page moved on.
+
+A first step that opens the next step is the second kind. QueuePilot's "Queue type" chooser
+— *Picks* or *Rules*, and the editor for the one you press opens immediately — is the case
+this component was built for; that same app's Tonight activity filter stays a `RadioGroup`,
+because it holds a value the Go button below it reads.
+
+<Canvas of={ActionTilesStories.BesideTheRadioTile} />
+
+## Why this is not a `Button` with a `className`
+
+A `Button` is sized by `h-(--control-height-md)` and carries **no block padding at all**. It
+is a one-line control by contract, which is what keeps every control on a form row the same
+height at every density.
+
+So an app that wants a wrapping two-line card reaches for `height: auto` — and that deletes
+the height and leaves `padding: 0` down the block axis. The title sits flush against the top
+border and the description flush against the bottom one. Nothing reports it: the class really
+is in the DOM, TypeScript never reads the CSS, and unstyled-but-present markup passes axe.
+
+That shipped in QueuePilot's queue-type chooser and is what this component exists to have
+made impossible. `ActionTiles.test.tsx` reads the padding off `getComputedStyle` in a real
+browser for the same reason.
+
+<Canvas of={ActionTilesStories.AllStates} />
+
+## The box is shared, and asserted rather than trusted
+
+`tileStyles.ts` holds the padding, the border, the radius, the surface, the type ramp, the
+hint ramp, the gap and the grid; `RadioGroup` and `ActionTiles` both read it. Two tile sets
+on one page have to be the same card, and "identical" spelled as two copies of one string is
+a promise that survives exactly one edit — the same argument `CONTROL_BASE_CLASS` settles
+between `Button` and `ButtonLink`.
+
+The test compares **computed** styles of an action tile and a resting radio tile, not class
+names. A class-name assertion passes while the paint is wrong.
+
+## `href` makes the tile a real anchor
+
+Middle-click, ctrl-click, "open in a new tab", "copy link address" and the status bar all
+come from the element rather than from the paint — the standing
+[buttons are actions, links are navigation](/docs/guides-routing--docs) rule. A same-origin
+destination goes through the injected `RouterLink`; an external one or a fragment falls back
+to a plain `<a>`, because pushing `https://…` or `#credits` onto the history stack navigates
+the SPA to a route that does not exist.
+
+A set may mix links and buttons. `isDisabled` on a link drops the `href` entirely rather than
+shipping a focusable anchor that silently ignores clicks, and keeps `role="link"` plus
+`aria-disabled` so it is *announced* as unavailable rather than vanishing from the tree.
+
+<Canvas of={ActionTilesStories.Links} />
+
+## `role="group"`, and no roving tabindex
+
+These are ordinary buttons and anchors, so the platform already owns the keyboard: Tab
+reaches **each** tile, Enter and Space press a button, Enter follows a link.
+
+A radio group borrows one tab stop and moves its choice with the arrow keys because exactly
+one of its options is true at a time. Nothing here is true, so imposing that model would only
+cost a keyboard user the ability to Tab to the second tile.
+
+The group takes a required `label`, which names the set — "Queue type", "Pick a tool" — the
+way a `radiogroup` is named. A set of unnamed tiles is a pile of buttons.
+
+## A tile may lead with an icon
+
+`icon` is `aria-hidden` by construction, because the name it sits above is inside the same
+tile — an announced icon is the label read twice. The library still ships no icons; apps
+bring their own.
+
+<Canvas of={ActionTilesStories.WithIcons} />
+
+## The grid takes its columns from the container
+
+`repeat(auto-fill, minmax(min(var(--charcuterie-tile-min-inline-size), 100%), 1fr))` — the
+same constant `RadioGroup`'s tile shape uses, and each of its three parts is load-bearing:
+
+- **`auto-fill`, not `auto-fit`.** `auto-fit` collapses the empty tracks and lets the
+  survivors share the whole row, so six tiles in a 2560px container become six 420px slabs —
+  the full-width-row shape in a new costume.
+- **`min(…, 100%)`.** Without it the 200px floor overflows a container narrower than one
+  tile, which is a horizontal scrollbar in the Narrow View.
+- **A custom property, not an interpolated class.** Tailwind scans source *text* for complete
+  class strings, so `` `grid-cols-[…${n}px…]` `` generates nothing, paints nothing and
+  reports nothing.
+
+This is **not** `useAdaptiveColumns`. That hook buys a column with **height**, for an
+unbounded gallery that is going to scroll; a tile set is a bounded group inside a form section
+or a first step, where the only question is how many fit across the box it was given.
+
+<Canvas of={ActionTilesStories.Responsive} />
+
+## What this deliberately does not do
+
+- **Hold a selection.** That is `RadioGroup itemShape="tile"`, and giving these tiles
+  `aria-checked` would be the mistake the 2026-08-25 record refused.
+- **Toggle per tile.** A multi-select tile is a checkbox group and a different record.
+- **Carry artwork.** That is [`MediaTile`](/docs/components-data-mediatile--docs).
+
+<Canvas of={ActionTilesStories.Interactive} />

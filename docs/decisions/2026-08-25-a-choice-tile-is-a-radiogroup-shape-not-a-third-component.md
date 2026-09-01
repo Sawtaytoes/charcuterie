@@ -5,6 +5,7 @@
 **Type:** Component / API shape
 **Supersedes:** —
 **Superseded by:** —
+**Extended by:** [2026-09-01-a-tile-that-acts-is-its-own-component-and-shares-only-the-box.md](2026-09-01-a-tile-that-acts-is-its-own-component-and-shares-only-the-box.md) — the tile that *navigates*, named below as out of scope, is now `ActionTiles`
 **Extends:** [2026-07-30-a-consumer-milestone-adds-components.md](2026-07-30-a-consumer-milestone-adds-components.md)
 
 ## Decision
@@ -111,7 +112,9 @@ generates nothing, paints nothing and reports nothing.
   tile. That is `MultiplePicker`, a checkbox group, and a different record.
 - **A tile that navigates.** mux-magic's "Pick a tool" tiles are `<a href>` and points-market's
   are `<Link>`. A link is not a radio, and giving one `aria-checked` would be worse than the
-  paint it replaced.
+  paint it replaced. **This is now `ActionTiles`**
+  ([2026-09-01](2026-09-01-a-tile-that-acts-is-its-own-component-and-shares-only-the-box.md)),
+  which shares this shape's box through `tileStyles.ts` and nothing else.
 - **A tile with artwork.** That is `MediaTile`, and it stays that.
 
 ## Evidence

@@ -37,6 +37,11 @@ export type {
   AccordionProps,
 } from "./Accordion/Accordion.tsx"
 export { Accordion } from "./Accordion/Accordion.tsx"
+export type {
+  ActionTileItem,
+  ActionTilesProps,
+} from "./ActionTiles/ActionTiles.tsx"
+export { ActionTiles } from "./ActionTiles/ActionTiles.tsx"
 export type { AdaptiveGridProps } from "./AdaptiveGrid/AdaptiveGrid.tsx"
 export { AdaptiveGrid } from "./AdaptiveGrid/AdaptiveGrid.tsx"
 export type { ColumnChoice } from "./AdaptiveGrid/chooseColumns.ts"

@@ -3,6 +3,12 @@ import type { ReactNode } from "react"
 import { useEffect } from "react"
 
 import { FOCUS_RING_CLASS } from "../intentStyles.ts"
+import {
+  TILE_BOX_CLASS,
+  TILE_HINT_TEXT_CLASS,
+  TILE_PADDING_CLASS,
+  TILE_TEXT_SIZE_CLASS,
+} from "../tileStyles.ts"
 import { toClassName } from "../toClassName.ts"
 import type {
   RadioItem,
@@ -41,42 +47,6 @@ const DOT_SIZE_CLASS: Record<ControlSize, string> = {
   md: "size-2",
   lg: "size-2.5",
 }
-
-const TEXT_SIZE_CLASS: Record<ControlSize, string> = {
-  sm: "text-sm",
-  md: "text-md",
-  lg: "text-lg",
-}
-
-/**
- * One step down from the option's own text, and never below `xs`:
- * a hint that keeps shrinking with the density axis is the 11px
- * caption the 2026-08-10 ramp rebuild exists to have removed.
- */
-const HINT_TEXT_CLASS: Record<ControlSize, string> = {
-  sm: "text-xs",
-  md: "text-xs",
-  lg: "text-sm",
-}
-
-/**
- * A tile is a card, so its padding is a card's rather than a
- * control's — enough that the border reads as a box around content
- * and not as an outline on a line of text.
- */
-const TILE_PADDING_CLASS: Record<ControlSize, string> = {
-  sm: "px-3 py-2.5",
-  md: "px-3.5 py-3",
-  lg: "px-4 py-3.5",
-}
-
-/**
- * The box, and only the box. Every state below it is a **border and
- * a surface**, never colour alone — the same reason `Stepper`
- * refuses to say "done" with a hue.
- */
-const TILE_BOX_CLASS =
-  "rounded-lg border border-border-subtle bg-surface-raised"
 
 /**
  * Its own file for the same reason `SegmentedOption` is: **both
@@ -152,7 +122,7 @@ export const RadioGroupOption = ({
                 ? "items-center"
                 : "items-start",
             ),
-        TEXT_SIZE_CLASS[size],
+        TILE_TEXT_SIZE_CLASS[size],
         // Disabled turns the whole option down with `opacity-60`, the
         // same family treatment as `Checkbox` and `Switch`, rather than
         // fading the ring to a token that disappeared on a pale theme.
@@ -252,7 +222,7 @@ export const RadioGroupOption = ({
             <span
               className={toClassName(
                 "font-normal text-content-muted",
-                HINT_TEXT_CLASS[size],
+                TILE_HINT_TEXT_CLASS[size],
               )}
             >
               {hint}
