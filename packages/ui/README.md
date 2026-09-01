@@ -82,6 +82,20 @@ screen reader announces. `onClick` is required, so a pill nobody can press is a 
 construction
 ([decision](../../docs/decisions/2026-08-22-a-pressable-badge-is-a-sibling-component-not-a-prop.md)).
 
+**`ActionTiles` is the tile that presses**, and it is the case the
+[choice-tile record](../../docs/decisions/2026-08-25-a-choice-tile-is-a-radiogroup-shape-not-a-third-component.md)
+named as out of scope: mux-magic's "Pick a tool" tiles are `<a href>` and points-market's are
+`<Link>`, and a link is not a radio. That record's test was *only the box changes*, and here
+it is false — no role to borrow, no roving tabindex, no selection-follows-focus, no
+read-only, no pending value — so the two share **the box and nothing else**, through
+`tileStyles.ts`, and the test compares *computed* styles rather than class names. It exists
+because QueuePilot's queue-type chooser was two `Button`s with `height: auto`: a `Button`
+carries **no block padding at all**, so the override computed to `padding: 0` down the block
+axis and shipped a card whose title sat flush against its top border. Nothing could report
+it — the class really was in the DOM, tsc never reads the CSS, and unstyled markup passes
+axe
+([decision](../../docs/decisions/2026-09-01-a-tile-that-acts-is-its-own-component-and-shares-only-the-box.md)).
+
 **The unified app shell adds four**: `Shell`, `Header`, `Rail`, `Main` — the fleet's largest
 single duplication, where ten of twelve UI repos hand-roll the page chrome and three of them
 have a file named `AppShell.tsx` (two of those headers are a *byte-identical* class string,

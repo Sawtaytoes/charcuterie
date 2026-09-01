@@ -7,6 +7,11 @@ import type { ControlSize } from "@charcuterie/tokens"
 import type { CSSProperties, ReactNode } from "react"
 import { useCallback, useEffect, useRef } from "react"
 
+import {
+  TILE_COLUMNS_CLASS,
+  TILE_GAP_CLASS,
+  TILE_MIN_INLINE_SIZE_PROPERTY,
+} from "../tileStyles.ts"
 import { toClassName } from "../toClassName.ts"
 import { RadioGroupOption } from "./RadioGroupOption.tsx"
 
@@ -86,47 +91,6 @@ const GAP_CLASS: Record<ControlSize, string> = {
 }
 
 /**
- * Wider than the row gaps: rows are separated by their leading, and
- * tiles by nothing but the gap, so the same 6px that reads as a list
- * reads as a seam between two cards.
- */
-const TILE_GAP_CLASS: Record<ControlSize, string> = {
-  sm: "gap-1.5",
-  md: "gap-2",
-  lg: "gap-3",
-}
-
-/**
- * `auto-fill`, and deliberately not `auto-fit`.
- *
- * `auto-fit` collapses the empty tracks and lets the ones that
- * remain share the whole row, so six tiles in a 2560px container
- * become six 420px slabs — the full-width-row shape in a new
- * costume. `auto-fill` keeps the empty tracks, so a tile stays a
- * tile and the grid simply has room to spare.
- *
- * `min(…, 100%)` is what stops the floor overflowing a container
- * narrower than one tile, which is the Narrow View and is otherwise
- * a horizontal scrollbar on a phone.
- *
- * The floor arrives as a custom property rather than an interpolated
- * class because Tailwind scans source *text* for complete class
- * strings: `` `grid-cols-[…${n}px…]` `` generates nothing, paints
- * nothing and reports nothing. One written-out literal reading
- * `var(--charcuterie-tile-min-inline-size)` covers every width an
- * app can ask for — the same reason `Card`'s accent edge goes
- * through one property.
- *
- * This is **not** `useAdaptiveColumns`, and the difference is the
- * question being asked. That hook buys a column with height, for an
- * unbounded gallery that will scroll; a radio group is a bounded set
- * of options inside a form section, where the only question is how
- * many fit across the box it was given.
- */
-const TILE_COLUMNS_CLASS =
-  "grid-cols-[repeat(auto-fill,minmax(min(var(--charcuterie-tile-min-inline-size),100%),1fr))]"
-
-/**
  * One choice out of many, each on its own row with a label the size
  * of prose — the stacked sibling of `SegmentedControl`.
  *
@@ -157,6 +121,16 @@ const TILE_COLUMNS_CLASS =
  * and `isReadOnly` are the ones already tested here. `SegmentedControl`
  * earns its own file by being a different control — one connected
  * strip, no radio affordance; a tile is this control with a border.
+ *
+ * ### A tile that ACTS is `ActionTiles`
+ *
+ * Same box, read from `tileStyles.ts`, and nothing else in common:
+ * no `radio` role, no roving tabindex, no selection to follow focus,
+ * no read-only. Ask what a press does. It records a value something
+ * below reads — this. It goes somewhere or starts something, and
+ * nothing stays selected — `ActionTiles`. Inverting every clause of
+ * the paragraph above is what earned that one its own file
+ * (`docs/decisions/2026-09-01-a-tile-that-acts-is-its-own-component-and-shares-only-the-box.md`).
  */
 export const RadioGroup = ({
   className,
@@ -292,7 +266,7 @@ export const RadioGroup = ({
       style={
         isTile
           ? ({
-              "--charcuterie-tile-min-inline-size": `${minTileInlineSize}px`,
+              [TILE_MIN_INLINE_SIZE_PROPERTY]: `${minTileInlineSize}px`,
             } as CSSProperties)
           : undefined
       }
