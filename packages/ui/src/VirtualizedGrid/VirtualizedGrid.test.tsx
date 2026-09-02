@@ -1,5 +1,5 @@
 import { composeStories } from "@storybook/react"
-import { expect, waitFor } from "storybook/test"
+import { expect, userEvent, waitFor } from "storybook/test"
 import { test } from "vitest"
 
 import { mountStory } from "../mountStory.testHelpers.ts"
@@ -31,10 +31,17 @@ import * as stories from "./VirtualizedGrid.stories.tsx"
  *    and "list, 40 items" on a list of 2,000.
  *  - **An empty list reserves no space.** The state a filter lands
  *    on.
+ *  - **A hidden panel measures nothing, and revealing it does not
+ *    scroll.** The regression that took Docket's Triage tab bar off
+ *    the top of the screen.
  */
 
-const { AllStates, Default, InShellScrollRegion } =
-  composeStories(stories)
+const {
+  AllStates,
+  Default,
+  InHiddenTabPanel,
+  InShellScrollRegion,
+} = composeStories(stories)
 
 const getLists = (canvasElement: HTMLElement) => [
   ...canvasElement.querySelectorAll<HTMLElement>("ul"),
@@ -203,6 +210,118 @@ test("a grid inside Shell follows Main's one scroll region", async () => {
   await expect(
     getList(canvasElement).style.paddingBlockEnd,
   ).toBe("0px")
+})
+
+test("a grid inside a hidden panel mounts nothing and reveals without scrolling", async () => {
+  const { canvasElement } = await mountStory(
+    InHiddenTabPanel,
+  )
+
+  const main =
+    canvasElement.querySelector<HTMLElement>("main")
+
+  if (!main) {
+    throw new Error("The tab story has no Main element.")
+  }
+
+  await waitFor(async () => {
+    await expect(
+      getRowIndexes(canvasElement).length,
+    ).toBeGreaterThan(0)
+  })
+
+  const hiddenPanel = canvasElement.querySelector(
+    '[role="tabpanel"][hidden]',
+  )
+
+  if (!hiddenPanel) {
+    throw new Error("Both tab panels are showing.")
+  }
+
+  /*
+   * The direct observable, and the one the fix is: `display: none`
+   * gives an element no box, so nothing inside it can be measured.
+   * A grid that mounted its rows anyway would record a 0px-wide
+   * container and 0px-tall rows as facts.
+   */
+  /*
+   * THE ASSERTION THAT DISCRIMINATES, and it is the cause rather
+   * than the symptom on purpose.
+   *
+   * `display: none` gives an element no box, so nothing inside it
+   * can be measured. A grid that mounted its rows anyway records a
+   * 0px-wide container and 0px-tall rows as facts, and the
+   * virtualizer then reads the correction as a resize and
+   * compensates the scroll position for it.
+   *
+   * Whether that compensation actually lands is a RACE — between
+   * the `ResizeObserver` delivering the real row heights and the
+   * layout effect correcting `scrollMargin`. In Docket it landed
+   * and moved `Main` by 266px, 190px and 1,190px on three
+   * different switches; in this story it does not land at all. So
+   * the symptom is not what is asserted here. This is: with
+   * nothing mounted, the race has no entrants.
+   */
+  await expect(
+    hiddenPanel.querySelectorAll("ul").length,
+  ).toBe(0)
+
+  const tabs = [
+    ...canvasElement.querySelectorAll<HTMLElement>(
+      '[role="tab"]',
+    ),
+  ]
+
+  const nextTab = tabs.find(
+    (tab) => tab.getAttribute("aria-selected") === "false",
+  )
+
+  if (!nextTab) {
+    throw new Error("No unselected tab to switch to.")
+  }
+
+  await expect(main.scrollTop).toBe(0)
+
+  await userEvent.click(nextTab)
+
+  /**
+   * The list inside the panel that is SHOWING. Scoping matters:
+   * without the gate the hidden panel still holds a `<ul>`, and a
+   * query that took the first one in the canvas would watch the
+   * panel that was just put away and settle before the revealed
+   * one had measured anything.
+   */
+  const getShownList = () => {
+    const shown = canvasElement.querySelector(
+      '[role="tabpanel"]:not([hidden])',
+    )
+
+    const list = shown?.querySelector<HTMLElement>("ul")
+
+    if (!list) {
+      throw new Error("The shown panel has no grid.")
+    }
+
+    return list
+  }
+
+  // Wait for the revealed grid to have MEASURED, not merely to
+  // have mounted — the adjustment, when it happens, happens on the
+  // virtualizer's resize path.
+  await waitFor(async () => {
+    await expect(
+      Number(
+        getShownList().style.paddingBlockEnd.replace(
+          "px",
+          "",
+        ),
+      ),
+    ).toBeGreaterThan(0)
+  })
+
+  // The symptom, kept as a guard rather than as the proof. It is
+  // free, and it is the sentence a reader of this file wants.
+  await expect(main.scrollTop).toBe(0)
 })
 
 test("a screen reader is told the real length", async () => {
