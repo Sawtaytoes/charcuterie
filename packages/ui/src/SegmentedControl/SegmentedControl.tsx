@@ -24,6 +24,17 @@ export type SegmentedItem = {
 
 export type SegmentedControlProps = {
   className?: string
+  /**
+   * Fill the available inline space, with every option claiming an
+   * equal share. A board's Narrow View selector needs this: its
+   * options name the only lane on screen, so a content-width strip
+   * leaves the rest of the board looking disconnected.
+   *
+   * The default stays content-width. Most segmented controls choose
+   * a compact view or density, where stretching three short words
+   * across a whole toolbar would weaken their grouping.
+   */
+  isFullWidth?: boolean
   items: readonly SegmentedItem[]
   /** The group's accessible name. Required. */
   label: string
@@ -75,6 +86,7 @@ const GAP_CLASS: Record<ControlSize, string> = {
  */
 export const SegmentedControl = ({
   className,
+  isFullWidth = false,
   items,
   label,
   onChange,
@@ -152,6 +164,7 @@ export const SegmentedControl = ({
       aria-label={label}
       className={toClassName(
         "inline-flex items-center rounded-md border border-border-subtle bg-surface-sunken p-0.5",
+        isFullWidth && "w-full flex-wrap",
         GAP_CLASS[size],
         className,
       )}
@@ -194,6 +207,7 @@ export const SegmentedControl = ({
       {items.map((item) => (
         <SegmentedOption
           isChecked={checkedValue === item.value}
+          isFullWidth={isFullWidth}
           item={item}
           key={item.value}
           onChoose={chooseOption}
