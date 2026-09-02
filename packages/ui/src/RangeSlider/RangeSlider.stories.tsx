@@ -29,10 +29,20 @@ const toClock = (seconds: number): string => {
 /** An invented chapter list for a 45-minute programme. */
 const chapters = [
   { label: "Cold open", value: 0 },
-  { label: "Titles", value: 240 },
   { label: "Act one", value: 600 },
   { label: "Act two", value: 1_500 },
   { label: "Credits", value: 2_460 },
+]
+
+/**
+ * The same marks with the words taken off, which is what a narrow
+ * container wants: a label is centred on its mark, so two marks closer
+ * together than a label box overlap. The component draws what it is
+ * given.
+ */
+const chapterMarks = [
+  ...chapters.map(({ value }) => ({ value })),
+  { value: 240 },
 ]
 
 /**
@@ -252,7 +262,7 @@ export const Responsive: Story = {
           isValueShown
           label={`Section at ${width}`}
           max={2_700}
-          ticks={chapters}
+          ticks={chapterMarks}
           value={{ end: 1_500, start: 600 }}
           valueFormat={toClock}
         />

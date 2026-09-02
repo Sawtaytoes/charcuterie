@@ -91,6 +91,11 @@ export type RangeSliderProps = Omit<
   /**
    * Marks along the bar. Positions in the same units as `value`, so a
    * film's chapters are the offsets the app already has.
+   *
+   * A `label` is centred on its own mark and clamped inside the bar at
+   * both ends. Two marks closer together than a label box will overlap:
+   * the component draws what it is given, and a caller with dense marks
+   * passes the words only where there is room for them.
    */
   ticks?: readonly RangeSliderTick[]
   /**
@@ -108,9 +113,9 @@ export type RangeSliderProps = Omit<
 }
 
 /** Half the tick-label box, which is what centres it on its mark. */
-const TICK_LABEL_INLINE_SIZE = "3.5rem"
+const TICK_LABEL_INLINE_SIZE = "4.5rem"
 
-const TICK_LABEL_HALF = "1.75rem"
+const TICK_LABEL_HALF = "2.25rem"
 
 /**
  * A two-thumb range control: a span picked out along a bar, with an
@@ -278,6 +283,12 @@ export const RangeSlider = ({
     // Focus follows the grab. A pointer user who then reaches for the
     // arrow keys is moving the handle they were just dragging, which
     // is the only answer that does not need looking at.
+    //
+    // The handle wears its focus ring for the length of the drag,
+    // which is a script `focus()` matching `:focus-visible`. On a
+    // one-thumb control that would be the ring-after-a-click the house
+    // style rejects; here it is the answer to "which of the two am I
+    // holding", and it is the same mark the keyboard path leaves.
     const thumbElement =
       thumb === "start"
         ? startThumbRef.current
