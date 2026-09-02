@@ -269,6 +269,7 @@ export const Board = ({
               ? "hidden"
               : "cq-lg:hidden",
           )}
+          isFullWidth
           items={lanes.map((lane) => ({
             // Stacked rather than `Todo (6)`, because the count is
             // the reason to look: a lane picker that reads
@@ -277,7 +278,12 @@ export const Board = ({
             // on any line at all.
             label: (
               <span className="flex flex-col items-center leading-tight">
-                <span>{lane.label}</span>
+                {/* Equal-width targets wrap onto a second row at an
+                    extreme Narrow View width, so lane labels always
+                    stay whole and each target keeps its baseline. */}
+                <span className="block whitespace-nowrap">
+                  {lane.label}
+                </span>
 
                 <span className="font-normal text-content-muted text-xs">
                   {String(
