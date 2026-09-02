@@ -553,7 +553,23 @@ test("the barrel is the only place components are re-exported", async () => {
   // spells the *printing* half five times over (queuepilot twice,
   // castkit, mux-magic twice) and a read-only surface needs the
   // formatter without the field.
-  expect(componentNames.length).toBe(63)
+  //
+  // `RangeSlider` is +1 -> 64. `Slider`'s own record said a two-thumb
+  // range is *"a different widget with its own focus model"*, and the
+  // focus model is exactly what makes it a component rather than an
+  // `isRange` mode: one `role="slider"` on the track becomes two of
+  // them on the thumbs inside a `role="group"`, and one tab stop
+  // becomes two. So this shares the ARITHMETIC (`sliderValue.ts`,
+  // called rather than copied) and the BAR (`sliderStyles.ts`, the
+  // same extraction `tileStyles.ts` is), and nothing else.
+  // `rangeSliderValue.ts` is its member and stays out of this count
+  // by the `<Name>/<Name>.tsx` rule. It lands beside `TimecodeInput`
+  // rather than instead of it: the two halves of QueuePilot's clip
+  // editor are a typed field and a dragged bar over one value, and
+  // `isRange` is right there and wrong here for a reason that is
+  // written down — a second text field is still a text field, while a
+  // second thumb cannot share one `aria-valuenow`.
+  expect(componentNames.length).toBe(64)
 
   for (const name of componentNames) {
     expect(barrel).toContain(`export { ${name} }`)

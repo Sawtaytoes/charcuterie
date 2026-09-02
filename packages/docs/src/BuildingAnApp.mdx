@@ -34,6 +34,7 @@ Start here. Find the row that matches what you are about to build.
 | Pick one, but the trigger is a tile, a table header, something that is not a button | `Listbox` | wrapping `Picker` in something that is not a button |
 | Pick from many, or the user should be able to type to find it | `Combobox` (`isMultiple` for multi-select) | a `<select>` with 400 `<option>` |
 | Take a position in a piece of media — a resume point, a clip boundary | `TimecodeInput` (`isRange` for a section, both ends optional) | `<input type="time">` (a 24-hour wall clock, no milliseconds, OS-painted); a sixth hand-rolled `h:mm:ss` formatter |
+| Pick a **span** — a clip's start and end, a price band, a section of a timeline | `RangeSlider` — two `role="slider"` thumbs in a group, with `valueFormat` for the units | two `Slider`s side by side; `<input type="range">`; a pair of number fields called a range |
 | Label, describe or error-annotate any control | `Field` | a bare `<label>` + hand-wired `aria-describedby` |
 | Page chrome — header, rails, the content column | `Shell` / `Header` / `Rail` / `Main` | a new `AppShell.tsx` |
 | The sections of ONE screen, each with its own address | `Tabs` with `href` items + `activeHref` | a `Nav` (that is the app's destinations, and its current item is a pill); a `Tabs` whose choice is state, so reload and Back lose the section |
