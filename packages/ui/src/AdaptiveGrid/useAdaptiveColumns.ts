@@ -240,6 +240,22 @@ export const useAdaptiveColumns = <
    * ⚠️ Never the element `contentMaxInlineSize` is applied to.
    */
   containerRef: RefObject<ContainerElement | null>
+  /**
+   * Has the container been given a box yet?
+   *
+   * False in two situations that look identical from here and are
+   * both "no measurement has happened": the frame before
+   * `ResizeObserver` delivers its first record, and any time the
+   * container sits inside a `display: none` ancestor — which is
+   * what the `hidden` attribute is, and what a tab panel, a
+   * collapsed disclosure and a closed `<details>` all use.
+   *
+   * The distinction matters because a zero inline size is not a
+   * measurement of zero. It is the absence of one, and a consumer
+   * that treats it as a number lays out for a 0px container and
+   * then reads the correction as a change.
+   */
+  isLaidOut: boolean
   /** What was picked, `"auto"` included. */
   choice: ColumnChoice
   setChoice: (choice: ColumnChoice) => void
@@ -350,6 +366,7 @@ export const useAdaptiveColumns = <
       gutterInlineSize,
       singleInlineSize,
     }),
+    isLaidOut: availableInlineSize > 0,
     setChoice,
   }
 }
