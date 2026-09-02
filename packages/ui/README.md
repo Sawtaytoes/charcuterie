@@ -96,6 +96,21 @@ it — the class really was in the DOM, tsc never reads the CSS, and unstyled ma
 axe
 ([decision](../../docs/decisions/2026-09-01-a-tile-that-acts-is-its-own-component-and-shares-only-the-box.md)).
 
+**`TimecodeInput` is the first field the fleet could not write down twice the same way.**
+QueuePilot is adding "play only this section of a video", and the *printing* half of a
+timecode already exists five times — queuepilot's `clock` and `toClock`, castkit's
+`formatTime`, and mux-magic's two modal formatters — with three different answers to whether
+the hour is shown and two to whether the minute is padded, so the same position renders
+differently in two panels of one app. The *reading* half exists nowhere. It is a text field
+rather than an `<input type="time">` for the reason `Select` is deprecated and `Slider` is a
+`div`: the platform widget is OS-painted, and it cannot carry a millisecond anyway. The
+grammar is ordered, anchored and total — `90` is ninety seconds, `90:00` is ninety minutes,
+and `1:90` is refused by name rather than carried into `2:30`, which is the `1:60` trap
+mux-magic wrote down in 2023. `isRange` edits a section whose **two ends are independently
+optional**; an inverted section swaps, and a zero-length one is refused, because a section
+with no length plays nothing
+([decision](../../docs/decisions/2026-09-01-a-timecode-is-milliseconds-and-a-section-is-a-mode.md)).
+
 **The unified app shell adds four**: `Shell`, `Header`, `Rail`, `Main` — the fleet's largest
 single duplication, where ten of twelve UI repos hand-roll the page chrome and three of them
 have a file named `AppShell.tsx` (two of those headers are a *byte-identical* class string,

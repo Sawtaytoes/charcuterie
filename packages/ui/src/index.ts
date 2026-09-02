@@ -448,6 +448,18 @@ export type {
   TextLinkProps,
 } from "./TextLink/TextLink.tsx"
 export { TextLink } from "./TextLink/TextLink.tsx"
+export type { TimecodeInputProps } from "./TimecodeInput/TimecodeInput.tsx"
+export { TimecodeInput } from "./TimecodeInput/TimecodeInput.tsx"
+export type {
+  FormatTimecodeOptions,
+  TimecodeInputResult,
+  TimecodeRange,
+} from "./TimecodeInput/timecode.ts"
+export {
+  clampTimecode,
+  formatTimecode,
+  parseTimecodeInput,
+} from "./TimecodeInput/timecode.ts"
 export type { ToastProps } from "./Toast/Toast.tsx"
 export { Toast } from "./Toast/Toast.tsx"
 export type {
