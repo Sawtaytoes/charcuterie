@@ -66,9 +66,15 @@ test("an app renders one component and gets both seams", async () => {
 
   // A soft navigation: the route changed inside the same document.
   // A plain `<a>` would have left the story mounted and unchanged.
-  await expect(
-    canvas.getByRole("heading", { name: "Episode" }),
-  ).toBeVisible()
+  //
+  // `waitFor`, because the route commit is a state update and the
+  // click resolves before it. It passed locally and failed on CI
+  // for exactly that reason.
+  await waitFor(async () => {
+    await expect(
+      canvas.getByRole("heading", { name: "Episode" }),
+    ).toBeVisible()
+  })
 
   await userEvent.click(
     expectAgentDrivable(canvas, {
