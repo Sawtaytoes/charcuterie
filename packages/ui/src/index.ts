@@ -350,6 +350,12 @@ export type {
 } from "./Rail/Rail.tsx"
 export { Rail } from "./Rail/Rail.tsx"
 export type {
+  RangeSliderProps,
+  RangeSliderTick,
+} from "./RangeSlider/RangeSlider.tsx"
+export { RangeSlider } from "./RangeSlider/RangeSlider.tsx"
+export type { RangeSliderValue } from "./RangeSlider/rangeSliderValue.ts"
+export type {
   ReorderListItem,
   ReorderListProps,
   ReorderListRenderArguments,
