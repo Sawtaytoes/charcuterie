@@ -110,6 +110,21 @@ mux-magic wrote down in 2023. `isRange` edits a section whose **two ends are ind
 optional**; an inverted section swaps, and a zero-length one is refused, because a section
 with no length plays nothing
 ([decision](../../docs/decisions/2026-09-01-a-timecode-is-milliseconds-and-a-section-is-a-mode.md)).
+**`RangeSlider` is the two-thumb range**, and it exists because
+[the Slider record](../../docs/decisions/2026-08-22-the-slider-is-a-div-with-role-slider-not-an-input-range.md)
+said one would be a different widget: QueuePilot plays *only a section* of a video, so a
+user drags two handles over a film's runtime and reads the result beside a `TimecodeInput`.
+`Slider` puts `role="slider"`, the tab stop and the pointer target on the **track**, and two
+values cannot live on one accessible object — so here the role moves to the thumbs, the
+track becomes a `role="group"` carrying the label, and one tab stop becomes two. That is why
+it is a component rather than an `isRange` mode: both halves of the test that made
+`Combobox`'s `isMultiple` and `DatePicker`'s `isRange` modes — *the role does not change,
+and the shared part is everything* — are false here. The thumbs **clamp** rather than swap,
+so the handle under the pointer keeps its identity and each thumb reports the other as its
+own `aria-valuemin`/`aria-valuemax`. What is genuinely shared is the arithmetic
+(`Slider/sliderValue.ts`, called rather than copied) and the bar (`sliderStyles.ts`, the
+same extraction `tileStyles.ts` is), compared as **computed** styles in the test
+([decision](../../docs/decisions/2026-09-01-a-two-thumb-range-is-its-own-component-and-shares-the-bar.md)).
 
 **The unified app shell adds four**: `Shell`, `Header`, `Rail`, `Main` — the fleet's largest
 single duplication, where ten of twelve UI repos hand-roll the page chrome and three of them

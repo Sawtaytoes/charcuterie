@@ -12,6 +12,15 @@ import {
   FOCUS_RING_CLASS,
   INTENT_SOLID_FILL_CLASS,
 } from "../intentStyles.ts"
+import type { SliderSize } from "../sliderStyles.ts"
+import {
+  SLIDER_ROW_CLASS,
+  SLIDER_THUMB_CLASS,
+  SLIDER_THUMB_OFFSET,
+  SLIDER_THUMB_SIZE_CLASS,
+  SLIDER_TRACK_CLASS,
+  SLIDER_TRACK_SIZE_CLASS,
+} from "../sliderStyles.ts"
 import { toClassName } from "../toClassName.ts"
 import { VisuallyHidden } from "../VisuallyHidden/VisuallyHidden.tsx"
 import {
@@ -21,7 +30,11 @@ import {
   toPercent,
 } from "./sliderValue.ts"
 
-export type SliderSize = "lg" | "md" | "sm"
+/**
+ * Re-exported rather than declared here: the three sizes are the bar's,
+ * and `RangeSlider` paints the same bar from `../sliderStyles.ts`.
+ */
+export type { SliderSize }
 
 export type SliderProps = Omit<
   ComponentPropsWithRef<"div">,
@@ -71,25 +84,6 @@ export type SliderProps = Omit<
    * seconds nobody has.
    */
   valueFormat?: (value: number) => string
-}
-
-const TRACK_SIZE_CLASS: Record<SliderSize, string> = {
-  sm: "h-1",
-  md: "h-2",
-  lg: "h-3",
-}
-
-const THUMB_SIZE_CLASS: Record<SliderSize, string> = {
-  sm: "size-3",
-  md: "size-4",
-  lg: "size-5",
-}
-
-/** Half of each `THUMB_SIZE_CLASS`, as the inline-start pull-back. */
-const THUMB_OFFSET: Record<SliderSize, string> = {
-  sm: "-0.375rem",
-  md: "-0.5rem",
-  lg: "-0.625rem",
 }
 
 /**
@@ -341,10 +335,10 @@ export const Slider = ({
         aria-valuenow={shown}
         aria-valuetext={valueText}
         className={toClassName(
-          "relative flex w-full touch-none items-center rounded-full",
-          // The hit area is the row, which is taller than the bar: a
-          // 2px track is not a pointer target, and a finger is 44px.
-          "min-h-(--control-height-sm) cursor-pointer",
+          // The bar, shared with `RangeSlider` through
+          // `../sliderStyles.ts` — including the hit area being the
+          // row rather than the 2px track.
+          SLIDER_ROW_CLASS,
           FOCUS_RING_CLASS,
           // NOT `ARIA_DISABLED_CLASS`. That constant paints a
           // box-shaped control — `bg-surface-sunken` plus a border —
@@ -373,8 +367,8 @@ export const Slider = ({
       >
         <span
           className={toClassName(
-            "w-full overflow-hidden rounded-full bg-surface-sunken",
-            TRACK_SIZE_CLASS[size],
+            SLIDER_TRACK_CLASS,
+            SLIDER_TRACK_SIZE_CLASS[size],
           )}
         >
           <span
@@ -389,8 +383,8 @@ export const Slider = ({
         <span
           aria-hidden="true"
           className={toClassName(
-            "absolute rounded-full border-2 border-surface-raised shadow-sm",
-            THUMB_SIZE_CLASS[size],
+            SLIDER_THUMB_CLASS,
+            SLIDER_THUMB_SIZE_CLASS[size],
             INTENT_SOLID_FILL_CLASS[intent],
           )}
           // Pulled back by half its own width so it sits ON the
@@ -403,7 +397,7 @@ export const Slider = ({
           // logical `inset-inline-start` looks like it already solved.
           style={{
             insetInlineStart: `${percent}%`,
-            marginInlineStart: THUMB_OFFSET[size],
+            marginInlineStart: SLIDER_THUMB_OFFSET[size],
           }}
         />
       </div>
