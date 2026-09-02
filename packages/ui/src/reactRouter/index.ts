@@ -1,6 +1,6 @@
 /**
- * `@charcuterie/ui/react-router` — the react-router adapter for the
- * link seam.
+ * `@charcuterie/ui/react-router` — the react-router adapter for this
+ * library's seams.
  *
  * **A subpath export with an optional peer dependency**, and both
  * halves of that matter. The base package must stay router-free: the
@@ -13,17 +13,23 @@
  * asserts exactly that — the main entry is measured for what it
  * reaches, so this cannot leak into it by accident.
  *
- * The wiring is one provider at the app root; `Guides/Routing` in
+ * The wiring is one component at the app root; `Guides/Routing` in
  * Storybook is the copy-pasteable version.
  *
  * ```tsx
- * import { RouterLinkProvider } from "@charcuterie/ui"
- * import { ReactRouterLink } from "@charcuterie/ui/react-router"
+ * import { ReactRouterAdapter } from "@charcuterie/ui/react-router"
  *
- * <RouterLinkProvider link={ReactRouterLink}>
- *   <RouterProvider router={router} />
- * </RouterLinkProvider>
+ * <BrowserRouter>
+ *   <ReactRouterAdapter>
+ *     <Routes>…</Routes>
+ *   </ReactRouterAdapter>
+ * </BrowserRouter>
  * ```
+ *
+ * `ReactRouterLink` stays exported for an app that wires
+ * `RouterLinkProvider` itself.
  */
 
+export type { ReactRouterAdapterProps } from "./ReactRouterAdapter.tsx"
+export { ReactRouterAdapter } from "./ReactRouterAdapter.tsx"
 export { ReactRouterLink } from "./ReactRouterLink.tsx"

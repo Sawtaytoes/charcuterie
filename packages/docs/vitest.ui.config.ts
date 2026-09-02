@@ -44,6 +44,12 @@ export default defineConfig({
       "@storybook/addon-a11y/preview",
       "@storybook/addon-docs/blocks",
       "@tanstack/react-virtual",
+      // `ReactRouterAdapter.stories.tsx` is the only story that
+      // reaches a router, and discovering it mid-run reloads the
+      // page: the test fails with "Failed to fetch dynamically
+      // imported module", which names Vite's cache rather than the
+      // dependency that was missing from this list.
+      "react-router",
     ],
   },
   test: {

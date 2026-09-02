@@ -262,7 +262,7 @@ const nav = useNavLayout({ storageKey: "rip-deck-nav" })
   still navigates. A `bar` keeps `icon` optional, because there the label never leaves.
 - **An app with three or four destinations wants `layout="bar"` in the `Header` instead**,
   and no rail at all. A 212px column costs a dashboard more than it returns.
-- Items are real `<a href>`. Inject your router once with `RouterLinkProvider` and they all
+- Items are real `<a href>`. Inject your router once with `ReactRouterAdapter` and they all
   route.
 - **`activeHref` is a string you supply**, and `resolveActiveKey` decides the rest — a parent
   path is current for its children, `/` is exact, the query string is not part of the answer,
@@ -357,24 +357,35 @@ nowhere left to go and every card in the app disappears into the page.
 
 ### 2. Wire the router
 
-`TextLink` and `ButtonLink` already work with no setup — they render a real anchor, they just
-reload the page. **One provider at the app root** upgrades every link in the tree to soft
-navigation, with no change at any call site:
+**One component at the app root**, inside the router:
 
 ```tsx
-import { RouterLinkProvider } from "@charcuterie/ui"
-import { ReactRouterLink } from "@charcuterie/ui/react-router"
+import { ReactRouterAdapter } from "@charcuterie/ui/react-router"
 
-<RouterLinkProvider link={ReactRouterLink}>
-  <RouterProvider router={router} />
-</RouterLinkProvider>
+<BrowserRouter>
+  <ReactRouterAdapter>
+    <App />
+  </ReactRouterAdapter>
+</BrowserRouter>
 ```
 
-The seam is keyed on **`href`, not `to`** — each adapter renames it on the way in — so any
-router is a four-line adapter in your own app. `react-router` is an *optional* peer
-dependency and the adapter is a separate entry point, so an app that never imports it never
-resolves it. Full recipe, including wouter and hand-rolled routers, and the three
-destinations that always fall through to a plain `<a>`: **Guides → Routing**.
+That is two seams, and you want both.
+
+**Links.** `TextLink` and `ButtonLink` already work with no setup — they render a real
+anchor, they just reload the page. The adapter upgrades every link in the tree to soft
+navigation, with no change at any call site. The seam is keyed on **`href`, not `to`** — each
+adapter renames it on the way in — so any router is a four-line adapter in your own app.
+
+**Scroll.** `Main` is your page's only vertical scrollport (step 4), and a browser restores
+the **document** scroller, never an inner one — so Back lands at the top of a list the reader
+had scrolled half-way down, in every browser, with no setting that changes it. The adapter
+gives `Main` the history entry and the offset comes back. Skip this and the app is not
+broken, it is just quietly worse, which is why it is one component and not a prop.
+
+`react-router` is an *optional* peer dependency and the adapter is a separate entry point, so
+an app that never imports it never resolves it. Full recipe, including `createBrowserRouter`,
+wouter, hand-rolled routers, and the three destinations that always fall through to a plain
+`<a>`: **Guides → Routing**.
 
 ### 3. Adopt the house lint config
 

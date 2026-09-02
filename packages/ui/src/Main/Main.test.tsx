@@ -306,6 +306,64 @@ test("a restore waits for content that arrives after the navigation", async () =
 })
 
 /**
+ * The regression the first release of this shipped, and the reason
+ * an entry remembers its path.
+ *
+ * A filter chip, an expanded group and a selected tab each write a
+ * search param, and `setSearchParams` **navigates** — so pressing
+ * one mints a history entry the memory has never seen, on the page
+ * the reader is already looking at. Read as "unseen ⇒ start at the
+ * top", the list jumped to the top every time the reader opened a
+ * group. Measured live on Docket: scrolled to 1200, pressed a group
+ * toggle, landed at 0.
+ *
+ * The toggle is in the header rather than in the list on purpose.
+ * A control inside the scrollport is scrolled into view before it
+ * is pressed, so the driver moves the offset and the test proves
+ * nothing.
+ *
+ * Leaving the scrollport alone is also exactly what the page did
+ * before any of this existed, so this answer cannot itself be a
+ * regression.
+ */
+test("expanding a group is a new history entry that does not move the scrollport", async () => {
+  await setViewport(DESKTOP)
+
+  const { canvas } = await mountStory(ScrollMemory)
+
+  const main = canvas.getByRole("main")
+
+  await scrollTo(main, 900)
+
+  await userEvent.click(
+    expectAgentDrivable(canvas, {
+      name: "Expand the specials",
+      role: "button",
+    }),
+  )
+
+  // The expansion happened, so this is a real new entry rather than
+  // a press that did nothing.
+  await expect(
+    expectAgentDrivable(canvas, {
+      name: "Collapse the specials",
+      role: "button",
+    }),
+  ).toBeVisible()
+
+  // Still where the reader put it. `waitFor` would hide a jump that
+  // corrects itself, so this is read directly after two rendering
+  // steps.
+  await new Promise((resolve) => {
+    globalThis.requestAnimationFrame(() => {
+      globalThis.requestAnimationFrame(resolve)
+    })
+  })
+
+  await expect(main.scrollTop).toBe(900)
+})
+
+/**
  * A restore that outlives the reader's first scroll is a page that
  * fights them. Anything the reader does to the scrollport ends it.
  */
