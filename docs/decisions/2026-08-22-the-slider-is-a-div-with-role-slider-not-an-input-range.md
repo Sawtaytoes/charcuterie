@@ -5,6 +5,7 @@
 **Type:** Component / platform hatch
 **Supersedes:** —
 **Superseded by:** —
+**Extended by:** [2026-09-01-a-two-thumb-range-is-its-own-component-and-shares-the-bar.md](2026-09-01-a-two-thumb-range-is-its-own-component-and-shares-the-bar.md) — the two-thumb range named below as absent is now `RangeSlider`
 **Extends:** [2026-08-20-native-select-is-deprecated-and-the-platform-hatch-is-closed.md](2026-08-20-native-select-is-deprecated-and-the-platform-hatch-is-closed.md)
 
 ## Decision
@@ -94,6 +95,9 @@ behaving correctly.
 ## Notes
 
 - Single value only. A two-thumb range is a different widget with its own focus model, and
-  nothing in the fleet has asked for one.
+  nothing in the fleet has asked for one. **QueuePilot asked on 2026-09-01, and that
+  sentence is the argument for the shape it got**: `RangeSlider` is its own component
+  ([2026-09-01](2026-09-01-a-two-thumb-range-is-its-own-component-and-shares-the-bar.md)),
+  sharing this one's arithmetic and its bar and nothing else. `Slider` is unchanged.
 - Horizontal only. `aria-orientation` is written so a vertical variant can arrive without
   changing what AT already reads.
