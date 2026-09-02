@@ -1,10 +1,10 @@
 # `Main` remembers a history entry's scroll offset, because no browser does
 
-**Status:** Accepted
+**Status:** Superseded
 **Date:** 2026-08-31
 **Type:** Component / behaviour
 **Supersedes:** —
-**Superseded by:** —
+**Superseded by:** [2026-09-02-scroll-memory-is-automatic-and-a-filter-is-not-a-navigation.md](2026-09-02-scroll-memory-is-automatic-and-a-filter-is-not-a-navigation.md)
 **Extends:** [2026-08-29-main-is-the-app-shells-vertical-scroll-region.md](2026-08-29-main-is-the-app-shells-vertical-scroll-region.md)
 
 ## Decision
