@@ -545,7 +545,15 @@ test("the barrel is the only place components are re-exported", async () => {
   // what it deliberately does not cover — a tile that navigates is
   // not a radio, and giving one `aria-checked` would be worse than
   // the paint it replaced.
-  expect(componentNames.length).toBe(62)
+  //
+  // `TimecodeInput` — a typed media position, with an `isRange` mode
+  // for a section of a file — is +1 -> 63. `timecode.ts` is its
+  // member and stays out of this count by the `<Name>/<Name>.tsx`
+  // rule, while still being exported from the barrel: the fleet
+  // spells the *printing* half five times over (queuepilot twice,
+  // castkit, mux-magic twice) and a read-only surface needs the
+  // formatter without the field.
+  expect(componentNames.length).toBe(63)
 
   for (const name of componentNames) {
     expect(barrel).toContain(`export { ${name} }`)

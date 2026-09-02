@@ -1,0 +1,155 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as TimecodeInputStories from "./TimecodeInput.stories";
+
+<Meta of={TimecodeInputStories} />
+
+# TimecodeInput
+
+A text field for a position in a piece of media — `hh:mm:ss.mmm` — with an `isRange` mode
+for a section of a file. The consumer that shaped it is **QueuePilot**, which plays only a
+chosen part of a video
+([decision](../../../docs/decisions/2026-09-01-a-timecode-is-milliseconds-and-a-section-is-a-mode.md)).
+
+<Canvas of={TimecodeInputStories.Default} />
+
+## Props
+
+<Controls />
+
+## The value is milliseconds, and the props say so
+
+`onChange` reports an integer count of milliseconds from the start of the file. Not a
+`Date`, not a clock time, not a string. A media position is a **duration**, the only
+arithmetic anybody does with it is subtraction, and a number is the type that supports it.
+
+Every prop carrying one keeps the `Ms` suffix — `durationMs`, `maxValueMs`, `minValueMs`,
+`stepMs`, `valueMs` — because a duration's unit is genuinely ambiguous and this fleet has
+both seconds and milliseconds in use. A `*At` timestamp is the opposite case and takes no
+suffix.
+
+```tsx
+<TimecodeInput
+  durationMs={file.durationMs}      // the default maximum
+  label="Start at"
+  onChange={(value) => { setStartMs(value) }}   // number | null
+  valueMs={startMs}                 // seeds; Charcuterie owns it from then on
+/>
+```
+
+## Why this is not `<input type="time">`
+
+Two reasons, and neither is taste.
+
+A `time` input's value is a wall-clock `HH:MM` string capped at 24 hours, its smallest step
+is a second unless `step` is fractional, and it has no way to say "1.5 hours into a file" as
+a duration rather than as half past one. A clip boundary is milliseconds; the platform
+control cannot carry them.
+
+And it is painted by the operating system, out of `::-webkit-datetime-edit-*`
+pseudo-elements no token reaches inside — the same mechanism that deprecated the native
+`Select` and that kept `Slider` off `<input type="range">`.
+
+## Typing is the whole interface, so nothing guesses in silence
+
+| Typed | Resolves to |
+| --- | --- |
+| `90` | `00:01:30.000` — a bare number is **seconds** |
+| `1:30` | `00:01:30.000` |
+| `90:00` | `01:30:00.000` — the largest field present is unbounded |
+| `1:02:03` | `01:02:03.000` |
+| `1:02:03.500`, `1:02:03,500` | `01:02:03.500` |
+| `+90` | `00:01:30.000` — a leading `+` is tolerated |
+
+Three mechanisms keep a grammar that permissive from being dangerous:
+
+1. **The grammar is ordered and total.** Each rule is anchored on the *whole* input, the
+   first match wins, and no match is a stated failure. `1:` is not one minute.
+2. **An overflow is a failure with a name, not a carry.** `1:90` comes back as *A minute
+   has 60 seconds, so "90" is not a seconds field. Type 02:30 to carry it, or 90 to mean 90
+   seconds.* Both legal spellings are offered and neither is taken. Carrying it silently
+   moves the position by a whole minute, which is the `1:60` trap mux-magic wrote down in
+   2023.
+3. **Nothing commits without an echo.** The resolved position is rendered in full underneath
+   the field, in a `role="status"` live region wired into the input's `aria-describedby`.
+   Commit is Enter or blur; a keystroke never commits.
+
+**The largest field present is unbounded; every smaller one is 0–59.** That one sentence is
+every bound in the grammar. It is also why a bare number is seconds: seconds is the smallest
+unit the field prints, so the reading that needs no explanation is the one where the typist
+appended nothing.
+
+Refused by name: a negative, a seconds or minutes field of 60 or more with a larger field
+beside it, more than three colon-separated parts, a fraction longer than three digits, and
+anything the accepting rules do not match. A refused value leaves the text **exactly as
+typed**, marks the field invalid and says why.
+
+<Canvas of={TimecodeInputStories.AllVariants} />
+
+## A section is `isRange`, and both of its ends are optional
+
+`{ end, start }` has four real states, not three plus an error:
+
+| `start` | `end` | Means |
+| --- | --- | --- |
+| `null` | `null` | no window at all |
+| set | `null` | from here to the end of the media |
+| `null` | set | from the beginning, stopping here |
+| set | set | the window between them |
+
+So there is no `isEndOpen` prop — `null` already says it — and clearing one end never
+touches the other. An open start is the **absence of a choice**, not zero, which is why a
+half-open section is clamped but never compared.
+
+Picking an end before the start **swaps**, following `DatePicker`: throwing the pair away
+would discard the boundary just typed. An end **equal** to the start is **refused** by name,
+which is where this parts company with a date range: a zero-length section plays nothing, so
+swapping it would hide a typo behind a window that silently does not exist.
+
+There is no `error` prop. `Field` and `FieldGroup` own the semantic error; this component
+owns only the echo.
+
+<Canvas of={TimecodeInputStories.AllStates} />
+
+## Keyboard
+
+| Key | Does |
+| --- | --- |
+| Enter | commits the typed text |
+| Tab / blur | commits the typed text |
+| Escape | puts the last committed value back |
+| ArrowUp / ArrowDown | steps by `stepMs` (default 1000) and **commits** |
+| Shift + ArrowUp / ArrowDown | steps by ten times `stepMs` |
+
+A step commits, and that is not an exception to "a keystroke never commits" — it is the
+other side of it. Typing is a draft the echo reports on; a step is a whole gesture on a
+value that already exists, the same act as clicking a day in `DatePicker`'s calendar. A
+stepper that needed Enter afterwards is a stepper nobody presses twice.
+
+The control keeps the plain `textbox` role. It is **not** a `role="spinbutton"`: that role
+promises an `aria-valuenow`, and this field has no value at all while it is empty or while
+its text is refused — which are exactly the states the echo exists for. A spinbutton with no
+value is a widget that under-reports itself to a screen reader in its two most important
+states.
+
+<Canvas of={TimecodeInputStories.Responsive} />
+
+## The formatter is exported, because the fleet writes it repeatedly
+
+`formatTimecode`, `parseTimecodeInput` and `clampTimecode` come out of the barrel. The
+printing half is written five times across the fleet — queuepilot's `clock` and `toClock`,
+castkit's `formatTime`, and mux-magic's two modal formatters — each with its own answer to
+whether the hour is shown and whether the minute is padded. A read-only surface should call
+the exported one rather than spell a sixth.
+
+```ts
+formatTimecode(3_723_500)                            // "01:02:03.500"
+formatTimecode(90_000, { isHoursShown: false })      // "01:30.000"
+formatTimecode(1_999, { millisecondDigits: 0 })      // "00:00:01" — truncates
+```
+
+The default is the canonical `hh:mm:ss.mmm`, and it is what the field writes back on commit:
+one spelling means a re-read of the field parses to the number that produced it, and a
+screenshot of the same value is the same picture.
+
+<Canvas of={TimecodeInputStories.Interactive} />
