@@ -157,6 +157,41 @@ export type VirtualizedGridProps<Item> = {
  * answer: the browser's `Ctrl+F` only searches what is mounted, and
  * so does "select all". A page that needs either owes its users a
  * search field of its own.
+ *
+ * ### Nothing is mounted until there is a box to measure
+ *
+ * `display: none` gives an element no boxes at all, so every
+ * measurement taken through one reads zero — and zero is the
+ * absence of a measurement, not a measurement of nothing. A grid
+ * inside a `hidden` tab panel, a collapsed disclosure or a closed
+ * `<details>` therefore measures a 0px container (one column) and
+ * 0px-tall rows, and the virtualizer stores those as facts.
+ *
+ * Revealing the panel corrects all of them at once, and the
+ * virtualizer reads a correction as a **resize**. That is the one
+ * event it is entitled to move the scroll position for: an item
+ * above the viewport that grows must be compensated for, or the
+ * page slides under the reader. So it compensates — for a growth
+ * that never happened — and scrolls the shared scroll owner down
+ * by roughly the distance from the top of the region to the top of
+ * the grid.
+ *
+ * Whether the compensation lands is a race between the
+ * `ResizeObserver` delivering the real row heights and the layout
+ * effect correcting `scrollMargin`, so the symptom is intermittent
+ * and its size varies. Docket's Triage bar is where it was found:
+ * one switch moved `Main` 266px, another 190px, another 1,190px,
+ * and the tab bar went off the top of the screen. The cause is not
+ * the tab bar, and fixing it there would have left every other
+ * host of a hidden grid broken.
+ *
+ * `isLaidOut` is the gate. While the container has no box the
+ * windowed grid is not mounted, so there is nothing to measure
+ * wrongly and no virtualizer to mislead; it mounts when the box
+ * arrives and measures once, correctly. The cost is that a
+ * revealed grid re-measures from its estimate instead of resuming
+ * a cache — the same thing a routed tab does, and the reason a
+ * routed tab never had this bug.
  */
 export const VirtualizedGrid = <Item,>({
   blockSizeResolver,
@@ -227,7 +262,8 @@ export const VirtualizedGrid = <Item,>({
       )}
       ref={layout.containerRef}
     >
-      {scrollOwner?.kind === "element" ? (
+      {!layout.isLaidOut ? null : scrollOwner?.kind ===
+        "element" ? (
         <ElementGrid
           {...gridProps}
           scrollOwner={scrollOwner}

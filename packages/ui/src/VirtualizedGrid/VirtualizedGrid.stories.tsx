@@ -10,6 +10,7 @@ import { Header } from "../Header/Header.tsx"
 import { Main } from "../Main/Main.tsx"
 import { SegmentedControl } from "../SegmentedControl/SegmentedControl.tsx"
 import { Shell } from "../Shell/Shell.tsx"
+import { Tabs } from "../Tabs/Tabs.tsx"
 import { VirtualizedGrid } from "./VirtualizedGrid.tsx"
 
 /**
@@ -125,6 +126,69 @@ export const InShellScrollRegion: Story = {
       <Main>
         <Button onClick={() => {}}>Mark all seen</Button>
         <VirtualizedGrid {...gridProps} />
+      </Main>
+    </Shell>
+  ),
+}
+
+/**
+ * Two grids in a tab bar, one of them hidden — the shape that found
+ * the scroll bug.
+ *
+ * A `hidden` panel is `display: none`, so the grid inside it has no
+ * box: its container measures 0px wide (one column) and every
+ * mounted row measures 0px tall. Revealing the panel corrects all
+ * of that at once, and a virtualizer is entitled to read a
+ * correction as a resize and compensate the scroll position for it.
+ *
+ * Docket's Triage bar is where it showed: clicking a tab scrolled
+ * `Main` down 266px and put the tab bar off the top of the screen.
+ * So the claim this story exists to hold is one number — **switching
+ * tabs leaves `Main.scrollTop` where it was.**
+ *
+ * The chrome above the grid is not decoration either. The false
+ * adjustment is roughly the distance from the top of the scroll
+ * region to the top of the grid, so a story with the grid flush
+ * against the top of `Main` would have had nothing to measure and
+ * would have passed while the bug was still there.
+ */
+export const InHiddenTabPanel: Story = {
+  parameters: { layout: "fullscreen" },
+  render: (gridProps) => (
+    <Shell contentWidth="full">
+      <Header heading="Bays" />
+
+      <Main>
+        <p className="text-content-secondary text-sm">
+          Switching tabs must not move the page.
+        </p>
+
+        <Tabs
+          label="Bay views"
+          tabs={[
+            {
+              content: (
+                <VirtualizedGrid
+                  {...gridProps}
+                  label="Loaded bays"
+                />
+              ),
+              key: "loaded",
+              label: "Loaded",
+            },
+            {
+              content: (
+                <VirtualizedGrid
+                  {...gridProps}
+                  items={MANY_ITEMS.slice(0, 48)}
+                  label="Reserved bays"
+                />
+              ),
+              key: "reserved",
+              label: "Reserved",
+            },
+          ]}
+        />
       </Main>
     </Shell>
   ),
