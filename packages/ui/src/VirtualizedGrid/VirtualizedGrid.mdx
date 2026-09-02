@@ -59,6 +59,27 @@ wrong and every row is offset by the chrome above it.
 
 <Canvas of={VirtualizedGridStories.InShellScrollRegion} />
 
+## It waits for a box before it measures anything
+
+`display: none` gives an element no boxes, and the `hidden` attribute is `display: none`.
+So a grid inside a hidden tab panel, a collapsed disclosure or a closed `<details>` cannot
+be measured at all: its container reads 0px wide and every mounted row reads 0px tall.
+
+That is the absence of a measurement, not a measurement of zero, and the difference is not
+academic. Revealing the panel corrects every one of those numbers at once, and a
+virtualizer is entitled to read a correction as a **resize** — the one event it may move
+the scroll position for. It then compensates for growth that never happened and scrolls the
+page. Docket's Triage bar is where this was found: switching tabs moved `Main` by up to
+1,190px and took the tab bar off the top of the screen.
+
+So the grid mounts nothing until its container has a box. Put a grid in a tab panel and the
+panel holds no rows while it is put away; the rows arrive with the box and are measured once,
+correctly. The cost is that a revealed grid re-measures from its estimate rather than
+resuming a cache, which is exactly what a routed tab already does.
+
+<Canvas of={VirtualizedGridStories.InHiddenTabPanel} />
+
+
 ## The column rule is inherited, not reimplemented
 
 <Canvas of={VirtualizedGridStories.AllVariants} />
