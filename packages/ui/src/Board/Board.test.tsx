@@ -325,6 +325,14 @@ test("the narrow layout picks lanes with a named radiogroup", async () => {
     name: /In Progress/,
   })
 
+  // Equal-width targets must not grow to two different heights just
+  // because one lane name contains a space. At an extreme Narrow
+  // View width, the selector wraps its final target rather than the
+  // label itself.
+  await expect(
+    within(inProgress).getByText("In Progress"),
+  ).toHaveClass("whitespace-nowrap")
+
   await userEvent.click(inProgress)
 
   await waitFor(() => {
