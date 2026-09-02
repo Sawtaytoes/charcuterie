@@ -1,8 +1,10 @@
 import { useCallback, useLayoutEffect, useRef } from "react"
 
 import {
-  recallScrollOffset,
+  enterScrollEntry,
   rememberScrollOffset,
+  resolveScrollOffset,
+  type ScrollEntry,
 } from "./scrollMemory.ts"
 
 /**
@@ -11,11 +13,11 @@ import {
  *
  * The offset cannot be applied until the scrollport is tall enough
  * to hold it, and on a client-rendered page it is not: the commit
- * that changes the route draws a skeleton, and the rows land a
- * fetch later. So the restore re-applies as the content grows, and
- * gives up after this. A page that takes longer than three seconds
- * to fill has already been read from the top, and moving it then
- * is a worse answer than leaving it where the reader put it.
+ * that changes the route draws a skeleton, and the rows land a fetch
+ * later. So the restore re-applies as the content grows, and gives
+ * up after this. A page that takes longer than three seconds to fill
+ * has already been read from the top, and moving it then is a worse
+ * answer than leaving it where the reader put it.
  */
 const RESTORE_WINDOW_MS = 3000
 
@@ -28,41 +30,42 @@ const READER_INTENT_EVENTS = [
 ] as const
 
 /**
- * Remember where this history entry was scrolled to, and put it
- * back when the reader returns to it.
+ * Remember where this history entry was scrolled to, and put it back
+ * when the reader returns to it.
  *
- * `scrollMemory.ts` says why the browser will not. This is the
- * part that has to survive the two things a real page does:
+ * `scrollMemory.ts` says why the browser will not, and what an entry
+ * that has never been seen should do. This is the part that has to
+ * survive the two things a real page does:
  *
  *  1. **The content arrives late.** An offset applied against a
- *     600px skeleton clamps to `0` and looks like it did nothing.
- *     A `ResizeObserver` on the scrollport and on its content
- *     column re-applies the offset every time either grows, until
- *     the offset lands or the window closes.
- *  2. **The reader scrolls during all that.** Any wheel, touch,
- *     key or pointer press ends the restore immediately. The
- *     alternative is a page that jumps out from under somebody who
- *     has already started reading.
+ *     600px skeleton clamps to `0` and looks like it did nothing. A
+ *     `ResizeObserver` on the scrollport and on its content column
+ *     re-applies the offset every time either grows, until the
+ *     offset lands or the window closes.
+ *  2. **The reader scrolls during all that.** Any wheel, touch, key
+ *     or pointer press ends the restore immediately. The alternative
+ *     is a page that jumps out from under somebody who has already
+ *     started reading.
  *
  * The save is a passive `scroll` listener, suppressed while a
  * restore is in flight. Without that suppression the feature eats
  * itself: writing `scrollTop` on a still-short page clamps to `0`
- * and fires a `scroll` event reading `0`, which would be saved
- * over the very offset being restored.
+ * and fires a `scroll` event reading `0`, which would be saved over
+ * the very offset being restored.
  *
- * @param scrollKey Identifies the history entry — react-router's
- *   `useLocation().key`. `undefined` turns the memory off, which is
- *   what an app with no router gets.
+ * @param entry The history entry and the page it belongs to.
+ *   `null` turns the memory off, which is what an app that renders
+ *   no `ScrollMemoryProvider` gets.
  */
 export const useScrollMemory = (
-  scrollKey: string | undefined,
+  entry: ScrollEntry | null | undefined,
 ) => {
   const elementRef = useRef<HTMLElement | null>(null)
   const isRestoringRef = useRef(false)
 
-  // A ref rather than a query for the `<main>` id: the effect
-  // below runs in the same commit that mounts the node, and only a
-  // ref can say which node that was.
+  // A ref rather than a query for the `<main>` id: the effect below
+  // runs in the same commit that mounts the node, and only a ref can
+  // say which node that was.
   //
   // `unknown` in, narrowed here, so the returned function is both a
   // `RefCallback<HTMLElement>` and something `mergeRefs` accepts —
@@ -73,18 +76,43 @@ export const useScrollMemory = (
       node instanceof HTMLElement ? node : null
   }, [])
 
+  const key = entry?.key
+  const path = entry?.path
+
   useLayoutEffect(() => {
     const element = elementRef.current
 
-    if (!element || scrollKey === undefined) {
+    if (
+      !element ||
+      key === undefined ||
+      path === undefined
+    ) {
       return undefined
     }
 
-    const offset = recallScrollOffset(scrollKey)
+    const currentEntry = { key, path }
 
-    // The arrow defers the read of `applyOffset`, so the three
-    // pieces can be declared in the order they depend on each
-    // other rather than in the order they are used.
+    // `null` means leave the scrollport alone: a search param
+    // changed and the reader did not go anywhere. It is read BEFORE
+    // this entry becomes the current one, because the answer depends
+    // on the page the reader is arriving from.
+    const offset = resolveScrollOffset(currentEntry)
+
+    enterScrollEntry(currentEntry)
+
+    // Seed the entry now rather than waiting for a `scroll` event.
+    // A reader who opens a group and then follows a link never
+    // scrolls in between, so without this the entry they came from
+    // is one the memory has never seen — and Back would send them to
+    // the top of a list they were half-way down.
+    rememberScrollOffset(
+      currentEntry,
+      offset ?? element.scrollTop,
+    )
+
+    // The arrow defers the read of `applyOffset`, so the pieces can
+    // be declared in the order they depend on each other rather than
+    // in the order they are used.
     const observer = new ResizeObserver(() => {
       applyOffset()
     })
@@ -93,12 +121,9 @@ export const useScrollMemory = (
       stopRestoring()
     }, RESTORE_WINDOW_MS)
 
-    const stopRestoring = () => {
-      if (!isRestoringRef.current) {
-        return
-      }
+    let isRestoring = offset !== null
 
-      isRestoringRef.current = false
+    const teardown = () => {
       observer.disconnect()
       globalThis.clearTimeout(deadline)
 
@@ -110,8 +135,18 @@ export const useScrollMemory = (
       }
     }
 
+    const stopRestoring = () => {
+      if (!isRestoring) {
+        return
+      }
+
+      isRestoring = false
+      isRestoringRef.current = false
+      teardown()
+    }
+
     const applyOffset = () => {
-      if (!isRestoringRef.current) {
+      if (!isRestoring || offset === null) {
         return
       }
 
@@ -128,10 +163,10 @@ export const useScrollMemory = (
         return
       }
 
-      rememberScrollOffset(scrollKey, element.scrollTop)
+      rememberScrollOffset(currentEntry, element.scrollTop)
     }
 
-    isRestoringRef.current = true
+    isRestoringRef.current = isRestoring
 
     for (const eventName of READER_INTENT_EVENTS) {
       element.addEventListener(eventName, stopRestoring, {
@@ -155,10 +190,15 @@ export const useScrollMemory = (
     applyOffset()
 
     return () => {
-      stopRestoring()
+      // Unconditional, unlike `stopRestoring` — a restore that
+      // already landed still has an observer and four listeners on
+      // an element the next entry is about to use, and a stale
+      // observer that survives its effect applies a stale offset.
+      isRestoring = false
+      teardown()
       element.removeEventListener("scroll", onScroll)
     }
-  }, [scrollKey])
+  }, [key, path])
 
   return setElement
 }
