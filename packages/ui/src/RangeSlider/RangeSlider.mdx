@@ -1,0 +1,85 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as RangeSliderStories from "./RangeSlider.stories";
+
+<Meta of={RangeSliderStories} />
+
+# RangeSlider
+
+A span picked out along a bar, with an independently focusable handle at each end.
+
+It exists because QueuePilot plays **only a section** of a video: a user drags two handles
+over a film's runtime to choose where a clip starts and ends, and has to see the section
+they typed into a `TimecodeInput` beside it. So the shape this is built for is a media
+timeline — a bar spanning the whole runtime, two thumbs, and the chosen span painted
+between them.
+
+<Canvas of={RangeSliderStories.Default} />
+
+## Props
+
+<Controls />
+
+## Why this is a component and not `Slider isRange`
+
+`Combobox`'s `isMultiple` and `DatePicker`'s `isRange` are **modes**, and the test that
+made them modes is written down: the widget's ARIA role does not change, and the two shapes
+share nearly everything. Both halves of that test fail here.
+
+[`Slider` puts `role="slider"`, the tab stop and the pointer target on the **track**](?path=/docs/components-controls-slider--docs),
+because one track reports one value. Two values cannot live on one accessible object — so
+here the role moves to the thumbs, the track becomes a `role="group"` carrying the label,
+and the tab stops go from one to two. A mode that rewrote its own role would break
+`getByRole("slider", { name })` in every consumer that had used the single-value one.
+
+`Slider`'s own record says it plainly: *"a two-thumb range is a different widget with its
+own focus model"*.
+
+What the two genuinely share is the **arithmetic** (`Slider/sliderValue.ts`, called rather
+than copied, so both snap on the same grid) and the **bar** (`sliderStyles.ts`). The test
+compares the two thumbs as computed styles, not as class names.
+
+<Canvas of={RangeSliderStories.BesideTheSlider} />
+
+## The thumbs clamp, they do not swap
+
+A thumb dragged past its partner stops **on** it. The range collapses to zero width, both
+handles keep their identities, and the next press opens it again from whichever side that
+press lands on.
+
+Swapping is the other defensible answer and is the wrong one here. The two handles are a
+clip's start and its end, read alongside a field that names them; a drag that silently
+renamed the handle under the pointer would move a number the user is reading somewhere
+else. On the keyboard it is plainer still — swapping means one ArrowRight moves the *other*
+thumb, and the element with focus is no longer the value that changed.
+
+Each thumb reports the other as its own `aria-valuemin` / `aria-valuemax`, which is how a
+screen reader is told where this handle stops.
+
+<Canvas of={RangeSliderStories.AllStates} />
+
+## Drag does not commit
+
+`onChange` fires on every movement — each arrow key, each pointer sample. `onChangeEnd`
+fires once, on release or key up.
+
+The same split `Slider` settled, for the same reason: a clip preview that re-seeks a player
+from `onChange` issues one seek per pointer sample and arrives at the right frame **last**,
+behind a queue of stale ones. While a drag is in flight the component paints from its own
+value rather than from `value`, so a caller that commits on `onChangeEnd` alone still sees
+the thumbs follow the pointer.
+
+<Canvas of={RangeSliderStories.Interactive} />
+
+## The app owns the data
+
+`valueFormat` turns a number into whatever the value **is** — `21:14`, `$40`, `3.5 km`. The
+component never learns what a timecode is: it knows a number, and the app knows what the
+number means. That one function feeds `aria-valuetext` and the shown span both.
+
+`ticks` is the same division. A tick is `{ label?, value }` and nothing else, so a film's
+chapters are the offsets the app already has. There is no chapter model in here, and the
+marks are `aria-hidden` — each thumb already announces its own position, so a screen reader
+reading the marks between them would be reading the picture.
+
+<Canvas of={RangeSliderStories.AllVariants} />
