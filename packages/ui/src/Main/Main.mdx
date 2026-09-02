@@ -148,7 +148,7 @@ region, so the table is announced as a thing rather than as loose content.
 position. Without it, Safari and Firefox scroll to `<main>` and leave the next Tab back up
 in the header — which looks exactly like a skip link that works.
 
-## `scrollKey` — the reader's place, kept
+## The reader's place, kept
 
 <Canvas of={MainStories.ScrollMemory} />
 
@@ -166,17 +166,45 @@ changes it. The owner, on Docket:
 > "If I scroll, click on an item, then go back, it resets me to the top. […] It should
 > remember where the scroll position was previously. Isn't this handled by Chrome already?"
 
-Pass the history entry's key and it is:
+**There is no prop for it.** The history entry arrives on a context, and
+`ReactRouterAdapter` puts it at the app root beside the link seam:
 
 ```tsx
-const location = useLocation()
+import { ReactRouterAdapter } from "@charcuterie/ui/react-router"
 
-<Main scrollKey={location.key}>
-  <Outlet />
-</Main>
+<BrowserRouter>
+  <ReactRouterAdapter>
+    <Routes>…</Routes>
+  </ReactRouterAdapter>
+</BrowserRouter>
 ```
 
-Omit it and nothing is remembered, which is right for a page with no history to remember.
+It was a prop for one release — `scrollKey` — and that release is the argument against a
+prop. One app wired it and the other three carried on losing the reader's place with the
+library sitting right there supporting it. Render no provider and nothing is remembered,
+which is right for an app with no history to remember.
+
+An app on another router wires `ScrollMemoryProvider` itself, with any value that identifies
+the history **entry** rather than the URL:
+
+```tsx
+<ScrollMemoryProvider entry={{ key: historyKey, path: location }}>
+  <App />
+</ScrollMemoryProvider>
+```
+
+### A filter is not a navigation
+
+A filter chip, an expanded group and a selected tab each write a search param, and
+`setSearchParams` **navigates** — so each one mints a history entry the memory has never
+seen. Read as "unseen ⇒ start at the top", pressing a filter throws the reader to the top of
+the list they were reading. That shipped, and it is why an entry remembers its **path**:
+
+| The entry | What happens |
+| --- | --- |
+| One we have seen | Its remembered offset. Back and Forward land where you left them. |
+| New, **same** path | Nothing. The scrollport is left exactly where the reader put it. |
+| New, **different** path | The top, which is what a browser does for a new document. |
 
 ### It has to wait for the content
 

@@ -16,6 +16,7 @@ import {
   RailNavigation,
 } from "../shell.storyHelpers.tsx"
 import { Main } from "./Main.tsx"
+import { ScrollMemoryProvider } from "./ScrollMemoryProvider.tsx"
 
 const CONTENT_WIDTH_OPTIONS = [
   "sm",
@@ -173,17 +174,42 @@ const EPISODE_TITLES = Array.from(
 
 type HistoryEntry = {
   episode: string | null
+  isExpanded: boolean
   key: string
 }
 
+const SPECIAL_TITLES = Array.from(
+  { length: 8 },
+  (_unused, index) => `Special ${index + 1}`,
+)
+
+const toPath = (entry: HistoryEntry) =>
+  entry.episode === null
+    ? "/library"
+    : `/library/${entry.episode}`
+
 /**
- * A history stack, small enough to read and honest about the one
- * thing that matters: **Back returns to the entry it left, with
- * the key it had.** That key is what the offset is filed under,
- * and reusing it is the whole mechanism.
+ * A history stack, small enough to read and honest about the two
+ * things that matter.
  *
- * `contentDelayMs` is the second half of the problem. A real list
- * is fetched, so the commit that changes the route draws an empty
+ * **Back returns to the entry it left, with the key it had.** That
+ * key is what the offset is filed under, and reusing it is the
+ * whole mechanism.
+ *
+ * **Expanding the specials is a NEW entry on the SAME path.** That
+ * is what `setSearchParams` does for a filter chip or an expanded
+ * group, and it is the case that has to leave the scrollport alone.
+ * The key is one the memory has never seen, so a memory that read
+ * "unseen ⇒ top" would throw the reader to the top of the list
+ * every time they opened a group.
+ *
+ * The toggle sits in the **header**, not in the list, and that is
+ * not decoration: a control inside the scrollport is scrolled into
+ * view before it is pressed, which moves the very offset the demo
+ * is about. It cost an hour of chasing a bug that was the driver's.
+ *
+ * `contentDelayMs` is the other half of the problem. A real list is
+ * fetched, so the commit that changes the route draws an empty
  * scrollport and the rows land later — an offset applied against
  * that clamps to `0`. Set it and the restore has to wait for the
  * content, which is the case the `ResizeObserver` in
@@ -195,7 +221,7 @@ const ScrollMemoryDemo = ({
   contentDelayMs: number
 }) => {
   const [entries, setEntries] = useState<HistoryEntry[]>([
-    { episode: null, key: "entry-1" },
+    { episode: null, isExpanded: false, key: "entry-1" },
   ])
   const [entryIndex, setEntryIndex] = useState(0)
   const [isContentReady, setIsContentReady] = useState(
@@ -220,70 +246,103 @@ const ScrollMemoryDemo = ({
     }
   }, [contentDelayMs])
 
-  const open = (episode: string) => {
-    const opened = [
+  const push = (pushed: Omit<HistoryEntry, "key">) => {
+    const stack = [
       ...entries.slice(0, entryIndex + 1),
-      { episode, key: `entry-${entries.length + 1}` },
+      { ...pushed, key: `entry-${entries.length + 1}` },
     ]
 
-    setEntries(opened)
-    setEntryIndex(opened.length - 1)
+    setEntries(stack)
+    setEntryIndex(stack.length - 1)
   }
 
+  const titles = entry?.isExpanded
+    ? [...EPISODE_TITLES, ...SPECIAL_TITLES]
+    : EPISODE_TITLES
+
   return (
-    <Shell>
-      <Header
-        actions={
-          <Button
-            appearance="outline"
-            isDisabled={entryIndex === 0}
-            onClick={() => {
-              setEntryIndex(entryIndex - 1)
-            }}
-            size="sm"
-          >
-            Back
-          </Button>
-        }
-        heading="Library"
-      />
-
-      <Main scrollKey={entry?.key}>
-        {!isContentReady && <Spinner label="Loading" />}
-
-        {isContentReady && entry?.episode == null && (
-          <div className="flex flex-col gap-3">
-            {EPISODE_TITLES.map((title) => (
-              <Card
-                heading={title}
-                key={title}
-                padding="sm"
+    <ScrollMemoryProvider
+      entry={{
+        key: entry?.key ?? "entry-1",
+        path: entry ? toPath(entry) : "/library",
+      }}
+    >
+      <Shell>
+        <Header
+          actions={
+            <>
+              <Button
+                appearance="outline"
+                isDisabled={entryIndex === 0}
+                onClick={() => {
+                  setEntryIndex(entryIndex - 1)
+                }}
+                size="sm"
               >
-                <Button
-                  appearance="ghost"
-                  onClick={() => {
-                    open(title)
-                  }}
-                  size="sm"
-                >
-                  Open {title}
-                </Button>
-              </Card>
-            ))}
-          </div>
-        )}
+                Back
+              </Button>
 
-        {isContentReady && entry?.episode != null && (
-          <Card heading={entry.episode}>
-            <p className="text-content-secondary text-sm">
-              A page short enough that the scrollport
-              collapses behind it. Press Back: the list
-              returns to where it was, not to the top.
-            </p>
-          </Card>
-        )}
-      </Main>
-    </Shell>
+              <Button
+                appearance="outline"
+                isDisabled={entry?.episode != null}
+                onClick={() => {
+                  push({
+                    episode: null,
+                    isExpanded: !entry?.isExpanded,
+                  })
+                }}
+                size="sm"
+              >
+                {entry?.isExpanded
+                  ? "Collapse the specials"
+                  : "Expand the specials"}
+              </Button>
+            </>
+          }
+          heading="Library"
+        />
+
+        <Main>
+          {!isContentReady && <Spinner label="Loading" />}
+
+          {isContentReady && entry?.episode == null && (
+            <div className="flex flex-col gap-3">
+              {titles.map((title) => (
+                <Card
+                  heading={title}
+                  key={title}
+                  padding="sm"
+                >
+                  <Button
+                    appearance="ghost"
+                    onClick={() => {
+                      push({
+                        episode: title,
+                        isExpanded:
+                          entry?.isExpanded ?? false,
+                      })
+                    }}
+                    size="sm"
+                  >
+                    Open {title}
+                  </Button>
+                </Card>
+              ))}
+            </div>
+          )}
+
+          {isContentReady && entry?.episode != null && (
+            <Card heading={entry.episode}>
+              <p className="text-content-secondary text-sm">
+                A page short enough that the scrollport
+                collapses behind it. Press Back: the list
+                returns to where it was, not to the top.
+              </p>
+            </Card>
+          )}
+        </Main>
+      </Shell>
+    </ScrollMemoryProvider>
   )
 }
 
@@ -292,10 +351,16 @@ const ScrollMemoryDemo = ({
  *
  * `Shell` makes `<main>` the page's only vertical scrollport, and
  * a browser restores the **document** scroller and nothing else —
- * so without `scrollKey` this list comes back at the top every
- * time, in every browser, with no setting that changes it.
+ * so without a `ScrollMemoryProvider` this list comes back at the
+ * top every time, in every browser, with no setting that changes
+ * it.
  *
  * Scroll the list, open an episode, then press Back.
+ *
+ * Then scroll again and press **Expand the specials**. That is a
+ * new history entry on the same page, and the scrollport does not
+ * move — a filter is not a navigation, however the router files
+ * it.
  */
 export const ScrollMemory: Story = {
   render: () => <ScrollMemoryDemo contentDelayMs={0} />,

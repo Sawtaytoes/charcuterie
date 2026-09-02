@@ -17,20 +17,11 @@ import {
 } from "../Shell/contentWidth.ts"
 import { ShellContext } from "../Shell/shellContext.ts"
 import { toClassName } from "../toClassName.ts"
+import { ScrollMemoryContext } from "./scrollMemoryContext.ts"
 import { useScrollMemory } from "./useScrollMemory.ts"
 
 export type MainProps = ComponentPropsWithRef<"main"> & {
   contentWidth?: ContentWidth
-  /**
-   * The history entry this page belongs to — react-router's
-   * `useLocation().key`, and the same value under a different
-   * router. Given it, `<main>` remembers where each entry was
-   * scrolled to and puts the offset back on Back and Forward.
-   *
-   * Omit it and nothing is remembered, which is the right default
-   * for a page with no history to remember.
-   */
-  scrollKey?: string
 }
 
 /**
@@ -122,17 +113,26 @@ export type MainProps = ComponentPropsWithRef<"main"> & {
  * therefore lands at the top of a list the reader had scrolled
  * half-way down, and no browser setting changes that.
  *
- * Pass `scrollKey` — react-router's `useLocation().key` — and the
- * offset comes back. `useScrollMemory.ts` holds the mechanism and
- * `scrollMemory.ts` the reasoning.
+ * So this element remembers it, and **there is no prop for it**.
+ * The history entry arrives on `ScrollMemoryContext`, which
+ * `ReactRouterAdapter` puts at the app root:
  *
  * ```tsx
- * const location = useLocation()
- *
- * <Main scrollKey={location.key}>
- *   <Outlet />
- * </Main>
+ * <BrowserRouter>
+ *   <ReactRouterAdapter>
+ *     <Routes>…</Routes>
+ *   </ReactRouterAdapter>
+ * </BrowserRouter>
  * ```
+ *
+ * It was a prop for one release — `scrollKey` — and that release is
+ * the argument against a prop. One app wired it; the other three
+ * carried on losing the reader's place with the library sitting
+ * right there supporting it. Render no provider and nothing is
+ * remembered, which is what an app with no router should get.
+ *
+ * `useScrollMemory.ts` holds the mechanism and `scrollMemory.ts`
+ * the reasoning.
  *
  * ## Two more things it does, both one line
  *
@@ -169,11 +169,11 @@ export const Main = ({
   contentWidth,
   id,
   ref,
-  scrollKey,
   ...mainProps
 }: MainProps): ReactNode => {
   const shell = useContext(ShellContext)
-  const setScrollport = useScrollMemory(scrollKey)
+  const scrollEntry = useContext(ScrollMemoryContext)
+  const setScrollport = useScrollMemory(scrollEntry)
 
   // Always called, never conditionally: a `Main` outside a `Shell`
   // still needs an id an app can point its own skip link at.

@@ -253,6 +253,9 @@ export type {
 export { LogViewer } from "./LogViewer/LogViewer.tsx"
 export type { MainProps } from "./Main/Main.tsx"
 export { Main } from "./Main/Main.tsx"
+export type { ScrollMemoryProviderProps } from "./Main/ScrollMemoryProvider.tsx"
+export { ScrollMemoryProvider } from "./Main/ScrollMemoryProvider.tsx"
+export type { ScrollEntry } from "./Main/scrollMemory.ts"
 export type {
   MarkdownEditorProps,
   MarkdownImageUpload,
