@@ -9,13 +9,35 @@ import * as stories from "./ActionTiles.stories.tsx"
 
 const {
   AllStates,
+  AutoHues,
   BesideTheRadioTile,
   Default,
   Interactive,
   Links,
+  NamedHues,
+  Neutral,
   Responsive,
   WithIcons,
 } = composeStories(stories)
+
+/**
+ * The accent-edge layer out of a computed `box-shadow`.
+ *
+ * Reading the whole string does not work: Tailwind's shadow chain
+ * always emits four EMPTY `rgba(0, 0, 0, 0) 0px 0px 0px 0px` layers
+ * for the ring and shadow slots nothing filled, so a naive
+ * "contains no transparent colour" assertion fails on a bar that is
+ * painted perfectly. The bar is the `inset` layer, and it is the
+ * only one.
+ *
+ * Returns `"none"` when there is no inset layer at all, which is
+ * what `accent="none"` must produce.
+ */
+const getAccentEdgeLayer = (boxShadow: string) =>
+  boxShadow
+    .split(/,(?![^(]*\))/)
+    .map((layer) => layer.trim())
+    .find((layer) => layer.endsWith("inset")) ?? "none"
 
 test("it is a named group of pressable tiles", async () => {
   const { canvas, canvasElement } =
@@ -187,14 +209,33 @@ test("a disabled link drops its href and stays announced as a link", async () =>
  * rather than trusted — the same discipline `ButtonLink.test.tsx`
  * applies to `Button`. Two copies of one string is a promise that
  * survives exactly one edit.
+ *
+ * The UNCOLOURED action tile is the one held to an exact match. A
+ * coloured one carries a bar its neighbour does not, and the room
+ * for that bar is a real difference on one side — asserted
+ * separately below, so "the boxes match" cannot quietly come to mean
+ * "the boxes match apart from whatever changed last".
  */
-test("an action tile is the same box as a resting radio tile", async () => {
+test("an uncoloured action tile is the same box as a resting radio tile", async () => {
   const { canvas } = await mountStory(BesideTheRadioTile)
 
-  const actionTile = expectAgentDrivable(canvas, {
-    name: "Picks Choose titles yourself, then arrange them in priority and random lanes.",
-    role: "button",
-  })
+  // Scoped to the group rather than fetched by accessible name:
+  // the board draws the same two tiles three times, so a bare
+  // `getByRole("button", { name: "Picks …" })` is ambiguous.
+  const getFirstTile = (name: string) => {
+    const tile = expectAgentDrivable(canvas, {
+      name,
+      role: "group",
+    }).querySelector<HTMLElement>("button")
+
+    if (!tile) {
+      throw new Error(`${name} drew no tile`)
+    }
+
+    return tile
+  }
+
+  const actionTile = getFirstTile("Queue type, uncoloured")
 
   const radioGroup = expectAgentDrivable(canvas, {
     name: "Queue type, as radios",
@@ -227,6 +268,10 @@ test("an action tile is the same box as a resting radio tile", async () => {
     radio.paddingInlineStart,
   )
 
+  await expect(action.paddingInlineEnd).toBe(
+    radio.paddingInlineEnd,
+  )
+
   await expect(action.borderTopWidth).toBe(
     radio.borderTopWidth,
   )
@@ -251,6 +296,161 @@ test("an action tile is the same box as a resting radio tile", async () => {
   await expect(
     Number.parseFloat(action.paddingTop),
   ).toBeGreaterThan(0)
+})
+
+/**
+ * The bar is an OVERLAY — `Card`'s accent-edge pseudo-element, which
+ * is painted over the box and occupies nothing in it. A tile that
+ * did not widen its leading padding would draw the bar straight
+ * through the first letter of its own name, and nothing would report
+ * that: the pseudo-element is not in the DOM, so no query can miss
+ * it and axe has nothing to say about a glyph with a stripe on it.
+ *
+ * So the assertion is the difference itself, in computed pixels.
+ */
+test("a coloured tile makes room for its bar, and only on the leading side", async () => {
+  const { canvas } = await mountStory(BesideTheRadioTile)
+
+  const getFirstTile = (name: string) => {
+    const tile = expectAgentDrivable(canvas, {
+      name,
+      role: "group",
+    }).querySelector<HTMLElement>("button")
+
+    if (!tile) {
+      throw new Error(`${name} drew no tile`)
+    }
+
+    return tile
+  }
+
+  const coloured = getComputedStyle(
+    getFirstTile("Queue type"),
+  )
+
+  const uncoloured = getComputedStyle(
+    getFirstTile("Queue type, uncoloured"),
+  )
+
+  await expect(
+    Number.parseFloat(coloured.paddingInlineStart),
+  ).toBeGreaterThan(
+    Number.parseFloat(uncoloured.paddingInlineStart),
+  )
+
+  // Every other side is untouched. The colour is a bar and a hue,
+  // not a second set of metrics.
+  await expect(coloured.paddingInlineEnd).toBe(
+    uncoloured.paddingInlineEnd,
+  )
+
+  await expect(coloured.paddingTop).toBe(
+    uncoloured.paddingTop,
+  )
+
+  await expect(coloured.paddingBottom).toBe(
+    uncoloured.paddingBottom,
+  )
+
+  await expect(coloured.borderTopLeftRadius).toBe(
+    uncoloured.borderTopLeftRadius,
+  )
+})
+
+/**
+ * Ten hues taken in order, which is what makes a five-tile set need
+ * no colour props at all.
+ *
+ * Asserted through the pseudo-element's own `box-shadow`, because
+ * that is where the bar actually lives — a class-name assertion
+ * passes while the paint is wrong, and a `--color-categorical-*`
+ * that had never existed would resolve to nothing, paint
+ * transparent, and satisfy every check that the element rendered.
+ */
+test("a set walks the palette, and a named hue holds its place", async () => {
+  const { canvas } = await mountStory(AutoHues)
+
+  const group = expectAgentDrivable(canvas, {
+    name: "Pick a library",
+    role: "group",
+  })
+
+  const bars = Array.from(
+    group.querySelectorAll<HTMLElement>("button"),
+  ).map((tile) =>
+    getAccentEdgeLayer(
+      getComputedStyle(tile, "::before").boxShadow,
+    ),
+  )
+
+  await expect(bars).toHaveLength(5)
+
+  for (const bar of bars) {
+    // A token that resolved to nothing paints a transparent bar and
+    // passes every "did it render" check ever written.
+    await expect(bar).toMatch(/^rgb\(\d+, \d+, \d+\) /)
+  }
+
+  // Five tiles, five different colours.
+  await expect(new Set(bars).size).toBe(5)
+})
+
+test("a named hue survives a tile being inserted above it", async () => {
+  const { canvas } = await mountStory(NamedHues)
+
+  const pinned = expectAgentDrivable(canvas, {
+    name: "Shows Episodic television.",
+    role: "button",
+  })
+
+  const { canvas: autoCanvas } = await mountStory(AutoHues)
+
+  const seventh = Array.from(
+    expectAgentDrivable(autoCanvas, {
+      name: "Pick a library",
+      role: "group",
+    }).querySelectorAll<HTMLElement>("button"),
+  )[1]
+
+  if (!seventh) {
+    throw new Error("the auto-hue set drew no second tile")
+  }
+
+  // In the auto set this tile is position 1 and wears hue 2. Naming
+  // `categorical: 7` has to change it, or the prop does nothing and
+  // every test above still passes.
+  await expect(
+    getAccentEdgeLayer(
+      getComputedStyle(pinned, "::before").boxShadow,
+    ),
+  ).not.toBe(
+    getAccentEdgeLayer(
+      getComputedStyle(seventh, "::before").boxShadow,
+    ),
+  )
+})
+
+/**
+ * `accent="none"` is an opt-out, so it has to actually draw no bar
+ * — not a bar in a neutral colour, which would still be a stripe on
+ * a page that asked for none.
+ */
+test("accent='none' draws no bar at all", async () => {
+  const { canvas, canvasElement } =
+    await mountStory(Neutral)
+
+  const tile = expectAgentDrivable(canvas, {
+    name: "New arrivals Everything that arrived since the last run.",
+    role: "button",
+  })
+
+  await expect(
+    getAccentEdgeLayer(
+      getComputedStyle(tile, "::before").boxShadow,
+    ),
+  ).toBe("none")
+
+  await expectNoAxeViolations(canvasElement)
 })
 
 test("the column count comes from the container, not the window", async () => {

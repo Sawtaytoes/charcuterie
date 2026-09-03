@@ -38,7 +38,36 @@ export const TILE_PADDING_CLASS: Record<
 > = {
   sm: "px-3 py-2.5",
   md: "px-3.5 py-3",
-  lg: "px-4 py-3.5",
+  // `lg` is the landing-page tile — mux-magic's "Pick a tool",
+  // Gallery Downloader's two cards — where the tile is the only
+  // thing on the page and reads as a panel rather than as a row.
+  // It was `px-4 py-3.5`, which is a control's padding wearing a
+  // card's name, and the owner called the result "very boring"
+  // when it shipped in QueuePilot.
+  lg: "px-6 py-5",
+}
+
+/**
+ * What a tile with an accent edge adds to its LEADING padding.
+ *
+ * The bar is drawn by `Card`'s accent-edge pseudo-element, which is
+ * an overlay rather than a border — so it takes no space in the box
+ * model and lands on top of the text unless the tile makes room for
+ * it. `Card` has the same arrangement and the same answer.
+ *
+ * A separate map rather than a second full padding scale, because
+ * only the leading side changes and the shared box is the promise
+ * the 2026-09-01 record made. It is applied ONLY when an edge is
+ * drawn: a radio tile has no bar, and giving it this padding would
+ * be dead space on the side its own control sits on.
+ */
+export const TILE_ACCENT_EDGE_PADDING_CLASS: Record<
+  ControlSize,
+  string
+> = {
+  sm: "ps-4",
+  md: "ps-4.5",
+  lg: "ps-7",
 }
 
 /**

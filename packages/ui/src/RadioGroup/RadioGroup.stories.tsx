@@ -140,6 +140,45 @@ export const Tiles: Story = {
 }
 
 /**
+ * The tile at all three sizes.
+ *
+ * `AllVariants` above covers the three heights of a **row**, and
+ * every tile story took the default `md` — so the largest tile had
+ * no snapshot at all, and `TILE_PADDING_CLASS.lg` could be changed
+ * without a single pixel moving in the report. It was, on
+ * 2026-09-02, when `lg` grew to a landing-page tile's padding.
+ *
+ * The padding is shared with `ActionTiles` through `tileStyles.ts`,
+ * which is the promise this board is here to photograph.
+ */
+export const TileSizes: Story = {
+  args: {
+    items: IMPORT_ITEMS,
+    itemShape: "tile",
+    label: "On import",
+  },
+  render: (controlProps) => (
+    <StorySection title="One box at three sizes, and the same box ActionTiles reads from.">
+      <StoryGrid columns={3}>
+        {(["sm", "md", "lg"] as const).map((size) => (
+          <StoryCell
+            align="stretch"
+            key={size}
+            label={size}
+          >
+            <RadioGroup
+              {...controlProps}
+              label={`On import at ${size}`}
+              size={size}
+            />
+          </StoryCell>
+        ))}
+      </StoryGrid>
+    </StorySection>
+  ),
+}
+
+/**
  * A tile may lead with an icon. The library ships none — these are
  * story-only SVGs, exactly what an app passes — and the icon is
  * `aria-hidden` by construction, because the name it sits above is

@@ -236,6 +236,14 @@ test("a container-query component is never storied in a shrink-to-fit cell", () 
     "Main",
     "MarkdownEditor",
     "MediaTile",
+    // `PortraitTiles` declares its container on the SET rather than
+    // on a tile, and that is the whole design: the question is not
+    // "how wide is this one face" but "does this picker have room to
+    // stack". A phone shows one full-width column of rows; a wall
+    // display shows a row of tall columns. Querying a tile would
+    // answer neither, because a track is about the same width in
+    // both.
+    "PortraitTiles",
     // `Stepper`'s container is the one that decides whether a
     // `horizontal` sequence is actually horizontal. Below `--cq-md`
     // it falls back to the vertical column, because four steps side
@@ -571,7 +579,13 @@ test("the barrel is the only place components are re-exported", async () => {
   // `isRange` is right there and wrong here for a reason that is
   // written down — a second text field is still a text field, while a
   // second thumb cannot share one `aria-valuenow`.
-  expect(componentNames.length).toBe(64)
+  //
+  // `PortraitTiles` is +1 -> 65. It is the points-market kid picker:
+  // a face, a name and one number, which is a different question
+  // from `ActionTiles`' "what do you want to do" and would have
+  // meant one component whose icon is sometimes a 20px glyph beside
+  // a title and sometimes a 144px circle above it.
+  expect(componentNames.length).toBe(65)
 
   for (const name of componentNames) {
     expect(barrel).toContain(`export { ${name} }`)

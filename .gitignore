@@ -34,3 +34,7 @@ __screenshots__
 # the repo so they stay out of the sibling-repo listing the owner browses from a
 # tablet.
 .claude
+
+# Ad-hoc screenshots and served mock-ups. Scratch, not deliverables —
+# the fleet keeps these at a repo root and never commits them.
+__screenshots__

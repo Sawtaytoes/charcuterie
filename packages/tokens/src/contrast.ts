@@ -54,6 +54,10 @@ const parseHex = (hex: string): Rgb => {
   ]
 }
 
+/** The only two candidates `getReadableTextColour` picks between. */
+const BLACK = "#000000"
+const WHITE = "#FFFFFF"
+
 // ---------------------------------------------------------------
 // WCAG 2.2 — the gate
 // ---------------------------------------------------------------
@@ -94,6 +98,44 @@ export const getContrastRatio = (
   )
 
   return (lighter + 0.05) / (darker + 0.05)
+}
+
+/**
+ * Black or white on a given fill, whichever the fill can carry.
+ *
+ * Every other function in this file is an AUDIT tool: it runs at
+ * build time over tokens we wrote, and it throws on a colour it
+ * cannot parse because a malformed token is a bug somebody has to
+ * fix. This one is the opposite case, and that is why it is total:
+ * it runs **inside a render**, on a colour that came from data — a
+ * user's tag, a sticker, the card a child taps — and there is no
+ * build step in which somebody could have caught it.
+ *
+ * So an unparseable colour returns white rather than throwing. A
+ * throw here takes the whole component out over one bad row in a
+ * database, which is a blank picker instead of one hard-to-read
+ * letter.
+ *
+ * ⚠️ **Six-digit (or three-digit) hex is the only input it can
+ * actually measure.** `rebeccapurple`, `rgb(…)` and `oklch(…)` all
+ * fall through to the default, and the default is a guess. Store
+ * hex.
+ *
+ * WCAG rather than APCA, because this picks between exactly two
+ * candidates at the ends of the range, where both algorithms agree,
+ * and WCAG is the one the rest of the gate uses.
+ */
+export const getReadableTextColour = (
+  background: string,
+): string => {
+  try {
+    return getContrastRatio(WHITE, background) >=
+      getContrastRatio(BLACK, background)
+      ? WHITE
+      : BLACK
+  } catch {
+    return WHITE
+  }
 }
 
 // ---------------------------------------------------------------
