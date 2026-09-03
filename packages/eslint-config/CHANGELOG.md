@@ -1,5 +1,11 @@
 # @charcuterie/eslint-config
 
+## 1.7.1
+
+### Patch Changes
+
+- 44ad8fa: Add `UnstyledLink`, a router-aware link that preserves an app-owned visual treatment, and recommend it from the raw-anchor lint rule when neither painted link component fits.
+
 ## 1.7.0
 
 ### Minor Changes
