@@ -173,11 +173,27 @@ same constant `RadioGroup`'s tile shape uses, and each of its three parts is loa
   class strings, so `` `grid-cols-[…${n}px…]` `` generates nothing, paints nothing and
   reports nothing.
 
+### The floor sizes the CONTAINER's tracks, not the tiles
+
+`minTileInlineSize` is the narrowest a **track** may be, and `auto-fill` lays as many of
+them as fit whether or not there are tiles to put in them. So the number to pick comes from
+the width of the box the set is in, divided by how many tiles you want across it — not from
+how many tiles you have.
+
+Leave it at the 200px default in a 1024px container and the grid cuts four tracks. Two
+tiles take the first two, the other half of the row is empty background, and the set reads
+as a layout bug.
+
+⚠️ **Nothing reports this.** It type-checks, it lints, it passes every unit and e2e test,
+and the DOM is correct — the tiles really are in a grid, and the grid really has the columns
+it was asked for. Three apps shipped a half-empty row on the day they adopted this
+component, and each one was caught by a screenshot. If a set has few tiles, look at it.
+
+<Canvas of={ActionTilesStories.Responsive} />
+
 This is **not** `useAdaptiveColumns`. That hook buys a column with **height**, for an
 unbounded gallery that is going to scroll; a tile set is a bounded group inside a form section
 or a first step, where the only question is how many fit across the box it was given.
-
-<Canvas of={ActionTilesStories.Responsive} />
 
 ## What this deliberately does not do
 
