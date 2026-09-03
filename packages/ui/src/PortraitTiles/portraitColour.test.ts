@@ -2,9 +2,9 @@ import { expect, test } from "vitest"
 
 import {
   getPortraitColourProperties,
-  PORTRAIT_COLOUR_PROPERTY,
+  PORTRAIT_FILL_PROPERTY,
   PORTRAIT_HALO_PROPERTY,
-  PORTRAIT_ON_COLOUR_PROPERTY,
+  PORTRAIT_INITIALS_PROPERTY,
   PORTRAIT_STAT_PROPERTY,
 } from "./portraitColour.ts"
 
@@ -18,13 +18,11 @@ import {
 test("one colour becomes the four properties the paint reads", () => {
   const properties = getPortraitColourProperties("#8FD3F4")
 
-  expect(properties[PORTRAIT_COLOUR_PROPERTY]).toBe(
-    "#8FD3F4",
-  )
+  expect(properties[PORTRAIT_FILL_PROPERTY]).toBe("#8FD3F4")
 
   // Pale fill, so the letters go dark. `getReadableTextColour` owns
   // that choice and `contrast.test.ts` covers it.
-  expect(properties[PORTRAIT_ON_COLOUR_PROPERTY]).toBe(
+  expect(properties[PORTRAIT_INITIALS_PROPERTY]).toBe(
     "#000000",
   )
 

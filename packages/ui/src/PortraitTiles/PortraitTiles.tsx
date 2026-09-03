@@ -286,10 +286,10 @@ const getPortraitCategorical = (
  * that never gets generated rather than an error anywhere.
  */
 const COLOUR_TILE_HOVER_CLASS =
-  "hover:border-(--charcuterie-portrait-colour)"
+  "hover:border-(--charcuterie-portrait-fill)"
 
 const COLOUR_AVATAR_CLASS =
-  "bg-(--charcuterie-portrait-colour) text-(--charcuterie-portrait-on-colour) ring-(--charcuterie-portrait-halo) inset-ring-1 inset-ring-black/10"
+  "bg-(--charcuterie-portrait-fill) text-(--charcuterie-portrait-initials) ring-(--charcuterie-portrait-halo) inset-ring-1 inset-ring-black/10"
 
 const COLOUR_STAT_CLASS =
   "text-(--charcuterie-portrait-stat)"

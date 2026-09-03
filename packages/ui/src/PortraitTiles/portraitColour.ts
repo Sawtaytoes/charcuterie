@@ -10,7 +10,10 @@
  * properties.
  *
  * Four properties rather than one, because the same hue has to do
- * four jobs and only one of them can use it raw:
+ * four jobs and only one of them can use it raw. Each is named for
+ * the PART it paints, following `--charcuterie-accent-edge` — a
+ * property called `-colour` would say only what type it holds, which
+ * is the one thing already obvious from where it is used:
  *
  *  - the **fill** behind the initials — the colour itself, exactly;
  *  - the **initials** on top of it — black or white, whichever the
@@ -28,11 +31,11 @@
 
 import { getReadableTextColour } from "@charcuterie/tokens"
 
-export const PORTRAIT_COLOUR_PROPERTY =
-  "--charcuterie-portrait-colour"
+export const PORTRAIT_FILL_PROPERTY =
+  "--charcuterie-portrait-fill"
 
-export const PORTRAIT_ON_COLOUR_PROPERTY =
-  "--charcuterie-portrait-on-colour"
+export const PORTRAIT_INITIALS_PROPERTY =
+  "--charcuterie-portrait-initials"
 
 export const PORTRAIT_HALO_PROPERTY =
   "--charcuterie-portrait-halo"
@@ -56,9 +59,9 @@ export const PORTRAIT_STAT_PROPERTY =
 export const getPortraitColourProperties = (
   color: string,
 ): Record<string, string> => ({
-  [PORTRAIT_COLOUR_PROPERTY]: color,
+  [PORTRAIT_FILL_PROPERTY]: color,
   [PORTRAIT_HALO_PROPERTY]: `color-mix(in srgb, ${color} 28%, transparent)`,
-  [PORTRAIT_ON_COLOUR_PROPERTY]:
+  [PORTRAIT_INITIALS_PROPERTY]:
     getReadableTextColour(color),
   [PORTRAIT_STAT_PROPERTY]: `color-mix(in srgb, ${color} 62%, var(--color-content-primary))`,
 })
