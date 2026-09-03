@@ -329,6 +329,12 @@ export { Picker } from "./Picker/Picker.tsx"
 export type { PopoverProps } from "./Popover/Popover.tsx"
 export { Popover } from "./Popover/Popover.tsx"
 export type {
+  PortraitTileItem,
+  PortraitTilesLayout,
+  PortraitTilesProps,
+} from "./PortraitTiles/PortraitTiles.tsx"
+export { PortraitTiles } from "./PortraitTiles/PortraitTiles.tsx"
+export type {
   ProgressBarProps,
   ProgressBarSize,
 } from "./ProgressBar/ProgressBar.tsx"
