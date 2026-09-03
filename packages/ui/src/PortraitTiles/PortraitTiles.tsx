@@ -25,18 +25,34 @@ import {
 import { toClassName } from "../toClassName.ts"
 import { VisuallyHidden } from "../VisuallyHidden/VisuallyHidden.tsx"
 import { PortraitAvatar } from "./PortraitAvatar.tsx"
+import { getPortraitColourProperties } from "./portraitColour.ts"
 
-export type PortraitTileItem = {
-  /**
-   * The hue this portrait wears — the fill behind its initials, the
-   * halo around the picture, and the colour of its number.
-   *
-   * Overrides the one its position would have given it. Name it
-   * whenever the colour belongs to the PERSON rather than to the
-   * list: a household picker that gains a fifth member must not
-   * re-colour the first four, and it will if every hue is positional.
-   */
-  categorical?: CategoricalIndex
+/**
+ * Where one portrait's colour comes from. Two arms, and the fleet
+ * has both — the same split
+ * [`cardAccentEdge.ts`](../Card/cardAccentEdge.ts) already draws,
+ * for the same reason.
+ *
+ *  - **`categorical`** — one of the ten audited hues. A colour the
+ *    library owns, re-themed by `data-variant`, gated in both
+ *    schemes. Right whenever the colour is a *choice from what we
+ *    offered*.
+ *  - **`color`** — any CSS colour, from data. Right when the colour
+ *    **arrived from the world** and re-theming it would be lying
+ *    about a physical object. points-market is exactly this: each
+ *    kid's colour matches the NFC card they tap, by the workspace's
+ *    2026-07-20 `kid-identity-colors-match-nfc-cards` record. Ten
+ *    palette hues cannot represent that, and swapping them in would
+ *    have made the app disagree with the cards on the fridge.
+ *
+ * Neither is a default. A portrait that names no colour takes the
+ * next `categorical` hue by position.
+ */
+type PortraitTileColour =
+  | { categorical?: CategoricalIndex; color?: never }
+  | { categorical?: never; color: string }
+
+export type PortraitTileItem = PortraitTileColour & {
   /**
    * The quiet line under the number, naming its unit — "points",
    * "episodes left", "due today".
@@ -244,15 +260,39 @@ const GAP_CLASS: Record<ControlSize, string> = {
   lg: "gap-5",
 }
 
-/** Positional hue, wrapping at ten. Same rule `ActionTiles` uses. */
+/**
+ * Positional hue, wrapping at ten. Same rule `ActionTiles` uses.
+ *
+ * `null` when the portrait brought its own `color` — there is no
+ * palette index to fall back to in that arm, and picking one anyway
+ * would paint a second, unrelated hue onto the same tile.
+ */
 const getPortraitCategorical = (
   item: PortraitTileItem,
   position: number,
-): CategoricalIndex =>
-  item.categorical ??
-  (CATEGORICAL_INDEXES[
-    position % CATEGORICAL_INDEX_COUNT
-  ] as CategoricalIndex)
+): CategoricalIndex | null =>
+  item.color === undefined
+    ? (item.categorical ??
+      (CATEGORICAL_INDEXES[
+        position % CATEGORICAL_INDEX_COUNT
+      ] as CategoricalIndex))
+    : null
+
+/**
+ * The classes that read the four custom properties, spelled whole.
+ *
+ * Tailwind scans SOURCE TEXT for complete class strings, so these
+ * cannot be built from a variable — and the failure is silent CSS
+ * that never gets generated rather than an error anywhere.
+ */
+const COLOUR_TILE_HOVER_CLASS =
+  "hover:border-(--charcuterie-portrait-colour)"
+
+const COLOUR_AVATAR_CLASS =
+  "bg-(--charcuterie-portrait-colour) text-(--charcuterie-portrait-on-colour) ring-(--charcuterie-portrait-halo) inset-ring-1 inset-ring-black/10"
+
+const COLOUR_STAT_CLASS =
+  "text-(--charcuterie-portrait-stat)"
 
 /**
  * A set of PEOPLE — or of anything else picked by its face — drawn
@@ -300,8 +340,24 @@ const getPortraitCategorical = (
  * nothing. It is also the wrong default for a household: add a
  * fifth member and the first four change colour, which is exactly
  * the identity the picker was using to be fast. Any set whose
- * subjects persist should store a `categorical` per subject and
- * pass it — the same call Docket makes for a project.
+ * subjects persist should name its colour per subject.
+ *
+ * There are two ways to name one, and the difference is where the
+ * colour came from:
+ *
+ *  - **`categorical`** — an index into the ten audited hues. A
+ *    choice from what the library offered, so the library keeps
+ *    owning it: re-themed by `data-variant`, contrast-gated in both
+ *    schemes. The same call Docket makes for a project.
+ *  - **`color`** — any CSS colour, straight from data. For a colour
+ *    the system does **not** own and cannot re-theme without lying:
+ *    points-market's kids are coloured to match the NFC cards they
+ *    tap, so the picker and the cards on the fridge have to agree,
+ *    and ten palette hues cannot promise that.
+ *
+ * The second arm is the narrow one. Reach for it only when the
+ * colour is a fact about the subject rather than a decision about
+ * the design — the same line `Swatch` draws, for the same reason.
  */
 export const PortraitTiles = ({
   className,
@@ -355,6 +411,8 @@ export const PortraitTiles = ({
             position,
           )
 
+          const { color } = item
+
           const tileClassName = toClassName(
             "flex min-w-0 wrap-anywhere transition-[background-color,border-color,box-shadow,transform] duration-(--duration-fast) ease-standard",
             TILE_BOX_CLASS,
@@ -372,9 +430,11 @@ export const PortraitTiles = ({
                   // shadow and the border stay, so the hover is
                   // still legible without it.
                   "motion-reduce:hover:translate-y-0",
-                  CATEGORICAL_HOVER_BORDER_CLASS[
-                    categorical
-                  ],
+                  categorical === null
+                    ? COLOUR_TILE_HOVER_CLASS
+                    : CATEGORICAL_HOVER_BORDER_CLASS[
+                        categorical
+                      ],
                 ),
             FOCUS_RING_CLASS,
           )
@@ -383,9 +443,25 @@ export const PortraitTiles = ({
             "flex shrink-0 items-center justify-center overflow-hidden rounded-full object-cover font-display font-semibold ring-4",
             AVATAR_SIZE_CLASS[size][layout],
             AVATAR_TEXT_CLASS[size][layout],
-            CATEGORICAL_APPEARANCE_CLASS[categorical].solid,
-            CATEGORICAL_RING_CLASS[categorical],
+            categorical === null
+              ? COLOUR_AVATAR_CLASS
+              : toClassName(
+                  CATEGORICAL_APPEARANCE_CLASS[categorical]
+                    .solid,
+                  CATEGORICAL_RING_CLASS[categorical],
+                ),
           )
+
+          // The one sanctioned escape hatch for a runtime value,
+          // and the same one `Swatch` uses: a colour out of a
+          // database cannot be a class, because Tailwind generates
+          // its CSS at build time from source text.
+          const tileStyle =
+            color === undefined
+              ? undefined
+              : (getPortraitColourProperties(
+                  color,
+                ) as CSSProperties)
 
           const content = (
             <>
@@ -415,9 +491,11 @@ export const PortraitTiles = ({
                     className={toClassName(
                       "font-bold tabular-nums",
                       STAT_TEXT_CLASS[size][layout],
-                      CATEGORICAL_CONTENT_CLASS[
-                        categorical
-                      ],
+                      categorical === null
+                        ? COLOUR_STAT_CLASS
+                        : CATEGORICAL_CONTENT_CLASS[
+                            categorical
+                          ],
                     )}
                   >
                     {stat}
@@ -455,6 +533,7 @@ export const PortraitTiles = ({
                     ? "noopener noreferrer"
                     : undefined
                 }
+                style={tileStyle}
                 target={isExternal ? "_blank" : undefined}
               >
                 {content}
@@ -470,6 +549,7 @@ export const PortraitTiles = ({
                 className={tileClassName}
                 key={value}
                 role="link"
+                style={tileStyle}
               >
                 {content}
               </a>
@@ -484,6 +564,7 @@ export const PortraitTiles = ({
               onClick={() => {
                 onChoose?.(value)
               }}
+              style={tileStyle}
               type="button"
             >
               {content}

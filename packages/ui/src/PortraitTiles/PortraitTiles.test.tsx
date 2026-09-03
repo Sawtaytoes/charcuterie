@@ -10,6 +10,7 @@ import * as stories from "./PortraitTiles.stories.tsx"
 const {
   AllStates,
   AllVariants,
+  DataColours,
   Default,
   Interactive,
   NamedHues,
@@ -228,6 +229,83 @@ test("each portrait wears a different hue, and a named one holds it", async () =
   // change its colour, or the prop does nothing and every assertion
   // above still passes.
   await expect(pinned[0]).not.toBe(faces[0])
+})
+
+/**
+ * The second colour arm, which no token covers: the hue arrives from
+ * data, lands in an inline custom property, and three separate
+ * classes read it back out. Every step of that is invisible to
+ * typecheck, to lint and to axe — the CSS either generated or it did
+ * not, and a portrait with no fill looks like a picture that failed
+ * to load.
+ */
+test("a data colour reaches the fill exactly, and the initials flip to suit it", async () => {
+  const { canvas, canvasElement } =
+    await mountStory(DataColours)
+
+  const faces = Array.from(
+    expectAgentDrivable(canvas, {
+      name: "Who's shopping, coloured by their cards",
+      role: "group",
+    }).querySelectorAll<HTMLElement>(
+      "button > *:first-child",
+    ),
+  )
+
+  await expect(faces).toHaveLength(3)
+
+  // Exactly the stated colour. A palette hue would be some other
+  // triplet entirely, which is the whole point of the arm.
+  await expect(
+    faces.map(
+      (face) => getComputedStyle(face).backgroundColor,
+    ),
+  ).toEqual([
+    "rgb(166, 217, 106)",
+    "rgb(192, 196, 204)",
+    "rgb(255, 152, 48)",
+  ])
+
+  // All three fills are pale, so white letters would disappear into
+  // them. Nothing in the toolchain would have said so.
+  for (const face of faces) {
+    await expect(getComputedStyle(face).color).toBe(
+      "rgb(0, 0, 0)",
+    )
+  }
+
+  await expectNoAxeViolations(canvasElement)
+})
+
+/**
+ * The number is the hue mixed toward the scheme's own text colour,
+ * not the hue itself — a `#C0C4CC` number on a near-white surface is
+ * the readability failure this arm gives up the palette's guarantee
+ * to allow.
+ */
+test("the number is the data colour pulled toward readable, not the raw colour", async () => {
+  const { canvas } = await mountStory(DataColours)
+
+  const bailey = Array.from(
+    expectAgentDrivable(canvas, {
+      name: "Who's shopping, coloured by their cards",
+      role: "group",
+    }).querySelectorAll<HTMLButtonElement>("button"),
+  ).find((one) => one.textContent?.includes("Bailey"))
+
+  const stat = Array.from(
+    bailey?.querySelectorAll<HTMLElement>("span") ?? [],
+  ).find((one) => one.textContent === "860")
+
+  await expect(stat).toBeDefined()
+
+  const statColour = getComputedStyle(
+    stat as HTMLElement,
+  ).color
+
+  await expect(statColour).not.toBe("rgb(192, 196, 204)")
+
+  await expect(statColour).not.toBe("rgba(0, 0, 0, 0)")
 })
 
 test("every portrait is its own tab stop, and Enter and Space press it", async () => {

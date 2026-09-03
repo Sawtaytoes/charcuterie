@@ -19,7 +19,7 @@ import { PortraitTiles } from "./PortraitTiles.tsx"
  * the fleet has a standing rule about, and which a PNG in a pull
  * request makes ungreppable afterwards.
  */
-const SHOPPER_ITEMS: PortraitTileItem[] = [
+const SHOPPER_ITEMS = [
   {
     hint: "points",
     initials: "A",
@@ -48,7 +48,16 @@ const SHOPPER_ITEMS: PortraitTileItem[] = [
     stat: "430",
     value: "devon",
   },
-]
+  // `satisfies` rather than an annotation, so each fixture keeps its
+  // OWN type. `PortraitTileItem` is a union — a palette hue or a
+  // colour out of data, never both — and annotating the array widens
+  // every element to that union, after which `{ ...item,
+  // categorical: 3 }` below is an object that TypeScript reads as
+  // possibly carrying a `color` too, and rejects.
+] satisfies PortraitTileItem[]
+
+/** One fixture, with its colour arm still known. */
+type ShopperItem = (typeof SHOPPER_ITEMS)[number]
 
 /**
  * A set whose subjects persist, so each one owns its hue rather than
@@ -59,16 +68,56 @@ const SHOPPER_ITEMS: PortraitTileItem[] = [
  */
 const PINNED_ITEMS: PortraitTileItem[] = [
   {
-    ...(SHOPPER_ITEMS[0] as PortraitTileItem),
+    ...(SHOPPER_ITEMS[0] as ShopperItem),
     categorical: 3,
   },
   {
-    ...(SHOPPER_ITEMS[1] as PortraitTileItem),
+    ...(SHOPPER_ITEMS[1] as ShopperItem),
     categorical: 8,
   },
   {
-    ...(SHOPPER_ITEMS[2] as PortraitTileItem),
+    ...(SHOPPER_ITEMS[2] as ShopperItem),
     categorical: 5,
+  },
+]
+
+/**
+ * Colours that did **not** come from the palette.
+ *
+ * The shape this component was taken from is coloured this way: each
+ * subject's colour matches a physical card they tap, so the picker
+ * and the object in their hand have to agree. Ten audited hues
+ * cannot make that promise, and re-theming the colour would be
+ * re-theming the card.
+ *
+ * Hex on purpose — the contrast pick that decides whether the
+ * initials come out black or white reads six-digit hex and nothing
+ * else.
+ */
+const CARD_COLOUR_ITEMS: PortraitTileItem[] = [
+  {
+    color: "#A6D96A",
+    hint: "points",
+    initials: "A",
+    label: "Avery",
+    stat: "1,240",
+    value: "avery",
+  },
+  {
+    color: "#C0C4CC",
+    hint: "points",
+    initials: "B",
+    label: "Bailey",
+    stat: "860",
+    value: "bailey",
+  },
+  {
+    color: "#FF9830",
+    hint: "points",
+    initials: "C",
+    label: "Casey",
+    stat: "2,015",
+    value: "casey",
   },
 ]
 
@@ -219,7 +268,7 @@ export const WithPictures: Story = {
   args: {
     items: [
       {
-        ...(SHOPPER_ITEMS[0] as PortraitTileItem),
+        ...(SHOPPER_ITEMS[0] as ShopperItem),
         imageSrc:
           "data:image/svg+xml;utf8," +
           encodeURIComponent(
@@ -254,6 +303,27 @@ export const NamedHues: Story = {
   args: {
     items: PINNED_ITEMS,
     label: "Who's shopping, with pinned colours",
+  },
+}
+
+/**
+ * A colour out of data rather than out of the palette.
+ *
+ * All three of these are pale, which is the case the arm has to
+ * survive: the initials flip to black where white would vanish, and
+ * the number is the same hue pulled toward the scheme's own text
+ * colour so it stays readable on a pale surface — and, in the dark
+ * scheme, pulled the other way. Compare it with `NamedHues` above,
+ * where the library owns the colour and can simply state both ends.
+ *
+ * Use this arm only when the colour is a **fact about the subject**.
+ * A colour that is merely a design choice is a `categorical` index,
+ * and it gets re-theming and a contrast guarantee for free.
+ */
+export const DataColours: Story = {
+  args: {
+    items: CARD_COLOUR_ITEMS,
+    label: "Who's shopping, coloured by their cards",
   },
 }
 
@@ -298,9 +368,9 @@ export const AllStates: Story = {
           <PortraitTiles
             {...controlProps}
             items={[
-              SHOPPER_ITEMS[0] as PortraitTileItem,
+              SHOPPER_ITEMS[0] as ShopperItem,
               {
-                ...(SHOPPER_ITEMS[1] as PortraitTileItem),
+                ...(SHOPPER_ITEMS[1] as ShopperItem),
                 isDisabled: true,
               },
             ]}

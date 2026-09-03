@@ -73,6 +73,34 @@ what happens if you press the thing — and a person is not a warning.
 
 <Canvas of={PortraitTilesStories.NamedHues} />
 
+### When the colour is not ours to choose
+
+Some colours are not a design decision at all. points-market colours each child to match the
+**NFC card they physically tap**, by a settled household decision, so the picker on the wall
+and the card in their hand have to agree. Ten audited hues cannot promise that, and
+re-theming the colour would be re-theming the card.
+
+That is what `color` is for, and it is the same line
+[`Swatch`](/docs/components-data-swatch--docs) draws: a colour that arrived from the world is
+data, not a token. It reaches the paint through custom properties on the tile, because
+Tailwind generates its CSS at build time from source text and a colour out of a database is
+not in the source.
+
+Three things happen to that one colour, and only the first uses it raw.
+
+- The **fill** is the colour, exactly.
+- The **initials** are black or white, whichever the fill can carry. Pass six-digit hex:
+  `getReadableTextColour` measures hex and nothing else, and falls back to white on anything
+  it cannot parse rather than throwing inside your render.
+- The **number** is the colour mixed toward the scheme's own text colour, so a pale card
+  colour is still readable on a pale surface — and, in the dark scheme, is pulled the other
+  way instead.
+
+Reach for this arm only when the colour is a **fact about the subject**. A colour that is
+merely a choice is `categorical`, and it gets re-theming and a contrast guarantee for free.
+
+<Canvas of={PortraitTilesStories.DataColours} />
+
 ## A picture, and what happens when it 404s
 
 `imageSrc` draws a photo; `initials` draws a letter on the hue's solid fill. A portrait grid
@@ -117,7 +145,8 @@ for less. The shadow and the coloured border stay, so the hover is still legible
 
 - **Hold a selection.** Nothing here is checked; the page moved on. A picker that keeps a
   value is `RadioGroup itemShape="tile"`.
-- **Take a free-form colour.** A stored CSS colour that nobody can contrast-check is
-  [`Swatch`](/docs/components-data-swatch--docs)'s problem. Ten audited hues are this one's.
+- **Guarantee contrast on a `color` you supply.** The palette arm is audited in both schemes;
+  the data arm cannot be, because the colour is not ours. The initials are picked to suit the
+  fill and the number is pulled toward readable, and that is the whole of what it can promise.
 - **Crop or focus a face.** `object-fit: cover` centres, and that is all. An app that needs a
   focal point owns the crop.

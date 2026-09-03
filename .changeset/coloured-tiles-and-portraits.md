@@ -1,4 +1,5 @@
 ---
+"@charcuterie/tokens": minor
 "@charcuterie/ui": minor
 ---
 
@@ -22,6 +23,19 @@ subject in its own hue. It reflows from a row to a column on a container query o
 **set**, so a picker in a narrow sidebar stays a list of rows however wide the window is,
 and every length is a token, so `data-density="kiosk"` grows it. A picture that 404s falls
 back to the initials rather than leaving a torn hole where a face was.
+
+A portrait's colour has two arms, and they are mutually exclusive in the type. `categorical`
+is a hue from the palette — the default, re-themed and contrast-audited. `color` is any CSS
+colour, from data, for a colour the library does not own: points-market's children are
+coloured to match the NFC cards they tap, so the picker and the card have to agree and ten
+palette hues cannot promise that. The fill is the colour exactly; the initials flip to black
+or white to suit it; the number is mixed toward the scheme's own text colour so a pale colour
+stays readable on a pale surface.
+
+**`@charcuterie/tokens` gains `getReadableTextColour(background)`** — black or white on a
+given fill, WCAG. Unlike everything else in `contrast.ts` it never throws, because it runs
+inside a render on a colour out of a database. It measures hex and falls back to white on
+anything else.
 
 **`TILE_PADDING_CLASS.lg` grows** from `px-4 py-3.5` to `px-6 py-5`. `lg` is the
 landing-page tile and was carrying a control's padding under a card's name.

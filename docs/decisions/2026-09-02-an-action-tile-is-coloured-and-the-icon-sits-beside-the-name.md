@@ -41,7 +41,8 @@ size?: ControlSize
 // on PortraitTileItem
 label: ReactNode                  // the name
 value: string
-categorical?: CategoricalIndex
+categorical?: CategoricalIndex    // a hue from the palette …
+color?: string                    // … or one from data. Never both.
 hint?: ReactNode                  // the unit under the number — "points"
 href?: string
 imageSrc?: string
@@ -187,6 +188,31 @@ three that loaded, and this is the one shape that cannot absorb it. `onError` is
 signal a browser gives, so the fallback the caller already supplied for "no picture" covers
 "no picture today" too.
 
+**A portrait takes a colour from DATA as well as from the palette — and the first draft of
+this record said it would not.** That draft claimed points-market's per-person CSS colour was
+"a contrast guess" that ten audited hues should replace. It was wrong, and the workspace
+already held the reason: those colours **match the NFC cards the children physically tap**
+([`truenas/docs/decisions/2026-07-20-kid-identity-colors-match-nfc-cards.md`](https://mkdocs.octen.dev/workspace/truenas/docs/decisions/2026-07-20-kid-identity-colors-match-nfc-cards/)).
+Swapping in a palette index would have made the picker on the wall disagree with the card in
+the child's hand, which is not a theming change — it is the app contradicting a physical
+object. `Swatch`'s own doc names this exact class of colour: *"a design system owns
+`intent.danger`; it does not own the colour of the dot somebody stuck on a game controller,
+and re-theming that would be re-theming the hardware."*
+
+So `PortraitTileItem` carries the same two arms
+[`CardAccentEdge`](../../packages/ui/src/Card/cardAccentEdge.ts) already carries, mutually
+exclusive in the type. The palette arm stays the default and the recommended one. The data
+arm threads the colour through four custom properties on the tile, because Tailwind generates
+CSS at build time from source text and a colour out of a database is not in the source. Only
+the fill uses it raw: the initials are `getReadableTextColour(color)` — new in
+`@charcuterie/tokens`, WCAG, and **total**, because it runs inside a render and a throw on one
+bad row would blank the whole picker — and the number is `color-mix`ed toward
+`content-primary`, so a pale card colour is readable on a pale surface and moves with the
+scheme instead of staying pale.
+
+`ActionTiles` deliberately did **not** get the second arm. An action's colour is a design
+choice by construction.
+
 **The lift survives, guarded.** Hovering raises a portrait, which is the thing the owner
 pointed at in points-market. It is the only motion in this library, so
 `motion-reduce:hover:translate-y-0` turns it off for anyone who asked the OS for less; the
@@ -195,10 +221,13 @@ shadow and the coloured border stay, so the hover is still legible without it.
 ## What this deliberately does not do
 
 - **Colour a `RadioGroup` tile.** Above.
-- **Take a free-form colour on a portrait.** points-market stores a CSS colour per person and
-  paints `text-black/80` over it, which is a contrast guess. Ten audited hues replace it. A
-  colour that genuinely *arrived* from the world is still `Swatch`'s problem, per the
-  [2026-08-19 boundary](2026-08-19-categorical-is-a-curated-palette-not-ungoverned-colour.md).
+- **Guarantee contrast on a portrait's `color`.** The palette arm is audited in both schemes.
+  The data arm cannot be — the colour is not ours. It picks the initials to suit the fill and
+  pulls the number toward readable, and that is the whole of what it promises.
+- **Colour an `ActionTiles` tile from data.** `ActionTiles` takes `categorical` only. An
+  action is a thing the app decided to offer, so its colour is a design choice by
+  construction; the data arm exists for a colour that belongs to a *subject*, and an action
+  has no subject.
 - **Ship any icons.** Unchanged. Apps bring their own, and now state no colour on them.
 
 ## Evidence
@@ -211,6 +240,9 @@ shadow and the coloured border stay, so the hover is still legible without it.
   `accent="none"` opt-out, and the leading-padding difference, all read off computed styles
   rather than class names.
 - `packages/ui/src/PortraitTiles/PortraitTiles.test.tsx` — the container-driven reflow, the
-  404 fallback against a file that really does not exist, and the per-subject hue.
+  404 fallback against a file that really does not exist, the per-subject hue, and the data
+  colour reaching the fill exactly while the initials flip to suit it.
+- `packages/tokens/src/contrast.test.ts` — `getReadableTextColour` over the three real card
+  colours, and over the inputs it cannot measure, where it falls back instead of throwing.
 - `packages/ui/src/tileStyles.ts` — `TILE_ACCENT_EDGE_PADDING_CLASS`, and the `lg` growth
   with its reason.

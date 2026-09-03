@@ -15,6 +15,7 @@ import {
   getApcaLc,
   getContrast,
   getContrastRatio,
+  getReadableTextColour,
 } from "./contrast.ts"
 import {
   auditScheme,
@@ -303,4 +304,37 @@ test("APCA magnitude tracks readability on the winning variant", () => {
   expect(
     Math.abs(getApcaLc(content.primary, surface.base)),
   ).toBeGreaterThan(60)
+})
+
+/**
+ * The one total function in this file, and the tests are mostly
+ * about the cases it is total FOR: it runs inside a render on a
+ * colour out of a database, so a throw is a blank component rather
+ * than a build failure somebody sees.
+ */
+test("it picks black or white for a fill, whichever that fill can carry", () => {
+  // points-market's kid colours, straight off the NFC cards. All
+  // three are pale, so white letters would vanish into them and
+  // nothing in a build would have said so.
+  expect(getReadableTextColour("#A6D96A")).toBe("#000000")
+  expect(getReadableTextColour("#C0C4CC")).toBe("#000000")
+  expect(getReadableTextColour("#FF9830")).toBe("#000000")
+
+  expect(getReadableTextColour("#1A1C1F")).toBe("#FFFFFF")
+  expect(getReadableTextColour("#2F6F4E")).toBe("#FFFFFF")
+
+  // Three-digit hex is expanded by the same parser the ratio uses.
+  expect(getReadableTextColour("#eee")).toBe("#000000")
+})
+
+test("a colour it cannot measure falls back rather than throwing", () => {
+  expect(getReadableTextColour("rebeccapurple")).toBe(
+    "#FFFFFF",
+  )
+
+  expect(getReadableTextColour("oklch(0.7 0.1 200)")).toBe(
+    "#FFFFFF",
+  )
+
+  expect(getReadableTextColour("")).toBe("#FFFFFF")
 })
