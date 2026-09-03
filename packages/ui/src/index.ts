@@ -39,6 +39,7 @@ export type {
 export { Accordion } from "./Accordion/Accordion.tsx"
 export type {
   ActionTileItem,
+  ActionTilesAccent,
   ActionTilesProps,
 } from "./ActionTiles/ActionTiles.tsx"
 export { ActionTiles } from "./ActionTiles/ActionTiles.tsx"
@@ -129,7 +130,9 @@ export { copyText } from "./CopyButton/copyText.ts"
 export {
   CATEGORICAL_APPEARANCE_CLASS,
   CATEGORICAL_CONTENT_CLASS,
+  CATEGORICAL_HOVER_BORDER_CLASS,
   CATEGORICAL_HOVER_CLASS,
+  CATEGORICAL_RING_CLASS,
   CATEGORICAL_SOLID_FILL_CLASS,
 } from "./categoricalStyles.ts"
 export type { BadgeSize } from "./controlStyles.ts"
