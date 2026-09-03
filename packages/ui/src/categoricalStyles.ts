@@ -242,3 +242,60 @@ export const CATEGORICAL_CONTENT_CLASS: Record<
   9: "text-categorical-9-content",
   10: "text-categorical-10-content",
 }
+
+/**
+ * The hover BORDER, which `CATEGORICAL_HOVER_CLASS` deliberately
+ * does not carry.
+ *
+ * That map answers "what does this surface do under the pointer",
+ * and a `Badge` has no border state to change. A tile does: it is a
+ * bordered card, and the whole point of colouring one is that the
+ * box reacts in its own hue rather than in the neutral
+ * `border-strong` every other box uses. Kept separate rather than
+ * added as a fifth appearance key, because an appearance is a claim
+ * about the fill and this is not one.
+ *
+ * Written out in full for the reason this file opens with.
+ */
+export const CATEGORICAL_HOVER_BORDER_CLASS: Record<
+  CategoricalIndex,
+  string
+> = {
+  1: "hover:border-categorical-1-border",
+  2: "hover:border-categorical-2-border",
+  3: "hover:border-categorical-3-border",
+  4: "hover:border-categorical-4-border",
+  5: "hover:border-categorical-5-border",
+  6: "hover:border-categorical-6-border",
+  7: "hover:border-categorical-7-border",
+  8: "hover:border-categorical-8-border",
+  9: "hover:border-categorical-9-border",
+  10: "hover:border-categorical-10-border",
+}
+
+/**
+ * A halo the width of a ring, in the hue's SURFACE.
+ *
+ * `surface` and not `border`: this sits directly against the solid
+ * fill it surrounds, so it is a soft step out of the colour rather
+ * than a second line around it. `PortraitTiles` draws it around a
+ * face, where a hard outline reads as a frame and this reads as
+ * light.
+ *
+ * Written out in full for the reason this file opens with.
+ */
+export const CATEGORICAL_RING_CLASS: Record<
+  CategoricalIndex,
+  string
+> = {
+  1: "ring-categorical-1-surface",
+  2: "ring-categorical-2-surface",
+  3: "ring-categorical-3-surface",
+  4: "ring-categorical-4-surface",
+  5: "ring-categorical-5-surface",
+  6: "ring-categorical-6-surface",
+  7: "ring-categorical-7-surface",
+  8: "ring-categorical-8-surface",
+  9: "ring-categorical-9-surface",
+  10: "ring-categorical-10-surface",
+}
