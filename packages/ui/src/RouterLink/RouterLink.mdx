@@ -4,10 +4,11 @@ import { Meta } from "@storybook/addon-docs/blocks";
 
 # Routing
 
-`TextLink` and `ButtonLink` render a real `<a href>`. That is already correct with no setup
-at all — it navigates, it can be middle-clicked, ctrl-clicked, opened in a new tab and
-copied — it just reloads the page. **One provider at the app root** upgrades every link in
-the tree to the app's own soft navigation, with no change at any call site.
+`TextLink`, `ButtonLink`, and `UnstyledLink` render a real `<a href>`. That is already
+correct with no setup at all — it navigates, it can be middle-clicked, ctrl-clicked, opened
+in a new tab and copied — it just reloads the page. **One provider at the app root**
+upgrades every link in the tree to the app's own soft navigation, with no change at any
+call site.
 
 ## Why the library does not just import a router
 
@@ -106,6 +107,25 @@ export const ChannelCard = ({ channel }) => (
   </Card>
 )
 ```
+
+`TextLink` owns the fleet's inline and standalone text-link paint. `ButtonLink` owns the
+button-shaped paint. When an app already owns the complete appearance and must preserve it,
+`UnstyledLink` supplies only the same routing behavior:
+
+```tsx
+import { UnstyledLink } from "@charcuterie/ui"
+
+<UnstyledLink
+  className="text-xs text-content-secondary hover:text-content-primary"
+  href="/jobs"
+>
+  Jobs
+</UnstyledLink>
+```
+
+It adds no class and changes no target, relation, or accessible name. Prefer the two painted
+components for new UI. Use `UnstyledLink` for an established app-owned treatment whose
+appearance is not part of the change.
 
 ## Any other router
 
@@ -208,6 +228,7 @@ what `Main.stories.tsx` does.
 | `useRouterLink()` | `@charcuterie/ui` | The injected component, or `AnchorLink`. For an app building its own link-shaped component. |
 | `RouterLinkComponent` / `RouterLinkProps` | `@charcuterie/ui` | The contract: `ComponentPropsWithRef<"a">` with `href` required. |
 | `AnchorLink` | `@charcuterie/ui` | The plain `<a href>` default. |
+| `UnstyledLink` | `@charcuterie/ui` | The router-aware link seam with no library paint. |
 | `getIsRoutedHref(href)` | `@charcuterie/ui` | The destination test above. |
 | `ScrollMemoryProvider` | `@charcuterie/ui` | The scroll seam. `entry` is `{ key, path }` for the current history entry. |
 | `ScrollEntry` | `@charcuterie/ui` | That pair's type. |
