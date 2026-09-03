@@ -89,7 +89,8 @@ not in the source.
 Three things happen to that one colour, and only the first uses it raw.
 
 - The **fill** is the colour, exactly.
-- The **initials** are black or white, whichever the fill can carry. Pass six-digit hex:
+- The **initials** are black or white, whichever the fill can carry — which is why the third
+  portrait below has white letters and the other two have black. Pass six-digit hex:
   `getReadableTextColour` measures hex and nothing else, and falls back to white on anything
   it cannot parse rather than throwing inside your render.
 - The **number** is the colour mixed toward the scheme's own text colour, so a pale card

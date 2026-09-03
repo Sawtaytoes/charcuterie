@@ -16,10 +16,10 @@ import {
  * that failed to load.
  */
 test("one colour becomes the four properties the paint reads", () => {
-  const properties = getPortraitColourProperties("#A6D96A")
+  const properties = getPortraitColourProperties("#8FD3F4")
 
   expect(properties[PORTRAIT_COLOUR_PROPERTY]).toBe(
-    "#A6D96A",
+    "#8FD3F4",
   )
 
   // Pale fill, so the letters go dark. `getReadableTextColour` owns
@@ -32,10 +32,10 @@ test("one colour becomes the four properties the paint reads", () => {
   // the number pulled toward the scheme's own text colour so it
   // moves with the scheme instead of staying pale on a pale surface.
   expect(properties[PORTRAIT_HALO_PROPERTY]).toBe(
-    "color-mix(in srgb, #A6D96A 28%, transparent)",
+    "color-mix(in srgb, #8FD3F4 28%, transparent)",
   )
 
   expect(properties[PORTRAIT_STAT_PROPERTY]).toBe(
-    "color-mix(in srgb, #A6D96A 62%, var(--color-content-primary))",
+    "color-mix(in srgb, #8FD3F4 62%, var(--color-content-primary))",
   )
 })

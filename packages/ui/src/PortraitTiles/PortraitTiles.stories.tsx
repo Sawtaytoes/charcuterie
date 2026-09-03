@@ -93,10 +93,16 @@ const PINNED_ITEMS: PortraitTileItem[] = [
  * Hex on purpose — the contrast pick that decides whether the
  * initials come out black or white reads six-digit hex and nothing
  * else.
+ *
+ * Invented colours, like the names above them. An app's real values
+ * would be its data sitting in a published library, and a fixture
+ * that is somebody's actual configuration is a fixture nobody can
+ * change later. Two pale and one dark, so the story shows the
+ * initials flipping rather than describing it.
  */
 const CARD_COLOUR_ITEMS: PortraitTileItem[] = [
   {
-    color: "#A6D96A",
+    color: "#8FD3F4",
     hint: "points",
     initials: "A",
     label: "Avery",
@@ -104,7 +110,7 @@ const CARD_COLOUR_ITEMS: PortraitTileItem[] = [
     value: "avery",
   },
   {
-    color: "#C0C4CC",
+    color: "#D9D2C5",
     hint: "points",
     initials: "B",
     label: "Bailey",
@@ -112,7 +118,7 @@ const CARD_COLOUR_ITEMS: PortraitTileItem[] = [
     value: "bailey",
   },
   {
-    color: "#FF9830",
+    color: "#3B4A6B",
     hint: "points",
     initials: "C",
     label: "Casey",
@@ -309,12 +315,13 @@ export const NamedHues: Story = {
 /**
  * A colour out of data rather than out of the palette.
  *
- * All three of these are pale, which is the case the arm has to
- * survive: the initials flip to black where white would vanish, and
- * the number is the same hue pulled toward the scheme's own text
- * colour so it stays readable on a pale surface — and, in the dark
- * scheme, pulled the other way. Compare it with `NamedHues` above,
- * where the library owns the colour and can simply state both ends.
+ * Two pale fills and one dark one, which is the case the arm has to
+ * survive: the initials go black where white would vanish and white
+ * where black would, and the number is the same hue pulled toward
+ * the scheme's own text colour so it stays readable on a pale
+ * surface — and, in the dark scheme, pulled the other way. Compare
+ * it with `NamedHues` above, where the library owns the colour and
+ * can simply state both ends.
  *
  * Use this arm only when the colour is a **fact about the subject**.
  * A colour that is merely a design choice is a `categorical` index,

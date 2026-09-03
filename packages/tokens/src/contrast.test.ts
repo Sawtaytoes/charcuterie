@@ -313,13 +313,13 @@ test("APCA magnitude tracks readability on the winning variant", () => {
  * than a build failure somebody sees.
  */
 test("it picks black or white for a fill, whichever that fill can carry", () => {
-  // points-market's kid colours, straight off the NFC cards. All
-  // three are pale, so white letters would vanish into them and
-  // nothing in a build would have said so.
-  expect(getReadableTextColour("#A6D96A")).toBe("#000000")
-  expect(getReadableTextColour("#C0C4CC")).toBe("#000000")
-  expect(getReadableTextColour("#FF9830")).toBe("#000000")
+  // Pale fills, where white letters would vanish and nothing in a
+  // build would have said so.
+  expect(getReadableTextColour("#8FD3F4")).toBe("#000000")
+  expect(getReadableTextColour("#D9D2C5")).toBe("#000000")
+  expect(getReadableTextColour("#FFFFFF")).toBe("#000000")
 
+  expect(getReadableTextColour("#3B4A6B")).toBe("#FFFFFF")
   expect(getReadableTextColour("#1A1C1F")).toBe("#FFFFFF")
   expect(getReadableTextColour("#2F6F4E")).toBe("#FFFFFF")
 

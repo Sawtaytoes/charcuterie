@@ -261,18 +261,21 @@ test("a data colour reaches the fill exactly, and the initials flip to suit it",
       (face) => getComputedStyle(face).backgroundColor,
     ),
   ).toEqual([
-    "rgb(166, 217, 106)",
-    "rgb(192, 196, 204)",
-    "rgb(255, 152, 48)",
+    "rgb(143, 211, 244)",
+    "rgb(217, 210, 197)",
+    "rgb(59, 74, 107)",
   ])
 
-  // All three fills are pale, so white letters would disappear into
-  // them. Nothing in the toolchain would have said so.
-  for (const face of faces) {
-    await expect(getComputedStyle(face).color).toBe(
-      "rgb(0, 0, 0)",
-    )
-  }
+  // The first two fills are pale and the third is dark, so the
+  // letters have to go the other way on the third. Nothing in the
+  // toolchain would have said otherwise.
+  await expect(
+    faces.map((face) => getComputedStyle(face).color),
+  ).toEqual([
+    "rgb(0, 0, 0)",
+    "rgb(0, 0, 0)",
+    "rgb(255, 255, 255)",
+  ])
 
   await expectNoAxeViolations(canvasElement)
 })
@@ -303,7 +306,7 @@ test("the number is the data colour pulled toward readable, not the raw colour",
     stat as HTMLElement,
   ).color
 
-  await expect(statColour).not.toBe("rgb(192, 196, 204)")
+  await expect(statColour).not.toBe("rgb(217, 210, 197)")
 
   await expect(statColour).not.toBe("rgba(0, 0, 0, 0)")
 })
