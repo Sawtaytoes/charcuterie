@@ -107,7 +107,7 @@ test("a picture that fails to load falls back to the initials", async () => {
     const broken = Array.from(
       group.querySelectorAll<HTMLImageElement>("img"),
     ).find((one) =>
-      one.src.includes("this-file-does-not-exist"),
+      one.src.includes("charcuterie-missing-portrait"),
     )
 
     // Gone from the DOM entirely, replaced by the letter — not left

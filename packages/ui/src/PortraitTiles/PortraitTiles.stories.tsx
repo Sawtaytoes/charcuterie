@@ -227,8 +227,14 @@ export const WithPictures: Story = {
           ),
       },
       {
-        ...(SHOPPER_ITEMS[1] as PortraitTileItem),
-        imageSrc: "/this-file-does-not-exist.png",
+        ...(SHOPPER_ITEMS[1] as ShopperItem),
+        // The same URL `Avatar`'s fallback story points at, and
+        // that is not a coincidence: `smokeStorybook.ts` keeps a
+        // short allowlist of resources that are MEANT to 404, so a
+        // real missing chunk still fails the run. A new spelling of
+        // "this file is absent" is an unlisted 404 and fails the
+        // storybook gate — which is exactly what it did here.
+        imageSrc: "/charcuterie-missing-portrait.png",
       },
       SHOPPER_ITEMS[2] as PortraitTileItem,
     ],
