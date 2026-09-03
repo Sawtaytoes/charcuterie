@@ -1,5 +1,11 @@
 # @charcuterie/ui
 
+## 4.2.0
+
+### Minor Changes
+
+- 44ad8fa: Add `UnstyledLink`, a router-aware link that preserves an app-owned visual treatment, and recommend it from the raw-anchor lint rule when neither painted link component fits.
+
 ## 4.1.0
 
 ### Minor Changes
