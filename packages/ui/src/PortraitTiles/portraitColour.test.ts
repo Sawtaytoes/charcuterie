@@ -1,0 +1,39 @@
+import { expect, test } from "vitest"
+
+import {
+  getPortraitColourProperties,
+  PORTRAIT_FILL_PROPERTY,
+  PORTRAIT_HALO_PROPERTY,
+  PORTRAIT_INITIALS_PROPERTY,
+  PORTRAIT_STAT_PROPERTY,
+} from "./portraitColour.ts"
+
+/**
+ * Four properties out of one colour, and each of them is read by a
+ * class that Tailwind generated from a literal. A wrong name here is
+ * not an error anywhere — the property is simply never read and the
+ * portrait paints with no fill at all, which looks like an image
+ * that failed to load.
+ */
+test("one colour becomes the four properties the paint reads", () => {
+  const properties = getPortraitColourProperties("#8FD3F4")
+
+  expect(properties[PORTRAIT_FILL_PROPERTY]).toBe("#8FD3F4")
+
+  // Pale fill, so the letters go dark. `getReadableTextColour` owns
+  // that choice and `contrast.test.ts` covers it.
+  expect(properties[PORTRAIT_INITIALS_PROPERTY]).toBe(
+    "#000000",
+  )
+
+  // A wash of the hue, standing in for `categorical-N-surface`, and
+  // the number pulled toward the scheme's own text colour so it
+  // moves with the scheme instead of staying pale on a pale surface.
+  expect(properties[PORTRAIT_HALO_PROPERTY]).toBe(
+    "color-mix(in srgb, #8FD3F4 28%, transparent)",
+  )
+
+  expect(properties[PORTRAIT_STAT_PROPERTY]).toBe(
+    "color-mix(in srgb, #8FD3F4 62%, var(--color-content-primary))",
+  )
+})
