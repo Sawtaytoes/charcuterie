@@ -97,6 +97,29 @@ export const CATEGORICAL_INDEXES = [
   1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
 ] as const
 
+/**
+ * One of the ten hues. **1-based** — `1..10`, matching the token
+ * names (`--color-categorical-1-*`), not an array position.
+ *
+ * ⚠️ Never reach this type with `as`. Every consumer of an index is
+ * a plain `Record<CategoricalIndex, …>`, so a `0` from an off-by-one
+ * resolves to `undefined` and the next property read throws — which
+ * is a blank page, not a type error. `index as CategoricalIndex` over
+ * an `Array.map` position is exactly that mistake, and it type-checks
+ * because an assertion is a claim rather than a check. It shipped
+ * once, in QueuePilot's landing.
+ *
+ * Derive the value instead. Indexing the tuple already yields this
+ * union, so nothing needs asserting:
+ *
+ * ```ts
+ * CATEGORICAL_INDEXES[position % CATEGORICAL_INDEX_COUNT]
+ * ```
+ *
+ * Or let the component take it by position for you — `ActionTiles`
+ * and `PortraitTiles` both do, and an item only names its own hue
+ * when the order is not the answer.
+ */
 export type CategoricalIndex =
   (typeof CATEGORICAL_INDEXES)[number]
 
