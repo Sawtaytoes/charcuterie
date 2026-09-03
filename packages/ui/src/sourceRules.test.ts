@@ -382,11 +382,10 @@ test("the barrel is the only place components are re-exported", async () => {
   // back-link and made `Button` get used for navigation: `TextLink`
   // and `ButtonLink`, both a real `<a href>`, differing in paint
   // rather than semantics: +2 -> 38, on top of `AdaptiveGrid`'s 36.
-  // `AnchorLink`,
+  // `AnchorLink`, `UnstyledLink`,
   // `RouterLinkProvider`, `ReactRouterLink`, `ScrollMemoryProvider`
   // and `ReactRouterAdapter` are the router seam rather
-  // than components anybody stories, and live in `RouterLink/`,
-  // `Main/` and
+  // than painted components, and live in `RouterLink/`, `Main/` and
   // `reactRouter/` — outside this count by the `<Name>/<Name>.tsx`
   // rule, exactly as `Overlay/`'s parts are.
   // The unified app shell adds four: `Shell`, `Header`, `Rail`,

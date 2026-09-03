@@ -200,10 +200,11 @@ const createRawElementRule = ({
 export const NO_RAW_ANCHOR_MESSAGE = [
   "Raw `<a>`. Use `TextLink` for navigation in prose or a nav,",
   "or `ButtonLink` when the navigation should look like a",
-  `button — both from \`${UI_PACKAGE_NAME}\`, and both render a`,
+  "button. Use `UnstyledLink` only to preserve a complete",
+  `app-owned treatment. All three come from \`${UI_PACKAGE_NAME}\` and render a`,
   "real `<a href>`, so middle-click, ctrl-click and",
-  "open-in-new-tab keep working, with the house focus, hover and",
-  "visited styling instead of a hand-rolled one. Links go",
+  "open-in-new-tab keep working. The painted two also supply the",
+  "house focus, hover and visited styling. Links go",
   "somewhere; buttons act on this page. Escape hatch:",
   "`// eslint-disable-next-line charcuterie/no-raw-anchor -- why`.",
 ].join(" ")
@@ -326,7 +327,7 @@ export const SUPPRESSION_GUARDED_RULE_IDS = [
 export const COMPONENT_CHOICE_RULES = {
   "no-raw-anchor": createRawElementRule({
     description:
-      "Navigate with `TextLink` or `ButtonLink`, not a raw `<a>`.",
+      "Navigate with `TextLink`, `ButtonLink`, or `UnstyledLink`, not a raw `<a>`.",
     elementName: "a",
     messages: { rawAnchor: NO_RAW_ANCHOR_MESSAGE },
   }),

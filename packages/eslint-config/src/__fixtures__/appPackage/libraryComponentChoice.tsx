@@ -11,6 +11,9 @@ export const Navigation = () => (
   <nav>
     <TextLink href="/jobs">Jobs</TextLink>
     <ButtonLink href="/errors">Errors</ButtonLink>
+    <UnstyledLink className="app-owned-link" href="/logs">
+      Logs
+    </UnstyledLink>
   </nav>
 )
 
