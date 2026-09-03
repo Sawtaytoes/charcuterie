@@ -26,6 +26,7 @@ Start here. Find the row that matches what you are about to build.
 | --- | --- | --- |
 | Send the user somewhere, inline in a sentence or as a standalone link | `TextLink` (`appearance="inline"` or `"standalone"`) | `<a>`; `<button onClick={navigate}>`; a clickable `<div>` |
 | Send the user somewhere, but it should *look* like a button | `ButtonLink` — a real `<a href>` painted as a button | `Button` with an `onClick` that navigates |
+| Preserve an established app-owned link treatment while adding soft navigation | `UnstyledLink` — the router seam with no paint of its own | Replacing the app's appearance with `TextLink`; calling `useNavigate` from a click handler |
 | Do something on this page — submit, open, retry, delete | `Button` | `<button>`; a `<div onClick>` |
 | Do something on this page, and the control is icon-only | `IconButton` — `label` is **required** | `Button` with only a glyph inside |
 | Offer two or three ways forward, each needing a sentence to explain it | `ActionTiles` — a set of pressable or linking tiles | a `Button` with `height: auto` (a `Button` has **no** block padding; the override leaves `padding: 0` and a title flush against the border) |
@@ -49,17 +50,19 @@ A control that **navigates** is an `<a href>`. A control that **changes this pag
 copy-link-address and the browser's own status-bar preview cannot be added to a `<button>`
 afterwards, and re-implementing them by hand gets the modifier keys wrong every time.
 
-The library ships **two link components rather than one `Link` with an `appearance` prop**,
-because choosing between two names is a clearer decision than setting a prop — and `Button`
-deliberately grows no `href` and no `asChild`.
+The library ships **painted link components rather than one `Link` with an `appearance`
+prop**, because choosing between two names is a clearer decision than setting a prop — and
+`Button` deliberately grows no `href` and no `asChild`. `UnstyledLink` is the narrow third
+case: preserve a complete app-owned treatment while adding the shared router behavior.
 
 ```tsx
-import { Button, ButtonLink, IconButton, TextLink } from "@charcuterie/ui"
+import { Button, ButtonLink, IconButton, TextLink, UnstyledLink } from "@charcuterie/ui"
 
 // Navigation.
 <TextLink href="/channels">all channels</TextLink>
 <TextLink appearance="standalone" href="/channels">Back to all channels</TextLink>
 <ButtonLink href={`/channels/${id}/settings`}>Configure</ButtonLink>
+<UnstyledLink className="channel-link" href="/channels">Existing app-owned treatment</UnstyledLink>
 
 // On-page actions.
 <Button intent="danger" onClick={onDelete}>Delete</Button>
