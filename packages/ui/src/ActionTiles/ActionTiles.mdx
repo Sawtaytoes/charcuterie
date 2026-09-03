@@ -6,8 +6,8 @@ import * as ActionTilesStories from "./ActionTiles.stories";
 
 # ActionTiles
 
-A set of **actions** drawn as tiles — a bordered card carrying a name and a line of help, in
-a grid that gains columns with its container.
+A set of **actions** drawn as tiles — a bordered card carrying a colour bar, an icon beside
+its name, and a line of help, in a grid that gains columns with its container.
 
 This is [`RadioGroup`](/docs/components-controls-radiogroup--docs)'s `itemShape="tile"` with
 the radio taken away. The 2026-08-25 record that made the choice tile a `RadioGroup` shape
@@ -20,6 +20,49 @@ giving one `aria-checked` would be worse than the paint it replaced"*.
 ## Props
 
 <Controls />
+
+## The colour is the point, and it is not decoration
+
+The first version of this component was neutral, and the owner's verdict on it was *"very
+boring, not colorful"*. Three apps had already answered the question themselves — mux-magic,
+Gallery Downloader and points-market all coloured their tiles by hand — so the paint is now
+the library's and every one of them can stop.
+
+A tile wears a **bar down its leading edge**, its icon takes the same hue, and the box hovers
+in it. The hue comes from the ten-wide
+[categorical palette](/docs/foundations-colour--docs) taken **in order**, which is why a set
+of five needs no colour props at all.
+
+<Canvas of={ActionTilesStories.AutoHues} />
+
+The bar is `Card`'s accent-edge pseudo-element rather than a second copy of one, so a tile and
+a [`Card`](/docs/components-layout-card--docs) on the same page draw the same bar. That also
+buys the corner: a border is painted on the border box and cannot follow a curve, which is why
+all three hand-rolled versions in the fleet ran past the radius and stopped square.
+
+Because it is an **overlay**, it occupies nothing in the box model — so the tile widens its
+leading padding to make room. Without that the bar draws straight through the first letter of
+the name, and nothing reports it: a pseudo-element is not in the DOM, so no query can miss it
+and axe has nothing to say about a glyph with a stripe on it.
+
+`categorical` and not `intent`, for the reason `cardAccentEdge.ts` gives: an intent is a
+*claim* — `danger` says what happens if you press the thing — and "Builder" beside "Jobs" is
+making no claim about either. Ten numbered hues say only "these are different from each
+other", which is what a tile set means.
+
+### Naming a hue, and turning them off
+
+An item's `categorical` overrides the one its position would have given it, and the rest go on
+walking the palette from their own positions — so naming one does not force naming all of
+them. Worth doing when the colour belongs to the **thing** rather than to the list.
+
+<Canvas of={ActionTilesStories.NamedHues} />
+
+`accent="none"` is the paint this component shipped with, kept as an opt-out. Reach for it
+when the tiles sit inside something already carrying a colour of its own, where a second
+palette is noise rather than information.
+
+<Canvas of={ActionTilesStories.Neutral} />
 
 ## Which of the two you want
 
@@ -66,6 +109,14 @@ between `Button` and `ButtonLink`.
 The test compares **computed** styles of an action tile and a resting radio tile, not class
 names. A class-name assertion passes while the paint is wrong.
 
+There is exactly one difference, and it is asserted rather than waived: a coloured action tile
+has more **leading** padding than a radio tile, by the room its bar takes. Every other side
+matches, and `accent="none"` matches on all four — so "the boxes match" cannot quietly come to
+mean "the boxes match apart from whatever changed last". A radio tile draws no bar at all: a
+checked one says so by turning its whole border `intent-accent-solid`, and a coloured stripe
+on the same box would be one card carrying two claims — *this one is selected* and *this one
+is the blue one* — in the same place.
+
 ## `href` makes the tile a real anchor
 
 Middle-click, ctrl-click, "open in a new tab", "copy link address" and the status bar all
@@ -93,11 +144,18 @@ cost a keyboard user the ability to Tab to the second tile.
 The group takes a required `label`, which names the set — "Queue type", "Pick a tool" — the
 way a `radiogroup` is named. A set of unnamed tiles is a pile of buttons.
 
-## A tile may lead with an icon
+## A tile may lead with an icon, beside the name
 
-`icon` is `aria-hidden` by construction, because the name it sits above is inside the same
-tile — an announced icon is the label read twice. The library still ships no icons; apps
-bring their own.
+The icon sits **to the left of the title**, with the hint below both — which is how all three
+apps that had grown this card by hand drew it, and how the owner asked for it back: *"I like
+how Mux-Magic looks today with the icon to the left of the title."*
+
+It takes the tile's hue, so an app passes a `stroke="currentColor"` path and states no colour
+of its own. Size is the app's; around 22px at `md` and 30px at `lg` reads the way those
+hand-rolled cards did. The library still ships no icons.
+
+`icon` is `aria-hidden` by construction, because the name it sits beside is inside the same
+tile — an announced icon is the label read twice.
 
 <Canvas of={ActionTilesStories.WithIcons} />
 

@@ -1,0 +1,153 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as PortraitTilesStories from "./PortraitTiles.stories";
+
+<Meta of={PortraitTilesStories} />
+
+# PortraitTiles
+
+A set of **people** — or of anything else picked by its face — drawn as round pictures with a
+name and one big number.
+
+points-market's "Who's shopping?" is the shape this is taken from. It had been hand-rolled
+there since the app was built, and it is the third tile shape the fleet grew on its own,
+after mux-magic's and Gallery Downloader's "Pick a tool" cards.
+
+<Canvas of={PortraitTilesStories.Default} />
+
+## Props
+
+<Controls />
+
+## Why this is not an `ActionTiles` variant
+
+The two answer different questions.
+
+- [`ActionTiles`](/docs/components-actions-actiontiles--docs) asks **what do you want to
+  do** — a name, a line of help, an icon that illustrates a verb.
+- This asks **who is this** — a face, and one number that decides it. There is no
+  description, because a person is not explained.
+
+Collapsing them would mean one component whose `icon` is sometimes a 20px glyph beside the
+title and sometimes a 144px circle above it, with `hint` meaning "what this does" in one mode
+and "points" in the other. That is two components wearing one name.
+
+What they **do** share is the box: `tileStyles.ts` holds the border, the radius, the surface
+and the `auto-fill` grid, and both read it. A page carrying both does not show two different
+cards.
+
+## It scales, and the scaling is the point
+
+Two axes carry it, and neither is a pixel count in an app.
+
+**The container.** `layout="auto"` is a row while the set is narrow and a column once it has
+room, off a `cq-sm` (24rem) query on the set itself. Nothing reads the viewport, so a picker
+in a 320px sidebar on a 2560px monitor gets the row form — which is right, and which a media
+query would have got wrong.
+
+**The density.** Every length is a token, so `data-density="kiosk"` grows the type ramp
+underneath it: `text-2xl` is 30px at `comfortable` and 38px at `kiosk`. points-market runs
+`kiosk` today, and that is where its big numbers come from.
+
+<Canvas of={PortraitTilesStories.Responsive} />
+
+The container and the element querying it **cannot be the same box** — a container query
+matches descendants only. The set renders a wrapper for that reason, the same arrangement
+`EmptyState` uses, and `className` stays on the outer element where a consumer expects it.
+
+<Canvas of={PortraitTilesStories.AllVariants} />
+
+## The colour is the person's, not the position's
+
+A portrait takes the next hue from the ten-wide
+[categorical palette](/docs/foundations-colour--docs) when it names none, which costs a call
+site nothing and is the right default for a list assembled on the fly.
+
+It is the **wrong** default for a household. Add a fifth member and the first four change
+colour — and their colour was the thing the picker was being read by, faster than the names
+were. Any set whose subjects persist should store a `categorical` per subject and pass it,
+the same call Docket makes for a project.
+
+`categorical` and not `intent`: an intent is a claim the design system makes — `danger` says
+what happens if you press the thing — and a person is not a warning.
+
+<Canvas of={PortraitTilesStories.NamedHues} />
+
+### When the colour is not ours to choose
+
+Some colours are not a design decision at all. points-market colours each child to match the
+**NFC card they physically tap**, by a settled household decision, so the picker on the wall
+and the card in their hand have to agree. Ten audited hues cannot promise that, and
+re-theming the colour would be re-theming the card.
+
+That is what `color` is for, and it is the same line
+[`Swatch`](/docs/components-data-swatch--docs) draws: a colour that arrived from the world is
+data, not a token. It reaches the paint through custom properties on the tile, because
+Tailwind generates its CSS at build time from source text and a colour out of a database is
+not in the source.
+
+Three things happen to that one colour, and only the first uses it raw.
+
+- The **fill** is the colour, exactly.
+- The **initials** are black or white, whichever the fill can carry — which is why the third
+  portrait below has white letters and the other two have black. Pass six-digit hex:
+  `getReadableTextColour` measures hex and nothing else, and falls back to white on anything
+  it cannot parse rather than throwing inside your render.
+- The **number** is the colour mixed toward the scheme's own text colour, so a pale card
+  colour is still readable on a pale surface — and, in the dark scheme, is pulled the other
+  way instead.
+
+Reach for this arm only when the colour is a **fact about the subject**. A colour that is
+merely a choice is `categorical`, and it gets re-theming and a contrast guarantee for free.
+
+<Canvas of={PortraitTilesStories.DataColours} />
+
+## A picture, and what happens when it 404s
+
+`imageSrc` draws a photo; `initials` draws a letter on the hue's solid fill. A portrait grid
+is the shape that cannot absorb a broken image — a missing `<img>` is a torn hole where a
+face was, next to three that loaded — so a load error falls back to the initials the caller
+already supplied.
+
+The `<img>` is `alt=""` on purpose. The name is beside it inside the same tile, so an alt
+here is the name announced twice.
+
+<Canvas of={PortraitTilesStories.WithPictures} />
+
+## The keyboard is the platform's
+
+`href` makes a portrait a real `<a href>`, routed through the injected `RouterLink` for a
+same-origin destination — so middle-click, ctrl-click, "open in a new tab" and "copy link
+address" come from the element rather than from the paint. Without one it is a `<button>`
+that calls `onChoose`. A set may mix the two.
+
+Tab reaches **each** portrait. There is no roving tabindex, for the same reason `ActionTiles`
+has none: a radio group borrows one tab stop because exactly one of its options is true at a
+time, and nothing here is true.
+
+The group takes a required `label` naming the set — "Who's shopping?" — and `stat` is drawn
+inside the tile with its `hint` so both are part of the accessible name. "1,240" on its own
+tells a screen-reader user nothing.
+
+<Canvas of={PortraitTilesStories.AllStates} />
+
+## The lift, and who does not get it
+
+Hovering raises the portrait and casts a shadow. It is the one piece of motion in this
+library, kept because it is the thing the owner pointed at in points-market when this moved
+in here.
+
+`motion-reduce:hover:translate-y-0` turns the movement off for anyone who has asked the OS
+for less. The shadow and the coloured border stay, so the hover is still legible without it.
+
+<Canvas of={PortraitTilesStories.Interactive} />
+
+## What this deliberately does not do
+
+- **Hold a selection.** Nothing here is checked; the page moved on. A picker that keeps a
+  value is `RadioGroup itemShape="tile"`.
+- **Guarantee contrast on a `color` you supply.** The palette arm is audited in both schemes;
+  the data arm cannot be, because the colour is not ours. The initials are picked to suit the
+  fill and the number is pulled toward readable, and that is the whole of what it can promise.
+- **Crop or focus a face.** `object-fit: cover` centres, and that is all. An app that needs a
+  focal point owns the crop.

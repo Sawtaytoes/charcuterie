@@ -47,6 +47,7 @@ export {
   getApcaLc,
   getContrast,
   getContrastRatio,
+  getReadableTextColour,
 } from "./contrast.ts"
 export type { ContrastCheck } from "./contrastAudit.ts"
 export {
