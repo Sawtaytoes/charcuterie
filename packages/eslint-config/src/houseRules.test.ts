@@ -289,7 +289,7 @@ test("every message says which component to reach for instead", async () => {
   // Each message has to name a replacement and an escape hatch.
   for (const message of result.messages) {
     expect(message.message).toMatch(
-      /TextLink|ButtonLink|Button|IconButton|Listbox|Combobox/,
+      /TextLink|ButtonLink|UnstyledLink|Button|IconButton|Listbox|Combobox/,
     )
     expect(message.message).toContain(
       "eslint-disable-next-line",
