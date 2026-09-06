@@ -140,8 +140,73 @@ export const ScrollFiller = (): ReactNode => (
 )
 
 /**
- * The three things that actually make a page scroll sideways, and
- * each needs a different answer.
+ * A closed drawer parked off the inline edge by a transform — the
+ * third shape that makes a page scroll sideways, and the one that
+ * broke plex-channels.
+ *
+ * It is still laid out, still painted, and still part of the
+ * scrollable overflow region of whatever it resolves against: a
+ * transform does not remove a box from that region, and neither
+ * does `visibility: hidden`. So the page scrolls sideways to reach
+ * a panel nobody can see, and every `min-width: 0` in the tree is
+ * irrelevant. Only a clip on the box's containing block answers
+ * it.
+ *
+ * **Which element that is depends on where the drawer is
+ * rendered, and the two stories place it differently on purpose.**
+ * Beside `Main` it is `Shell`'s to clip, which is where an app's
+ * parked chrome belongs. Inside `Main` it is `Main`'s, because
+ * `Main` is `position: relative` — and that is why `Main` carries
+ * an `overflow-x: hidden` of its own rather than leaning on the
+ * frame's.
+ */
+export const ParkedDrawer = (): ReactNode => (
+  <div
+    aria-hidden="true"
+    className="pointer-events-none absolute top-0 end-0 h-40 w-80 translate-x-[110%] rounded-lg border border-border-subtle bg-surface-raised"
+    id="parked-drawer"
+  />
+)
+
+/**
+ * The shape that makes a page scroll **down** when only `<main>`
+ * was supposed to: an ordinary external link whose "opens in a new
+ * tab" hint is visually hidden.
+ *
+ * `sr-only` is `position: absolute`. Nothing here looks like
+ * layout at all — the span is one pixel and paints nothing — and
+ * that is the point: whatever it resolves against inherits its
+ * static position, which is wherever the link happens to sit in a
+ * long document. Resolve it outside the scrollport and the page
+ * grows to reach it, which is a second scrollbar beside `Main`'s.
+ * Folio drew both.
+ *
+ * It goes at the END of a fixture, past the fold, or the escape it
+ * demonstrates has nowhere to escape to.
+ */
+export const ExternalLinkFooter = (): ReactNode => (
+  <p className="text-content-secondary text-sm">
+    <a
+      className="text-intent-accent-content underline"
+      href="#runbook"
+      id="runbook-link"
+      rel="noreferrer"
+      target="_blank"
+    >
+      The transfer runbook
+      <span className="sr-only" id="new-tab-hint">
+        {" "}
+        (opens in a new tab)
+      </span>
+    </a>
+  </p>
+)
+
+/**
+ * The two shapes of *content* that make a page scroll sideways,
+ * and each needs a different answer. The third shape is a box
+ * rather than content and lives in `ParkedDrawer`, because where
+ * it is rendered is half of what it demonstrates.
  *
  * The **path** is content that *can* wrap and does not, because
  * nothing in it is a break opportunity. `Main`'s `wrap-anywhere`
@@ -166,23 +231,6 @@ export const ScrollFiller = (): ReactNode => (
  */
 export const OverflowingContent = (): ReactNode => (
   <>
-    {/*
-      The third shape, and the one that broke plex-channels: a
-      closed drawer parked off the inline edge by a transform.
-
-      It is still laid out, still painted, and still part of the
-      document's scrollable overflow region — a transform does not
-      remove a box from it, and neither does `visibility: hidden`.
-      So the page scrolls sideways to reach a panel nobody can see,
-      and every `min-width: 0` in the tree is irrelevant. `Shell`'s
-      `overflow-x: clip` is what actually answers it.
-    */}
-    <div
-      aria-hidden="true"
-      className="pointer-events-none absolute top-0 end-0 h-40 w-80 translate-x-[110%] rounded-lg border border-border-subtle bg-surface-raised"
-      id="parked-drawer"
-    />
-
     <p className="text-content-secondary text-sm">
       /mnt/Bunnies/Family/Media/Television/Some-Very-Long-Show-Name/Season-01/Some-Very-Long-Show-Name-S01E01-Pilot-2160p-HDR-DTS-HD-MA.mkv
     </p>

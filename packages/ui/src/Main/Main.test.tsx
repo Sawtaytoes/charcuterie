@@ -89,7 +89,7 @@ test("main is the query container its content responds to", async () => {
   ).toHaveLength(2)
 })
 
-test("neither an unbroken path nor a wide table widens the page at 390px", async () => {
+test("nothing in the fixture widens the page at 390px", async () => {
   await setViewport(PHONE)
 
   const { canvas, canvasElement } =
@@ -131,11 +131,94 @@ test("neither an unbroken path nor a wide table widens the page at 390px", async
     scroller.clientWidth,
   )
 
+  // The drawer parked at `translateX(110%)`, which is inside
+  // `Main` in this story rather than beside it. `Shell`'s
+  // `overflow-x: clip` cannot reach it any more — `Main` is
+  // `position: relative`, so `Main` is its containing block and
+  // `Main`'s own `overflow-x` is the only thing between it and a
+  // horizontal scrollbar on the scrollport.
+  const parkedDrawer = canvasElement.querySelector(
+    "#parked-drawer",
+  ) as HTMLElement
+
+  const main = canvas.getByRole("main")
+
+  await expect(parkedDrawer.offsetParent).toBe(main)
+
+  // `hidden` rather than `clip`, and the browser decides that:
+  // `overflow-x: clip` beside an `overflow-y: auto` computes to
+  // `hidden`, so `Main` writes what will actually be used. It is
+  // also why the assertion is on the *page* below rather than on
+  // `main.scrollWidth` — a `hidden` box still reports the
+  // overflow it is refusing to scroll to.
+  await expect(
+    globalThis.getComputedStyle(main).overflowX,
+  ).toBe("hidden")
+
   const { documentElement } = document
 
   await expect(
     documentElement.scrollWidth,
   ).toBeLessThanOrEqual(documentElement.clientWidth)
+
+  await expectNoAxeViolations(canvasElement)
+})
+
+/**
+ * The second scrollbar, and how cheaply it is bought.
+ *
+ * `<main>` is the page's only vertical scrollport, so the document
+ * itself must not scroll. An absolutely positioned descendant
+ * breaks that unless `<main>` is its containing block: resolve it
+ * against `Shell` instead — which is what `position: static` here
+ * used to mean — and the box keeps its static position, deep down
+ * a long document, while sitting outside the scrollport. The page
+ * grows to reach it.
+ *
+ * The box in this fixture is Tailwind's `sr-only`, one pixel of
+ * nothing on an "opens in a new tab" hint. Measured on Folio
+ * before this: `<main>` 835px tall,
+ * `document.documentElement.scrollHeight` 2085 — the span's
+ * offset, exactly.
+ */
+test("a visually hidden span past the fold does not give the page a second scrollbar", async () => {
+  await setViewport(PHONE)
+
+  const { canvas, canvasElement } =
+    await mountStory(Responsive)
+
+  const main = canvas.getByRole("main")
+
+  // The fixture is only a fixture if `<main>` genuinely scrolls
+  // and the span genuinely sits past the fold. Without the
+  // height there is nothing for it to escape to, and every
+  // assertion below would pass against a short page.
+  await expect(main.scrollHeight).toBeGreaterThan(
+    main.clientHeight,
+  )
+
+  // By id rather than by text: the hint's words are part of the
+  // link's accessible name too, so a text query matches both the
+  // span and the anchor around it.
+  const hint = canvasElement.querySelector(
+    "#new-tab-hint",
+  ) as HTMLElement
+
+  await expect(
+    globalThis.getComputedStyle(hint).position,
+  ).toBe("absolute")
+
+  await expect(
+    hint.getBoundingClientRect().top,
+  ).toBeGreaterThan(main.getBoundingClientRect().bottom)
+
+  await expect(hint.offsetParent).toBe(main)
+
+  const { documentElement } = document
+
+  await expect(
+    documentElement.scrollHeight,
+  ).toBeLessThanOrEqual(documentElement.clientHeight)
 
   await expectNoAxeViolations(canvasElement)
 })
