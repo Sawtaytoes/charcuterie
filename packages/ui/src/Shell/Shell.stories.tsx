@@ -8,6 +8,7 @@ import {
   HeaderSchemeToggle,
   OverflowingContent,
   PageContent,
+  ParkedDrawer,
   RailDetail,
   RailNavigation,
   ScrollFiller,
@@ -130,6 +131,14 @@ export const WithBothRails: Story = {
  * scrolls left and right today for the first reason; the second
  * is what an `overflow-wrap` alone cannot save.
  *
+ * The third shape is `ParkedDrawer`, and it sits **beside**
+ * `Main` rather than in it — an app's parked chrome is parked
+ * against the frame, which is the arrangement `Shell`'s
+ * `overflow-x: clip` exists for. Absolutely positioned children
+ * of a grid container take no track, so it costs the layout
+ * nothing. `Main.stories.tsx` renders the same drawer *inside*
+ * `Main`, where the clip that answers it is `Main`'s own.
+ *
  * `document.documentElement.scrollWidth <= clientWidth` at 390px
  * is the assertion, and it is in `Shell.test.tsx` rather than
  * here — a story is a demo.
@@ -149,6 +158,8 @@ export const Responsive: Story = {
       <Main>
         <OverflowingContent />
       </Main>
+
+      <ParkedDrawer />
 
       <Rail label="Job detail" side="end">
         <RailDetail />

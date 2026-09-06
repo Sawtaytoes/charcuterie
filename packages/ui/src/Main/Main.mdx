@@ -109,7 +109,9 @@ for a `getBoundingClientRect()` assertion to catch. That is why the gate asserts
 `document.documentElement.scrollWidth`, and why `Main.test.tsx` pins the computed value.
 
 That is the cheap half of the horizontal-scroll fix; the other halves are `minmax(0, 1fr)`
-and `overflow-x: clip` on `Shell`.
+and `overflow-x: clip` on `Shell`, plus `overflow-x: hidden` here for anything absolutely
+positioned **inside** the scrollport — the next section says why that one cannot be left to
+the frame.
 
 A `<table>` is the one thing neither can save. Table columns have min-content widths that no
 `overflow-wrap` reaches, so a wide table goes in a scroll container:
@@ -139,6 +141,33 @@ satisfy it and the choice is not a matter of taste:
 
 `aria-label` on the container is worth it either way: it turns the scroller into a named
 region, so the table is announced as a thing rather than as loose content.
+
+## `relative`, and the second scrollbar
+
+`<main>` is the page's only vertical scrollport, so the document itself must never scroll.
+An absolutely positioned descendant breaks that unless `<main>` is its **containing block**.
+With `position: static` the nearest positioned ancestor is `Shell`, which sits *outside* the
+scrollport: the box resolves against the frame, `<main>`'s `overflow-y` has no authority over
+it, and its static position — a couple of thousand pixels down a long document — lands as
+scrollable overflow on `documentElement`. The page grows to reach it, and the reader gets a
+**second scrollbar** beside the one `<main>` already has.
+
+The box does not have to be exotic, which is what makes this hard to spot. Tailwind's
+`sr-only` is `position: absolute`, so one visually hidden `(opens in a new tab)` span in a
+document footer is enough. Measured on Folio at 1440x900 before this: `<main>` 835px tall,
+`document.documentElement.scrollHeight` 2085 — the span's offset, exactly. Nothing on the
+page looked wrong; there were simply two scrollbars.
+
+`overflow-x: hidden` comes with the `relative` and is not decoration. Moving every
+absolutely positioned descendant's containing block from `Shell` to `<main>` also moves what
+clips them sideways, so `Shell`'s `overflow-x: clip` no longer reaches them — a drawer parked
+at `translateX(110%)` **inside** `Main` would draw a horizontal scrollbar on the scrollport
+instead of being clipped. `hidden` rather than `clip` because this element already scrolls on
+the other axis: `clip` beside an `auto` computes to `hidden` anyway, so writing `hidden` is
+writing what the browser will use.
+
+An app's own parked chrome still belongs in `Shell`, beside `Main` rather than in it. That is
+what `Shell`'s clip is for, and it is the arrangement `Shell.stories.tsx` demonstrates.
 
 ## `tabIndex={-1}`
 
