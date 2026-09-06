@@ -101,6 +101,39 @@ export type MainProps = ComponentPropsWithRef<"main"> & {
  *    an app's own fixed chrome belongs in `Shell`, beside `Main`
  *    rather than in it.
  *
+ * ## `relative` — the scrollport has to be the containing block
+ *
+ * `<main>` is the page's only vertical scrollport, so everything
+ * in it is supposed to scroll *inside* it. An absolutely
+ * positioned descendant does not, unless this element is its
+ * containing block: with `position: static` here, the nearest
+ * positioned ancestor is `Shell`, which is **outside** the
+ * scrollport. The box then resolves against `Shell`, `<main>`'s
+ * `overflow-y` has no authority over it, and its static position —
+ * a couple of thousand pixels down a long document — becomes
+ * scrollable overflow on `documentElement`. The page grows to
+ * reach it and the reader gets a **second scrollbar** beside the
+ * one `<main>` already has.
+ *
+ * The box does not have to be exotic. Tailwind's `sr-only` is
+ * `position: absolute`, so the visually hidden
+ * `<span>(opens in a new tab)</span>` on one link in a document
+ * footer is enough. Measured on Folio at 1440x900: `<main>` was
+ * 835px tall and `document.documentElement.scrollHeight` read
+ * 2085, which is exactly where that span sat.
+ *
+ * `overflow-x: hidden` comes with it and is not decoration.
+ * `relative` moves every absolutely positioned descendant's
+ * containing block from `Shell` to here, which also moves what
+ * clips them **sideways**: `Shell`'s `overflow-x: clip` no longer
+ * reaches them, so a drawer parked at `translateX(110%)` inside
+ * `Main` would draw a horizontal scrollbar on the scrollport
+ * instead of being clipped. `hidden` rather than `clip` because
+ * this element already scrolls on the other axis — a `clip` beside
+ * an `auto` computes to `hidden` anyway, and writing what the
+ * browser will use is the honest spelling. `Shell`'s note on the
+ * clip explains the other half.
+ *
  * ## It remembers where each history entry was scrolled to
  *
  * `Shell` gives this element the page's only vertical scrollport,
@@ -189,7 +222,7 @@ export const Main = ({
     <main
       {...mainProps}
       className={toClassName(
-        "charcuterie-scrollbar col-start-1 row-start-3 min-h-0 min-w-0 overflow-y-auto md:col-start-2 md:row-start-2",
+        "charcuterie-scrollbar relative col-start-1 row-start-3 min-h-0 min-w-0 overflow-x-hidden overflow-y-auto md:col-start-2 md:row-start-2",
         className,
       )}
       id={id ?? shell?.mainId ?? fallbackId}
