@@ -10,10 +10,13 @@ import { toMaxInlineSize } from "../Shell/contentWidth.ts"
 import { Shell } from "../Shell/Shell.tsx"
 import { Spinner } from "../Spinner/Spinner.tsx"
 import {
+  ExternalLinkFooter,
   HeaderSchemeToggle,
   OverflowingContent,
   PageContent,
+  ParkedDrawer,
   RailNavigation,
+  ScrollFiller,
 } from "../shell.storyHelpers.tsx"
 import { Main } from "./Main.tsx"
 import { ScrollMemoryProvider } from "./ScrollMemoryProvider.tsx"
@@ -124,14 +127,29 @@ export const AllVariants: Story = {
 }
 
 /**
- * The 390px fixture. An unbroken 130-character path and a table
- * wider than the phone it is on, in one column.
+ * The 390px fixture: everything that tries to make the **page**
+ * scroll when only `<main>` should, in one column.
  *
- * The path wraps because `Main` sets `overflow-wrap: break-word`;
- * the table cannot wrap at all and lives in a labelled,
- * keyboard-reachable scroll container. Neither widens the page,
- * which is the assertion `Main.test.tsx` makes at a real 390px
- * viewport.
+ * Sideways, three ways. The path wraps because `Main` sets
+ * `overflow-wrap: anywhere`; the table cannot wrap at all and
+ * lives in a labelled, keyboard-reachable scroll container; and
+ * the drawer parked at `translateX(110%)` is clipped. The drawer
+ * is **inside** `Main` here, unlike `Shell.stories.tsx`, so the
+ * element clipping it is `Main` — `position: relative` moved that
+ * job in from the frame, and `overflow-x: hidden` is `Main`
+ * taking it.
+ *
+ * Downwards, once, and it is the shape nobody looks for: the
+ * footer link's `sr-only` "(opens in a new tab)" span is
+ * `position: absolute`, so it resolves against the nearest
+ * positioned ancestor. Before `Main` was one that was `Shell`,
+ * outside the scrollport, and the span's static position past the
+ * fold became scrollable overflow on the page. `ScrollFiller` is
+ * what puts it past the fold; without the height there is nothing
+ * to escape.
+ *
+ * The assertions are in `Main.test.tsx` at a real 390px viewport
+ * — a story is a demo.
  */
 export const Responsive: Story = {
   render: (mainProps) => (
@@ -139,7 +157,21 @@ export const Responsive: Story = {
       <Header heading="Transfers" />
 
       <Main {...mainProps}>
+        <ParkedDrawer />
+
         <OverflowingContent />
+
+        {/*
+          Twice. One is a few dozen pixels short of filling an
+          844px phone, and the footer below has to sit past the
+          fold or there is nothing for its hidden span to escape
+          to.
+        */}
+        <ScrollFiller />
+
+        <ScrollFiller />
+
+        <ExternalLinkFooter />
       </Main>
     </Shell>
   ),
