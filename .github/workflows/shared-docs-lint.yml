@@ -1,0 +1,72 @@
+# Shared across the fleet — this file is IMPORTED, not copied.
+#
+# The gate that a docs-only pull request DOES run. Every repo here keeps its
+# paper trail in `docs/decisions/`, the shape is written down in AGENTS.md, and
+# it was followed by hand — so it drifted. This checks the shape.
+#
+#   jobs:
+#     docs:
+#       uses: Sawtaytoes/charcuterie/.github/workflows/shared-docs-lint.yml@workflows-v1
+#
+# ⚠️ A reusable workflow resolves ON THE CONSUMER'S OWN HOST. Forgejo repos
+# import the same path from the read-only Forgejo mirror instead:
+#
+#   uses: sawtaytoes/charcuterie/.github/workflows/shared-docs-lint.yml@workflows-v1
+#
+# ⚠️ The inner job is `decisionRecords`, not `lint`. Forgejo posts a status
+# context for the INNER job name as well as the caller's, and five repos here
+# already have a job called `lint` — two contexts with one name is a branch
+# protection that cannot be satisfied.
+name: Shared — decision-record lint
+
+on:
+  workflow_call:
+    inputs:
+      packageVersion:
+        description: "The @charcuterie/ci range to run. Pin it to hold a repo back."
+        type: string
+        required: false
+        default: "^0"
+
+jobs:
+  decisionRecords:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+        # The full history: the lint below diffs against the base commit.
+        with: { fetch-depth: 0 }
+
+      - uses: actions/setup-node@v6
+        with: { node-version: "24" }
+
+      - id: base
+        env:
+          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          set -euo pipefail
+
+          # Fails SAFE in the OPPOSITE direction from the docs-only detector.
+          # If we cannot work out what changed, lint NOTHING. Roughly a quarter
+          # of the fleet's 1050 existing records predate the header convention,
+          # and a linter that fails on settled history would either be switched
+          # off or force a rewrite of records that are not supposed to be
+          # edited after the fact.
+          if [ -z "${BASE_SHA:-}" ] \
+            || [ "${BASE_SHA}" = "0000000000000000000000000000000000000000" ] \
+            || ! git cat-file -e "${BASE_SHA}^{commit}" 2>/dev/null
+          then
+            echo "No usable base commit — nothing to lint."
+            echo "baseSha=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "baseSha=${BASE_SHA}" >> "$GITHUB_OUTPUT"
+
+      # `--package ... --` and not `npx <pkg> <bin>`: the short form passes the
+      # bin name to the package's default binary as an ARGUMENT, and the linter
+      # would try to lint a file called `charcuterie-docs-lint`.
+      - if: ${{ steps.base.outputs.baseSha != '' }}
+        run: |
+          npx --yes --package "@charcuterie/ci@${{ inputs.packageVersion }}" -- \
+            charcuterie-docs-lint --base "${{ steps.base.outputs.baseSha }}"
