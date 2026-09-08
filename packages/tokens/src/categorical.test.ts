@@ -418,4 +418,49 @@ describe("CATEGORICAL_SEQUENCE", () => {
       getMinimumGap(CATEGORICAL_INDEXES) * 2,
     )
   })
+
+  /**
+   * Spacing alone picked Red first, which made Red and Lime the two
+   * hues every two-tile set in the fleet got. The owner rejected it
+   * and named the pair he wanted instead, so the START of the walk
+   * is a decision and not an accident of the solver.
+   */
+  test("starts on the pair the owner asked for", () => {
+    const [first, second] = CATEGORICAL_SEQUENCE
+
+    expect(CATEGORICAL_HUES[first].label).toBe("Teal")
+
+    expect(CATEGORICAL_HUES[second].label).toBe("Purple")
+  })
+
+  /**
+   * At EVERY position, wrap included — not just at the front. Red
+   * beside a green is the pair the owner rejected, and a set of any
+   * size may straddle any two neighbours.
+   */
+  test("never puts Red beside a green", () => {
+    const GREENS = ["Lime", "Green"]
+
+    const redPosition = CATEGORICAL_SEQUENCE.indexOf(
+      CATEGORICAL_INDEXES.find(
+        (index) => CATEGORICAL_HUES[index].label === "Red",
+      ) as (typeof CATEGORICAL_SEQUENCE)[number],
+    )
+
+    const neighbours = [
+      CATEGORICAL_SEQUENCE[
+        (redPosition + 1) % CATEGORICAL_INDEX_COUNT
+      ],
+      CATEGORICAL_SEQUENCE[
+        (redPosition + CATEGORICAL_INDEX_COUNT - 1) %
+          CATEGORICAL_INDEX_COUNT
+      ],
+    ] as (typeof CATEGORICAL_SEQUENCE)[number][]
+
+    for (const neighbour of neighbours) {
+      expect(GREENS).not.toContain(
+        CATEGORICAL_HUES[neighbour].label,
+      )
+    }
+  })
 })
