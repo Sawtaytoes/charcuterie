@@ -1,5 +1,50 @@
 # @charcuterie/ui
 
+## 4.4.0
+
+### Minor Changes
+
+- 091da0c: `formatTimecode` accepts `millisecondDigits: "auto"`, and `TimecodeInput` uses it.
+
+  The grammar has always read a fraction as optional, but the printer did not write one that
+  way: typing `1:01:00` and tabbing away rewrote the field to `01:01:00.000`. You write 3, not
+  3.000. `"auto"` prints the fraction only when the value is not a whole number of seconds, and
+  prints all three digits when it does.
+
+  The **default is still `3`**. Changing it would have altered the output of every direct
+  caller of a published export, none of which this change can see. `TimecodeInput` opts in
+  instead — for the text it writes back on commit and for its own echo, so the two agree on the
+  page. The overflow refusal keeps `millisecondDigits: 0`, which is what a "type 02:30 to carry
+  it" message wants.
+
+  `minor` rather than `patch`: `FormatTimecodeOptions.millisecondDigits` widens from `number` to
+  `"auto" | number`, which is new API surface on an exported type.
+
+### Patch Changes
+
+- 091da0c: `TimecodeInput`: the echo leaves with the focus, and the Narrow View stacks the two fields.
+
+  The restatement under the field was derived from `activeEndpoint`, which seeds to `"start"`
+  and never clears — so an untouched control printed its start mark under it forever, as a
+  loose unlabelled timecode with nothing saying what it was. It is now a reading of the
+  **focused** field. Both refusals still persist: the zero-length complaint is written at the
+  commit, which _is_ the blur, and an unparsed text keeps `aria-invalid` on the control, so
+  the sentence that says why has to stay with it.
+
+  Below `--cq-sm` a section stops being `[start] to [end]` in a row. The fields stack under a
+  "Start" caption and an "End" caption, because two `hh:mm:ss.mmm` fields and the word between
+  them fill a 390px modal edge to edge. It is a **container** query — the box that ran out of
+  room is this field's, and the same modal on a 2560px monitor is a Wide View to every media
+  query. The captions are `aria-hidden`, exactly as `to` always was, so the accessible name of
+  each control is identical in both layouts.
+
+  **Why `patch` and not `minor`**: no prop, no type and no default changed, and a caller wider
+  than `--cq-sm` renders exactly what it rendered before. Both halves are the component doing
+  what its own documentation already claimed. The one thing to know is that `TimecodeInput`
+  now declares `@container`, so it carries `contain: inline-size` and takes its width from its
+  parent rather than from its content — the same trade `Card`, `Alert` and `DataTable` make.
+  Give it a definite inline size.
+
 ## 4.3.0
 
 ### Minor Changes
