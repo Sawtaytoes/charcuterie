@@ -4,7 +4,7 @@
 **Date:** 2026-09-03
 **Type:** Tokens / colour
 **Supersedes:** —
-**Superseded by:** —
+**Superseded by:** [2026-09-08 — The walk starts at Teal, and Red never sits beside a green](2026-09-08-the-walk-starts-at-teal-and-red-never-sits-beside-a-green.md)
 
 ## Decision
 
