@@ -63,5 +63,10 @@ jobs:
 
           echo "baseSha=${BASE_SHA}" >> "$GITHUB_OUTPUT"
 
+      # `--package ... --` and not `npx <pkg> <bin>`: the short form passes the
+      # bin name to the package's default binary as an ARGUMENT, and the linter
+      # would try to lint a file called `charcuterie-docs-lint`.
       - if: ${{ steps.base.outputs.baseSha != '' }}
-        run: npx --yes "@charcuterie/ci@${{ inputs.packageVersion }}" charcuterie-docs-lint --base "${{ steps.base.outputs.baseSha }}"
+        run: |
+          npx --yes --package "@charcuterie/ci@${{ inputs.packageVersion }}" -- \
+            charcuterie-docs-lint --base "${{ steps.base.outputs.baseSha }}"
