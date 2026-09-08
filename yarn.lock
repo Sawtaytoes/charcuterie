@@ -800,6 +800,18 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@charcuterie/ci@workspace:packages/ci":
+  version: 0.0.0-use.local
+  resolution: "@charcuterie/ci@workspace:packages/ci"
+  dependencies:
+    "@types/node": "npm:^25.6.2"
+    typescript: "npm:^6.0.3"
+    vitest: "npm:^4.1.8"
+  bin:
+    charcuterie-docs-lint: ./src/cli/docsLint.js
+  languageName: unknown
+  linkType: soft
+
 "@charcuterie/docs@workspace:packages/docs":
   version: 0.0.0-use.local
   resolution: "@charcuterie/docs@workspace:packages/docs"

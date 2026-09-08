@@ -1,0 +1,39 @@
+{
+  "name": "@charcuterie/ci",
+  "version": "0.0.0",
+  "description": "CI checks shared across the Charcuterie fleet — starting with a linter for decision records, so every repo's docs/decisions/ follows the same template.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./src/index.js",
+  "types": "./src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "default": "./src/index.js"
+    },
+    "./*": "./src/*"
+  },
+  "files": [
+    "src"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "bin": {
+    "charcuterie-docs-lint": "./src/cli/docsLint.js"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.2",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.8"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Sawtaytoes/charcuterie.git",
+    "directory": "packages/ci"
+  }
+}
