@@ -1,6 +1,6 @@
 {
   "name": "@charcuterie/ci",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "CI checks shared across the Charcuterie fleet — starting with a linter for decision records, so every repo's docs/decisions/ follows the same template.",
   "license": "MIT",
   "type": "module",
