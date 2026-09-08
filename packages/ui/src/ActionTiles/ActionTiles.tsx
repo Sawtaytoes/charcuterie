@@ -163,7 +163,8 @@ const STACK_GAP_CLASS: Record<ControlSize, string> = {
  * hands a two-tile set the two hardest colours in the family to
  * tell apart — 34 degrees, the tightest pair the palette has. The
  * sequence visits the same ten in an order that keeps every
- * neighbour 105 degrees or more away.
+ * neighbour 105 degrees or more away, starts on Teal and Purple,
+ * and never puts Red beside Lime or Green.
  */
 const getTileCategorical = (
   item: ActionTileItem,
@@ -219,7 +220,8 @@ const getTileCategorical = (
  * ten-wide categorical palette, walked in `CATEGORICAL_SEQUENCE`
  * rather than 1..10 — the ring is hue-ordered for the swatch
  * picker's sake, so taking it in order would hand a two-tile set
- * red and orange. A set of eight needs no colour props at all. See
+ * red and orange. The walk starts on Teal and Purple. A set of
+ * eight needs no colour props at all. See
  * [the tile paint record](../../../../docs/decisions/2026-09-02-an-action-tile-is-coloured-and-the-icon-sits-beside-the-name.md)
  * for the four other paints that were drawn and rejected.
  *
