@@ -63,10 +63,23 @@ jobs:
 
           echo "baseSha=${BASE_SHA}" >> "$GITHUB_OUTPUT"
 
+      # Two things this step is careful about.
+      #
       # `--package ... --` and not `npx <pkg> <bin>`: the short form passes the
       # bin name to the package's default binary as an ARGUMENT, and the linter
       # would try to lint a file called `charcuterie-docs-lint`.
+      #
+      # The range is defaulted in SHELL as well as in `inputs`. Forgejo Actions
+      # is a re-implementation, and whether it applies a `workflow_call` input
+      # default is not something this fleet has proven. An unapplied default
+      # would ask npx for `@charcuterie/ci@`, which fails — in eleven Forgejo
+      # repos at once. Belt and braces costs one line.
       - if: ${{ steps.base.outputs.baseSha != '' }}
+        env:
+          PACKAGE_VERSION: ${{ inputs.packageVersion }}
+          BASE_SHA: ${{ steps.base.outputs.baseSha }}
         run: |
-          npx --yes --package "@charcuterie/ci@${{ inputs.packageVersion }}" -- \
-            charcuterie-docs-lint --base "${{ steps.base.outputs.baseSha }}"
+          set -euo pipefail
+          version="${PACKAGE_VERSION:-^0}"
+          npx --yes --package "@charcuterie/ci@${version}" -- \
+            charcuterie-docs-lint --base "${BASE_SHA}"
