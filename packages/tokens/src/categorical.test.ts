@@ -21,6 +21,7 @@ import {
   CATEGORICAL_INDEX_COUNT,
   CATEGORICAL_INDEXES,
   CATEGORICAL_PAIRS,
+  CATEGORICAL_SEQUENCE,
   getCategoricalDistinctnessFailures,
   TABLEAU_10_MINIMUM_DISTANCE,
 } from "./categorical.ts"
@@ -332,4 +333,89 @@ test("no failure is reported on a palette that is fine", () => {
       2: collapsed[1],
     }).length,
   ).toBeGreaterThan(0)
+})
+
+/**
+ * The walk order, which is a different question from the ring.
+ *
+ * The ring is hue-ordered so a swatch picker reads as a spectrum,
+ * and that is exactly why a set must not be coloured by walking it
+ * in order: ring-adjacent hues are the tightest pair the palette
+ * has, so a two-tile set got the two hardest colours in the family
+ * to tell apart. These three assertions are what stop the sequence
+ * being "tidied" back into 1..10 by somebody who reads it as an
+ * unsorted list.
+ */
+describe("CATEGORICAL_SEQUENCE", () => {
+  test("visits every index exactly once", () => {
+    expect(
+      [...CATEGORICAL_SEQUENCE].sort(
+        (first, second) => first - second,
+      ),
+    ).toEqual([...CATEGORICAL_INDEXES])
+  })
+
+  /**
+   * Including the WRAP. A set of eleven tiles puts the tenth beside
+   * the first, and a sequence that is only checked pairwise from
+   * the front can be perfectly spread and still close up there.
+   */
+  test("holds every neighbour, and the wrap, far apart in hue", () => {
+    const getGap = (
+      first: (typeof CATEGORICAL_SEQUENCE)[number],
+      second: (typeof CATEGORICAL_SEQUENCE)[number],
+    ) => {
+      const raw = Math.abs(
+        CATEGORICAL_HUES[first].hue -
+          CATEGORICAL_HUES[second].hue,
+      )
+
+      return Math.min(raw, 360 - raw)
+    }
+
+    const gaps = CATEGORICAL_SEQUENCE.map(
+      (index, position) =>
+        getGap(
+          index,
+          CATEGORICAL_SEQUENCE[
+            (position + 1) % CATEGORICAL_INDEX_COUNT
+          ] as (typeof CATEGORICAL_SEQUENCE)[number],
+        ),
+    )
+
+    // Ten steps around a circle average 108 degrees, so 100 is the
+    // floor with the slack the uneven ring actually needs — the
+    // hue spacing is solved for separability, not drawn at 36.
+    expect(Math.min(...gaps)).toBeGreaterThanOrEqual(100)
+  })
+
+  /**
+   * The regression this exists for, stated as the comparison the
+   * owner made: walking the ring in order is three times worse.
+   */
+  test("beats walking the ring in order", () => {
+    const getMinimumGap = (
+      order: readonly (typeof CATEGORICAL_SEQUENCE)[number][],
+    ) =>
+      Math.min(
+        ...order.map((index, position) => {
+          const next = order[
+            (position + 1) % order.length
+          ] as (typeof CATEGORICAL_SEQUENCE)[number]
+
+          const raw = Math.abs(
+            CATEGORICAL_HUES[index].hue -
+              CATEGORICAL_HUES[next].hue,
+          )
+
+          return Math.min(raw, 360 - raw)
+        }),
+      )
+
+    expect(
+      getMinimumGap(CATEGORICAL_SEQUENCE),
+    ).toBeGreaterThan(
+      getMinimumGap(CATEGORICAL_INDEXES) * 2,
+    )
+  })
 })

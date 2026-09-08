@@ -4,7 +4,7 @@ import type {
 } from "@charcuterie/tokens"
 import {
   CATEGORICAL_INDEX_COUNT,
-  CATEGORICAL_INDEXES,
+  CATEGORICAL_SEQUENCE,
 } from "@charcuterie/tokens"
 import type { CSSProperties, ReactNode } from "react"
 
@@ -39,8 +39,8 @@ export type ActionTileItem = {
    * set — a destination that is red everywhere else in the app, a
    * pair that must not drift apart when a third tile is inserted
    * between them. An overridden tile keeps its hue and the rest go
-   * on walking the palette in order, so naming one does not force
-   * naming all of them.
+   * on walking `CATEGORICAL_SEQUENCE` from their own positions, so
+   * naming one does not force naming all of them.
    *
    * Ignored when the set is `accent="none"`.
    */
@@ -157,15 +157,20 @@ const STACK_GAP_CLASS: Record<ControlSize, string> = {
  * two-tile set the same colour twice. A tile set is short, ordered,
  * and written out in the source; the eye reads it as a row, so the
  * palette is walked as one.
+ *
+ * `CATEGORICAL_SEQUENCE`, not `CATEGORICAL_INDEXES`. The ring is
+ * hue-ordered for the swatch picker's sake, so walking it in order
+ * hands a two-tile set the two hardest colours in the family to
+ * tell apart — 34 degrees, the tightest pair the palette has. The
+ * sequence visits the same ten in an order that keeps every
+ * neighbour 105 degrees or more away.
  */
 const getTileCategorical = (
   item: ActionTileItem,
   position: number,
 ): CategoricalIndex =>
   item.categorical ??
-  (CATEGORICAL_INDEXES[
-    position % CATEGORICAL_INDEX_COUNT
-  ] as CategoricalIndex)
+  CATEGORICAL_SEQUENCE[position % CATEGORICAL_INDEX_COUNT]
 
 /**
  * A set of ACTIONS drawn as tiles — a bordered card carrying a
@@ -211,8 +216,10 @@ const getTileCategorical = (
  * accent-edge pseudo-element so a tile and a card on the same page
  * are the same bar rather than two that nearly match. Its icon takes
  * the same hue, and the box hovers in it too. The hue comes from the
- * ten-wide categorical palette, taken **in order**, which is why a
- * set of eight needs no colour props at all. See
+ * ten-wide categorical palette, walked in `CATEGORICAL_SEQUENCE`
+ * rather than 1..10 — the ring is hue-ordered for the swatch
+ * picker's sake, so taking it in order would hand a two-tile set
+ * red and orange. A set of eight needs no colour props at all. See
  * [the tile paint record](../../../../docs/decisions/2026-09-02-an-action-tile-is-coloured-and-the-icon-sits-beside-the-name.md)
  * for the four other paints that were drawn and rejected.
  *
