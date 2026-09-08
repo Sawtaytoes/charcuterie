@@ -1,0 +1,97 @@
+# Shared across the fleet — this file is IMPORTED, not copied.
+#
+# Consumers call it as a reusable workflow and read `isDocsOnly`:
+#
+#   jobs:
+#     changes:
+#       uses: Sawtaytoes/charcuterie/.github/workflows/shared-docs-only-changes.yml@workflows-v1
+#     check:
+#       needs: [changes]
+#       if: ${{ needs.changes.outputs.isDocsOnly != 'true' }}
+#
+# ⚠️ A reusable workflow resolves ON THE CONSUMER'S OWN HOST. A Forgejo repo
+# CANNOT import this file from github.com — the job is dropped silently, the
+# run still reports success, and the gates behind it never run. Forgejo repos
+# therefore import the same path from the read-only Forgejo mirror:
+#
+#   uses: sawtaytoes/charcuterie/.github/workflows/shared-docs-only-changes.yml@workflows-v1
+#
+# The mirror re-pulls this repo every 10 minutes and has Actions disabled, so
+# nothing here runs twice. See the agentic decision record
+# 2026-09-08-forgejo-reusable-workflows-need-a-public-source-repo.md.
+name: Shared — docs-only changes
+
+on:
+  workflow_call:
+    # No `checkoutVersion` input: `uses:` cannot take an expression, so the
+    # action version has to be literal. v7 is what both hosts resolve —
+    # github.com and data.forgejo.org.
+    outputs:
+      isDocsOnly:
+        description: "'true' only when every changed file is documentation."
+        value: ${{ jobs.detect.outputs.isDocsOnly }}
+
+jobs:
+  # Nothing in this fleet reads markdown. There is no markdownlint, no remark,
+  # no prettier over `.md` and no link check, and Biome does not format it. So
+  # a `.md`-only diff makes every gate run without opening the file that
+  # changed.
+  #
+  # ⚠️ Consumers must turn their gates off with `if:`, NOT with `paths-ignore:`
+  # on the trigger. A job skipped by `if:` still posts its status context —
+  # GitHub records `skipped` and counts it as success, Forgejo posts `skipped`
+  # and keeps the combined state green. A workflow that never STARTED posts
+  # nothing, so a required check stays pending and the pull request can never
+  # merge, with no failure to explain why.
+  detect:
+    runs-on: ubuntu-latest
+
+    outputs:
+      isDocsOnly: ${{ steps.detect.outputs.isDocsOnly }}
+
+    steps:
+      - uses: actions/checkout@v7
+        # The full history: the diff below needs the base commit present.
+        with: { fetch-depth: 0 }
+
+      - id: detect
+        env:
+          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          set -euo pipefail
+
+          # Fail SAFE. Anything we cannot diff — a workflow_dispatch, a tag, a
+          # new branch whose `before` is all zeros, a base commit the fetch
+          # missed — runs the whole suite rather than skipping it.
+          if [ -z "${BASE_SHA:-}" ] \
+            || [ "${BASE_SHA}" = "0000000000000000000000000000000000000000" ] \
+            || ! git cat-file -e "${BASE_SHA}^{commit}" 2>/dev/null
+          then
+            echo "No usable base commit — running every gate."
+            echo "isDocsOnly=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          mergeBase="$(git merge-base "${BASE_SHA}" HEAD || echo "${BASE_SHA}")"
+          changedFiles="$(git diff --name-only "${mergeBase}" HEAD)"
+          printf 'Changed files:\n%s\n\n' "${changedFiles}"
+
+          isDocsOnly=true
+
+          if [ -z "${changedFiles}" ]
+          then
+            isDocsOnly=false
+          elif printf '%s\n' "${changedFiles}" | grep -q '^\.changeset/'
+          then
+            # A changeset file is markdown, but it is a RELEASE input rather
+            # than documentation. Treat it as code.
+            isDocsOnly=false
+          elif printf '%s\n' "${changedFiles}" | grep -qvE '^(.+\.md|LICENSE)$'
+          then
+            # `.mdx` deliberately does NOT match `.md$` — it is Storybook
+            # source in several repos here, and it compiles.
+            isDocsOnly=false
+          fi
+
+          echo "isDocsOnly=${isDocsOnly}"
+          echo "isDocsOnly=${isDocsOnly}" >> "$GITHUB_OUTPUT"
