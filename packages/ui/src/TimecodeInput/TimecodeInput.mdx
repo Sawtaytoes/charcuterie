@@ -74,10 +74,26 @@ Three mechanisms keep a grammar that permissive from being dangerous:
    the field, in a `role="status"` live region wired into the input's `aria-describedby`.
    Commit is Enter or blur; a keystroke never commits.
 
+The echo is a **reading of the focused field**, so it leaves when the focus does. A
+restatement left under an idle control is an unlabelled timecode floating on the page, which
+reads as a value rather than as a report on the one above it.
+
+A **refusal** is the other case and it stays up, both kinds of it. The zero-length complaint
+is written at the commit — which *is* the blur — so a rule that cleared it on blur would mean
+it was never readable. And a text the grammar cannot read keeps `aria-invalid` on the
+control, so the sentence saying why has to stay with it: an invalid field with no message is
+worse than the stray line this removes. Emptying a live region announces nothing, so none of
+this makes a screen reader chatty.
+
 **The largest field present is unbounded; every smaller one is 0–59.** That one sentence is
 every bound in the grammar. It is also why a bare number is seconds: seconds is the smallest
 unit the field prints, so the reading that needs no explanation is the one where the typist
 appended nothing.
+
+**Milliseconds are optional to read as well as to type.** The grammar has always accepted
+`1:01:00`, and the field now writes it back as `01:01:00` rather than as `01:01:00.000` — you
+write 3, not 3.000. A real fraction still prints in full: `1:01:00.5` commits as
+`01:01:00.500`, because a fraction pads on the right.
 
 Refused by name: a negative, a seconds or minutes field of 60 or more with a larger field
 beside it, more than three colon-separated parts, a fraction longer than three digits, and
@@ -132,6 +148,25 @@ its text is refused — which are exactly the states the echo exists for. A spin
 value is a widget that under-reports itself to a screen reader in its two most important
 states.
 
+## The Narrow View stacks the two fields
+
+A section is `[start] to [end]` in a row while there is room for it. Below `--cq-sm` the two
+fields **stack**, and the `to` is replaced by a "Start" caption over the first and an "End"
+caption over the second. Two `hh:mm:ss.mmm` fields and a word between them fill a 390px modal
+edge to edge with no slack, which is where this was reported from.
+
+It is a **container** query, not a window breakpoint. The box that ran out of room is this
+field's own, and a 390px dialog on a 2560px monitor is the Wide View by every media query
+ever written. The cost of `container-type: inline-size` is the `contain: inline-size` that
+rides with it, so `TimecodeInput` takes its width from its parent rather than from its
+content — give it a definite inline size, as with every container-query component here.
+
+The captions are `aria-hidden`, exactly as the `to` always was. Each input already carries
+`aria-label="<label> start"` / `"<label> end"`, and a real `<label>` would name the start
+control a second time and fight the `id` a `Field` above clones onto it. **The accessible
+name of each control is identical in both layouts**, and `TimecodeInput.test.tsx` asserts it
+at two container widths.
+
 <Canvas of={TimecodeInputStories.Responsive} />
 
 ## The formatter is exported, because the fleet writes it repeatedly
@@ -143,13 +178,18 @@ whether the hour is shown and whether the minute is padded. A read-only surface 
 the exported one rather than spell a sixth.
 
 ```ts
-formatTimecode(3_723_500)                            // "01:02:03.500"
-formatTimecode(90_000, { isHoursShown: false })      // "01:30.000"
-formatTimecode(1_999, { millisecondDigits: 0 })      // "00:00:01" — truncates
+formatTimecode(3_723_500)                                 // "01:02:03.500"
+formatTimecode(90_000, { isHoursShown: false })           // "01:30.000"
+formatTimecode(1_999, { millisecondDigits: 0 })           // "00:00:01" — truncates
+formatTimecode(3_660_000, { millisecondDigits: "auto" })  // "01:01:00" — no fraction to print
+formatTimecode(3_660_500, { millisecondDigits: "auto" })  // "01:01:00.500"
 ```
 
-The default is the canonical `hh:mm:ss.mmm`, and it is what the field writes back on commit:
-one spelling means a re-read of the field parses to the number that produced it, and a
-screenshot of the same value is the same picture.
+The **default is the canonical `hh:mm:ss.mmm`** and it stays that way, because a published
+export is read by callers no change here can see. `TimecodeInput` opts in to `"auto"` for
+both the text it writes back and its own echo, so the two agree on the page.
+
+Either way it is one spelling per value: a re-read of the field parses to the number that
+produced it, and a screenshot of the same value is the same picture.
 
 <Canvas of={TimecodeInputStories.Interactive} />

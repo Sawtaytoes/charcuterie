@@ -64,6 +64,21 @@ const INPUT_CLASS =
 
 type Endpoint = "end" | "start"
 
+/**
+ * How this field prints, everywhere it prints — the text it writes
+ * back on commit, and the echo that reports what a draft resolves
+ * to. The two have to agree, so they read the same constant.
+ *
+ * `"auto"` rather than the exported default of three digits: a
+ * person who types `1:01:00` and tabs away did not ask for
+ * `01:01:00.000`, any more than typing `3` asks for `3.000`. A real
+ * fraction still prints in full, and the grammar reads both back to
+ * the same number.
+ */
+const DISPLAY_FORMAT = {
+  millisecondDigits: "auto",
+} as const
+
 const toSeededRange = (
   valueMs: number | TimecodeRange | undefined,
 ): TimecodeRange =>
@@ -117,6 +132,23 @@ const toSeededRange = (
  * discard the boundary just typed. A **zero-length** section is
  * refused by name: it plays nothing, so swapping would hide a typo
  * behind a window that silently does not exist.
+ *
+ * ### The Narrow View stacks the two fields
+ *
+ * Below `--cq-sm` a section is two fields one above the other, under
+ * the captions "Start" and "End"; above it, the row with `to`
+ * between them. It is a **container** query, so a 390px modal on a
+ * 2560px monitor gets the stacked form that a window breakpoint
+ * would have denied it. The captions are `aria-hidden`, so the
+ * accessible name of each control is the same in both layouts.
+ *
+ * ### Milliseconds are optional to read as well as to type
+ *
+ * The grammar has always accepted `1:01:00`. The field now writes it
+ * back as `01:01:00` rather than as `01:01:00.000`, through
+ * `formatTimecode`'s `millisecondDigits: "auto"`, because a fraction
+ * nobody typed is not information. `1:01:00.5` still commits as
+ * `01:01:00.500`.
  */
 export const TimecodeInput = ({
   className,
@@ -149,15 +181,28 @@ export const TimecodeInput = ({
   const toDisplayText = (milliseconds: null | number) =>
     milliseconds === null
       ? ""
-      : formatTimecode(milliseconds)
+      : formatTimecode(milliseconds, DISPLAY_FORMAT)
 
   const [texts, setTexts] = useState({
     end: toDisplayText(seededRange.end),
     start: toDisplayText(seededRange.start),
   })
 
+  /**
+   * Which endpoint the keyboard steps and the echo belong to. It
+   * SURVIVES blur, deliberately: a refusal has to keep naming the
+   * field it is about after the focus has gone somewhere else.
+   */
   const [activeEndpoint, setActiveEndpoint] =
     useState<Endpoint>("start")
+
+  /**
+   * Whether a field of this control holds the focus. Separate from
+   * `activeEndpoint` because the two answer different questions —
+   * *which* endpoint, and *whether anybody is typing* — and only the
+   * second one may hide the echo.
+   */
+  const [isFocused, setIsFocused] = useState(false)
 
   /**
    * A refusal the grammar cannot see, because it is about the
@@ -355,13 +400,54 @@ export const TimecodeInput = ({
       : parsed.kind === "empty" || clampedPreview === null
         ? ""
         : clampedPreview === parsed.milliseconds
-          ? formatTimecode(parsed.milliseconds)
-          : `${formatTimecode(parsed.milliseconds)} is outside the media, so it commits as ${formatTimecode(clampedPreview)}.`
+          ? formatTimecode(
+              parsed.milliseconds,
+              DISPLAY_FORMAT,
+            )
+          : `${formatTimecode(parsed.milliseconds, DISPLAY_FORMAT)} is outside the media, so it commits as ${formatTimecode(clampedPreview, DISPLAY_FORMAT)}.`
 
-  const echoText = rangeRefusal ?? parsedEcho
+  /**
+   * A restatement is a reading of the field above it, so it leaves
+   * with the focus. Left up, an unlabelled `00:05:00` under an idle
+   * control reads as a stray value rather than as a report on one.
+   *
+   * A REFUSAL stays, and both kinds do. `rangeRefusal` is set on
+   * commit — which is exactly blur — so a rule that hid it on blur
+   * would mean it was never readable at all. And an unparsed text
+   * keeps `aria-invalid` on the control, so the sentence saying why
+   * has to stay with it: an invalid field with no message is worse
+   * than the stray line this removes.
+   *
+   * Emptying a live region announces nothing, so the blur costs a
+   * screen reader no chatter.
+   */
+  const echoText =
+    rangeRefusal ??
+    (isFocused || parsed.kind === "unparsed"
+      ? parsedEcho
+      : "")
 
   const isInvalid =
     rangeRefusal !== null || parsed.kind === "unparsed"
+
+  /**
+   * The Narrow View's caption over one field.
+   *
+   * Presentational, and `aria-hidden` for the same reason the word
+   * `to` is: each input already carries
+   * `aria-label="<label> <endpoint>"`, and a real `<label>` here
+   * would name the start control a second time and fight the `id` a
+   * `Field` above clones onto it. The eye gets a caption; the
+   * accessible name is the same in both layouts.
+   */
+  const renderCaption = (text: string) => (
+    <span
+      aria-hidden="true"
+      className="text-content-secondary text-sm cq-sm:hidden"
+    >
+      {text}
+    </span>
+  )
 
   const renderInput = (endpoint: Endpoint) => {
     const ownProps = {
@@ -398,6 +484,8 @@ export const TimecodeInput = ({
       // rather than by a keyboard the field cannot choose.
       inputMode: "numeric" as const,
       onBlur: () => {
+        setIsFocused(false)
+
         commitText(endpoint)
       },
       onChange: (changeEvent: {
@@ -417,6 +505,8 @@ export const TimecodeInput = ({
         }))
       },
       onFocus: () => {
+        setIsFocused(true)
+
         setActiveEndpoint(endpoint)
       },
       onKeyDown: (
@@ -444,28 +534,49 @@ export const TimecodeInput = ({
   }
 
   return (
+    // `@container` here, not on a wrapper: the box a caller sized is
+    // the box that either has room for two timecodes side by side or
+    // does not. A viewport breakpoint reads that backwards — a 390px
+    // modal on a 2560px monitor is a Wide View by the window and a
+    // Narrow View by every measurement that matters. The cost is the
+    // `contain: inline-size` that rides along with it, so this field
+    // takes its width from its parent rather than from its content:
+    // give it a definite inline size, as every container-query
+    // component in this library needs.
     <div
       className={toClassName(
-        "flex flex-col gap-1",
+        "@container flex flex-col gap-1",
         className,
       )}
     >
-      <div className="flex items-center gap-2">
-        {renderInput("start")}
+      {isRange ? (
+        // Below `--cq-sm` the two fields STACK, each under a caption
+        // of its own, because `hh:mm:ss.mmm` twice and the word
+        // between them fills a phone-width modal edge to edge with
+        // no slack left. Above it, the row is unchanged.
+        <div className="flex flex-col gap-2 cq-sm:flex-row cq-sm:items-center cq-sm:gap-2">
+          <div className="flex min-w-0 flex-col gap-1 cq-sm:flex-1">
+            {renderCaption("Start")}
 
-        {isRange ? (
-          <>
-            <span
-              aria-hidden="true"
-              className="shrink-0 text-content-secondary text-sm"
-            >
-              to
-            </span>
+            {renderInput("start")}
+          </div>
+
+          <span
+            aria-hidden="true"
+            className="hidden shrink-0 text-content-secondary text-sm cq-sm:inline"
+          >
+            to
+          </span>
+
+          <div className="flex min-w-0 flex-col gap-1 cq-sm:flex-1">
+            {renderCaption("End")}
 
             {renderInput("end")}
-          </>
-        ) : null}
-      </div>
+          </div>
+        </div>
+      ) : (
+        renderInput("start")
+      )}
 
       {/*
         The anti-silent-guess mechanism, and the reason this field is
