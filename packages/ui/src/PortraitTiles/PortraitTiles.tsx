@@ -4,7 +4,7 @@ import type {
 } from "@charcuterie/tokens"
 import {
   CATEGORICAL_INDEX_COUNT,
-  CATEGORICAL_INDEXES,
+  CATEGORICAL_SEQUENCE,
 } from "@charcuterie/tokens"
 import type { CSSProperties, ReactNode } from "react"
 
@@ -45,8 +45,10 @@ import { getPortraitColourProperties } from "./portraitColour.ts"
  *    palette hues cannot represent that, and swapping them in would
  *    have made the app disagree with the cards on the fridge.
  *
- * Neither is a default. A portrait that names no colour takes the
- * next `categorical` hue by position.
+ * Neither is a default. A portrait that names no colour takes its
+ * position's entry in `CATEGORICAL_SEQUENCE` — the palette walked so
+ * neighbours contrast, rather than the hue-ordered ring, which would
+ * put red beside orange.
  */
 type PortraitTileColour =
   | { categorical?: CategoricalIndex; color?: never }
@@ -273,9 +275,9 @@ const getPortraitCategorical = (
 ): CategoricalIndex | null =>
   item.color === undefined
     ? (item.categorical ??
-      (CATEGORICAL_INDEXES[
+      CATEGORICAL_SEQUENCE[
         position % CATEGORICAL_INDEX_COUNT
-      ] as CategoricalIndex))
+      ])
     : null
 
 /**

@@ -59,8 +59,9 @@ const START_ITEMS: ActionTileItem[] = [
 ]
 
 /**
- * Enough tiles to see the palette walk. Ten hues, taken in order,
- * and not one colour prop between them.
+ * Enough tiles to see the palette walk. Ten hues in
+ * `CATEGORICAL_SEQUENCE` order — every neighbouring pair a third of
+ * the wheel apart — and not one colour prop between them.
  */
 const LIBRARY_ITEMS: ActionTileItem[] = [
   {

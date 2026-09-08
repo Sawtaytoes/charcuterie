@@ -33,6 +33,7 @@ export {
   CATEGORICAL_INDEX_COUNT,
   CATEGORICAL_INDEXES,
   CATEGORICAL_PAIRS,
+  CATEGORICAL_SEQUENCE,
   getCategoricalDistinctnessFailures,
   TABLEAU_10_MINIMUM_DISTANCE,
 } from "./categorical.ts"
