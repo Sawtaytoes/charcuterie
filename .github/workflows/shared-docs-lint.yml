@@ -4,14 +4,24 @@
 # paper trail in `docs/decisions/`, the shape is written down in AGENTS.md, and
 # it was followed by hand — so it drifted. This checks the shape.
 #
-#   jobs:
-#     docs:
-#       uses: Sawtaytoes/charcuterie/.github/workflows/shared-docs-lint.yml@workflows-v1
+#   # a GitHub repo
+#   docs:
+#     uses: Sawtaytoes/charcuterie/.github/workflows/shared-docs-lint.yml@workflows-v1
 #
-# ⚠️ A reusable workflow resolves ON THE CONSUMER'S OWN HOST. Forgejo repos
-# import the same path from the read-only Forgejo mirror instead:
+#   # a Forgejo repo — same path on the public pull mirror, and it must ALSO
+#   # point the checkout at the mirror, because the linter is run from source.
+#   docs:
+#     uses: sawtaytoes/charcuterie/.github/workflows/shared-docs-lint.yml@workflows-v1
+#     with:
+#       charcuterieRepository: sawtaytoes/charcuterie
 #
-#   uses: sawtaytoes/charcuterie/.github/workflows/shared-docs-lint.yml@workflows-v1
+# ⚠️ The linter runs FROM A CHECKOUT, not from npm. `@charcuterie/ci` is not
+# published: npm will not let you configure a trusted publisher for a package
+# that does not exist yet, so a first publish means a hand-published automation
+# token plus a web-UI step, and forgetting the web-UI step breaks the release
+# job for every package in the fleet (packages/server/SEEDING.md). Running from
+# source removes all of that, and it removes a version-skew axis too — the tag
+# in `uses:` and the linter it runs are the same commit.
 #
 # ⚠️ The inner job is `decisionRecords`, not `lint`. Forgejo posts a status
 # context for the INNER job name as well as the caller's, and five repos here
@@ -22,11 +32,19 @@ name: Shared — decision-record lint
 on:
   workflow_call:
     inputs:
-      packageVersion:
-        description: "The @charcuterie/ci range to run. Pin it to hold a repo back."
+      charcuterieRepository:
+        description: >-
+          Where to read the linter from. A Forgejo caller MUST set this to the
+          mirror: `actions/checkout` resolves a bare `owner/repo` against the
+          runner's own host, so the GitHub default would not exist there.
         type: string
         required: false
-        default: "^0"
+        default: Sawtaytoes/charcuterie
+      charcuterieRef:
+        description: "Pin the linter. Keep this equal to the ref in `uses:`."
+        type: string
+        required: false
+        default: workflows-v1
 
 jobs:
   decisionRecords:
@@ -36,6 +54,15 @@ jobs:
       - uses: actions/checkout@v7
         # The full history: the lint below diffs against the base commit.
         with: { fetch-depth: 0 }
+
+      - uses: actions/checkout@v7
+        with:
+          repository: ${{ inputs.charcuterieRepository || 'Sawtaytoes/charcuterie' }}
+          ref: ${{ inputs.charcuterieRef || 'workflows-v1' }}
+          path: .charcuterie-lint
+          # The linter has no dependencies beyond Node's standard library, so
+          # one commit is enough — no install, no lockfile, no build.
+          fetch-depth: 1
 
       - uses: actions/setup-node@v6
         with: { node-version: "24" }
@@ -63,10 +90,9 @@ jobs:
 
           echo "baseSha=${BASE_SHA}" >> "$GITHUB_OUTPUT"
 
-      # `--package ... --` and not `npx <pkg> <bin>`: the short form passes the
-      # bin name to the package's default binary as an ARGUMENT, and the linter
-      # would try to lint a file called `charcuterie-docs-lint`.
       - if: ${{ steps.base.outputs.baseSha != '' }}
+        env:
+          BASE_SHA: ${{ steps.base.outputs.baseSha }}
         run: |
-          npx --yes --package "@charcuterie/ci@${{ inputs.packageVersion }}" -- \
-            charcuterie-docs-lint --base "${{ steps.base.outputs.baseSha }}"
+          set -euo pipefail
+          node .charcuterie-lint/packages/ci/src/cli/docsLint.js --base "${BASE_SHA}"
