@@ -19,12 +19,24 @@ import { basename, dirname, join } from "node:path"
  */
 
 /** @type {readonly string[]} */
-const requiredHeaderFields = ["Status", "Date", "Type", "Supersedes", "Superseded by"]
+const requiredHeaderFields = [
+  "Status",
+  "Date",
+  "Type",
+  "Supersedes",
+  "Superseded by",
+]
 
 /** @type {readonly string[]} */
-const requiredSections = ["Decision", "Context", "Why", "Evidence"]
+const requiredSections = [
+  "Decision",
+  "Context",
+  "Why",
+  "Evidence",
+]
 
-const fileNamePattern = /^(\d{4}-\d{2}-\d{2})-[a-z0-9]+(?:-[a-z0-9]+)*\.md$/
+const fileNamePattern =
+  /^(\d{4}-\d{2}-\d{2})-[a-z0-9]+(?:-[a-z0-9]+)*\.md$/
 
 /**
  * `- **Status:** Accepted` is the documented form. Some early records used a
@@ -34,14 +46,11 @@ const fileNamePattern = /^(\d{4}-\d{2}-\d{2})-[a-z0-9]+(?:-[a-z0-9]+)*\.md$/
  * @param {string} field
  * @returns {RegExp}
  */
-const headerFieldPattern = (
-  field,
-) => (
+const headerFieldPattern = (field) =>
   new RegExp(
     `^-?\\s*(?:\\*\\*)?${field.replace(" ", "\\s+")}:(?:\\*\\*)?\\s*(\\S.*)$`,
     "im",
   )
-)
 
 /**
  * @param {string} filePath
@@ -94,12 +103,13 @@ export const lintDecisionRecord = (
     }
   }
 
-  const dateMatch = headerFieldPattern("Date").exec(contents)
+  const dateMatch =
+    headerFieldPattern("Date").exec(contents)
 
   if (
-    nameMatch
-    && dateMatch
-    && dateMatch[1].trim() !== nameMatch[1]
+    nameMatch &&
+    dateMatch &&
+    dateMatch[1].trim() !== nameMatch[1]
   ) {
     fail(
       "date-mismatch",
@@ -109,8 +119,9 @@ export const lintDecisionRecord = (
 
   for (const section of requiredSections) {
     if (
-      !new RegExp(`^##\\s+${section}\\b`, "m")
-        .test(contents)
+      !new RegExp(`^##\\s+${section}\\b`, "m").test(
+        contents,
+      )
     ) {
       fail(
         "section",
@@ -120,8 +131,8 @@ export const lintDecisionRecord = (
   }
 
   if (
-    indexContents !== null
-    && !indexContents.includes(fileName)
+    indexContents !== null &&
+    !indexContents.includes(fileName)
   ) {
     fail(
       "not-indexed",
@@ -136,9 +147,7 @@ export const lintDecisionRecord = (
  * @param {string[]} filePaths
  * @returns {Promise<{ filePath: string, rule: string, message: string }[]>}
  */
-export const lintDecisionRecords = async (
-  filePaths,
-) => {
+export const lintDecisionRecords = async (filePaths) => {
   /** @type {Map<string, string | null>} */
   const indexCache = new Map()
 
@@ -151,8 +160,7 @@ export const lintDecisionRecords = async (
     if (!indexCache.has(indexPath)) {
       indexCache.set(
         indexPath,
-        await readFile(indexPath, "utf8")
-          .catch(() => null),
+        await readFile(indexPath, "utf8").catch(() => null),
       )
     }
 

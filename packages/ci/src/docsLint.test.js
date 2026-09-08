@@ -29,9 +29,7 @@ Verified on a real run.
 
 const rulesOf = (
   /** @type {ReturnType<typeof lintDecisionRecord>} */ problems,
-) => (
-  problems.map((problem) => problem.rule)
-)
+) => problems.map((problem) => problem.rule)
 
 describe("lintDecisionRecord", () => {
   it("passes a record that follows the template", () => {
@@ -41,15 +39,17 @@ describe("lintDecisionRecord", () => {
         goodRecord,
         "- [A thing](2026-09-08-a-thing.md)",
       ),
-    )
-      .toEqual([])
+    ).toEqual([])
   })
 
   it("ignores the index itself", () => {
     expect(
-      lintDecisionRecord("docs/decisions/README.md", "# Decisions", null),
-    )
-      .toEqual([])
+      lintDecisionRecord(
+        "docs/decisions/README.md",
+        "# Decisions",
+        null,
+      ),
+    ).toEqual([])
   })
 
   it("accepts the early un-bolded header style", () => {
@@ -61,17 +61,19 @@ describe("lintDecisionRecord", () => {
           "2026-09-08-a-thing.md",
         ),
       ),
-    )
-      .toEqual([])
+    ).toEqual([])
   })
 
   it("flags a file name that is not YYYY-MM-DD-kebab", () => {
     expect(
       rulesOf(
-        lintDecisionRecord("docs/decisions/A_Thing.md", goodRecord, "A_Thing.md"),
+        lintDecisionRecord(
+          "docs/decisions/A_Thing.md",
+          goodRecord,
+          "A_Thing.md",
+        ),
       ),
-    )
-      .toContain("file-name")
+    ).toContain("file-name")
   })
 
   it("flags a record missing from the index — the failure that hides a record", () => {
@@ -83,8 +85,7 @@ describe("lintDecisionRecord", () => {
           "- [Something else](2026-01-01-other.md)",
         ),
       ),
-    )
-      .toEqual(["not-indexed"])
+    ).toEqual(["not-indexed"])
   })
 
   it("flags a header date that disagrees with the file name", () => {
@@ -96,8 +97,7 @@ describe("lintDecisionRecord", () => {
           "2026-09-08-a-thing.md",
         ),
       ),
-    )
-      .toContain("date-mismatch")
+    ).toContain("date-mismatch")
   })
 
   it("names every missing section rather than only the first", () => {
@@ -107,12 +107,14 @@ describe("lintDecisionRecord", () => {
           "docs/decisions/2026-09-08-a-thing.md",
           goodRecord
             .replace("## Why\n\nBecause.\n\n", "")
-            .replace("## Evidence\n\nVerified on a real run.\n", ""),
+            .replace(
+              "## Evidence\n\nVerified on a real run.\n",
+              "",
+            ),
           "2026-09-08-a-thing.md",
         ),
       ),
-    )
-      .toEqual(["section", "section"])
+    ).toEqual(["section", "section"])
   })
 
   it("flags a missing header field", () => {
@@ -120,12 +122,14 @@ describe("lintDecisionRecord", () => {
       rulesOf(
         lintDecisionRecord(
           "docs/decisions/2026-09-08-a-thing.md",
-          goodRecord.replace("- **Superseded by:** —\n", ""),
+          goodRecord.replace(
+            "- **Superseded by:** —\n",
+            "",
+          ),
           "2026-09-08-a-thing.md",
         ),
       ),
-    )
-      .toEqual(["header-field"])
+    ).toEqual(["header-field"])
   })
 
   it("flags a missing title", () => {
@@ -137,7 +141,6 @@ describe("lintDecisionRecord", () => {
           "2026-09-08-a-thing.md",
         ),
       ),
-    )
-      .toContain("title")
+    ).toContain("title")
   })
 })

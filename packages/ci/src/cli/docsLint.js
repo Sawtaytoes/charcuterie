@@ -18,7 +18,9 @@ const run = promisify(execFile)
  */
 const main = async () => {
   const args = process.argv.slice(2)
-  const explicitPaths = args.filter((a) => !a.startsWith("-"))
+  const explicitPaths = args.filter(
+    (a) => !a.startsWith("-"),
+  )
   const isAll = args.includes("--all")
   const baseIndex = args.indexOf("--base")
   const base = baseIndex === -1 ? null : args[baseIndex + 1]
@@ -28,32 +30,35 @@ const main = async () => {
 
   if (explicitPaths.length > 0) {
     filePaths = explicitPaths
-  }
-  else if (isAll) {
+  } else if (isAll) {
     const { stdout } = await run("git", [
-      "ls-files", "docs/decisions/*.md",
+      "ls-files",
+      "docs/decisions/*.md",
     ])
     filePaths = stdout.split("\n").filter(Boolean)
-  }
-  else {
+  } else {
     // Fails SAFE in the opposite direction from the docs-only detector: if we
     // cannot work out what changed, lint NOTHING rather than the whole tree.
     // A false failure on settled history would train people to ignore this.
     const baseRef = base ?? "origin/HEAD"
     const { stdout } = await run("git", [
-      "diff", "--name-only", "--diff-filter=d", `${baseRef}...HEAD`,
-    ])
-      .catch(() => ({ stdout: "" }))
+      "diff",
+      "--name-only",
+      "--diff-filter=d",
+      `${baseRef}...HEAD`,
+    ]).catch(() => ({ stdout: "" }))
 
-    filePaths = (
-      stdout
+    filePaths = stdout
       .split("\n")
-      .filter((p) => /(^|\/)docs\/decisions\/[^/]+\.md$/.test(p))
-    )
+      .filter((p) =>
+        /(^|\/)docs\/decisions\/[^/]+\.md$/.test(p),
+      )
   }
 
   if (filePaths.length === 0) {
-    console.log("charcuterie-docs-lint: no decision records to check.")
+    console.log(
+      "charcuterie-docs-lint: no decision records to check.",
+    )
     return
   }
 
@@ -67,7 +72,9 @@ const main = async () => {
   }
 
   for (const problem of problems) {
-    console.error(`${problem.filePath}: [${problem.rule}] ${problem.message}`)
+    console.error(
+      `${problem.filePath}: [${problem.rule}] ${problem.message}`,
+    )
   }
 
   console.error(
@@ -77,8 +84,7 @@ const main = async () => {
   process.exitCode = 1
 }
 
-main()
-  .catch((error) => {
-    console.error(error)
-    process.exitCode = 1
-  })
+main().catch((error) => {
+  console.error(error)
+  process.exitCode = 1
+})
