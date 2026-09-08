@@ -20,6 +20,12 @@ import { formatTimecode } from "./timecode.ts"
  */
 const DURATION_MS = 2_712_000
 
+/**
+ * The demo readout prints a committed value the way the field
+ * writes it — `millisecondDigits: "auto"` — so one position is one
+ * spelling everywhere on the page. `formatTimecode`'s own default is
+ * still the full `hh:mm:ss.mmm`, and the docs page shows both.
+ */
 const describeValue = (
   value: null | number | TimecodeRange,
 ) => {
@@ -28,7 +34,9 @@ const describeValue = (
   }
 
   if (typeof value === "number") {
-    return formatTimecode(value)
+    return formatTimecode(value, {
+      millisecondDigits: "auto",
+    })
   }
 
   // A section with neither end set is the same absence `onChange`
@@ -37,7 +45,7 @@ const describeValue = (
     return "—"
   }
 
-  return `${value.start === null ? "the beginning" : formatTimecode(value.start)} to ${value.end === null ? "the end" : formatTimecode(value.end)}`
+  return `${value.start === null ? "the beginning" : formatTimecode(value.start, { millisecondDigits: "auto" })} to ${value.end === null ? "the end" : formatTimecode(value.end, { millisecondDigits: "auto" })}`
 }
 
 const meta = {
@@ -97,6 +105,13 @@ const TimecodeHarness = ({
  * it before anything commits — `90` is ninety seconds, `1:30` is the
  * same position spelled the other way, `1:02:03.500` is the full
  * form. Enter or blur commits; Escape puts the last value back.
+ *
+ * The line is a reading of the field, so it leaves when the focus
+ * does. A refusal stays up, because a control that is still marked
+ * invalid needs the sentence that says why.
+ *
+ * Milliseconds are optional both ways: `1:01:00` commits as
+ * `01:01:00`, not as `01:01:00.000`.
  */
 export const Default: Story = {
   args: { label: "Start at" },
@@ -257,9 +272,14 @@ export const AllStates: Story = {
 }
 
 /**
- * The field at three container widths. Two inputs and a word between
- * them is the layout that runs out of room first, so the section
- * mode is the one worth looking at narrow.
+ * The field at three container widths, which is the only honest way
+ * to story a container query — the window never moves.
+ *
+ * Below `--cq-sm` the section becomes the **Narrow View**: the two
+ * fields stack, and the word `to` is replaced by a "Start" caption
+ * over the first and an "End" caption over the second. Two
+ * `hh:mm:ss.mmm` fields and a word between them fill a phone-width
+ * modal edge to edge, which is where this was reported from.
  */
 export const Responsive: Story = {
   args: { label: "Start at" },
@@ -286,7 +306,9 @@ export const Responsive: Story = {
  *
  * In the section below, type an end that sits before the start and
  * the pair **swaps**; type an end equal to the start and it is
- * **refused**, because a section with no length plays nothing.
+ * **refused**, because a section with no length plays nothing. The
+ * refusal is readable after the field has been left, which is when
+ * a commit-time complaint is written.
  */
 export const Interactive: Story = {
   args: { label: "Start at" },

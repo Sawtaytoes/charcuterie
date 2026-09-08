@@ -90,8 +90,17 @@ export type FormatTimecodeOptions = {
    * unchanged because the largest field present is unbounded.
    */
   isHoursShown?: boolean
-  /** `0` through `3`. `0` drops the fraction and its separator. */
-  millisecondDigits?: number
+  /**
+   * `0` through `3`. `0` drops the fraction and its separator.
+   *
+   * `"auto"` prints the fraction only when there is one to print: a
+   * whole number of seconds comes back as `01:01:00`, and half a
+   * second more comes back as `01:01:00.500`. It is how a decimal
+   * number is written everywhere else — you write `3`, not `3.000` —
+   * and the grammar reads both spellings back to the number that
+   * produced them, because its fraction is optional.
+   */
+  millisecondDigits?: "auto" | number
 }
 
 const padTwo = (value: number) =>
@@ -105,12 +114,16 @@ const padTwo = (value: number) =>
  * because it has not reached second 2 yet. Rounding would print a
  * seek point the media has not played.
  *
- * The default is the canonical `hh:mm:ss.mmm`, and that is what the
- * field writes back on commit. One spelling means a re-read of the
- * field parses to the number that produced it, and a screenshot of
- * the same value is the same picture — neither of which is true of
- * the fleet's five printers, three of which hide the hour and two of
- * which do not pad the minute.
+ * The default is the canonical `hh:mm:ss.mmm`. `TimecodeInput` asks
+ * for `millisecondDigits: "auto"` instead, so a whole second is
+ * written back as `01:01:00` rather than as `01:01:00.000` — a
+ * person who typed no fraction did not ask for one, and both
+ * spellings re-read to the number that produced them.
+ *
+ * Either way it is ONE spelling per value, which is what the fleet's
+ * five printers never were: three of them hide the hour and two do
+ * not pad the minute, so the same position is a different picture in
+ * each app.
  */
 export const formatTimecode = (
   milliseconds: number,
@@ -123,10 +136,15 @@ export const formatTimecode = (
     ? Math.max(0, Math.floor(milliseconds))
     : 0
 
-  const digits = Math.min(
-    3,
-    Math.max(0, Math.floor(millisecondDigits)),
-  )
+  const digits =
+    millisecondDigits === "auto"
+      ? total % MILLISECONDS_PER_SECOND === 0
+        ? 0
+        : 3
+      : Math.min(
+          3,
+          Math.max(0, Math.floor(millisecondDigits)),
+        )
 
   const hours = isHoursShown
     ? Math.floor(total / MILLISECONDS_PER_HOUR)
