@@ -168,6 +168,54 @@ export const CATEGORICAL_HUES: Record<
 }
 
 /**
+ * The order to WALK the ring in when a set colours itself by
+ * position — as distinct from {@link CATEGORICAL_INDEXES}, which is
+ * the ring itself.
+ *
+ * The ring is hue-ordered on purpose: a swatch picker offering ten
+ * dots wants a spectrum, because that is the row a person scans to
+ * find "the greenish one". But walking a spectrum in order is the
+ * worst possible assignment for a SET, and the owner named the
+ * symptom:
+ *
+ * > the colors are in-order, so I get red and orange next to each
+ * > other in my apps rather than contrasting colors like I used to
+ * > have
+ *
+ * Ring-adjacent hues are 34-41 degrees apart, which is the tightest
+ * pair the palette has anywhere. So a two-tile set got the two
+ * hardest colours in the family to tell apart, every time, in every
+ * app. Walking with a stride of three instead visits all ten before
+ * repeating and holds every neighbouring gap at 105-115 degrees —
+ * three times the separation, and about as even as ten steps around
+ * a circle can be.
+ *
+ * ### Why the walk moved and the ring did not
+ *
+ * Re-numbering the hues would have fixed the same symptom, and it
+ * is what the owner offered as the alternative. It cannot be done
+ * quietly: **the index is durable data.** Docket and mail-sifter
+ * both persist the owner's PICKED index in SQLite (`categorical
+ * INTEGER`, "the owner's picked Charcuterie categorical index,
+ * 1-10"), so re-numbering repaints by hand-picked colour without
+ * touching the row — a label deliberately made red comes back teal.
+ * Every hash-assigned colour moves too (`getCategoricalIndex` over
+ * Docket projects, mail-sifter queues, Folio repos), and those
+ * cannot be migrated at all because they are derived rather than
+ * stored. Changing the walk costs none of that: no stored value
+ * changes meaning, and the picker keeps its spectrum.
+ *
+ * ### This is not for `getCategoricalIndex`
+ *
+ * That hashes, so it already scatters. Composing a permutation onto
+ * a hash buys nothing and would move every derived colour in the
+ * fleet for the privilege.
+ */
+export const CATEGORICAL_SEQUENCE = [
+  1, 4, 7, 10, 3, 6, 9, 2, 5, 8,
+] as const satisfies readonly CategoricalIndex[]
+
+/**
  * How far the solver moves per step, in OKLab lightness.
  *
  * A scan rather than a binary search, and the reason is rounding.
