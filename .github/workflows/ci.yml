@@ -15,6 +15,16 @@ jobs:
   changes:
     uses: ./.github/workflows/shared-docs-only-changes.yml
 
+  # The one gate a docs-only change DOES run. It lints the decision records
+  # the pull request TOUCHED, never the whole tree.
+  # This repo keeps 132 decision records.
+  # Charcuterie imports its own shared workflows by relative path, so a change
+  # is proven here before the tag moves.
+  docs:
+    uses: ./.github/workflows/shared-docs-lint.yml
+    with:
+      charcuterieRef: ${{ github.event.pull_request.head.sha || github.sha }}
+
 
   lint:
     needs: [changes]
