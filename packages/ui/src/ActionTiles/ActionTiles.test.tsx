@@ -358,8 +358,8 @@ test("a coloured tile makes room for its bar, and only on the leading side", asy
 })
 
 /**
- * Ten hues taken in order, which is what makes a five-tile set need
- * no colour props at all.
+ * Ten hues walked in `CATEGORICAL_SEQUENCE`, which is what makes a
+ * five-tile set need no colour props at all.
  *
  * Asserted through the pseudo-element's own `box-shadow`, because
  * that is where the bar actually lives — a class-name assertion
@@ -416,9 +416,10 @@ test("a named hue survives a tile being inserted above it", async () => {
     throw new Error("the auto-hue set drew no second tile")
   }
 
-  // In the auto set this tile is position 1 and wears hue 2. Naming
-  // `categorical: 7` has to change it, or the prop does nothing and
-  // every test above still passes.
+  // In the auto set this tile is position 1, so it wears the second
+  // entry of `CATEGORICAL_SEQUENCE`. Naming `categorical: 7` has to
+  // change it, or the prop does nothing and every test above still
+  // passes.
   await expect(
     getAccentEdgeLayer(
       getComputedStyle(pinned, "::before").boxShadow,
