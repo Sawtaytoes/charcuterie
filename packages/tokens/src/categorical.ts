@@ -185,10 +185,35 @@ export const CATEGORICAL_HUES: Record<
  * Ring-adjacent hues are 34-41 degrees apart, which is the tightest
  * pair the palette has anywhere. So a two-tile set got the two
  * hardest colours in the family to tell apart, every time, in every
- * app. Walking with a stride of three instead visits all ten before
- * repeating and holds every neighbouring gap at 105-115 degrees —
- * three times the separation, and about as even as ten steps around
- * a circle can be.
+ * app. A stride of three instead visits all ten before repeating and
+ * holds every neighbouring gap at 105 degrees or more — three times
+ * the separation, and about as even as ten steps around a circle can
+ * be.
+ *
+ * ### Where it starts, and the one pair it keeps apart
+ *
+ * Even spacing is not the whole job. The first draft of this walk
+ * started at Red, so the first two hues were Red and Lime, and the
+ * two-tile sets that dominate the fleet all came out red beside
+ * green. The owner rejected that on sight:
+ *
+ * > I don't really want red and green. We had a kinda teal and
+ * > purple that looked nice in the past. [...] Red and green as the
+ * > 2 main ones.
+ *
+ * So the walk starts at **Teal** and takes **Purple** second, which
+ * is the pair he named. Red and green are still both in the palette
+ * — nothing was dropped — but Red now sits between Indigo and Blue
+ * and **never neighbours Lime or Green at any position**, wrap
+ * included. That is the one adjacency constraint here, and it is
+ * worth stating why it is only one: forbidding Orange beside a green
+ * as well drops the best achievable minimum gap from 105 to 71
+ * degrees, and Orange beside green is not a pair anybody complained
+ * about.
+ *
+ * The order is the stride-three cycle rotated to begin at Teal, with
+ * Lime and Blue swapped so that Red's neighbour is Blue. Spacing is
+ * unchanged by the swap: the minimum is still 105 degrees.
  *
  * ### Why the walk moved and the ring did not
  *
@@ -212,7 +237,7 @@ export const CATEGORICAL_HUES: Record<
  * fleet for the privilege.
  */
 export const CATEGORICAL_SEQUENCE = [
-  1, 4, 7, 10, 3, 6, 9, 2, 5, 8,
+  6, 9, 2, 5, 8, 1, 7, 4, 10, 3,
 ] as const satisfies readonly CategoricalIndex[]
 
 /**
