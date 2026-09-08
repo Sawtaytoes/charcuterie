@@ -210,6 +210,49 @@ test("millisecondDigits truncates rather than rounding, because a position is no
   ).toBe("00:00:01")
 })
 
+test('millisecondDigits "auto" prints the fraction only when there is one', () => {
+  // The complaint this answers: typing `1:01:00` and tabbing away
+  // rewrote the field to `01:01:00.000`. You write 3, not 3.000.
+  expect(
+    formatTimecode(3_660_000, {
+      millisecondDigits: "auto",
+    }),
+  ).toBe("01:01:00")
+
+  // A real fraction still prints in full, at the same three digits.
+  expect(
+    formatTimecode(3_660_500, {
+      millisecondDigits: "auto",
+    }),
+  ).toBe("01:01:00.500")
+
+  expect(
+    formatTimecode(1, { millisecondDigits: "auto" }),
+  ).toBe("00:00:00.001")
+
+  expect(
+    formatTimecode(0, { millisecondDigits: "auto" }),
+  ).toBe("00:00:00")
+
+  // Both spellings read back to the number that produced them, so
+  // the shorter one costs the round trip nothing.
+  expect(parsedMilliseconds("01:01:00")).toBe(3_660_000)
+  expect(parsedMilliseconds("01:01:00.500")).toBe(3_660_500)
+
+  // It composes with the other option rather than replacing it.
+  expect(
+    formatTimecode(90_000, {
+      isHoursShown: false,
+      millisecondDigits: "auto",
+    }),
+  ).toBe("01:30")
+})
+
+test("the DEFAULT is still three digits, because a published export is read by callers this change never saw", () => {
+  expect(formatTimecode(3_660_000)).toBe("01:01:00.000")
+  expect(formatTimecode(90_000)).toBe("00:01:30.000")
+})
+
 test("formatTimecode refuses to print a position that does not exist", () => {
   expect(formatTimecode(-5_000)).toBe("00:00:00.000")
   expect(formatTimecode(Number.NaN)).toBe("00:00:00.000")

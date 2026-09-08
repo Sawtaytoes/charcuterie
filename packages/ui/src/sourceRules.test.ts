@@ -251,6 +251,13 @@ test("a container-query component is never storied in a shrink-to-fit cell", () 
     // measured in Docket, before any of the steps contained
     // anything.
     "Stepper",
+    // `TimecodeInput` queries its own box to decide whether a section
+    // is `[start] to [end]` in a row or two captioned fields stacked.
+    // The width that decides it is a modal's, not a window's: the
+    // report came from a 390px dialog, and the same dialog on a
+    // 2560px monitor is the Wide View by every media query and the
+    // Narrow View by the only measurement that matters.
+    "TimecodeInput",
   ])
 
   // `StoryCell`s are never nested, so the lazy match really does
