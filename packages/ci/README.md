@@ -14,6 +14,24 @@ It was followed by hand, so it drifted. Measured across agentic's 262 records on
 records that had never been added to the index at all — which makes them invisible, since
 the index is what gets read. Both were hard constraints.
 
+## It is NOT published to npm, on purpose
+
+Every other `@charcuterie/*` package is published by `npm-package-deploy.yml` over OIDC
+trusted publishing. That works only for a package npm already knows about: you cannot
+configure a trusted publisher for a name that does not exist yet, so a **first** publish
+means a hand-published automation token plus a web-UI step
+(`packages/server/SEEDING.md`). Forget the web-UI step and the release job fails for the
+whole fleet at the next version bump.
+
+`shared-docs-lint.yml` sidesteps all of it by checking this repo out and running
+`src/cli/docsLint.js` directly. The linter needs nothing but Node's standard library, so
+there is no install, no lockfile and no build. It also removes a version-skew axis: the
+ref in the caller's `uses:` and the linter it runs are the same commit.
+
+So `ci` is deliberately absent from the deploy loop's package list. If a consumer outside
+CI ever wants it on npm, follow `packages/server/SEEDING.md` and add `ci` to that list —
+last, because it will be unseeded.
+
 ## Usage
 
 ```sh
