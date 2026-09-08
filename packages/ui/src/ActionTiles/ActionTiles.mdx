@@ -30,8 +30,14 @@ the library's and every one of them can stop.
 
 A tile wears a **bar down its leading edge**, its icon takes the same hue, and the box hovers
 in it. The hue comes from the ten-wide
-[categorical palette](/docs/foundations-colour--docs) taken **in order**, which is why a set
-of five needs no colour props at all.
+[categorical palette](/docs/foundations-colour--docs), which is why a set of five needs no
+colour props at all.
+
+It is walked in **`CATEGORICAL_SEQUENCE`**, not `1..10`. The ring itself is hue-ordered
+because a swatch picker wants a spectrum to scan, and that is exactly what makes walking it in
+order the worst assignment for a set: ring neighbours are 34–41° apart, the tightest pair the
+palette has, so a two-tile set got red and orange every time. The sequence visits the same ten
+and holds every neighbour 105° or more away.
 
 <Canvas of={ActionTilesStories.AutoHues} />
 
