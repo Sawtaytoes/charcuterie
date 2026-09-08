@@ -18,12 +18,43 @@ const run = promisify(execFile)
  */
 const main = async () => {
   const args = process.argv.slice(2)
-  const explicitPaths = args.filter(
-    (a) => !a.startsWith("-"),
-  )
-  const isAll = args.includes("--all")
-  const baseIndex = args.indexOf("--base")
-  const base = baseIndex === -1 ? null : args[baseIndex + 1]
+
+  // Walk the arguments rather than filtering them. A plain `args.filter(a =>
+  // !a.startsWith("-"))` swallows the VALUE of `--base` as though it were a
+  // file to lint, so `--base <sha>` tried to open `<sha>` and every CI run
+  // would have died with ENOENT.
+  /** @type {string[]} */
+  const explicitPaths = []
+  let isAll = false
+  /** @type {string | null} */
+  let base = null
+
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index]
+
+    if (arg === "--all") {
+      isAll = true
+    } else if (arg === "--base") {
+      index += 1
+      base = args[index] ?? null
+
+      if (base === null) {
+        console.error(
+          "charcuterie-docs-lint: --base needs a ref.",
+        )
+        process.exitCode = 1
+        return
+      }
+    } else if (arg.startsWith("-")) {
+      console.error(
+        `charcuterie-docs-lint: unknown option \`${arg}\`.`,
+      )
+      process.exitCode = 1
+      return
+    } else {
+      explicitPaths.push(arg)
+    }
+  }
 
   /** @type {string[]} */
   let filePaths
