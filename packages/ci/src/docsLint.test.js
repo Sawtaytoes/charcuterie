@@ -144,3 +144,107 @@ describe("lintDecisionRecord", () => {
     ).toContain("title")
   })
 })
+
+describe("header forms", () => {
+  // mail-sifter writes its header as a two-column table. All 57 of its
+  // conforming records failed the first version of this rule.
+  it("accepts a table header", async () => {
+    const problems = lintDecisionRecord(
+      "docs/decisions/2026-08-09-handling-mode-is-per-queue.md",
+      [
+        "# Handling mode is per queue",
+        "",
+        "| Field | Value |",
+        "| --- | --- |",
+        "| Status | Accepted |",
+        "| Date | 2026-08-09 |",
+        "| Type | Constraint |",
+        "| Supersedes | — |",
+        "| Superseded by | — |",
+        "",
+        "## Decision",
+        "## Context",
+        "## Why",
+        "## Evidence",
+      ].join("\n"),
+      null,
+    )
+
+    expect(problems).toEqual([])
+  })
+
+  it("reads the date out of a table header", async () => {
+    const problems = lintDecisionRecord(
+      "docs/decisions/2026-08-09-handling-mode-is-per-queue.md",
+      [
+        "# Handling mode is per queue",
+        "",
+        "| Status | Accepted |",
+        "| Date | 2026-08-10 |",
+        "| Type | Constraint |",
+        "| Supersedes | — |",
+        "| Superseded by | — |",
+        "",
+        "## Decision",
+        "## Context",
+        "## Why",
+        "## Evidence",
+      ].join("\n"),
+      null,
+    )
+
+    expect(problems).toEqual([
+      expect.objectContaining({ rule: "date-mismatch" }),
+    ])
+  })
+
+  it("accepts a bulleted header", async () => {
+    const problems = lintDecisionRecord(
+      "docs/decisions/2026-07-08-kids-channels-shows-and-shorts-only.md",
+      [
+        "# Kids' channels draw from Shows and Shorts only",
+        "",
+        "- **Status:** Accepted",
+        "- **Date:** 2026-07-08",
+        "- **Type:** scope",
+        "- **Supersedes:** —",
+        "- **Superseded by:** —",
+        "",
+        "## Decision",
+        "## Context",
+        "## Why",
+        "## Evidence",
+      ].join("\n"),
+      null,
+    )
+
+    expect(problems).toEqual([])
+  })
+})
+
+describe("date-mismatch", () => {
+  // `2026-08-18 (accepted 2026-08-19)` is a real record. Only the leading
+  // date has to agree with the file name.
+  it("ignores a qualifier after the date", async () => {
+    const problems = lintDecisionRecord(
+      "docs/decisions/2026-08-18-queued-links-is-the-wrong-name.md",
+      [
+        "# Queued Links is the wrong name",
+        "",
+        "| Status | Accepted |",
+        "| Date | 2026-08-18 (accepted 2026-08-19) |",
+        "| Type | naming |",
+        "| Supersedes | — |",
+        "| Superseded by | — |",
+        "",
+        "## Decision",
+        "## Context",
+        "## Why",
+        "## Evidence",
+      ].join("\n"),
+      null,
+    )
+
+    expect(problems).toEqual([])
+  })
+})

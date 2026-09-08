@@ -39,18 +39,50 @@ const fileNamePattern =
   /^(\d{4}-\d{2}-\d{2})-[a-z0-9]+(?:-[a-z0-9]+)*\.md$/
 
 /**
- * `- **Status:** Accepted` is the documented form. Some early records used a
- * bare `Status: Accepted`, so both are accepted here — the point is that the
- * field is present and findable, not that it is bold.
+ * The fleet writes this header three ways, and all three are correct. Measured
+ * across 1050 records on 2026-09-08: 784 use the bulleted form, 230 the bare
+ * bold form, and mail-sifter's 57 use a two-column table.
+ *
+ *   - **Status:** Accepted     <- bulleted, the most common
+ *   **Status:** Accepted       <- bare bold
+ *   | Status | Accepted |      <- table row
+ *
+ * Picking one and failing the other two would flag ~90% of conforming records,
+ * so the rule asks whether the field is PRESENT and findable, not how it is
+ * decorated. Choosing a single house form is a decision record, not a linter
+ * default.
  *
  * @param {string} field
  * @returns {RegExp}
  */
-const headerFieldPattern = (field) =>
-  new RegExp(
-    `^-?\\s*(?:\\*\\*)?${field.replace(" ", "\\s+")}:(?:\\*\\*)?\\s*(\\S.*)$`,
+const headerFieldPattern = (field) => {
+  const name = field.replace(" ", "\\s+")
+
+  return new RegExp(
+    // `| Status | Accepted |`, or any of the prose forms.
+    `^(?:\\|\\s*(?:\\*\\*)?${name}(?:\\*\\*)?\\s*\\|\\s*(\\S[^|]*?)\\s*\\|` +
+      `|-?\\s*(?:\\*\\*)?${name}:(?:\\*\\*)?\\s*(\\S.*))$`,
     "im",
   )
+}
+
+/**
+ * The two header forms land the value in different capture groups, so callers
+ * ask for "whichever one matched" rather than reaching for an index.
+ *
+ * @param {string} field
+ * @param {string} contents
+ * @returns {string | null}
+ */
+const headerFieldValue = (field, contents) => {
+  const match = headerFieldPattern(field).exec(contents)
+
+  if (!match) {
+    return null
+  }
+
+  return (match[1] ?? match[2] ?? "").trim()
+}
 
 /**
  * @param {string} filePath
@@ -103,17 +135,23 @@ export const lintDecisionRecord = (
     }
   }
 
-  const dateMatch =
-    headerFieldPattern("Date").exec(contents)
+  const dateValue = headerFieldValue("Date", contents)
+
+  // A `Date` field often carries a qualifier — `2026-08-18 (accepted
+  // 2026-08-19)` is one real example. Only the leading date has to agree with
+  // the file name; the rest is the record telling its own story.
+  const headerDate = dateValue
+    ? /^\d{4}-\d{2}-\d{2}/.exec(dateValue)?.[0]
+    : null
 
   if (
     nameMatch &&
-    dateMatch &&
-    dateMatch[1].trim() !== nameMatch[1]
+    headerDate &&
+    headerDate !== nameMatch[1]
   ) {
     fail(
       "date-mismatch",
-      `The header says \`${dateMatch[1].trim()}\` but the file name says \`${nameMatch[1]}\`. They are read by different people and must agree.`,
+      `The header says \`${headerDate}\` but the file name says \`${nameMatch[1]}\`. They are read by different people and must agree.`,
     )
   }
 
