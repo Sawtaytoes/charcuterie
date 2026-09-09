@@ -1,5 +1,11 @@
 # @charcuterie/vitest-config
 
+## 1.1.1
+
+### Patch Changes
+
+- 359d24a: Run tests in Chromium through Playwright by default.
+
 ## 1.1.0
 
 ### Minor Changes
