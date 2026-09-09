@@ -16,7 +16,7 @@
  *   VRT_PR_NUMBER         PR number (empty on push builds)
  *   VRT_REPORT_URL        report URL reg-suit emitted (preferred)
  *   VRT_REPORT_KEY        S3 key the report was published under (fallback)
- *   VRT_REPORT_BASE_URL   default https://garage.octen.dev (fallback)
+ *   VRT_REPORT_BASE_URL   report host (used when reg-suit omits the URL)
  *   VRT_STATUS_CONTEXT    default vrt/charcuterie
  *
  * Exits non-zero when a story changed against its baseline **on a pull
@@ -40,7 +40,7 @@ const {
   VRT_PR_NUMBER,
   VRT_REPORT_URL,
   VRT_REPORT_KEY,
-  VRT_REPORT_BASE_URL = "https://garage.octen.dev",
+  VRT_REPORT_BASE_URL,
   VRT_STATUS_CONTEXT = "vrt/charcuterie",
 } = process.env
 
@@ -99,7 +99,15 @@ const summary = `${changed} changed · ${added} new · ${deleted} deleted · ${p
 
 const reportUrl =
   VRT_REPORT_URL ||
-  `${VRT_REPORT_BASE_URL.replace(/\/$/, "")}/${VRT_REPORT_KEY}/index.html`
+  (() => {
+    if (!VRT_REPORT_BASE_URL || !VRT_REPORT_KEY) {
+      throw new Error(
+        "VRT_REPORT_BASE_URL and VRT_REPORT_KEY are required when reg-suit omits the report URL.",
+      )
+    }
+
+    return `${VRT_REPORT_BASE_URL.replace(/\/$/, "")}/${VRT_REPORT_KEY}/index.html`
+  })()
 
 if (GITHUB_REPOSITORY && VRT_STATUS_SHA) {
   await api(

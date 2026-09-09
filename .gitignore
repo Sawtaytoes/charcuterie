@@ -8,7 +8,8 @@ node_modules
 storybook-static
 
 # Visual-regression scratch: reg-suit's working dir and the freshly
-# captured "actual" PNGs. Baselines live in Garage S3, never in git
+# captured "actual" PNGs. Baselines live in S3, never in git
+.regconfig.json
 # (that's the whole point — see agentic VRT decision record).
 .reg
 packages/*/.reg
