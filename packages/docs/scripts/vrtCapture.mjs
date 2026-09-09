@@ -2,7 +2,7 @@
  * Visual-regression capture. Renders every built Storybook story
  * twice — once per colour scheme — and writes a PNG per shot into
  * the reg-suit "actual" directory. reg-suit (`vrt:compare`) then
- * diffs those against the baseline pulled from Garage S3 and
+ * diffs those against the baseline pulled from S3 and
  * publishes the result; this script only produces pixels.
  *
  * Modelled on `m8Screenshots.mjs` (same static-serve + Playwright

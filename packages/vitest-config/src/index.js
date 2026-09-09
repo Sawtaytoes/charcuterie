@@ -10,10 +10,17 @@
  * suites otherwise diverge.
  */
 
+import { playwright } from "@vitest/browser-playwright"
 import { defineConfig, mergeConfig } from "vitest/config"
 
 const baseConfig = defineConfig({
   test: {
+    browser: {
+      enabled: true,
+      provider: playwright(),
+      headless: true,
+      instances: [{ browser: "chromium" }],
+    },
     globals: true,
     exclude: [
       "**/dist/**",
