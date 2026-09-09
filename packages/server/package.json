@@ -61,7 +61,7 @@
   "devDependencies": {
     "@hono/node-server": "^2.0.2",
     "@types/node": "^25.6.2",
-    "hono": "^4.12.21",
+    "hono": "^4.13.5",
     "mqtt": "^5.15.2",
     "typescript": "^6.0.3",
     "vite": "^8.0.16",
