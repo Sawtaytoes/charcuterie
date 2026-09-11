@@ -83,7 +83,10 @@ const PADDING_CLASS: Record<CardPadding, string> = {
  *
  * `aria-labelledby` rather than `aria-label`, because the heading is
  * on screen already and stating the name twice is how the two drift
- * apart.
+ * apart. A card with **no** `heading` keeps the `aria-labelledby`
+ * the call site passed, for the app that draws its own title row
+ * inside the card — the name still points at text on screen, which
+ * is the same rule one level out.
  *
  * **Density is not a prop here.** mux-magic's inventory turned up a
  * `CardDensityProvider` in the withdrawn bambuddy evidence, and it
@@ -94,6 +97,7 @@ const PADDING_CLASS: Record<CardPadding, string> = {
  * a layout fact rather than a density one.
  */
 export const Card = ({
+  "aria-labelledby": ariaLabelledBy,
   accentEdge,
   actions,
   children,
@@ -122,12 +126,30 @@ export const Card = ({
       ? style
       : { ...accentEdgeStyle, ...style }
 
+  // The caller's own pointer is the FALLBACK, not the loser. This
+  // attribute is written *after* the spread, so `undefined` here
+  // does not mean "leave whatever the call site passed": it
+  // overwrites it, React then drops the attribute entirely, and the
+  // card's accessible name falls back to its whole subtree with
+  // nothing failing — not typecheck, not axe, not a render. A
+  // `role="button"` tile in mail-sifter naming itself
+  // `aria-labelledby="recent-tile-heading"` announced as "Recent
+  // Mail 6 40 arrived in the last 24 hours, 34 done".
+  //
+  // `heading` still wins when it is given, because that is the name
+  // the reader can see and this component renders it. Do not
+  // "simplify" this back to a ternary ending in `undefined`.
+  //
+  // `aria-label` needs no equivalent: the component never writes
+  // one, so the spread carries the caller's through untouched.
+  const labelledById = heading ? headingId : ariaLabelledBy
+
   const Heading = `h${headingLevel}` as const
 
   return (
     <section
       {...sectionProps}
-      aria-labelledby={heading ? headingId : undefined}
+      aria-labelledby={labelledById}
       className={toClassName(
         // `@container` here, not on a wrapper, is what lets the
         // header stack at narrow widths *inside a wide viewport* —

@@ -296,3 +296,91 @@ export const AccentEdge: Story = {
     </StorySection>
   ),
 }
+
+/**
+ * Ids for the two cells that point at their own text. Written out
+ * rather than generated, because a story is a static demo and the
+ * docs page mounts every cell at once — two cells sharing a
+ * generated id would be a duplicate-id violation nobody could see.
+ */
+const CALLER_HEADING_ID = "card-caller-heading"
+const SHADOWED_HEADING_ID = "card-shadowed-heading"
+
+/**
+ * The card is named by a heading the **app** draws, not by
+ * `heading`.
+ *
+ * mail-sifter's tiles put the name and its count on one row, so they
+ * render the title themselves and pass `aria-labelledby` at the call
+ * site. `Card` writes that attribute after the caller's spread, so
+ * it has to fall back to the caller's pointer: without the fallback
+ * the attribute is overwritten with `undefined`, React drops it, and
+ * the tile's name becomes its whole subtree — "Recent Mail 6 40
+ * arrived in the last 24 hours, 34 done" instead of "Recent Mail".
+ * Nothing reports that: it renders, it typechecks, and axe is happy
+ * with a name made of everything.
+ *
+ * `heading` still wins where it is given, and `aria-label` needs no
+ * fallback at all — the component never writes one, so the spread
+ * carries it through.
+ */
+export const CallerNamed: Story = {
+  args: { children: "Content" },
+  render: () => (
+    <StoryGrid columns={3}>
+      <StoryCell
+        align="stretch"
+        label="the call site's own pointer"
+      >
+        <Card aria-labelledby={CALLER_HEADING_ID}>
+          <div className="flex items-baseline justify-between gap-2">
+            <h2
+              className="font-semibold text-md leading-tight"
+              id={CALLER_HEADING_ID}
+            >
+              Recent Mail
+            </h2>
+
+            <Badge intent="info" size="sm">
+              6
+            </Badge>
+          </div>
+
+          <p className="text-content-secondary text-sm">
+            40 arrived in the last 24 hours, 34 done.
+          </p>
+        </Card>
+      </StoryCell>
+
+      <StoryCell
+        align="stretch"
+        label="a heading beats the pointer"
+      >
+        <Card
+          aria-labelledby={SHADOWED_HEADING_ID}
+          heading="Bay 5"
+        >
+          <p
+            className="text-content-secondary text-sm"
+            id={SHADOWED_HEADING_ID}
+          >
+            Pointed at, and deliberately not the name — the
+            heading is the text the reader can see.
+          </p>
+        </Card>
+      </StoryCell>
+
+      <StoryCell
+        align="stretch"
+        label="an aria-label passes through"
+      >
+        <Card aria-label="Unread mail">
+          <p className="text-content-secondary text-sm">
+            No heading and no pointer, so the card is named
+            by the label the call site set.
+          </p>
+        </Card>
+      </StoryCell>
+    </StoryGrid>
+  ),
+}

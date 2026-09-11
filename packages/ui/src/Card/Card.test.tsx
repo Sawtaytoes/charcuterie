@@ -6,8 +6,13 @@ import { mountStory } from "../mountStory.testHelpers.ts"
 import { expectAgentDrivable } from "../testing/index.ts"
 import * as stories from "./Card.stories.tsx"
 
-const { AccentEdge, AllStates, Default, Interactive } =
-  composeStories(stories)
+const {
+  AccentEdge,
+  AllStates,
+  CallerNamed,
+  Default,
+  Interactive,
+} = composeStories(stories)
 
 test("a heading turns the card into a named landmark", async () => {
   const { canvas } = await mountStory(Default)
@@ -27,6 +32,58 @@ test("a card with no heading is not a landmark", async () => {
   await expect(canvas.getAllByRole("region")).toHaveLength(
     3,
   )
+})
+
+/**
+ * The name the call site set is the fallback, and it is the half the
+ * component used to throw away.
+ *
+ * `aria-labelledby` is written after the caller's spread, so the old
+ * `heading ? headingId : undefined` overwrote the caller's pointer
+ * instead of deferring to it. A tile naming itself from a heading it
+ * draws lost its name and picked up its whole subtree — and this is
+ * the only gate that can see it, because the markup is valid, the
+ * types are satisfied, and a card named by everything is still a
+ * card with a name.
+ */
+test("a card with no heading keeps the caller's own name", async () => {
+  const { canvas } = await mountStory(CallerNamed)
+
+  // Exactly "Recent Mail". Were the subtree naming it, this would be
+  // "Recent Mail 6 40 arrived in the last 24 hours, 34 done" and the
+  // query would match nothing.
+  expectAgentDrivable(canvas, {
+    name: "Recent Mail",
+    role: "region",
+  })
+})
+
+/**
+ * The fallback is a fallback, not a swap: a `heading` is text the
+ * reader can see and the component renders it, so it still wins.
+ */
+test("a heading still names the card over the caller's pointer", async () => {
+  const { canvas } = await mountStory(CallerNamed)
+
+  expectAgentDrivable(canvas, {
+    name: "Bay 5",
+    role: "region",
+  })
+})
+
+/**
+ * `aria-label` needs no fallback — the component never writes one,
+ * so the spread carries the caller's through. Asserted anyway, so
+ * that a future "fix" which starts writing `aria-label` here cannot
+ * take the caller's with it the way this one took `aria-labelledby`.
+ */
+test("a caller's aria-label reaches the card untouched", async () => {
+  const { canvas } = await mountStory(CallerNamed)
+
+  expectAgentDrivable(canvas, {
+    name: "Unread mail",
+    role: "region",
+  })
 })
 
 /**
