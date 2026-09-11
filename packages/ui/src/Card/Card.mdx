@@ -35,6 +35,26 @@ all, deliberately — it has nothing to be named.
 `raised` means *more separated from base*, not *lighter*, which is why light mode's base is
 `#F5F7FA` and its raised is white.
 
+### A card the app names itself
+
+Pass `aria-labelledby` and no `heading` when the app draws its own title row — a name beside
+a count is one line that `heading` cannot express, so mail-sifter's tiles render it and point
+at it. The card keeps that pointer.
+
+> **It has to be a fallback, not a default.** The attribute is written after the caller's
+> props are spread, so the obvious `heading ? headingId : undefined` **overwrites** the call
+> site's pointer rather than leaving it alone. React then drops the attribute, the card's name
+> falls back to its entire subtree, and nothing reports it: the markup is valid, the types are
+> satisfied, and axe is content with a name made of everything. Both of mail-sifter's
+> `role="button"` tiles announced their whole contents — "Recent Mail 6 40 arrived in the last
+> 24 hours, 34 done" for a tile called "Recent Mail".
+
+`heading` still wins where both are given, because the heading is text the reader can see and
+this component renders it. `aria-label` needs no fallback at all — `Card` never writes one, so
+the spread carries the caller's through.
+
+<Canvas of={CardStories.CallerNamed} />
+
 <Canvas of={CardStories.AllVariants} />
 
 ## Container queries, not media queries
