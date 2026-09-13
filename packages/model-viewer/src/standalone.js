@@ -6,6 +6,7 @@ import {
   THREE,
   VERSION,
 } from "./index.js"
+import { initialView } from "./manifest.js"
 
 const element = document.getElementById("app")
 const viewer = createViewer(element, {
@@ -346,8 +347,7 @@ try {
   observer.observe(element)
   viewer.resize()
   const query = new URLSearchParams(location.search)
-  const name =
-    query.get("view") || manifest.initialView || "iso"
+  const name = initialView(manifest, query)
   arrange(
     Object.hasOwn(directions, name) ||
       Object.hasOwn(manifest.views || {}, name)
