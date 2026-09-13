@@ -57,6 +57,11 @@ try {
       console.log(
         `serving ${directory} on http://127.0.0.1:${server.address().port}/`,
       )
+      if (values.shot)
+        await screenshot(
+          `http://127.0.0.1:${server.address().port}/`,
+          values.shot,
+        )
     } else {
       let result
       try {
