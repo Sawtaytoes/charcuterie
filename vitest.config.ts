@@ -16,6 +16,7 @@ export default defineConfig({
       "packages/vite-config/vitest.config.ts",
       "packages/vitest-config/vitest.config.ts",
       "packages/server/vitest.config.ts",
+      "packages/model-viewer/vitest.config.ts",
       "packages/storybook-config/vitest.config.ts",
       "packages/ui/vitest.config.ts",
       "packages/docs/vitest.storybook.config.ts",
