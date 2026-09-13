@@ -1,0 +1,41 @@
+{
+  "name": "@charcuterie/model-viewer",
+  "version": "0.1.0",
+  "description": "Reusable Three.js model review, standalone previews and a local preview service.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "default": "./src/index.js"
+    }
+  },
+  "bin": "./src/cli.js",
+  "files": [
+    "src",
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "node build.js",
+    "prepack": "yarn build",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@types/three": "0.160.0",
+    "three": "0.160.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.2",
+    "esbuild": "0.28.1",
+    "playwright": "^1.61.1",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.8"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Sawtaytoes/charcuterie.git",
+    "directory": "packages/model-viewer"
+  }
+}

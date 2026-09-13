@@ -13,6 +13,7 @@ exports and setup instructions.
 
 | Package | Purpose |
 | --- | --- |
+| [`@charcuterie/model-viewer`](packages/model-viewer/README.md) | Framework-independent 3D model reviews and agent previews |
 | [`@charcuterie/ui`](packages/ui/README.md) | React components and app layout |
 | [`@charcuterie/tokens`](packages/tokens/README.md) | Colours, typography, spacing, and generated CSS and JSON |
 | [`@charcuterie/logic`](packages/logic/README.md) | Shared state logic with React and Preact bindings |

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Model viewer</title>
+<style>
+  :root{
+    --bg:#101318; --panel:#171b22; --line:#262c36;
+    --ink:#e7ecf3; --muted:#8e9aab; --accent:#5b8ff9;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);
+    font:14px/1.5 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    overscroll-behavior:none}
+  #app{position:fixed;inset:0}
+  canvas{display:block;touch-action:none}
+  .bar{position:fixed;left:0;right:0;top:0;padding:9px 13px;background:rgba(16,19,24,.88);
+    backdrop-filter:blur(8px);border-bottom:1px solid var(--line);
+    display:flex;gap:16px;align-items:center;flex-wrap:wrap;z-index:5}
+  .bar h1{font-size:13.5px;margin:0;font-weight:650;letter-spacing:.2px;white-space:nowrap}
+  .grp{display:flex;gap:5px;align-items:center;flex-wrap:wrap}
+  .lbl{color:var(--muted);font-size:10.5px;text-transform:uppercase;
+    letter-spacing:.7px;margin-right:1px}
+  button{background:var(--panel);color:var(--ink);border:1px solid var(--line);
+    border-radius:7px;padding:5px 10px;font:inherit;font-size:12.5px;cursor:pointer;
+    display:inline-flex;align-items:center;gap:6px}
+  button:hover{border-color:#3a4350}
+  button[aria-pressed="true"]{background:#20304d;border-color:var(--accent);color:#cfe0ff}
+  .dot{width:9px;height:9px;border-radius:2px;flex:0 0 auto}
+  .panel{position:fixed;background:rgba(23,27,34,.92);border:1px solid var(--line);
+    border-radius:9px;padding:10px 12px;z-index:5}
+  #info{left:12px;bottom:12px;font:11.5px/1.65 ui-monospace,SFMono-Regular,Menlo,monospace}
+  #info .nm{color:#fff;font-weight:600}
+  #info .mut{color:var(--muted)}
+  summary{cursor:pointer}
+  #parts-menu[open]{flex-basis:100%}
+  #parts-menu #parts{max-height:24vh;overflow:auto;margin-top:6px}
+  #info{max-width:94vw;max-height:28vh;overflow:auto}
+  #hint{position:fixed;left:50%;top:52px;transform:translateX(-50%);color:var(--muted);
+    font-size:11.5px;z-index:5;pointer-events:none;transition:opacity .5s}
+  @media(max-width:600px){#hint{display:none}}
+  #err{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:9;
+    max-width:640px;background:#2b1416;border:1px solid #7f2f36;color:#ffd7da;
+    padding:16px 18px;border-radius:10px;display:none;font-size:13px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div class="bar">
+  <h1 id="title">STL preview</h1>
+  <details id="parts-menu"><summary>Show or hide parts</summary><div class="grp" id="parts"></div></details>
+  <div class="grp" id="views">
+    <span class="lbl">View</span>
+    <button type="button" data-v="iso">Iso</button><button type="button" data-v="top">Top</button>
+    <button type="button" data-v="front">Front</button><button type="button" data-v="right">Right</button>
+    <button type="button" data-v="fit">Fit</button>
+  </div>
+  <div class="grp">
+    <button type="button" id="b-wire" aria-pressed="false">Wireframe</button>
+    <button type="button" id="b-edge" aria-pressed="true">Edges</button>
+    <button type="button" id="b-spin" aria-pressed="false">Spin</button>
+  </div>
+<details id="extras"><summary>Assembly and artwork</summary><label>Separate <input aria-label="Separate parts" id="separate" type="range" min="0" max="1" step="0.01" value="0"></label> <button type="button" id="plain" aria-pressed="false">Plain relief</button><span id="caption"></span></details>
+</div>
+<div id="hint">drag to orbit &middot; scroll to zoom &middot; right-drag to pan</div>
+<details id="info" class="panel"><summary>Dimensions and review notes</summary><div id="info-body"></div></details>
+<div id="err" role="alert"></div>
+
+<script type="importmap">{"imports":{"three":"./vendor/three.module.js"}}</script>
+<script type="module" src="./standalone.js"></script></body></html>
