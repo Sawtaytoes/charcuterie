@@ -1,0 +1,211 @@
+# Shared across the fleet — this file is IMPORTED, not copied.
+#
+# The gate for the two languages no linter in the fleet guarded: Python and
+# C++. ESLint and Biome cover every `.ts`/`.tsx`, `charcuterie-docs-lint`
+# covers `docs/decisions/`, and until this workflow a `.py` or a `.cpp` could
+# land in any repo with nothing reading it at all.
+#
+#   # a GitHub repo
+#   nativeLint:
+#     uses: Sawtaytoes/charcuterie/.github/workflows/shared-native-lint.yml@workflows-v1
+#
+#   # a Forgejo repo — same path on the public pull mirror, and it must ALSO
+#   # point the checkout at the mirror, because the configs are read from source.
+#   nativeLint:
+#     uses: sawtaytoes/charcuterie/.github/workflows/shared-native-lint.yml@workflows-v1
+#     with:
+#       charcuterieRepository: sawtaytoes/charcuterie
+#       cppExclude: device-client/esphome/components/it8951e device-client/esphome/components/m5paper
+#
+# ⚠️ IT READS THE DIFF, NOT THE TREE. Same rule as `shared-docs-lint.yml`, for
+# the same reason and with more force: `agentic` holds 765 `.py` files and
+# `external/` holds 7780, none of them ever linted. A gate that failed on all
+# of them at once would be switched off inside a week. A pull request is
+# answerable for the files it touched.
+#
+# ⚠️ It fails SAFE by linting NOTHING when it cannot work out a base commit —
+# the opposite direction from the docs-only detector, and the same direction as
+# the docs lint.
+#
+# ⚠️ VENDORED C++ MUST BE EXCLUDED. castkit's `it8951e/` and `m5paper/` are
+# copied from `ilia-ae/m5paper_esphome` and patched; `PATCHES.md` states each
+# patch as a diff against that upstream. A formatter would rewrite every line
+# of both and destroy that. Pass `cppExclude`. Python has no equivalent problem
+# today — every `.py` in the fleet outside `external/` is ours — but
+# `pythonExclude` exists for the day one is vendored.
+#
+# ⚠️ The inner jobs are `pythonLint` and `cppLint`, never `lint`. Forgejo posts
+# a status context for the INNER job name as well as the caller's, and five
+# repos here already have a job called `lint`.
+name: Shared — Python and C++ lint
+
+on:
+  workflow_call:
+    inputs:
+      charcuterieRepository:
+        description: >-
+          Where to read the configs from. A Forgejo caller MUST set this to the
+          mirror: `actions/checkout` resolves a bare `owner/repo` against the
+          runner's own host, so the GitHub default would not exist there.
+        type: string
+        required: false
+        default: Sawtaytoes/charcuterie
+      charcuterieRef:
+        description: "Pin the configs. Keep this equal to the ref in `uses:`."
+        type: string
+        required: false
+        default: workflows-v1
+      pythonExclude:
+        description: >-
+          Space-separated path prefixes to skip. A changed file under one of
+          them is dropped before ruff sees it.
+        type: string
+        required: false
+        default: ""
+      cppExclude:
+        description: >-
+          Space-separated path prefixes to skip. Vendored components go here —
+          reformatting one destroys the diff against its upstream.
+        type: string
+        required: false
+        default: ""
+      ruffVersion:
+        description: "Pin ruff. An unpinned linter turns a green repo red on its own schedule."
+        type: string
+        required: false
+        default: "0.14.5"
+
+jobs:
+  pythonLint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+        # The full history: the steps below diff against the base commit.
+        with: { fetch-depth: 0 }
+
+      - uses: actions/checkout@v7
+        with:
+          repository: ${{ inputs.charcuterieRepository || 'Sawtaytoes/charcuterie' }}
+          ref: ${{ inputs.charcuterieRef || 'workflows-v1' }}
+          path: .charcuterie-lint
+          fetch-depth: 1
+
+      - id: changed
+        env:
+          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          EXCLUDE: ${{ inputs.pythonExclude }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${BASE_SHA:-}" ] \
+            || [ "${BASE_SHA}" = "0000000000000000000000000000000000000000" ] \
+            || ! git cat-file -e "${BASE_SHA}^{commit}" 2>/dev/null
+          then
+            echo "No usable base commit — nothing to lint."
+            echo "files=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # `--diff-filter=d` drops deletions: ruff cannot read a file that is
+          # no longer there, and a deleted file cannot be badly formatted.
+          git diff --name-only --diff-filter=d "${BASE_SHA}" HEAD \
+            | grep -E '\.pyi?$' > /tmp/pythonChanged.txt || true
+
+          for prefix in ${EXCLUDE:-}; do
+            grep -v "^${prefix}" /tmp/pythonChanged.txt > /tmp/pythonKept.txt || true
+            mv /tmp/pythonKept.txt /tmp/pythonChanged.txt
+          done
+
+          if [ ! -s /tmp/pythonChanged.txt ]; then
+            echo "No Python files changed."
+            echo "files=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "Linting:"
+          sed 's/^/  /' /tmp/pythonChanged.txt
+          echo "files=yes" >> "$GITHUB_OUTPUT"
+
+      - if: ${{ steps.changed.outputs.files != '' }}
+        uses: actions/setup-python@v6
+        with: { python-version: "3.13" }
+
+      - if: ${{ steps.changed.outputs.files != '' }}
+        env:
+          RUFF_VERSION: ${{ inputs.ruffVersion || '0.14.5' }}
+        run: pip install --quiet "ruff==${RUFF_VERSION}"
+
+      - if: ${{ steps.changed.outputs.files != '' }}
+        run: |
+          set -euo pipefail
+          config=.charcuterie-lint/packages/ci/configs/ruff.toml
+
+          # `--no-force-exclude` is NOT passed: a path the config excludes stays
+          # excluded even when it is named on the command line.
+          xargs -a /tmp/pythonChanged.txt ruff check --config "$config" --output-format=github
+          xargs -a /tmp/pythonChanged.txt ruff format --config "$config" --check --diff
+
+  cppLint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+        with: { fetch-depth: 0 }
+
+      - uses: actions/checkout@v7
+        with:
+          repository: ${{ inputs.charcuterieRepository || 'Sawtaytoes/charcuterie' }}
+          ref: ${{ inputs.charcuterieRef || 'workflows-v1' }}
+          path: .charcuterie-lint
+          fetch-depth: 1
+
+      - id: changed
+        env:
+          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          EXCLUDE: ${{ inputs.cppExclude }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${BASE_SHA:-}" ] \
+            || [ "${BASE_SHA}" = "0000000000000000000000000000000000000000" ] \
+            || ! git cat-file -e "${BASE_SHA}^{commit}" 2>/dev/null
+          then
+            echo "No usable base commit — nothing to lint."
+            echo "files=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          git diff --name-only --diff-filter=d "${BASE_SHA}" HEAD \
+            | grep -E '\.(c|cc|cpp|cxx|h|hh|hpp|hxx)$' > /tmp/cppChanged.txt || true
+
+          for prefix in ${EXCLUDE:-}; do
+            grep -v "^${prefix}" /tmp/cppChanged.txt > /tmp/cppKept.txt || true
+            mv /tmp/cppKept.txt /tmp/cppChanged.txt
+          done
+
+          if [ ! -s /tmp/cppChanged.txt ]; then
+            echo "No C++ files changed."
+            echo "files=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "Checking:"
+          sed 's/^/  /' /tmp/cppChanged.txt
+          echo "files=yes" >> "$GITHUB_OUTPUT"
+
+      - if: ${{ steps.changed.outputs.files != '' }}
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq clang-format
+
+      - if: ${{ steps.changed.outputs.files != '' }}
+        run: |
+          set -euo pipefail
+
+          # `--style=file:<path>` names the config explicitly. Without it
+          # clang-format walks up from each input file looking for a
+          # `.clang-format`, and would find the consumer repo's own or none.
+          xargs -a /tmp/cppChanged.txt \
+            clang-format \
+              --style=file:.charcuterie-lint/packages/ci/configs/clang-format.yml \
+              --dry-run \
+              -Werror
