@@ -228,4 +228,21 @@ it("renders the built standalone page with arrangements, artwork, stable visibil
     await rm(source, { recursive: true, force: true })
     await rm(directory, { recursive: true, force: true })
   }
-}, 30000)
+  // ⚠️ 120 s, not 30 s — this test had a 3 SECOND margin and fell over.
+  //
+  // It launches chromium, builds the standalone page, serves it, waits for
+  // WebGL to paint and then reads pixels back. On the last run that passed
+  // (2026-09-13, CI job 103764914703) it took **26 937 ms against a 30 000 ms
+  // budget** — 90 % of the allowance. The next day it exceeded it on every
+  // run, on master at the SAME commit as well as on a branch, and blocked
+  // every pull request in the repo.
+  //
+  // Nothing in the test got slower on purpose and the lockfile pins
+  // playwright at 1.62.0, so this is runner speed. A gate whose pass depends
+  // on a hosted runner being no slower than average is not a gate.
+  //
+  // 120 s is roughly 4x the measured cost. It is deliberately not "infinity":
+  // a test that genuinely hangs must still fail rather than burn the job's
+  // whole 15 minutes. If the measured cost ever approaches 60 s, make the test
+  // cheaper instead of raising this again.
+}, 120000)
