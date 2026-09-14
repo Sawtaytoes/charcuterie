@@ -9,7 +9,7 @@ import * as stories from "./MarkdownView.stories.tsx"
 
 const {
   AllStates,
-  Default,
+  Playground,
   HostileMarkdown,
   Interactive,
   NestedLinkText,
@@ -26,7 +26,7 @@ const {
  * there is the fix.
  */
 test("there is no toolbar, not a hidden one", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   await expect(canvas.queryAllByRole("toolbar")).toEqual([])
 
@@ -47,7 +47,7 @@ test("there is no toolbar, not a hidden one", async () => {
  * asserted together.
  */
 test("it is an article whose headings are headings", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   const article = expectAgentDrivable(canvas, {
     name: "Description",
@@ -265,7 +265,7 @@ test("hostile markdown renders as characters, not as behaviour", async () => {
  * else noticing.
  */
 test("the text can be selected", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   const article = canvas.getByRole("article")
 
@@ -360,7 +360,7 @@ test.each([
  * survives a change to the base font size.
  */
 test("the document is set at prose leading", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   const article = canvas.getByRole("article")
 
@@ -379,7 +379,7 @@ test("the document is set at prose leading", async () => {
  * backticks comes out as a wall of emphasis nobody asked for.
  */
 test("a code span is smaller than the prose it sits in", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   const article = canvas.getByRole("article")
 

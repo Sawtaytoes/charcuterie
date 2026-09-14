@@ -1,5 +1,6 @@
 import type { SerializedTree } from "@charcuterie/logic"
 import { createTree, useTree } from "@charcuterie/logic"
+import { playgroundParameters } from "@charcuterie/storybook-config/story-parameters"
 import type { Meta, StoryObj } from "@storybook/react"
 import type { ReactNode } from "react"
 import { useState } from "react"
@@ -194,7 +195,8 @@ type Story = StoryObj<typeof meta>
  * A flat group of two conditions joined by ALL. Change the combinator,
  * edit a condition, or add another with "+ Add condition".
  */
-export const Default: Story = {
+export const Playground: Story = {
+  parameters: playgroundParameters,
   render: () => (
     <QueryBuilderHarness initialTree={FLAT_TREE} />
   ),

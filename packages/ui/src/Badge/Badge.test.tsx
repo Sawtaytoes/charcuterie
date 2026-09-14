@@ -11,13 +11,13 @@ import meta, * as stories from "./Badge.stories.tsx"
 const {
   Categorical,
   CategoricalLabels,
-  Default,
+  Playground,
   Interactive,
   Responsive,
 } = composeStories(stories)
 
 test("the text is queryable, which is what an agent matches on", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   // No role, deliberately — a badge is a word about something else,
   // not a live region. So there is nothing to `getByRole` and the
@@ -115,7 +115,7 @@ test("a truncated badge never paints outside its container", async () => {
 })
 
 test("a short badge gets no tooltip", async () => {
-  const { canvasElement } = await mountStory(Default)
+  const { canvasElement } = await mountStory(Playground)
 
   // The measurement has to be able to say *no*, or `title` is just
   // unconditional and every pill in a bay list grows a tooltip.

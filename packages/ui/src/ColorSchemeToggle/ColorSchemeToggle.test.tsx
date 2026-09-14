@@ -10,7 +10,7 @@ import { mountStory } from "../mountStory.testHelpers.ts"
 import { expectAgentDrivable } from "../testing/index.ts"
 import meta, * as stories from "./ColorSchemeToggle.stories.tsx"
 
-const { AllModes, Default } = composeStories(stories)
+const { AllModes, Playground } = composeStories(stories)
 
 /**
  * The name states the current mode — a screen reader that lands on
@@ -18,7 +18,7 @@ const { AllModes, Default } = composeStories(stories)
  * and an agent can find it.
  */
 test("the toggle is named for its current mode", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   expectAgentDrivable(canvas, {
     name: /colour scheme: system/i,
@@ -27,7 +27,7 @@ test("the toggle is named for its current mode", async () => {
 })
 
 test("a press cycles the mode and updates the name", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   const button = expectAgentDrivable(canvas, {
     name: /colour scheme: system/i,
@@ -53,7 +53,7 @@ test("a press cycles the mode and updates the name", async () => {
 
 test("the icon is hidden from assistive tech; the name carries it", async () => {
   const { canvas, canvasElement } =
-    await mountStory(Default)
+    await mountStory(Playground)
 
   expectAgentDrivable(canvas, {
     name: /colour scheme/i,
@@ -90,7 +90,7 @@ test("each mode renders its own control", async () => {
  * action on real app chrome.
  */
 test("defaults to the neutral intent, not accent", async () => {
-  const { canvasElement } = await mountStory(Default)
+  const { canvasElement } = await mountStory(Playground)
 
   const button = canvasElement.querySelector("button")
 

@@ -1,3 +1,4 @@
+import { playgroundParameters } from "@charcuterie/storybook-config/story-parameters"
 import type { Meta, StoryObj } from "@storybook/react"
 import type { ReactNode } from "react"
 import { useState } from "react"
@@ -106,7 +107,8 @@ const PickerHarness = ({
  * The assembled default: a button showing the current value, a
  * chevron, and the `Listbox` panel already wired to it.
  */
-export const Default: Story = {
+export const Playground: Story = {
+  parameters: playgroundParameters,
   render: () => (
     <PickerHarness
       initialValue="eng"

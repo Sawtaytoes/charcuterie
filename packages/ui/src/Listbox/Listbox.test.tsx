@@ -7,11 +7,11 @@ import { mountStory } from "../mountStory.testHelpers.ts"
 import { expectAgentDrivable } from "../testing/index.ts"
 import * as stories from "./Listbox.stories.tsx"
 
-const { AllStates, AllVariants, Default, Interactive } =
+const { AllStates, AllVariants, Playground, Interactive } =
   composeStories(stories)
 
 test("a button opens a listbox whose rows are options", async () => {
-  const { body, canvas } = await mountStory(Default)
+  const { body, canvas } = await mountStory(Playground)
 
   const trigger = expectAgentDrivable(canvas, {
     name: "Choose a language",
@@ -74,7 +74,7 @@ test("opening focuses the seeded selection, which reads selected", async () => {
 })
 
 test("the arrow keys move focus and skip the disabled option", async () => {
-  const { body, canvas } = await mountStory(Default)
+  const { body, canvas } = await mountStory(Playground)
 
   await userEvent.click(
     expectAgentDrivable(canvas, {
@@ -116,7 +116,7 @@ test("the arrow keys move focus and skip the disabled option", async () => {
 })
 
 test("type-ahead jumps to the first match", async () => {
-  const { body, canvas } = await mountStory(Default)
+  const { body, canvas } = await mountStory(Playground)
 
   await userEvent.click(
     expectAgentDrivable(canvas, {
@@ -163,7 +163,7 @@ test("Enter selects the focused option and closes", async () => {
 })
 
 test("Escape dismisses without choosing, and there is one tab stop", async () => {
-  const { body, canvas } = await mountStory(Default)
+  const { body, canvas } = await mountStory(Playground)
 
   await userEvent.click(
     expectAgentDrivable(canvas, {

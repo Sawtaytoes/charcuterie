@@ -35,7 +35,10 @@ const DESKTOP = { height: 900, width: 1440 }
 const PHONE = { height: 844, width: 390 }
 
 const TEMPLATES = [
-  ["01-header-and-main", "components-shell--default"],
+  [
+    "01-header-and-main",
+    "components-layout-shell--playground",
+  ],
   ["02-start-rail", "components-shell--with-start-rail"],
   ["03-both-rails", "components-shell--with-both-rails"],
 ]

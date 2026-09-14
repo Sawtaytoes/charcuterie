@@ -26,6 +26,12 @@ fork.
 - **`themeParameters({ isA11yEnforced })`** — the a11y + controls
   parameters (`isA11yEnforced` fails the run on an axe violation
   instead of only reporting).
+- **`hiddenPanelOptions`** / **`playgroundParameters`** — the
+  addon panel, closed by default and opened by one story. Spread
+  `hiddenPanelOptions` into the preview's `options` beside
+  `storySort`; put `parameters: playgroundParameters` on the single
+  story per component whose `args` drive one instance. Both live at
+  `/story-parameters` and are re-exported here.
 - **`docsAddonWithGfm`** — `@storybook/addon-docs` wired for
   GitHub-flavoured Markdown tables.
 - **`charcuterieViteFinal({ isReactDeduped })`** — Tailwind v4 in
@@ -92,6 +98,13 @@ to import from `main.ts`. `/preview` is **browser-side** and pulls
 in React and `@storybook/addon-docs/blocks`; `/vite` pulls in
 Tailwind. They are split so a `main.ts` import never drags browser or
 Tailwind code into a Node process that has no use for it.
+
+**`/story-parameters` is a third, and it imports nothing at all.**
+`hiddenPanelOptions` and `playgroundParameters` are plain objects, but
+a `*.stories.tsx` is the file that needs `playgroundParameters`, and
+that file is imported by `composeStories` in a Vitest run. Reaching
+for `/preview` there would pull the docs blocks into every unit test.
+Import the leaf from a story; import `/preview` from a preview.
 
 `/preview` must never be tree-shaken: its top-level
 `@storybook/addon-docs/blocks` import is the React-Aria focus patch

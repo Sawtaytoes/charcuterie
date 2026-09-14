@@ -13,7 +13,7 @@ import {
 import * as stories from "./Shell.stories.tsx"
 
 const {
-  Default,
+  Playground,
   Interactive,
   Responsive,
   Scrollable,
@@ -270,7 +270,7 @@ test("header and main are capped at the same width", async () => {
   await setViewport(DESKTOP)
 
   const { canvas, canvasElement } =
-    await mountStory(Default)
+    await mountStory(Playground)
 
   // The inner rows, not the landmarks: the `<header>` and
   // `<main>` are both full-bleed on purpose, and it is the row

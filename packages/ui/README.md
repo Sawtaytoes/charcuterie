@@ -284,8 +284,13 @@ rename breaks only the rendered page).
    ([decision](../../docs/decisions/2026-08-21-a-deprecation-is-a-badge-in-place-and-the-sidebar-has-groups.md)).
 2. Colours from `intentStyles.ts`, sizes from `controlStyles.ts`. No hex, no `*-slate-*`
    (a test checks).
-3. The five stories: `Default`, `AllVariants`, `AllStates`, `Responsive` (three container
-   widths, via `ContainerBoard`), `Interactive` (the complete keyboard path).
+3. The five stories: `Playground`, `AllVariants`, `AllStates`, `Responsive` (three
+   container widths, via `ContainerBoard`), `Interactive` (the complete keyboard path).
+   **`Playground` is the only one that carries `parameters: playgroundParameters`.** The
+   addon panel is closed on every story in this Storybook, and that line is how the one
+   story whose `args` drive a single instance opens it again. The other four render their
+   own matrix, so a control moves at most one cell of the board
+   ([decision](../../docs/decisions/2026-09-13-the-addon-panel-is-closed-except-on-the-playground-story.md)).
 4. Export from `src/index.ts` — the one sanctioned barrel. Components import each other
    directly, never through it.
 5. **If it is an overlay, portal it to the body** — `FloatingPortal`, through

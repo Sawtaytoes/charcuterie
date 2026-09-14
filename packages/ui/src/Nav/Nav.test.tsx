@@ -12,11 +12,11 @@ import { mountStory } from "../mountStory.testHelpers.ts"
 import { expectAgentDrivable } from "../testing/index.ts"
 import * as stories from "./Nav.stories.tsx"
 
-const { AllStates, AllVariants, Default, Interactive } =
+const { AllStates, AllVariants, Playground, Interactive } =
   composeStories(stories)
 
 test("the destinations are a named navigation landmark", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   const nav = expectAgentDrivable(canvas, {
     name: "Main",
@@ -33,7 +33,7 @@ test("the destinations are a named navigation landmark", async () => {
  * a new tab", the status bar, and "copy link address".
  */
 test("every destination is a real link with an href", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   const links = canvas.getAllByRole("link")
 
@@ -45,7 +45,7 @@ test("every destination is a real link with an href", async () => {
 })
 
 test("the current destination is announced, not only coloured", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   const current = canvas.getByRole("link", {
     name: "Library",
@@ -240,7 +240,7 @@ test("a long label truncates rather than widening the column", async () => {
  * button permanently.
  */
 test("a bar with room shows no menu trigger", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   const nav = canvas.getByRole("navigation", {
     name: "Main",
@@ -330,7 +330,7 @@ test("a folded destination is still a real link", async () => {
  * tell which one a human can see.
  */
 test("a destination is mounted exactly once", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   expect(
     canvas.getAllByRole("link", { name: "Tonight" }),

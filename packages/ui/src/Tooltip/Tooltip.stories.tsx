@@ -1,3 +1,4 @@
+import { playgroundParameters } from "@charcuterie/storybook-config/story-parameters"
 import type { Meta, StoryObj } from "@storybook/react"
 
 import { placementArgType } from "../argTypes.storyHelpers.ts"
@@ -26,7 +27,8 @@ export default meta
 
 type Story = StoryObj<typeof meta>
 
-export const Default: Story = {
+export const Playground: Story = {
+  parameters: playgroundParameters,
   args: {
     children: <Button appearance="outline">Retry</Button>,
     label: "Re-reads the disc from title 1.",

@@ -1,3 +1,4 @@
+import { playgroundParameters } from "@charcuterie/storybook-config/story-parameters"
 import type { Meta, StoryObj } from "@storybook/react"
 import { Button } from "../Button/Button.tsx"
 import {
@@ -30,7 +31,8 @@ type Story = StoryObj<typeof meta>
  * The heading is the handle. Eleven copies of "Nothing here" in a
  * `<div>` are indistinguishable to an agent; a named heading is not.
  */
-export const Default: Story = {
+export const Playground: Story = {
+  parameters: playgroundParameters,
   args: {
     description:
       "Insert a disc and rip-deck will pick it up automatically.",

@@ -1,3 +1,4 @@
+import { playgroundParameters } from "@charcuterie/storybook-config/story-parameters"
 import type { Meta, StoryObj } from "@storybook/react"
 
 import {
@@ -28,7 +29,8 @@ export default meta
 
 type Story = StoryObj<typeof meta>
 
-export const Default: Story = {
+export const Playground: Story = {
+  parameters: playgroundParameters,
   args: { children: "Announced, never printed." },
   render: (visuallyHiddenProps) => (
     <StoryGrid columns={2}>
