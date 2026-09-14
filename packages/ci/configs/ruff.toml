@@ -1,0 +1,73 @@
+# The fleet's shared Python lint and format config.
+#
+# ⚠️ This file is READ FROM A CHECKOUT, not installed. `@charcuterie/ci` is not
+# published to npm, and a Python repo could not `yarn add` it anyway — there is
+# no dependency path from a Python project to an npm package. So the config gets
+# to a consumer the same way `docsLint.js` does: `shared-native-lint.yml` checks
+# this repo out and points `ruff` at this file with `--config`.
+#
+# A repo that wants to run the same check by hand:
+#
+#   ruff check --config <charcuterie>/packages/ci/configs/ruff.toml .
+#   ruff format --check --config <charcuterie>/packages/ci/configs/ruff.toml .
+#
+# ⚠️ A repo does NOT copy this file. A copy drifts, which is the whole reason
+# the ESLint and Biome configs are adopted rather than composed. A genuine
+# repo-local need is a `[tool.ruff]` table in that repo's own `pyproject.toml`
+# holding ONLY the delta, and a house rule is a change here.
+
+# 100, because that is what `hardcopy` and `automatic-projector-lens-memory`
+# already set by hand. Codifying the convention the fleet arrived at beats
+# inventing a different one and reformatting both repos.
+line-length = 100
+target-version = "py311"
+
+# Ruff reads `extend-exclude` on TOP of its own defaults (`.venv`, `node_modules`,
+# `__pycache__`, `.git`, build directories), so those do not need repeating.
+extend-exclude = [
+  # ESPHome and Home Assistant generate these. Nobody edits them.
+  ".esphome",
+  "esphome/.esphome",
+]
+
+[lint]
+select = [
+  "F",    # pyflakes — undefined names, unused imports, the real defects
+  "E",    # pycodestyle errors
+  "W",    # pycodestyle warnings
+  "I",    # isort — import order, so a diff is not half import churn
+  "UP",   # pyupgrade — no `typing.List` in a py311 file
+  "B",    # bugbear — mutable default arguments and friends
+  "C4",   # comprehensions
+  "SIM",  # simplifiable code
+  "RUF",  # ruff's own rules
+]
+
+ignore = [
+  # `ruff format` owns line length. Leaving E501 on means a long URL in a
+  # comment, which the formatter cannot break, fails the gate forever.
+  "E501",
+
+  # The house writes en dashes and em dashes on purpose, in prose and in error
+  # messages. RUF001/2/3 read every one of them as a typo for a hyphen. They
+  # are aimed at a homoglyph attack, which is not a threat model for a message
+  # string in a household display client, and enforcing them would rewrite
+  # `500–7000ms` into `500-7000ms` across the fleet.
+  "RUF001",
+  "RUF002",
+  "RUF003",
+]
+
+[lint.per-file-ignores]
+# A test asserts on the thing it imported; an unused import there is usually a
+# fixture, and `assert` is the point.
+"**/test_*.py" = ["F401"]
+"**/*_test.py" = ["F401"]
+
+[format]
+# Double quotes: `ruff format`'s default, Black's default, and what the fleet's
+# Python already writes (castkit's `inkcast_receiver.py` is 179 double to 28
+# single). It also matches the JavaScript side, so an agent moving between them
+# does not have to remember which language it is in.
+quote-style = "double"
+indent-style = "space"
