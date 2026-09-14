@@ -5,7 +5,7 @@ import { test } from "vitest"
 import { mountStory } from "../mountStory.testHelpers.ts"
 import * as stories from "./MarkdownEditorCodeMirror.stories.tsx"
 
-const { AllStates, CaretReveal, Default, Uploading } =
+const { AllStates, CaretReveal, Playground, Uploading } =
   composeStories(stories)
 
 type Canvas = Awaited<
@@ -169,7 +169,7 @@ test("a click low in an empty field lands in the document", async () => {
  * anywhere in this stack would have quietly taken away.
  */
 test("a document taller than the frame grows it", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   const content = canvas.getByRole("textbox", {
     name: "Description",
@@ -235,7 +235,7 @@ test("the toolbar offers Image when uploads are wired", async () => {
 /** A button that opens a file picker and then has nowhere to send
  * the file is worse than no button. */
 test("the toolbar hides Image when nothing can take the file", async () => {
-  const { body, canvas } = await mountStory(Default)
+  const { body, canvas } = await mountStory(Playground)
 
   const overflow = canvas.queryByRole("button", {
     name: "More actions",

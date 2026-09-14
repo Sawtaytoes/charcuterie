@@ -1,3 +1,4 @@
+import { playgroundParameters } from "@charcuterie/storybook-config/story-parameters"
 import type { Meta, StoryObj } from "@storybook/react"
 import type { ReactNode } from "react"
 import { useState } from "react"
@@ -153,7 +154,8 @@ type Story = StoryObj<typeof Nav>
  * A header row, which is what an app with a handful of destinations
  * wants: ai-usage, folio, mux-magic, portly-controllers.
  */
-export const Default: Story = {
+export const Playground: Story = {
+  parameters: playgroundParameters,
   args: {
     activeHref: "/library",
     items: STATION_ITEMS,

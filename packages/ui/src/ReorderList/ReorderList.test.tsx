@@ -10,7 +10,7 @@ import { expectNoAxeViolations } from "../expectNoAxeViolations.testHelpers.ts"
 import { mountStory } from "../mountStory.testHelpers.ts"
 import * as stories from "./ReorderList.stories.tsx"
 
-const { Default, SingleItem } = composeStories(stories)
+const { Playground, SingleItem } = composeStories(stories)
 
 /**
  * The rows come back in the DOM order the list draws them, which is
@@ -25,7 +25,7 @@ const getRowLabels = (canvas: ReturnType<typeof within>) =>
     .filter((text: string) => text !== "")
 
 test("moves a row later with the button, and says where it went", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   await userEvent.click(
     canvas.getByRole("button", {
@@ -56,7 +56,7 @@ test("moves a row later with the button, and says where it went", async () => {
 })
 
 test("moves a row earlier, and the ends stay disabled", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   expect(
     canvas.getByRole("button", {
@@ -93,7 +93,7 @@ test("a one-row list offers no drag handle", async () => {
 })
 
 test("the handle takes the gesture away from the browser's scroll", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   const grip = canvas.getAllByTitle("Drag to reorder")[0]
 
@@ -118,7 +118,7 @@ test("the handle takes the gesture away from the browser's scroll", async () => 
  * passes or fails for a reason the component does not have.
  */
 test("drags a row past the one below it", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   const grip = canvas.getAllByTitle("Drag to reorder")[0]
 
@@ -159,7 +159,7 @@ test("drags a row past the one below it", async () => {
  * and every stray tap on a row reorders the list.
  */
 test("a press with no movement reorders nothing", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   const grip = canvas.getAllByTitle("Drag to reorder")[0]
 
@@ -184,7 +184,7 @@ test("a press with no movement reorders nothing", async () => {
 })
 
 test("has no axe violations", async () => {
-  const { canvasElement } = await mountStory(Default)
+  const { canvasElement } = await mountStory(Playground)
 
   await expectNoAxeViolations(canvasElement)
 })

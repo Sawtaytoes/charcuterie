@@ -7,12 +7,12 @@ import { mountStory } from "../mountStory.testHelpers.ts"
 import { expectAgentDrivable } from "../testing/index.ts"
 import * as stories from "./Accordion.stories.tsx"
 
-const { AllStates, AllVariants, Default } =
+const { AllStates, AllVariants, Playground } =
   composeStories(stories)
 
 test("a trigger says what it controls and whether it is open", async () => {
   const { canvas, canvasElement } =
-    await mountStory(Default)
+    await mountStory(Playground)
 
   const disc = expectAgentDrivable(canvas, {
     name: "Disc",
@@ -57,7 +57,7 @@ test("a trigger says what it controls and whether it is open", async () => {
  * frame later.
  */
 test("the initially expanded section is expanded on the first paint", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   const expanded = canvas
     .queryAllByRole("button")
@@ -72,7 +72,7 @@ test("the initially expanded section is expanded on the first paint", async () =
 })
 
 test("exclusive means opening one closes the other", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   const log = expectAgentDrivable(canvas, {
     name: "Log",

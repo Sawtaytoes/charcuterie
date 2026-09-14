@@ -7,12 +7,12 @@ import { mountStory } from "../mountStory.testHelpers.ts"
 import { expectAgentDrivable } from "../testing/index.ts"
 import * as stories from "./Switch.stories.tsx"
 
-const { AllStates, Default, Interactive } =
+const { AllStates, Playground, Interactive } =
   composeStories(stories)
 
 test("it is a switch a screen reader can name and read", async () => {
   const { canvas, canvasElement } =
-    await mountStory(Default)
+    await mountStory(Playground)
 
   const control = expectAgentDrivable(canvas, {
     name: "Automatic imports",

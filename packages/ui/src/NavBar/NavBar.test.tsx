@@ -15,13 +15,13 @@ import * as stories from "./NavBar.stories.tsx"
 const {
   AllStates,
   AllVariants,
-  Default,
+  Playground,
   InAppShell,
   Interactive,
 } = composeStories(stories)
 
 test("the nav is named, and its destinations are links", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   const nav = expectAgentDrivable(canvas, {
     name: "Main",
@@ -48,7 +48,7 @@ test("the nav is named, and its destinations are links", async () => {
  * button permanently.
  */
 test("a bar with room shows no menu trigger", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   const nav = expectAgentDrivable(canvas, {
     name: "Main",

@@ -6,10 +6,10 @@ import { mountStory } from "../mountStory.testHelpers.ts"
 import { expectAgentDrivable } from "../testing/index.ts"
 import * as stories from "./LiveStatusIndicator.stories.tsx"
 
-const { Default, Interactive } = composeStories(stories)
+const { Playground, Interactive } = composeStories(stories)
 
 test("it is a named live region with a stable status handle", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   const indicator = expectAgentDrivable(canvas, {
     name: "Connected",

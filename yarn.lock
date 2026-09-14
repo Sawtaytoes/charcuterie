@@ -1018,6 +1018,7 @@ __metadata:
   resolution: "@charcuterie/ui@workspace:packages/ui"
   dependencies:
     "@charcuterie/logic": "workspace:*"
+    "@charcuterie/storybook-config": "workspace:*"
     "@charcuterie/tokens": "workspace:*"
     "@codemirror/commands": "npm:^6"
     "@codemirror/lang-markdown": "npm:^6"

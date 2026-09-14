@@ -6,7 +6,7 @@ import { expectNoAxeViolations } from "../expectNoAxeViolations.testHelpers.ts"
 import { mountStory } from "../mountStory.testHelpers.ts"
 import * as stories from "./FileDropZone.stories.tsx"
 
-const { AllStates, AllVariants, Default, Interactive } =
+const { AllStates, AllVariants, Playground, Interactive } =
   composeStories(stories)
 
 /**
@@ -45,7 +45,7 @@ const { AllStates, AllVariants, Default, Interactive } =
  */
 test("the zone is a real file input, reachable and named", async () => {
   const { canvas, canvasElement } =
-    await mountStory(Default)
+    await mountStory(Playground)
 
   const input = canvas.getByLabelText(
     "Drop a disc image here",
@@ -198,7 +198,7 @@ test("a dropped link reports as text", async () => {
  * the correct fix and is reproduced here.
  */
 test("the highlight survives crossing a child element", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   const zone = canvas
     .getByLabelText("Drop a disc image here")

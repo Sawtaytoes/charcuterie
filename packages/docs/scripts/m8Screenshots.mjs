@@ -59,7 +59,7 @@ const shots = [
     open: "Open (escapes the clip)",
   },
   {
-    id: "components-dialog--default",
+    id: "components-overlays-dialog--playground",
     name: "m8-dialog-default",
     open: "Show the read error",
   },

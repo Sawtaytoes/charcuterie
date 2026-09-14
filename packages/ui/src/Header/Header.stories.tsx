@@ -1,3 +1,4 @@
+import { playgroundParameters } from "@charcuterie/storybook-config/story-parameters"
 import type { Meta, StoryObj } from "@storybook/react"
 
 import { Badge } from "../Badge/Badge.tsx"
@@ -41,7 +42,8 @@ type Story = StoryObj<typeof meta>
  * and a fill that is `surface-raised` rather than the page's own
  * colour.
  */
-export const Default: Story = {
+export const Playground: Story = {
+  parameters: playgroundParameters,
   args: { heading: "Rip Deck" },
   render: (headerProps) => (
     <Shell>

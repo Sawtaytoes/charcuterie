@@ -71,7 +71,7 @@ const browser = await chromium.launch()
 const SHOTS = [
   {
     name: "01-wide-every-destination",
-    storyId: "components-layout-navbar--default",
+    storyId: "components-layout-navbar--playground",
     viewport: { width: 1000, height: 160 },
   },
   {
