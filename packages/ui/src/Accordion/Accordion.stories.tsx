@@ -1,3 +1,4 @@
+import { playgroundParameters } from "@charcuterie/storybook-config/story-parameters"
 import type { Meta, StoryObj } from "@storybook/react"
 
 import { Badge } from "../Badge/Badge.tsx"
@@ -67,7 +68,8 @@ export default meta
 
 type Story = StoryObj<typeof meta>
 
-export const Default: Story = {
+export const Playground: Story = {
+  parameters: playgroundParameters,
   args: { expandedKeys: ["disc"], items: JOB_SECTIONS },
 }
 

@@ -1,3 +1,4 @@
+import { playgroundParameters } from "@charcuterie/storybook-config/story-parameters"
 import type { Meta, StoryObj } from "@storybook/react"
 import type { ReactNode } from "react"
 import { useState } from "react"
@@ -46,7 +47,8 @@ const ToastList = ({
   </ul>
 )
 
-export const Default: Story = {
+export const Playground: Story = {
+  parameters: playgroundParameters,
   args: {
     children: "Blade Runner (1982) · 9 titles.",
     title: "Rip finished",

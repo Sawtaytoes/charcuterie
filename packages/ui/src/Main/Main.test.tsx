@@ -14,7 +14,7 @@ import * as stories from "./Main.stories.tsx"
 import { forgetScrollOffsets } from "./scrollMemory.ts"
 
 const {
-  Default,
+  Playground,
   Interactive,
   Responsive,
   ScrollMemory,
@@ -34,7 +34,7 @@ afterEach(() => {
 test("the content column is capped at the token, not at the window", async () => {
   await setViewport(DESKTOP)
 
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   const column = canvas.getByRole("main")
     .firstElementChild as HTMLElement
@@ -63,7 +63,7 @@ test("the content column is capped at the token, not at the window", async () =>
 test("main is the query container its content responds to", async () => {
   await setViewport(DESKTOP)
 
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   const column = canvas.getByRole("main")
     .firstElementChild as HTMLElement

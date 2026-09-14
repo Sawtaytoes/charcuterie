@@ -11,7 +11,7 @@ const {
   AllStates,
   AllVariants,
   Blank,
-  Default,
+  Playground,
   Interactive,
   NoUpload,
   Responsive,
@@ -59,7 +59,7 @@ const resyncHarness = (editor: HTMLTextAreaElement) => {
  */
 test("the surface is a real textbox an agent can find", async () => {
   const { canvas, canvasElement } =
-    await mountStory(Default)
+    await mountStory(Playground)
 
   expectAgentDrivable(canvas, {
     name: "Description",
@@ -77,7 +77,7 @@ test("the surface is a real textbox an agent can find", async () => {
 
 test("the toolbar is one tab stop with arrow keys inside it", async () => {
   const { canvas, canvasElement } =
-    await mountStory(Default)
+    await mountStory(Playground)
 
   expectAgentDrivable(canvas, {
     name: "Markdown formatting",
@@ -133,7 +133,7 @@ test("markdown goes in and the same markdown comes out", async () => {
  * drifts away from the glyphs it is supposed to be sitting between.
  */
 test("the painted layer holds exactly the textarea's text", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   const editor = getEditor(canvas, "Description")
 

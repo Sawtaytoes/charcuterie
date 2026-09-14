@@ -7,12 +7,12 @@ import { mountStory } from "../mountStory.testHelpers.ts"
 import { expectAgentDrivable } from "../testing/index.ts"
 import * as stories from "./Modal.stories.tsx"
 
-const { Alert, Default, Interactive } =
+const { Alert, Playground, Interactive } =
   composeStories(stories)
 
 test("the base modal portals to the body, named by its aria-label", async () => {
   const { body, canvas, canvasElement } =
-    await mountStory(Default)
+    await mountStory(Playground)
 
   await userEvent.click(
     expectAgentDrivable(canvas, {
@@ -50,7 +50,7 @@ test("an alertdialog role is carried through", async () => {
 })
 
 test("Escape and an outside press both close through onClose", async () => {
-  const { body, canvas } = await mountStory(Default)
+  const { body, canvas } = await mountStory(Playground)
 
   const trigger = expectAgentDrivable(canvas, {
     name: "Open the base modal",

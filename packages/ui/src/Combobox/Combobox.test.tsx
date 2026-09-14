@@ -11,7 +11,7 @@ const {
   AllVariants,
   AttachedInputDrillDown,
   ChosenValueOnOpen,
-  Default,
+  Playground,
   DisabledFirstOption,
   Interactive,
   LongFooter,
@@ -42,7 +42,7 @@ const openMulti = async () => {
 }
 
 const openDefault = async () => {
-  const mounted = await mountStory(Default)
+  const mounted = await mountStory(Playground)
 
   await userEvent.click(
     expectAgentDrivable(mounted.canvas, {

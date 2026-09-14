@@ -15,13 +15,13 @@ import * as stories from "./Toolbar.stories.tsx"
 const {
   AllStates,
   AllVariants,
-  Default,
+  Playground,
   InAppShell,
   Interactive,
 } = composeStories(stories)
 
 test("the toolbar is named, and its actions are buttons", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   const toolbar = expectAgentDrivable(canvas, {
     name: "Deck actions",
@@ -43,7 +43,7 @@ test("the toolbar is named, and its actions are buttons", async () => {
  * popover permanently.
  */
 test("a bar with room shows no overflow trigger", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   const toolbar = expectAgentDrivable(canvas, {
     name: "Deck actions",
@@ -73,7 +73,7 @@ test("a bar with room shows no overflow trigger", async () => {
  * the app's own component and most of them forward no `tabIndex`.
  */
 test("the toolbar is one tab stop", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   const toolbar = expectAgentDrivable(canvas, {
     name: "Deck actions",
@@ -98,7 +98,7 @@ test("the toolbar is one tab stop", async () => {
 })
 
 test("the arrow keys move along the row", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   const start = expectAgentDrivable(canvas, {
     name: "Start rip",

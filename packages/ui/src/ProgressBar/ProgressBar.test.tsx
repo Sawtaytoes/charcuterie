@@ -6,11 +6,11 @@ import { mountStory } from "../mountStory.testHelpers.ts"
 import { expectAgentDrivable } from "../testing/index.ts"
 import * as stories from "./ProgressBar.stories.tsx"
 
-const { Default, Indeterminate, Interactive } =
+const { Playground, Indeterminate, Interactive } =
   composeStories(stories)
 
 test("the name is real and the value sits on the track", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   const bar = expectAgentDrivable(canvas, {
     name: "Ripping title 4 of 9",

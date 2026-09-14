@@ -11,7 +11,7 @@ import {
 } from "../viewport.testHelpers.ts"
 import * as stories from "./DataTable.stories.tsx"
 
-const { AllVariants, Default, Interactive, Responsive } =
+const { AllVariants, Playground, Interactive, Responsive } =
   composeStories(stories)
 
 /**
@@ -23,7 +23,7 @@ const { AllVariants, Default, Interactive, Responsive } =
  */
 test("the table is drivable by role and name", async () => {
   const { canvas, canvasElement } =
-    await mountStory(Default)
+    await mountStory(Playground)
 
   const table = expectAgentDrivable(canvas, {
     name: "Tasks",
@@ -43,7 +43,7 @@ test("the table is drivable by role and name", async () => {
  * cannot be sorted", where `"none"` would say the opposite.
  */
 test("sortable columns announce, unsortable ones stay silent", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   const updated = expectAgentDrivable(canvas, {
     name: "Updated",

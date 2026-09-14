@@ -16,7 +16,7 @@ const {
   AccentEdge,
   AllStates,
   CardMenuItems,
-  Default,
+  Playground,
   InBoardScreen,
   Interactive,
   MarkdownTitles,
@@ -188,7 +188,7 @@ test("the priority bar's meaning is available as text", async () => {
  * a promise.
  */
 test("a board with no onMove has no move handles", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   await expect(
     canvas.queryAllByRole("button", { name: /^Move / }),

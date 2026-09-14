@@ -1,3 +1,4 @@
+import { playgroundParameters } from "@charcuterie/storybook-config/story-parameters"
 import type { Meta, StoryObj } from "@storybook/react"
 import type { ReactNode } from "react"
 
@@ -131,7 +132,8 @@ type Story = StoryObj<typeof meta>
  * a trigger that shows at every width is not a fold, it is a nav
  * you have permanently hidden.
  */
-export const Default: Story = {
+export const Playground: Story = {
+  parameters: playgroundParameters,
   render: (navBarProps) => (
     <Frame inlineSize="52rem">
       <NavBar {...navBarProps} />

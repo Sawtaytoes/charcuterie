@@ -1,3 +1,4 @@
+import { playgroundParameters } from "@charcuterie/storybook-config/story-parameters"
 import type { Meta, StoryObj } from "@storybook/react"
 import type { ReactNode } from "react"
 import { useState } from "react"
@@ -99,7 +100,8 @@ const DatePickerHarness = ({
  * `19 aug`, `2026-08-19` and a bare `19` all resolve, and the line
  * underneath shows what they resolved to before anything commits.
  */
-export const Default: Story = {
+export const Playground: Story = {
+  parameters: playgroundParameters,
   args: { label: "Due date" },
   render: () => <DatePickerHarness label="Due date" />,
 }

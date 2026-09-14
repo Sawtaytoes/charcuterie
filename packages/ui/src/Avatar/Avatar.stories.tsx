@@ -1,3 +1,4 @@
+import { playgroundParameters } from "@charcuterie/storybook-config/story-parameters"
 import type { Meta, StoryObj } from "@storybook/react"
 
 import { categoricalArgType } from "../argTypes.storyHelpers.ts"
@@ -75,7 +76,9 @@ type Story = StoryObj<typeof meta>
  * a screen reader and on hover for a pointer, and it is not printed
  * anywhere — `getByRole("img", { name: "Ada Lovelace" })` resolves.
  */
-export const Default: Story = {}
+export const Playground: Story = {
+  parameters: playgroundParameters,
+}
 
 /**
  * The three appearances, and the ten colours the scale holds.

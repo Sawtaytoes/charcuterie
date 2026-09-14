@@ -38,7 +38,7 @@ import * as stories from "./VirtualizedGrid.stories.tsx"
 
 const {
   AllStates,
-  Default,
+  Playground,
   InHiddenTabPanel,
   InShellScrollRegion,
 } = composeStories(stories)
@@ -84,7 +84,7 @@ const getRowIndexes = (canvasElement: HTMLElement) => [
 ]
 
 test("2,000 items mount as a few dozen cells", async () => {
-  const { canvasElement } = await mountStory(Default)
+  const { canvasElement } = await mountStory(Playground)
 
   await waitFor(async () => {
     await expect(
@@ -102,7 +102,7 @@ test("2,000 items mount as a few dozen cells", async () => {
 })
 
 test("the page is still as tall as the whole list", async () => {
-  const { canvasElement } = await mountStory(Default)
+  const { canvasElement } = await mountStory(Playground)
 
   await waitFor(async () => {
     await expect(
@@ -123,7 +123,7 @@ test("the page is still as tall as the whole list", async () => {
 })
 
 test("scrolling changes which rows exist", async () => {
-  const { canvasElement } = await mountStory(Default)
+  const { canvasElement } = await mountStory(Playground)
 
   await waitFor(async () => {
     await expect(
@@ -325,7 +325,7 @@ test("a grid inside a hidden panel mounts nothing and reveals without scrolling"
 })
 
 test("a screen reader is told the real length", async () => {
-  const { canvasElement } = await mountStory(Default)
+  const { canvasElement } = await mountStory(Playground)
 
   await waitFor(async () => {
     await expect(

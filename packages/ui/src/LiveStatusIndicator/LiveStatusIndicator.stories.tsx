@@ -2,6 +2,7 @@ import {
   connectionTransitions,
   useStatus,
 } from "@charcuterie/logic"
+import { playgroundParameters } from "@charcuterie/storybook-config/story-parameters"
 import type { Meta, StoryObj } from "@storybook/react"
 
 import { connectionStatusArgType } from "../argTypes.storyHelpers.ts"
@@ -40,7 +41,8 @@ type Story = StoryObj<typeof meta>
  * handle for a Playwright assertion, because it survives translation
  * where the visible wording does not.
  */
-export const Default: Story = {
+export const Playground: Story = {
+  parameters: playgroundParameters,
   args: { status: "connected" },
 }
 

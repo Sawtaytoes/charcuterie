@@ -7,12 +7,12 @@ import { mountStory } from "../mountStory.testHelpers.ts"
 import { expectAgentDrivable } from "../testing/index.ts"
 import * as stories from "./Select.stories.tsx"
 
-const { AllStates, AllVariants, Default, Sized } =
+const { AllStates, AllVariants, Playground, Sized } =
   composeStories(stories)
 
 test("a select is named, and therefore findable", async () => {
   const { canvas, canvasElement } =
-    await mountStory(Default)
+    await mountStory(Playground)
 
   // Twelve of the fleet's fourteen native selects have neither a
   // `<label for>` nor an `aria-label`, so this query returns nothing
@@ -26,7 +26,7 @@ test("a select is named, and therefore findable", async () => {
 })
 
 test("choosing reports the value outward", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   const select = expectAgentDrivable(canvas, {
     name: "Rip profile",
@@ -64,7 +64,7 @@ test("the initial value seeds the DOM and nothing more", async () => {
 })
 
 test("a disabled option stays announced", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   const select = expectAgentDrivable(canvas, {
     name: "Rip profile",

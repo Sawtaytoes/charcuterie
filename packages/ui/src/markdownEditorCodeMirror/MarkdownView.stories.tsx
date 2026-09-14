@@ -1,3 +1,4 @@
+import { playgroundParameters } from "@charcuterie/storybook-config/story-parameters"
 import type { Meta, StoryObj } from "@storybook/react"
 import { useState } from "react"
 
@@ -183,7 +184,9 @@ type Story = StoryObj<typeof meta>
  * `getAllByRole("toolbar")` returns nothing, because nothing in this
  * component can render one.
  */
-export const Default: Story = {}
+export const Playground: Story = {
+  parameters: playgroundParameters,
+}
 
 /**
  * The same string, in both surfaces, side by side.

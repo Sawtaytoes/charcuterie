@@ -1,3 +1,4 @@
+import { playgroundParameters } from "@charcuterie/storybook-config/story-parameters"
 import type { Meta, StoryObj } from "@storybook/react"
 
 import {
@@ -91,7 +92,8 @@ type Story = StoryObj<typeof meta>
  * genuinely larger, `**` is nowhere on screen, the checkboxes are
  * checkboxes, and the bare URL is a link.
  */
-export const Default: Story = {
+export const Playground: Story = {
+  parameters: playgroundParameters,
   args: {
     defaultValue: SAMPLE,
     label: "Description",

@@ -36,7 +36,7 @@ import * as stories from "./AdaptiveGrid.stories.tsx"
  * all.
  */
 
-const { AllStates, AllVariants, Default, Responsive } =
+const { AllStates, AllVariants, Playground, Responsive } =
   composeStories(stories)
 
 /**
@@ -109,7 +109,7 @@ test("the grid re-columns when its container resizes", async () => {
   // need two stacks; at 700px wide only one column fits, and at
   // 1280px the second one it wanted is finally allowed.
   const { canvasElement } = await mountAtInlineSize(
-    Default,
+    Playground,
     700,
   )
 
@@ -147,7 +147,7 @@ test("height buys the column, and width only caps it", async () => {
 
 test("the content cap widens with the columns", async () => {
   const { canvasElement } = await mountAtInlineSize(
-    Default,
+    Playground,
     1280,
   )
 
@@ -163,7 +163,7 @@ test("the content cap widens with the columns", async () => {
 
 test("the measured box is never the capped box", async () => {
   const { canvasElement } = await mountAtInlineSize(
-    Default,
+    Playground,
     1280,
   )
 
@@ -203,7 +203,7 @@ test("one item is one column at a reading measure", async () => {
 
 test("a long unbroken string does not push a track wide", async () => {
   const { canvasElement } = await mountAtInlineSize(
-    Default,
+    Playground,
     1280,
   )
 

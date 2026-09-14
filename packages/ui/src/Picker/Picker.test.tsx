@@ -7,12 +7,12 @@ import { mountStory } from "../mountStory.testHelpers.ts"
 import { expectAgentDrivable } from "../testing/index.ts"
 import * as stories from "./Picker.stories.tsx"
 
-const { AllStates, Default, Interactive, NextToText } =
+const { AllStates, Playground, Interactive, NextToText } =
   composeStories(stories)
 
 test("the trigger's accessible name carries the current value", async () => {
   const { canvas, canvasElement } =
-    await mountStory(Default)
+    await mountStory(Playground)
 
   // Not a bare "Language": the button's VISIBLE text is the value, and
   // WCAG 2.5.3 wants the visible text inside the accessible name.

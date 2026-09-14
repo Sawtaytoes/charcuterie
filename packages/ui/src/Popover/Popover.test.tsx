@@ -10,14 +10,14 @@ import * as stories from "./Popover.stories.tsx"
 const {
   AllStates,
   AllVariants,
-  Default,
+  Playground,
   EscapesOverflowClip,
   Interactive,
   Responsive,
 } = composeStories(stories)
 
 test("the trigger and the panel agree about each other", async () => {
-  const { body, canvas } = await mountStory(Default)
+  const { body, canvas } = await mountStory(Playground)
 
   const trigger = expectAgentDrivable(canvas, {
     name: "Filters",

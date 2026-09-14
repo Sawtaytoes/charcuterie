@@ -7,7 +7,7 @@ import { mountStory } from "../mountStory.testHelpers.ts"
 import { expectAgentDrivable } from "../testing/index.ts"
 import * as stories from "./Alert.stories.tsx"
 
-const { AllStates, Default, Interactive, Responsive } =
+const { AllStates, Playground, Interactive, Responsive } =
   composeStories(stories)
 
 test("a labelled alert is a landmark an agent can scope to", async () => {
@@ -34,7 +34,7 @@ test("a labelled alert is a landmark an agent can scope to", async () => {
 
 test("an unlabelled alert is not a landmark", async () => {
   const { canvas, canvasElement } =
-    await mountStory(Default)
+    await mountStory(Playground)
 
   // A block, deliberately. Nine bay cards each holding a named
   // region called "Part of the tower-wide problem above." is axe's

@@ -1,4 +1,5 @@
 import { useVisibility } from "@charcuterie/logic"
+import { playgroundParameters } from "@charcuterie/storybook-config/story-parameters"
 import type { ControlSize } from "@charcuterie/tokens"
 import type { Meta, StoryObj } from "@storybook/react"
 import type { ReactNode } from "react"
@@ -150,7 +151,8 @@ const ComboboxHarness = ({
   )
 }
 
-export const Default: Story = {
+export const Playground: Story = {
+  parameters: playgroundParameters,
   args: {
     isVisible: false,
     onDismiss: () => {},

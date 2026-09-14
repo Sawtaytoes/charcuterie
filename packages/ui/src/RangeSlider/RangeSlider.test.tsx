@@ -7,8 +7,12 @@ import { mountStory } from "../mountStory.testHelpers.ts"
 import { expectAgentDrivable } from "../testing/index.ts"
 import * as stories from "./RangeSlider.stories.tsx"
 
-const { AllStates, BesideTheSlider, Default, Interactive } =
-  composeStories(stories)
+const {
+  AllStates,
+  BesideTheSlider,
+  Playground,
+  Interactive,
+} = composeStories(stories)
 
 /** A fraction along the bar, as viewport coordinates. */
 const pointerAt =
@@ -39,7 +43,7 @@ const readThumbStyles = (thumb: Element) => {
 
 test("it is two named sliders inside one named group", async () => {
   const { canvas, canvasElement } =
-    await mountStory(Default)
+    await mountStory(Playground)
 
   const start = expectAgentDrivable(canvas, {
     name: "Clip start",

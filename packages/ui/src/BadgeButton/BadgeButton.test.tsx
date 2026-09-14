@@ -10,7 +10,7 @@ import { mountStory } from "../mountStory.testHelpers.ts"
 import { expectAgentDrivable } from "../testing/index.ts"
 import meta, * as stories from "./BadgeButton.stories.tsx"
 
-const { BesideABadge, Default, InATileFooter } =
+const { BesideABadge, Playground, InATileFooter } =
   composeStories(stories)
 
 /**
@@ -18,7 +18,7 @@ const { BesideABadge, Default, InATileFooter } =
  * is a component rather than a `className` on `Badge`.
  */
 test("is a button, not a span", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   const chip = expectAgentDrivable(canvas, {
     name: "1 episode",

@@ -9,7 +9,7 @@ import * as stories from "./Checkbox.stories.tsx"
 
 const {
   AllStates,
-  Default,
+  Playground,
   Interactive,
   WithDescriptions,
   WithValues,
@@ -17,7 +17,7 @@ const {
 
 test("it is a checkbox a screen reader can name", async () => {
   const { canvas, canvasElement } =
-    await mountStory(Default)
+    await mountStory(Playground)
 
   const checkbox = expectAgentDrivable(canvas, {
     name: "Delete originals after import",
@@ -151,7 +151,7 @@ test("value names the member, and a group reads back the ticked ones", async () 
 })
 
 test("a box with no value stays out of the way", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   // `value` is optional and a lone boolean should omit it. React drops
   // an `undefined` attribute entirely rather than writing an empty
@@ -252,7 +252,7 @@ test("each box owns its own description, and the group owns the group's", async 
 })
 
 test("a box with no description writes no aria-describedby", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   // The slot is opt-in. React drops an `undefined` attribute rather
   // than writing an empty string, so a box without a hint points at

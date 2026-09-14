@@ -6,10 +6,10 @@ import { mountStory } from "../mountStory.testHelpers.ts"
 import { expectAgentDrivable } from "../testing/index.ts"
 import * as stories from "./UnstyledLink.stories.tsx"
 
-const { Default, Routed } = composeStories(stories)
+const { Playground, Routed } = composeStories(stories)
 
 test("keeps the caller's paint and works without a router", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
   const link = expectAgentDrivable(canvas, {
     name: "Jobs",
     role: "link",

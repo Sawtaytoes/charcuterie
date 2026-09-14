@@ -1,3 +1,4 @@
+import { playgroundParameters } from "@charcuterie/storybook-config/story-parameters"
 import type { Meta, StoryObj } from "@storybook/react"
 import type { ReactNode } from "react"
 import { useState } from "react"
@@ -113,7 +114,8 @@ const TimecodeHarness = ({
  * Milliseconds are optional both ways: `1:01:00` commits as
  * `01:01:00`, not as `01:01:00.000`.
  */
-export const Default: Story = {
+export const Playground: Story = {
+  parameters: playgroundParameters,
   args: { label: "Start at" },
   render: () => <TimecodeHarness label="Start at" />,
 }

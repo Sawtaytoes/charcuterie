@@ -1,3 +1,4 @@
+import { playgroundParameters } from "@charcuterie/storybook-config/story-parameters"
 import type { Meta, StoryObj } from "@storybook/react"
 import { useEffect, useState } from "react"
 
@@ -55,7 +56,8 @@ type Story = StoryObj<typeof meta>
  * tell apart and the reason the fleet's poster grids look wrong
  * at intermediate widths.
  */
-export const Default: Story = {
+export const Playground: Story = {
+  parameters: playgroundParameters,
   render: (mainProps) => (
     <Shell>
       <Header

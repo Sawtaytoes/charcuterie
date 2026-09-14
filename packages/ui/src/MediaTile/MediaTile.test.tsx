@@ -6,11 +6,11 @@ import { mountStory } from "../mountStory.testHelpers.ts"
 import { expectAgentDrivable } from "../testing/index.ts"
 import * as stories from "./MediaTile.stories.tsx"
 
-const { Default, Interactive, InteractiveButton } =
+const { Playground, Interactive, InteractiveButton } =
   composeStories(stories)
 
 test("an unlinked tile's poster carries the name", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   expectAgentDrivable(canvas, {
     name: "Blade Runner (1982) poster",

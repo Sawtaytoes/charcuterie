@@ -9,13 +9,13 @@ import * as stories from "./Stepper.stories.tsx"
 const {
   AllStates,
   CompactCard,
-  Default,
+  Playground,
   Interactive,
   Responsive,
 } = composeStories(stories)
 
 test("the sequence is an ordered list with a name", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   // A `<ol>`, not a stack of divs: the ORDER is the meaning, and a
   // screen reader announcing "list, 3 items" is what carries it.
@@ -28,7 +28,7 @@ test("the sequence is an ordered list with a name", async () => {
 })
 
 test("each step is a heading at the level the caller asked for", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   await expect(
     canvas.getByRole("heading", { level: 3, name: /Rip/ }),
@@ -60,7 +60,7 @@ test("every status is a word, not only a colour", async () => {
 })
 
 test("the marker is the ordinal, so it renders in a font with no tick glyph", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   // Not `✓`. `docs/decisions/2026-07-29-ship-no-icons-and-no-symbol-
   // glyphs.md` — a glyph the font lacks paints as an empty box, and
@@ -75,7 +75,7 @@ test("the marker is the ordinal, so it renders in a font with no tick glyph", as
  * all — a pseudo-element has nothing to count.
  */
 test("the last step draws no connector", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   const connectors = canvas
     .getAllByRole("listitem")
@@ -88,7 +88,7 @@ test("the last step draws no connector", async () => {
 })
 
 test("each step carries its key into the DOM, so a re-order can animate", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   // React's `key` never reaches the markup. Without this attribute
   // a caller who re-orders `steps` has no way to say which `<li>`
@@ -124,7 +124,7 @@ test("advancing moves which step is current", async () => {
 })
 
 test("no axe violations, in either orientation", async () => {
-  const vertical = await mountStory(Default)
+  const vertical = await mountStory(Playground)
 
   await expectNoAxeViolations(vertical.canvasElement)
 

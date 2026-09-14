@@ -1,3 +1,4 @@
+import { playgroundParameters } from "@charcuterie/storybook-config/story-parameters"
 import type { Meta, StoryObj } from "@storybook/react"
 
 import {
@@ -44,7 +45,9 @@ type Story = StoryObj<typeof meta>
  * because a colour a screen reader cannot see needs a name it can
  * read.
  */
-export const Default: Story = {}
+export const Playground: Story = {
+  parameters: playgroundParameters,
+}
 
 /**
  * `solid` fills; `outline` keeps the hue and drops the fill. The

@@ -1,3 +1,4 @@
+import { playgroundParameters } from "@charcuterie/storybook-config/story-parameters"
 import type { Meta, StoryObj } from "@storybook/react"
 import type { ReactNode } from "react"
 import { useState } from "react"
@@ -473,7 +474,9 @@ type Story = StoryObj<typeof meta>
  * a real mode rather than a story convenience: a board on a wall
  * display should not be advertising affordances nobody can use.
  */
-export const Default: Story = {}
+export const Playground: Story = {
+  parameters: playgroundParameters,
+}
 
 /**
  * Parallel project pools as horizontal bands. Every lane stays on

@@ -1,4 +1,5 @@
 import {
+  hiddenPanelOptions,
   installThemeAxes,
   themeParameters,
 } from "@charcuterie/storybook-config/preview"
@@ -36,6 +37,19 @@ export default {
   parameters: {
     ...themeParameters({ isA11yEnforced: true }),
     options: {
+      /**
+       * The addon panel starts closed on every story, and the
+       * `Playground` story of each component opens it again with
+       * `playgroundParameters`.
+       *
+       * The owner reads this Storybook to look at components, not
+       * to drive them: a board story spends a third of the canvas
+       * on a Controls tab whose inputs move nothing, because the
+       * board renders its own matrix. The one story where a control
+       * is the point says so.
+       */
+      ...hiddenPanelOptions,
+
       /**
        * Sidebar order, and it is deliberately not alphabetical.
        *

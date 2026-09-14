@@ -12,7 +12,7 @@ import {
 } from "../viewport.testHelpers.ts"
 import * as stories from "./Rail.stories.tsx"
 
-const { AllVariants, Default, Interactive, Responsive } =
+const { AllVariants, Playground, Interactive, Responsive } =
   composeStories(stories)
 
 afterAll(async () => {
@@ -144,7 +144,7 @@ test("the rail scopes its own links away from the header's", async () => {
 })
 
 test("a single start rail is clean under axe", async () => {
-  const { canvasElement } = await mountStory(Default)
+  const { canvasElement } = await mountStory(Playground)
 
   await expectNoAxeViolations(canvasElement)
 })

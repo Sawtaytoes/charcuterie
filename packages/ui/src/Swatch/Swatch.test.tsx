@@ -6,10 +6,10 @@ import { mountStory } from "../mountStory.testHelpers.ts"
 import { expectAgentDrivable } from "../testing/index.ts"
 import * as stories from "./Swatch.stories.tsx"
 
-const { Default, InAList } = composeStories(stories)
+const { Playground, InAList } = composeStories(stories)
 
 test("a colour is findable by the name a screen reader can read", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   // The whole contract: a `background-color` is nothing to an agent
   // or a screen reader, so the swatch is an `img` with a name.
@@ -44,7 +44,7 @@ test("the name survives with no visible label", async () => {
 })
 
 test("solid rings its fill; the ring is what keeps white visible", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   const dot = canvas.getByRole("img", {
     name: "Red",

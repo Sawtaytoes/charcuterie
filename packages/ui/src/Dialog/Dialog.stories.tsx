@@ -1,4 +1,5 @@
 import { useVisibility } from "@charcuterie/logic"
+import { playgroundParameters } from "@charcuterie/storybook-config/story-parameters"
 import type { Meta, StoryObj } from "@storybook/react"
 import type { ReactNode } from "react"
 import { useRef } from "react"
@@ -121,7 +122,8 @@ const InitialFocusDemo = (): ReactNode => {
   )
 }
 
-export const Default: Story = {
+export const Playground: Story = {
+  parameters: playgroundParameters,
   args: {
     heading: "Bay 3",
     isVisible: false,
