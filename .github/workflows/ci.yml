@@ -25,6 +25,15 @@ jobs:
     with:
       charcuterieRef: ${{ github.event.pull_request.head.sha || github.sha }}
 
+  # Same relative-path proof for the Python and C++ gate. This repo holds
+  # neither language today, so both jobs no-op — which is the point: it proves
+  # the checkout, the diff detection and the no-op path before the tag moves.
+  # The gate itself is exercised on real files in `castkit`.
+  nativeLint:
+    uses: ./.github/workflows/shared-native-lint.yml
+    with:
+      charcuterieRef: ${{ github.event.pull_request.head.sha || github.sha }}
+
 
   lint:
     needs: [changes]
