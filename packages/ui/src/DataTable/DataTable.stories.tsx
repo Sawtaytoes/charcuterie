@@ -1,3 +1,4 @@
+import { playgroundParameters } from "@charcuterie/storybook-config/story-parameters"
 import type { Meta, StoryObj } from "@storybook/react"
 import type { ReactNode } from "react"
 import { useState } from "react"
@@ -266,7 +267,8 @@ type Story = StoryObj<typeof meta>
  * of the split: the component says *which* column is sorted, the
  * consumer says what that means for a priority enum.
  */
-export const Default: Story = {
+export const Playground: Story = {
+  parameters: playgroundParameters,
   render: () => (
     <TaskTable
       initialSort={{

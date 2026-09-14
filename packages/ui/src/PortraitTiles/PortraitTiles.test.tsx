@@ -11,7 +11,7 @@ const {
   AllStates,
   AllVariants,
   DataColours,
-  Default,
+  Playground,
   Interactive,
   NamedHues,
   Responsive,
@@ -20,7 +20,7 @@ const {
 
 test("it is a named group of pressable portraits", async () => {
   const { canvas, canvasElement } =
-    await mountStory(Default)
+    await mountStory(Playground)
 
   const group = expectAgentDrivable(canvas, {
     name: "Who's shopping?",
@@ -50,7 +50,7 @@ test("it is a named group of pressable portraits", async () => {
  * thing the portrait was being chosen by.
  */
 test("the name, the number and its unit are one accessible name", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   expectAgentDrivable(canvas, {
     name: "Avery 1,240 points",
@@ -194,7 +194,7 @@ test("a fixed layout skips the query", async () => {
  * how a token name that did not exist shipped in Docket.
  */
 test("each portrait wears a different hue, and a named one holds it", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   const faces = Array.from(
     expectAgentDrivable(canvas, {
@@ -380,7 +380,7 @@ test("an href portrait is a real anchor", async () => {
  * promise that survives exactly one edit.
  */
 test("a portrait is the same box as an action tile", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   const portrait = expectAgentDrivable(canvas, {
     name: "Avery 1,240 points",

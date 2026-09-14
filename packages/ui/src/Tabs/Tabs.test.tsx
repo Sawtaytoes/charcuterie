@@ -10,7 +10,7 @@ import * as stories from "./Tabs.stories.tsx"
 const {
   AllStates,
   AllVariants,
-  Default,
+  Playground,
   Manual,
   Responsive,
   Routed,
@@ -20,7 +20,7 @@ const {
 
 test("selecting a tab wires the panel back to it", async () => {
   const { canvas, canvasElement } =
-    await mountStory(Default)
+    await mountStory(Playground)
 
   const tablist = expectAgentDrivable(canvas, {
     name: "Bay 3",
@@ -256,7 +256,7 @@ test("manual activation moves focus without selecting", async () => {
 })
 
 test("automatic activation selects as focus moves, and wraps", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   const tablist = expectAgentDrivable(canvas, {
     name: "Bay 3",

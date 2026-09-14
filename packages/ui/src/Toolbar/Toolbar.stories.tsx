@@ -1,5 +1,6 @@
 import { useMediaQuery } from "@charcuterie/logic"
 import { matchMediaMatcher } from "@charcuterie/logic/browser"
+import { playgroundParameters } from "@charcuterie/storybook-config/story-parameters"
 import type { Meta, StoryObj } from "@storybook/react"
 import type { ReactNode } from "react"
 import { useState } from "react"
@@ -150,7 +151,8 @@ type Story = StoryObj<typeof meta>
  * collapse is not progressive: almost everything lives in the
  * popover permanently.
  */
-export const Default: Story = {
+export const Playground: Story = {
+  parameters: playgroundParameters,
   render: (toolbarProps) => (
     <Frame inlineSize="34rem">
       <Toolbar {...toolbarProps} />

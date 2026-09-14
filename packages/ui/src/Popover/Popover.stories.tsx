@@ -1,4 +1,5 @@
 import { useVisibility } from "@charcuterie/logic"
+import { playgroundParameters } from "@charcuterie/storybook-config/story-parameters"
 import type { Placement } from "@floating-ui/react"
 import type { Meta, StoryObj } from "@storybook/react"
 import type { ReactNode } from "react"
@@ -73,7 +74,8 @@ const PopoverDemo = ({
   )
 }
 
-export const Default: Story = {
+export const Playground: Story = {
+  parameters: playgroundParameters,
   args: {
     children: null,
     heading: "Filters",

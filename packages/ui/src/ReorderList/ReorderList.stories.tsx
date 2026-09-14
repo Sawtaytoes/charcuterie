@@ -1,3 +1,4 @@
+import { playgroundParameters } from "@charcuterie/storybook-config/story-parameters"
 import type { Meta, StoryObj } from "@storybook/react"
 import { useState } from "react"
 
@@ -133,7 +134,8 @@ type Story = StoryObj<typeof meta>
  * A checklist in the order it will be worked through. Press ↑ or ↓,
  * or press and hold the position and drag it somewhere else.
  */
-export const Default: Story = {
+export const Playground: Story = {
+  parameters: playgroundParameters,
   render: () => <StoryList />,
 }
 

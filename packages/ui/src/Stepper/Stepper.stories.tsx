@@ -1,3 +1,4 @@
+import { playgroundParameters } from "@charcuterie/storybook-config/story-parameters"
 import type { Meta, StoryObj } from "@storybook/react"
 import { useState } from "react"
 import { Button } from "../Button/Button.tsx"
@@ -54,7 +55,9 @@ type Story = StoryObj<typeof meta>
  * as an empty box in the one position where an empty box reads as
  * an error.
  */
-export const Default: Story = {}
+export const Playground: Story = {
+  parameters: playgroundParameters,
+}
 
 export const AllVariants: Story = {
   render: (stepperProps) => (

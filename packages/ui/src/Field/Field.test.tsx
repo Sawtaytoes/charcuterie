@@ -12,7 +12,7 @@ const {
   AdoptsOverlayTriggerId,
   AllStates,
   AllVariants,
-  Default,
+  Playground,
   ForwardsRestProps,
   Group,
   Nested,
@@ -79,7 +79,7 @@ test("an overlay trigger keeps the id the label points at", async () => {
 
 test("the label names the control it points at", async () => {
   const { canvas, canvasElement } =
-    await mountStory(Default)
+    await mountStory(Playground)
 
   // The whole point of the component in one query: the control is
   // findable by the *label's* text, which is only true if `htmlFor`
@@ -112,7 +112,7 @@ test("the label names the control it points at", async () => {
  * the other component's suite.
  */
 test("the label carries a derivable id for non-labelable controls", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   const control = expectAgentDrivable(canvas, {
     name: "Output directory",
@@ -133,7 +133,7 @@ test("the label carries a derivable id for non-labelable controls", async () => 
 })
 
 test("a description is announced with the control", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   const control = expectAgentDrivable(canvas, {
     name: "Output directory",
