@@ -35,13 +35,21 @@ ColumnLimit: 100
 # `void loop() {` on one line, the way every ESPHome component is written.
 BreakBeforeBraces: Attach
 
+# ESPHome writes ` public:` indented one space inside the class, not flush at
+# column 0. LLVM's default of -2 would move every access specifier in every
+# component we ever touch.
+AccessModifierOffset: -1
+
 # A one-line `if (x) return;` hides the return from a reader skimming for exits,
 # and it is the shape that produced the M5Paper watchdog bug — a guard that read
-# as a no-op. Force the braces onto their own lines.
+# as a no-op. Break it onto its own line AND give it braces: a braceless guard
+# is the other half of the same problem, because the next person adding a second
+# statement to it has to notice the braces are missing.
 AllowShortIfStatementsOnASingleLine: Never
 AllowShortLoopsOnASingleLine: false
 AllowShortFunctionsOnASingleLine: Inline
 AllowShortCaseLabelsOnASingleLine: false
+InsertBraces: true
 
 # Pointer binds to the type: `uint8_t *buffer` is what ESPHome writes.
 PointerAlignment: Right

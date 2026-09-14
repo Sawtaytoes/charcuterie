@@ -118,6 +118,9 @@ nativeLint:
   uses: sawtaytoes/charcuterie/.github/workflows/shared-native-lint.yml@workflows-v1
   with:
     charcuterieRepository: sawtaytoes/charcuterie
+    pythonExclude: >-
+      device-client/esphome/components/it8951e
+      device-client/esphome/components/m5paper
     cppExclude: >-
       device-client/esphome/components/it8951e
       device-client/esphome/components/m5paper
@@ -139,12 +142,18 @@ would be switched off inside a week. A pull request is answerable for the files 
 
 It fails safe by linting **nothing** when it cannot work out a base commit.
 
-### ⚠️ Vendored C++ must be excluded
+### ⚠️ Vendored code must be excluded — and it is not only C++
 
 `castkit`'s `it8951e/` and `m5paper/` components are copied from `ilia-ae/m5paper_esphome`
 and patched, and its `PATCHES.md` states every patch as a diff against that upstream.
 Running a formatter over them would rewrite every line, destroy that diff, and turn the next
-upstream pull into a conflict in every file. Pass `cppExclude`.
+upstream pull into a conflict in every file.
+
+**An ESPHome component is C++ AND Python.** Those two directories hold `display.py` and
+`__init__.py` beside the `.cpp` and `.h`, so a consumer usually passes the same prefixes to
+`pythonExclude` and `cppExclude` both. This was found by running the gate for real: the
+first ruff pass over castkit reformatted both vendored Python files and the diff had to be
+reverted.
 
 Only `castkit_display/` is ours — 260 lines. The C++ gate has very little to do today. It
 exists so that the next component lands formatted instead of being reformatted later.

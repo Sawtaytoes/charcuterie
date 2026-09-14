@@ -69,12 +69,20 @@ survives. `agentic` alone holds 765 unlinted `.py` files. A tree-scoped gate wou
 every repo it was added to, on its first run, and be switched off within a week — the same
 failure the docs lint was designed around.
 
-**Vendored C++ is excluded, and the workflow takes `cppExclude` for it.** `it8951e/` and
-`m5paper/` are copied from `ilia-ae/m5paper_esphome`, and `PATCHES.md` states each patch as
-a diff against that upstream. Reformatting them would rewrite every line, destroy that
-diff, and turn the next upstream pull into a conflict in every file. This is the reason the
-C++ gate is format-only rather than `clang-tidy` as well: a tidy run over a vendored tree is
-a rewrite, and over 260 lines of our own code it is not worth the build setup.
+**Vendored code is excluded, and the workflow takes `pythonExclude` and `cppExclude` for
+it.** `it8951e/` and `m5paper/` are copied from `ilia-ae/m5paper_esphome`, and `PATCHES.md`
+states each patch as a diff against that upstream. Reformatting them would rewrite every
+line, destroy that diff, and turn the next upstream pull into a conflict in every file.
+
+⚠️ **An ESPHome component is C++ AND Python**, so both exclusions take the same prefixes.
+That was not obvious from reading — it was found by running the gate for real. The first
+ruff pass over castkit reformatted the vendored `it8951e/display.py` and
+`m5paper/__init__.py`, and the diff had to be reverted. An earlier draft of this record
+claimed Python had no vendoring problem.
+
+This is also the reason the C++ gate is format-only rather than `clang-tidy` as well: a
+tidy run over a vendored tree is a rewrite, and over 260 lines of our own code it is not
+worth the build setup.
 
 **`ruff`, because two repos already chose it.** Codifying the convention the fleet arrived
 at beats inventing a different one and reformatting both repos. `ruff` is one binary that

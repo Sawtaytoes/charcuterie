@@ -15,6 +15,7 @@
 #     uses: sawtaytoes/charcuterie/.github/workflows/shared-native-lint.yml@workflows-v1
 #     with:
 #       charcuterieRepository: sawtaytoes/charcuterie
+#       pythonExclude: device-client/esphome/components/it8951e device-client/esphome/components/m5paper
 #       cppExclude: device-client/esphome/components/it8951e device-client/esphome/components/m5paper
 #
 # ⚠️ IT READS THE DIFF, NOT THE TREE. Same rule as `shared-docs-lint.yml`, for
@@ -27,12 +28,16 @@
 # the opposite direction from the docs-only detector, and the same direction as
 # the docs lint.
 #
-# ⚠️ VENDORED C++ MUST BE EXCLUDED. castkit's `it8951e/` and `m5paper/` are
-# copied from `ilia-ae/m5paper_esphome` and patched; `PATCHES.md` states each
-# patch as a diff against that upstream. A formatter would rewrite every line
-# of both and destroy that. Pass `cppExclude`. Python has no equivalent problem
-# today — every `.py` in the fleet outside `external/` is ours — but
-# `pythonExclude` exists for the day one is vendored.
+# ⚠️ VENDORED CODE MUST BE EXCLUDED, AND IT IS NOT ONLY C++. castkit's
+# `it8951e/` and `m5paper/` are copied from `ilia-ae/m5paper_esphome` and
+# patched; `PATCHES.md` states each patch as a diff against that upstream. A
+# formatter would rewrite every line and destroy that.
+#
+# Those two directories hold `display.py` and `__init__.py` as well as the C++,
+# so a consumer usually passes the SAME prefixes to both `pythonExclude` and
+# `cppExclude`. This was found by running the gate for real rather than by
+# reading: the first ruff pass over castkit reformatted both vendored Python
+# files, and the diff had to be reverted.
 #
 # ⚠️ The inner jobs are `pythonLint` and `cppLint`, never `lint`. Forgejo posts
 # a status context for the INNER job name as well as the caller's, and five
@@ -74,6 +79,16 @@ on:
         type: string
         required: false
         default: "0.14.5"
+      clangFormatVersion:
+        description: >-
+          Pin clang-format, through the npm package that ships the binary. Two
+          clang-format majors do not agree on the same file, so an unpinned one
+          turns a green repo red on LLVM's schedule — and it would not match
+          what a developer runs by hand either. npm is the pin that reaches
+          both, because every runner already has Node.
+        type: string
+        required: false
+        default: "1.8.0"
 
 jobs:
   pythonLint:
@@ -195,11 +210,23 @@ jobs:
           echo "files=yes" >> "$GITHUB_OUTPUT"
 
       - if: ${{ steps.changed.outputs.files != '' }}
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq clang-format
+        uses: actions/setup-node@v6
+        with: { node-version: "24" }
+
+      - if: ${{ steps.changed.outputs.files != '' }}
+        env:
+          CLANG_FORMAT_VERSION: ${{ inputs.clangFormatVersion || '1.8.0' }}
+        # NOT `apt-get install clang-format`. The archive's version moves with
+        # the runner image, two clang-format majors disagree on the same file,
+        # and nothing a developer ran by hand would match it. The npm package
+        # ships the binary, pins exactly, and needs only the Node every runner
+        # already has.
+        run: npm install --no-audit --no-fund --global "clang-format@${CLANG_FORMAT_VERSION}"
 
       - if: ${{ steps.changed.outputs.files != '' }}
         run: |
           set -euo pipefail
+          clang-format --version
 
           # `--style=file:<path>` names the config explicitly. Without it
           # clang-format walks up from each input file looking for a
