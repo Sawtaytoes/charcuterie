@@ -1,0 +1,68 @@
+# The fleet's shared C++ format config.
+#
+# ⚠️ The file is named `clang-format.yml`, not `.clang-format`, ON PURPOSE.
+# `clang-format` walks UP from each input file looking for a `.clang-format`,
+# so a real one here would silently capture any C++ that ever appears beside it
+# in this repo. `shared-native-lint.yml` passes this file explicitly with
+# `--style=file:<path>`, which takes any name.
+#
+# ⚠️ THE C++ WE OWN IS SMALL, AND MOST OF THE C++ WE SHIP IS NOT OURS.
+# castkit's `device-client/esphome/components/` holds three components. Only
+# `castkit_display/` is ours (260 lines). `it8951e/` and `m5paper/` are copied
+# from `ilia-ae/m5paper_esphome` and patched, and `PATCHES.md` documents each
+# patch as a diff against that upstream. Reformatting them would rewrite every
+# line, destroy the ability to diff against upstream, and turn the next upstream
+# pull into a merge conflict in every file. A consumer therefore passes
+# `cppExclude` for its vendored directories, and the workflow refuses to run
+# with no exclusions on a tree that has a vendored marker.
+#
+# The base is LLVM rather than Google or ESPHome's own, because LLVM is
+# clang-format's built-in default: a contributor with no config still lands
+# close, and the delta below is small enough to read in one screen.
+---
+BasedOnStyle: LLVM
+
+# ESPHome, Arduino and the ESP-IDF all write two spaces. The vendored
+# components we patch do too, so a patch hunk does not re-indent its context.
+IndentWidth: 2
+TabWidth: 2
+UseTab: Never
+
+# 100, the same number as the Python config and as the two repos that already
+# set it. One number for the fleet is worth more than a per-language optimum.
+ColumnLimit: 100
+
+# `void loop() {` on one line, the way every ESPHome component is written.
+BreakBeforeBraces: Attach
+
+# ESPHome writes ` public:` indented one space inside the class, not flush at
+# column 0. LLVM's default of -2 would move every access specifier in every
+# component we ever touch.
+AccessModifierOffset: -1
+
+# A one-line `if (x) return;` hides the return from a reader skimming for exits,
+# and it is the shape that produced the M5Paper watchdog bug — a guard that read
+# as a no-op. Break it onto its own line AND give it braces: a braceless guard
+# is the other half of the same problem, because the next person adding a second
+# statement to it has to notice the braces are missing.
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortCaseLabelsOnASingleLine: false
+InsertBraces: true
+
+# Pointer binds to the type: `uint8_t *buffer` is what ESPHome writes.
+PointerAlignment: Right
+DerivePointerAlignment: false
+
+# Keep include blocks as the author grouped them. Reordering an ESPHome
+# component's includes breaks it: `esphome/core/log.h` has to follow
+# `esphome/core/hal.h`, and clang-format cannot know that.
+SortIncludes: Never
+IncludeBlocks: Preserve
+
+# A trailing comment sitting one space off the code is noise in a diff when the
+# line above changes length.
+AlignTrailingComments: false
+AlignConsecutiveAssignments: false
+AlignConsecutiveDeclarations: false
