@@ -1,3 +1,4 @@
+import { playgroundParameters } from "@charcuterie/storybook-config/story-parameters"
 import type { Meta, StoryObj } from "@storybook/react"
 
 import {
@@ -53,7 +54,8 @@ type Story = StoryObj<typeof meta>
  * finds it — which is what an agent, and every test in the fleet,
  * actually matches on.
  */
-export const Default: Story = {
+export const Playground: Story = {
+  parameters: playgroundParameters,
   args: { children: "1 episode", intent: "accent" },
 }
 

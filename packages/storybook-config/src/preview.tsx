@@ -34,6 +34,15 @@ import {
   type ThemeAxis,
 } from "./themeAxes.ts"
 
+// Re-exported so a `preview.tsx` reaches for one module. The
+// definitions live in a side-effect-free leaf because a
+// `*.stories.tsx` imports `playgroundParameters` too, and a unit
+// test that composes that file must not pull the docs blocks in.
+export {
+  hiddenPanelOptions,
+  playgroundParameters,
+} from "./storyParameters.ts"
+
 /**
  * Write the chosen axes onto `<html>` from a `globals` bag.
  *

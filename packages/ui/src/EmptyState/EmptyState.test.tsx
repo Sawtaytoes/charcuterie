@@ -6,11 +6,11 @@ import { mountStory } from "../mountStory.testHelpers.ts"
 import { expectAgentDrivable } from "../testing/index.ts"
 import * as stories from "./EmptyState.stories.tsx"
 
-const { Default, DeeplyNested, Interactive } =
+const { Playground, DeeplyNested, Interactive } =
   composeStories(stories)
 
 test("the heading is the handle", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   expectAgentDrivable(canvas, {
     name: "No discs queued",

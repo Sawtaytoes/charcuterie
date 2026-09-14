@@ -10,14 +10,14 @@ import * as stories from "./LogViewer.stories.tsx"
 const {
   AllStates,
   AllVariants,
-  Default,
+  Playground,
   InsideDisclosure,
   Interactive,
 } = composeStories(stories)
 
 test("the pane is named, and is a log", async () => {
   const { canvas, canvasElement } =
-    await mountStory(Default)
+    await mountStory(Playground)
 
   // Found by its name, not by a `data-log-id`. mux-magic's pane
   // carries one of those — a `data-testid` under a different name,

@@ -1,3 +1,4 @@
+import { playgroundParameters } from "@charcuterie/storybook-config/story-parameters"
 import type { Meta, StoryObj } from "@storybook/react"
 import { useState } from "react"
 
@@ -170,7 +171,9 @@ type Story = StoryObj<typeof meta>
  * group the card is already in — visible, unofferable, and saying so
  * to a screen reader rather than only by being dimmer.
  */
-export const Default: Story = {}
+export const Playground: Story = {
+  parameters: playgroundParameters,
+}
 
 /**
  * The case the component exists for. Thirty-four destinations do not

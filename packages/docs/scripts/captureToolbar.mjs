@@ -71,7 +71,7 @@ const browser = await chromium.launch()
 const SHOTS = [
   {
     name: "01-wide-nothing-collapsed",
-    storyId: "components-toolbar--default",
+    storyId: "components-actions-toolbar--playground",
     viewport: { width: 900, height: 200 },
   },
   {

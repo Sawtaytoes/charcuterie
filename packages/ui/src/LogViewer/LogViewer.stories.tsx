@@ -1,3 +1,4 @@
+import { playgroundParameters } from "@charcuterie/storybook-config/story-parameters"
 import type { Meta, StoryObj } from "@storybook/react"
 
 import { Accordion } from "../Accordion/Accordion.tsx"
@@ -61,7 +62,8 @@ export default meta
 
 type Story = StoryObj<typeof meta>
 
-export const Default: Story = {
+export const Playground: Story = {
+  parameters: playgroundParameters,
   args: { label: "Bay 3 rip log", lines: RIP_LINES },
 }
 

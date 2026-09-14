@@ -14,7 +14,7 @@ const {
   AllAppearances,
   AllStates,
   BackLink,
-  Default,
+  Playground,
   External,
   Routed,
 } = composeStories(stories)
@@ -28,7 +28,7 @@ const {
  * it for free is the entire argument for rendering an anchor.
  */
 test("is drivable by role and name", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   const link = expectAgentDrivable(canvas, {
     name: "the rip queue",
@@ -39,7 +39,7 @@ test("is drivable by role and name", async () => {
 })
 
 test("Tab reaches it", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   const link = canvas.getByRole("link", {
     name: "the rip queue",
@@ -210,7 +210,7 @@ test("an injected router takes in-app paths and nothing else", async () => {
 })
 
 test("with no provider it is still a real anchor", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   const link = canvas.getByRole("link", {
     name: "the rip queue",

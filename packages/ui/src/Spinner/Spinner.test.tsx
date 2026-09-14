@@ -6,10 +6,10 @@ import { mountStory } from "../mountStory.testHelpers.ts"
 import { expectAgentDrivable } from "../testing/index.ts"
 import * as stories from "./Spinner.stories.tsx"
 
-const { Default, Interactive } = composeStories(stories)
+const { Playground, Interactive } = composeStories(stories)
 
 test("the hidden label is the accessible name", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   // A live region takes **no** accessible name from its content, so
   // `Spinner` sets both — text for the announcement, `aria-label`

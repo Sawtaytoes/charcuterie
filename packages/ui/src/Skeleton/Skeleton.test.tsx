@@ -6,10 +6,10 @@ import { mountStory } from "../mountStory.testHelpers.ts"
 import { expectHiddenFromAgents } from "../testing/index.ts"
 import * as stories from "./Skeleton.stories.tsx"
 
-const { Default, Interactive } = composeStories(stories)
+const { Playground, Interactive } = composeStories(stories)
 
 test("a skeleton is hidden from assistive technology", async () => {
-  const { canvasElement } = await mountStory(Default)
+  const { canvasElement } = await mountStory(Playground)
 
   const skeleton = canvasElement.querySelector(
     "div[aria-hidden]",

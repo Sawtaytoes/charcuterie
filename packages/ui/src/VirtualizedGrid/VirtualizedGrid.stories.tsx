@@ -1,3 +1,4 @@
+import { playgroundParameters } from "@charcuterie/storybook-config/story-parameters"
 import type { Meta, StoryObj } from "@storybook/react"
 import { useState } from "react"
 
@@ -107,7 +108,9 @@ type Story = StoryObj<typeof meta>
  * Inspect the DOM and count: the row elements are the ones on
  * screen plus `overscanRows` above and below.
  */
-export const Default: Story = {}
+export const Playground: Story = {
+  parameters: playgroundParameters,
+}
 
 /**
  * The app-shell contract: `Main` is the one vertical scroll region,

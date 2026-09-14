@@ -1,3 +1,4 @@
+import { playgroundParameters } from "@charcuterie/storybook-config/story-parameters"
 import type { Meta, StoryObj } from "@storybook/react"
 import { useState } from "react"
 
@@ -43,7 +44,8 @@ type Story = StoryObj<typeof meta>
  * is not printed, and the value sits on the *track* — so an agent's
  * bounding box is the widget, not the filled 38%.
  */
-export const Default: Story = {
+export const Playground: Story = {
+  parameters: playgroundParameters,
   args: { label: "Ripping title 4 of 9", value: 38 },
 }
 

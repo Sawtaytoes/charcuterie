@@ -1,3 +1,4 @@
+import { playgroundParameters } from "@charcuterie/storybook-config/story-parameters"
 import type { Meta, StoryObj } from "@storybook/react"
 
 import { toStoryChoice } from "../argTypes.storyHelpers.ts"
@@ -53,7 +54,8 @@ type Story = StoryObj<typeof meta>
  * need. Copy it verbatim; only the contents of `actions` and
  * `Main` differ per app.
  */
-export const Default: Story = {
+export const Playground: Story = {
+  parameters: playgroundParameters,
   render: (shellProps) => (
     <Shell {...shellProps}>
       <Header

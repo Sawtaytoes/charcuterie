@@ -7,12 +7,12 @@ import { mountStory } from "../mountStory.testHelpers.ts"
 import { expectAgentDrivable } from "../testing/index.ts"
 import * as stories from "./Tooltip.stories.tsx"
 
-const { AllVariants, Default, Interactive } =
+const { AllVariants, Playground, Interactive } =
   composeStories(stories)
 
 test("nothing is shown until something asks", async () => {
   const { body, canvas, canvasElement } =
-    await mountStory(Default)
+    await mountStory(Playground)
 
   expectAgentDrivable(canvas, {
     name: "Retry",

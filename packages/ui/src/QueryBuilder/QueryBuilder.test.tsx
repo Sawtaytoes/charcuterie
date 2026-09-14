@@ -10,13 +10,13 @@ import * as stories from "./QueryBuilder.stories.tsx"
 const {
   AllStates,
   CustomCombinator,
-  Default,
+  Playground,
   Interactive,
 } = composeStories(stories)
 
 test("the root group exposes its combinator as a named 'Match' control", async () => {
   const { canvas, canvasElement } =
-    await mountStory(Default)
+    await mountStory(Playground)
 
   // One root group, so exactly one combinator picker. It is a
   // `Listbox` trigger, so the control is a button that opens a

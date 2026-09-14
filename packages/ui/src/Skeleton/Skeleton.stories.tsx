@@ -1,3 +1,4 @@
+import { playgroundParameters } from "@charcuterie/storybook-config/story-parameters"
 import type { Meta, StoryObj } from "@storybook/react"
 
 import {
@@ -26,7 +27,8 @@ type Story = StoryObj<typeof meta>
  * is hidden from AT entirely — otherwise a screen reader reads three
  * empty bars.
  */
-export const Default: Story = {
+export const Playground: Story = {
+  parameters: playgroundParameters,
   args: { blockSize: "1.5rem", inlineSize: "12rem" },
 }
 

@@ -1,3 +1,4 @@
+import { playgroundParameters } from "@charcuterie/storybook-config/story-parameters"
 import type { Meta, StoryObj } from "@storybook/react"
 
 import { controlSizeArgType } from "../argTypes.storyHelpers.ts"
@@ -48,7 +49,8 @@ type Story = StoryObj<typeof meta>
  * bare `<button>` today, so a screen reader announces "↶" and
  * `getByRole("button", { name: "Undo" })` finds nothing.
  */
-export const Default: Story = {
+export const Playground: Story = {
+  parameters: playgroundParameters,
   args: { children: UNDO_ICON, label: "Undo" },
 }
 

@@ -11,7 +11,7 @@ const {
   AllStates,
   AutoHues,
   BesideTheRadioTile,
-  Default,
+  Playground,
   Interactive,
   Links,
   NamedHues,
@@ -41,7 +41,7 @@ const getAccentEdgeLayer = (boxShadow: string) =>
 
 test("it is a named group of pressable tiles", async () => {
   const { canvas, canvasElement } =
-    await mountStory(Default)
+    await mountStory(Playground)
 
   const group = expectAgentDrivable(canvas, {
     name: "Queue type",
@@ -64,7 +64,7 @@ test("it is a named group of pressable tiles", async () => {
 })
 
 test("a tile's hint is part of its accessible name", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   // The reason the hint is rendered inside the tile rather than
   // beside it: a hint a screen reader never reads is a hint half the

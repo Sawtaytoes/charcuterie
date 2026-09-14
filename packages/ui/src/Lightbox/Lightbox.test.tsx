@@ -7,11 +7,11 @@ import { mountStory } from "../mountStory.testHelpers.ts"
 import { expectAgentDrivable } from "../testing/index.ts"
 import * as stories from "./Lightbox.stories.tsx"
 
-const { Controlled, Default, Interactive, WithCaption } =
+const { Controlled, Playground, Interactive, WithCaption } =
   composeStories(stories)
 
 test("the thumbnail opens the enlarged image", async () => {
-  const { body, canvas } = await mountStory(Default)
+  const { body, canvas } = await mountStory(Playground)
 
   await userEvent.click(
     expectAgentDrivable(canvas, {

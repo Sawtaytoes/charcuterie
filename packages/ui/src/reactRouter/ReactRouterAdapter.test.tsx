@@ -11,7 +11,7 @@ import {
 } from "../viewport.testHelpers.ts"
 import * as stories from "./ReactRouterAdapter.stories.tsx"
 
-const { Default } = composeStories(stories)
+const { Playground } = composeStories(stories)
 
 // The offsets are module state, so they outlive a mount. A test
 // must not.
@@ -33,7 +33,7 @@ afterEach(() => {
 test("an app renders one component and gets both seams", async () => {
   await setViewport(DESKTOP)
 
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   const main = canvas.getByRole("main")
 

@@ -7,7 +7,7 @@ import { mountStory } from "../mountStory.testHelpers.ts"
 import { expectAgentDrivable } from "../testing/index.ts"
 import * as stories from "./ColorSchemeSwitcher.stories.tsx"
 
-const { Default } = composeStories(stories)
+const { Playground } = composeStories(stories)
 
 /**
  * The connected switcher is agent-drivable and cycles like the
@@ -15,7 +15,7 @@ const { Default } = composeStories(stories)
  * reaches the applier: the demo panel's `data-scheme` tracks it.
  */
 test("it renders a named, drivable button", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   expectAgentDrivable(canvas, {
     name: /colour scheme/i,
@@ -24,7 +24,7 @@ test("it renders a named, drivable button", async () => {
 })
 
 test("system resolves through the injected resolver to the panel", async () => {
-  const { canvasElement } = await mountStory(Default)
+  const { canvasElement } = await mountStory(Playground)
 
   const panel = canvasElement.querySelector("[data-scheme]")
 
@@ -33,7 +33,7 @@ test("system resolves through the injected resolver to the panel", async () => {
 })
 
 test("cycling to a concrete mode re-applies the scheme", async () => {
-  const { canvasElement } = await mountStory(Default)
+  const { canvasElement } = await mountStory(Playground)
 
   const canvas = within(canvasElement)
 
@@ -53,7 +53,7 @@ test("cycling to a concrete mode re-applies the scheme", async () => {
 })
 
 test("the connected switcher forwards the neutral intent by default", async () => {
-  const { canvasElement } = await mountStory(Default)
+  const { canvasElement } = await mountStory(Playground)
 
   const button = canvasElement.querySelector("button")
 

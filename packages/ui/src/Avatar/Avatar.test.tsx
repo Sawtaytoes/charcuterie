@@ -7,7 +7,7 @@ import { mountStory } from "../mountStory.testHelpers.ts"
 import { expectAgentDrivable } from "../testing/index.ts"
 import * as stories from "./Avatar.stories.tsx"
 
-const { AllStates, AllVariants, Default, InAList } =
+const { AllStates, AllVariants, Playground, InAList } =
   composeStories(stories)
 
 /**
@@ -18,7 +18,7 @@ const { AllStates, AllVariants, Default, InAList } =
  * text is the one regression that matters.
  */
 test("the name is readable by an agent and never printed", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   const avatar = expectAgentDrivable(canvas, {
     name: "Ada Lovelace",

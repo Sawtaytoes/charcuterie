@@ -1,3 +1,4 @@
+import { playgroundParameters } from "@charcuterie/storybook-config/story-parameters"
 import type { Meta, StoryObj } from "@storybook/react"
 
 import { toStoryChoice } from "../argTypes.storyHelpers.ts"
@@ -40,7 +41,8 @@ type Story = StoryObj<typeof meta>
  * name: "Sections" })` is what distinguishes its "Settings" link
  * from the header's "Settings" button.
  */
-export const Default: Story = {
+export const Playground: Story = {
+  parameters: playgroundParameters,
   args: {
     label: "Sections",
     landmark: "navigation",

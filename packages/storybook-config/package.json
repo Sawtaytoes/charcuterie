@@ -36,6 +36,11 @@
       "types": "./dist/vite.d.ts",
       "default": "./dist/vite.js"
     },
+    "./story-parameters": {
+      "source": "./src/storyParameters.ts",
+      "types": "./dist/storyParameters.d.ts",
+      "default": "./dist/storyParameters.js"
+    },
     "./src/*": "./src/*"
   },
   "files": [

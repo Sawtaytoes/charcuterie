@@ -3,6 +3,7 @@ import type {
   ColorSchemeResolver,
   ResolvedColorScheme,
 } from "@charcuterie/logic"
+import { playgroundParameters } from "@charcuterie/storybook-config/story-parameters"
 import type { Meta, StoryObj } from "@storybook/react"
 import { useRef, useState } from "react"
 import type { ColorSchemeIcons } from "../ColorSchemeToggle/ColorSchemeToggle.tsx"
@@ -113,6 +114,7 @@ type Story = StoryObj<typeof meta>
  * scoped to the demo panel, which is exactly how a non-browser host
  * (Electron `nativeTheme`) wires it — by replacing those seams.
  */
-export const Default: Story = {
+export const Playground: Story = {
+  parameters: playgroundParameters,
   render: () => <ScopedSwitcherDemo />,
 }

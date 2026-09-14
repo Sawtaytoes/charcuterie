@@ -9,7 +9,7 @@ import * as stories from "./RadioGroup.stories.tsx"
 
 const {
   AllStates,
-  Default,
+  Playground,
   Interactive,
   Responsive,
   Tiles,
@@ -30,7 +30,7 @@ const getOptions = (group: HTMLElement) =>
 
 test("it is a radio group with exactly one option checked", async () => {
   const { canvas, canvasElement } =
-    await mountStory(Default)
+    await mountStory(Playground)
 
   const group = expectAgentDrivable(canvas, {
     name: "Naming scheme",

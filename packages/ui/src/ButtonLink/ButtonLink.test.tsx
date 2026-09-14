@@ -14,7 +14,7 @@ const {
   AllStates,
   AllVariants,
   BesideAButton,
-  Default,
+  Playground,
   External,
   Routed,
 } = composeStories(stories)
@@ -29,7 +29,7 @@ const {
  * whole argument.
  */
 test("is a link, not a button", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   const link = expectAgentDrivable(canvas, {
     name: "Configure",
@@ -51,7 +51,7 @@ test("is a link, not a button", async () => {
 })
 
 test("Tab reaches it", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   const link = canvas.getByRole("link", {
     name: "Configure",

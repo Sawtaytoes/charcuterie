@@ -10,12 +10,12 @@ const {
   AccentEdge,
   AllStates,
   CallerNamed,
-  Default,
+  Playground,
   Interactive,
 } = composeStories(stories)
 
 test("a heading turns the card into a named landmark", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   expectAgentDrivable(canvas, {
     name: "Bay 3",

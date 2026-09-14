@@ -6,7 +6,7 @@ import { expectNoAxeViolations } from "../expectNoAxeViolations.testHelpers.ts"
 import { mountStory } from "../mountStory.testHelpers.ts"
 import * as stories from "./DropRail.stories.tsx"
 
-const { AllStates, Default, InAList, ManyTargets } =
+const { AllStates, Playground, InAList, ManyTargets } =
   composeStories(stories)
 
 /**
@@ -25,7 +25,7 @@ const { AllStates, Default, InAList, ManyTargets } =
  */
 
 test("the rail is a listbox of destinations", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   const rail = canvas.getByRole("listbox", {
     name: "Move to which project",
@@ -51,7 +51,7 @@ test("a closed rail renders nothing at all", async () => {
 })
 
 test("the group a card is already in is shown but not offerable", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   const current = canvas.getByRole("option", {
     name: /Atlas Ingest/,
@@ -64,7 +64,7 @@ test("the group a card is already in is shown but not offerable", async () => {
 })
 
 test("an archived destination is refused", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   expect(
     canvas.getByRole("option", {

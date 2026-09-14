@@ -71,7 +71,7 @@ const browser = await chromium.launch()
 const SHOTS = [
   {
     name: "01-bar-with-room",
-    storyId: "components-layout-nav--default",
+    storyId: "components-layout-nav--playground",
     viewport: { width: 1000, height: 150 },
   },
   {

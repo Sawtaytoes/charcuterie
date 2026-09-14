@@ -16,11 +16,11 @@ import { expectAgentDrivable } from "../testing/index.ts"
 import meta, * as stories from "./CopyButton.stories.tsx"
 import { copyText } from "./copyText.ts"
 
-const { Confirmed, Default, Refused } =
+const { Confirmed, Playground, Refused } =
   composeStories(stories)
 
 test("is a button an agent can find by role and name", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   const button = expectAgentDrivable(canvas, {
     name: "Copy",
@@ -170,7 +170,7 @@ test("a prevented click copies nothing", async () => {
 })
 
 test("has no axe violations", async () => {
-  const { canvasElement } = await mountStory(Default)
+  const { canvasElement } = await mountStory(Playground)
 
   await expectNoAxeViolations(canvasElement)
 })

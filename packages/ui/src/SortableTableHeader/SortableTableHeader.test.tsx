@@ -7,7 +7,7 @@ import { mountStory } from "../mountStory.testHelpers.ts"
 import { expectAgentDrivable } from "../testing/index.ts"
 import * as stories from "./SortableTableHeader.stories.tsx"
 
-const { AllVariants, Default, Interactive } =
+const { AllVariants, Playground, Interactive } =
   composeStories(stories)
 
 /**
@@ -19,7 +19,7 @@ const { AllVariants, Default, Interactive } =
  */
 test("the cell announces the sort, not the glyph", async () => {
   const { canvas, canvasElement } =
-    await mountStory(Default)
+    await mountStory(Playground)
 
   const title = expectAgentDrivable(canvas, {
     name: "Title",
@@ -68,7 +68,7 @@ test("an unsorted sortable column says `none`", async () => {
  * to anything reading the table's structure.
  */
 test("the header is a columnheader containing a button", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   const header = expectAgentDrivable(canvas, {
     name: "Title",

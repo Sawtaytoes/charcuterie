@@ -1,4 +1,5 @@
 import { useVisibility } from "@charcuterie/logic"
+import { playgroundParameters } from "@charcuterie/storybook-config/story-parameters"
 import type { Meta, StoryObj } from "@storybook/react"
 import type { ReactNode } from "react"
 
@@ -73,7 +74,8 @@ const ModalDemo = ({
   )
 }
 
-export const Default: Story = {
+export const Playground: Story = {
+  parameters: playgroundParameters,
   args: {
     "aria-label": "Read error on title 4",
     children: null,

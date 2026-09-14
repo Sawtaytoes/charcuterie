@@ -13,7 +13,7 @@ import * as stories from "./Dialog.stories.tsx"
 const {
   AllStates,
   AllVariants,
-  Default,
+  Playground,
   InitialFocus,
   Interactive,
   NoBody,
@@ -49,7 +49,7 @@ test("a dialog with no body renders from heading and footer alone", async () => 
 })
 
 test("the dialog is reachable from a body-scoped query", async () => {
-  const { body, canvas } = await mountStory(Default)
+  const { body, canvas } = await mountStory(Playground)
 
   await userEvent.click(
     expectAgentDrivable(canvas, {

@@ -1,3 +1,4 @@
+import { playgroundParameters } from "@charcuterie/storybook-config/story-parameters"
 import type { Meta, StoryObj } from "@storybook/react"
 import {
   MemoryRouter,
@@ -92,7 +93,8 @@ const EpisodePage = () => (
  * `TextLink` becomes a soft navigation and `Main` keeps the
  * reader's place because `ReactRouterAdapter` is above them both.
  */
-export const Default: Story = {
+export const Playground: Story = {
+  parameters: playgroundParameters,
   render: () => (
     <MemoryRouter initialEntries={["/library"]}>
       <ReactRouterAdapter>

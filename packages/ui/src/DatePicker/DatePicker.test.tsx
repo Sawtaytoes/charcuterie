@@ -12,11 +12,11 @@ import {
 } from "../viewport.testHelpers.ts"
 import * as stories from "./DatePicker.stories.tsx"
 
-const { AllVariants, Default, Interactive } =
+const { AllVariants, Playground, Interactive } =
   composeStories(stories)
 
 const openDefault = async () => {
-  const mounted = await mountStory(Default)
+  const mounted = await mountStory(Playground)
 
   const input = expectAgentDrivable(mounted.canvas, {
     name: "Due date",
@@ -415,7 +415,7 @@ test("a container narrower than --cq-xs drops the weekday headers to one letter"
   // clamped to the space available and the calendar reads *that*.
   await setViewport({ height: 700, width: 260 })
 
-  const { body, canvas } = await mountStory(Default)
+  const { body, canvas } = await mountStory(Playground)
 
   await userEvent.click(
     expectAgentDrivable(canvas, {

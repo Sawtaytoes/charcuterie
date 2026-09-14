@@ -8,7 +8,7 @@ import { expectAgentDrivable } from "../testing/index.ts"
 import * as stories from "./Toast.stories.tsx"
 import { toastTransitions } from "./toastLifecycle.ts"
 
-const { AllStates, AllVariants, Default, Interactive } =
+const { AllStates, AllVariants, Playground, Interactive } =
   composeStories(stories)
 
 /**
@@ -180,7 +180,7 @@ test("a dismiss during the enter frame is not undone by it", async () => {
 })
 
 test("a pinned toast stays put", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   const dismiss = expectAgentDrivable(canvas, {
     name: "Dismiss Rip finished",

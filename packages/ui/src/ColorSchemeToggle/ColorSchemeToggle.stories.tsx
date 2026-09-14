@@ -1,4 +1,5 @@
 import type { ColorSchemeMode } from "@charcuterie/logic"
+import { playgroundParameters } from "@charcuterie/storybook-config/story-parameters"
 import type { Meta, StoryObj } from "@storybook/react"
 import { useState } from "react"
 
@@ -71,7 +72,8 @@ type Story = StoryObj<typeof meta>
  * The accessible name states the current mode and the next one, so
  * it changes as the button cycles — that is what the test asserts.
  */
-export const Default: Story = {
+export const Playground: Story = {
+  parameters: playgroundParameters,
   render: (toggleProps) => {
     const [mode, setMode] =
       useState<ColorSchemeMode>("system")

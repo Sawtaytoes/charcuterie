@@ -2,6 +2,7 @@ import {
   asyncTransitions,
   useStatus,
 } from "@charcuterie/logic"
+import { playgroundParameters } from "@charcuterie/storybook-config/story-parameters"
 import {
   CATEGORICAL_HUES,
   CATEGORICAL_INDEXES,
@@ -64,7 +65,8 @@ type Story = StoryObj<typeof meta>
  * else, not a live region — so the handle an agent reads off the row
  * is its text.
  */
-export const Default: Story = {
+export const Playground: Story = {
+  parameters: playgroundParameters,
   args: { children: "running", intent: "info" },
 }
 

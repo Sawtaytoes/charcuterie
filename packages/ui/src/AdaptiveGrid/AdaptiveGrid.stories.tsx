@@ -1,3 +1,4 @@
+import { playgroundParameters } from "@charcuterie/storybook-config/story-parameters"
 import type { Meta, StoryObj } from "@storybook/react"
 import { useState } from "react"
 
@@ -89,7 +90,8 @@ type Story = StoryObj<typeof meta>
  * carry nine — and the content cap widens from 56rem to 72rem to
  * hold them.
  */
-export const Default: Story = {
+export const Playground: Story = {
+  parameters: playgroundParameters,
   args: { blockSizeResolver: fixedBlockSize(1080) },
 }
 

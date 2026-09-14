@@ -22,7 +22,7 @@ import * as stories from "./MarkdownLine.stories.tsx"
 const {
   AllMarks,
   AsALink,
-  Default,
+  Playground,
   FileNames,
   InsideACardLink,
   RefusedUrl,
@@ -31,7 +31,7 @@ const {
 } = composeStories(stories)
 
 test("a code span is a `code` element, and the backticks are gone", async () => {
-  const { canvasElement } = await mountStory(Default)
+  const { canvasElement } = await mountStory(Playground)
 
   await expect(
     [...canvasElement.querySelectorAll("code")].map(
@@ -80,7 +80,7 @@ test("an underscore inside a word marks nothing", async () => {
 })
 
 test("a line with no href has nothing to click", async () => {
-  const { canvasElement } = await mountStory(Default)
+  const { canvasElement } = await mountStory(Playground)
 
   await expect(canvasElement.querySelector("a")).toBe(null)
 })

@@ -1,3 +1,4 @@
+import { playgroundParameters } from "@charcuterie/storybook-config/story-parameters"
 import type { Meta, StoryObj } from "@storybook/react"
 
 import { controlSizeArgType } from "../argTypes.storyHelpers.ts"
@@ -31,7 +32,8 @@ type Story = StoryObj<typeof meta>
  * this beats a rotating `<div>`: the state is announced even though
  * nothing is printed.
  */
-export const Default: Story = {
+export const Playground: Story = {
+  parameters: playgroundParameters,
   args: {},
 }
 

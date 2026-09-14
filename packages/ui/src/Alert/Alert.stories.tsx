@@ -1,3 +1,4 @@
+import { playgroundParameters } from "@charcuterie/storybook-config/story-parameters"
 import type { Meta, StoryObj } from "@storybook/react"
 
 import {
@@ -47,7 +48,8 @@ type Story = StoryObj<typeof meta>
  * rip-deck's grouped tower alert, verbatim: one trouble, the bays it
  * touches, and whether the house speakers already said it out loud.
  */
-export const Default: Story = {
+export const Playground: Story = {
+  parameters: playgroundParameters,
   args: {
     description: "4 bays · 3, 4, 5, 6 · confirmed",
     heading:

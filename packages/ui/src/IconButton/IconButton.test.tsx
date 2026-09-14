@@ -10,7 +10,7 @@ import { mountStory } from "../mountStory.testHelpers.ts"
 import { expectAgentDrivable } from "../testing/index.ts"
 import meta, * as stories from "./IconButton.stories.tsx"
 
-const { Default, RawGlyph } = composeStories(stories)
+const { Playground, RawGlyph } = composeStories(stories)
 
 /**
  * The assertion the fleet fails today: plex-channels renders `↶`
@@ -18,7 +18,7 @@ const { Default, RawGlyph } = composeStories(stories)
  * query finds nothing.
  */
 test("a glyph gets a name", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   expectAgentDrivable(canvas, {
     name: "Undo",

@@ -9,11 +9,11 @@ import { mountStory } from "../mountStory.testHelpers.ts"
 import { expectAgentDrivable } from "../testing/index.ts"
 import meta, * as stories from "./Button.stories.tsx"
 
-const { AllStates, Default, Loading } =
+const { AllStates, Playground, Loading } =
   composeStories(stories)
 
 test("is drivable by role and name", async () => {
-  const { canvas } = await mountStory(Default)
+  const { canvas } = await mountStory(Playground)
 
   expectAgentDrivable(canvas, {
     name: "Start rip",

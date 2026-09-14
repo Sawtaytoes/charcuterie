@@ -7,7 +7,7 @@ import { mountStory } from "../mountStory.testHelpers.ts"
 import { expectAgentDrivable } from "../testing/index.ts"
 import * as stories from "./SegmentedControl.stories.tsx"
 
-const { AllStates, Default, FullWidth, Interactive } =
+const { AllStates, Playground, FullWidth, Interactive } =
   composeStories(stories)
 
 /**
@@ -25,7 +25,7 @@ const getOptions = (group: HTMLElement) =>
 
 test("it is a radio group with exactly one option checked", async () => {
   const { canvas, canvasElement } =
-    await mountStory(Default)
+    await mountStory(Playground)
 
   const group = expectAgentDrivable(canvas, {
     name: "Columns",
