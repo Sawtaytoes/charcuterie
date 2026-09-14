@@ -155,15 +155,33 @@ test("the day number round-trips across four centuries", () => {
     year: 2101,
   })
 
+  // ⚠️ ONE assertion, not 74 000 of them.
+  //
+  // This loop covers about 74 000 days, and it used to call `expect` on every
+  // one. Vitest builds an assertion object per call, so the assertion overhead
+  // WAS the whole cost of the test — it ran right up against the default 5 000
+  // ms timeout and started failing on 2026-09-14 when the hosted runners got
+  // slower. Collecting the mismatches and asserting once removes the overhead
+  // and keeps every day covered.
+  //
+  // It also reports better. The old shape stopped at the first bad day; this
+  // one names every day that failed, which is what you want from a round-trip
+  // over a century rule.
+  const mismatchedDayNumbers = []
+
   for (
     let dayNumber = from;
     dayNumber <= to;
     dayNumber += 1
   ) {
-    expect(
-      getDayNumber(getPlainDateFromDayNumber(dayNumber)),
-    ).toBe(dayNumber)
+    if (
+      getDayNumber(getPlainDateFromDayNumber(dayNumber)) !==
+      dayNumber
+    )
+      mismatchedDayNumbers.push(dayNumber)
   }
+
+  expect(mismatchedDayNumbers).toEqual([])
 
   expect(
     getDayNumber({ day: 1, month: 1, year: 1970 }),
