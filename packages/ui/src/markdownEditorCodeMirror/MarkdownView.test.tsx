@@ -86,12 +86,28 @@ test("it is an article whose headings are headings", async () => {
 test("it renders what the editor renders", async () => {
   const { canvas } = await mountStory(SameAsTheEditor)
 
-  const [viewTable, editorTable] =
-    canvas.getAllByRole("table")
+  // ⚠️ WAIT FOR THE COUNT, not for "a table".
+  //
+  // This test is the only one in the file that mounts a story with
+  // BOTH surfaces, so it is the only one that has to wait for
+  // CodeMirror. `MarkdownView` paints its table in the first commit;
+  // CodeMirror parses and decorates the document afterwards. A
+  // synchronous `getAllByRole("table")` therefore returned ONE table
+  // on a slow runner, `editorTable` was `undefined`, and the failure
+  // read "expected undefined to be defined" — which says nothing
+  // about the real cause (CI, 2026-09-14).
+  //
+  // ⚠️ A bare `findAllByRole` does NOT fix it. `findAllBy*` retries
+  // until the query matches AT LEAST ONE element, and one element is
+  // exactly the broken state: the view's table is there from the
+  // start. The count is the condition, so the count goes in the wait.
+  const [viewTable, editorTable] = await waitFor(() => {
+    const tables = canvas.getAllByRole("table")
 
-  await expect(viewTable).toBeDefined()
+    expect(tables).toHaveLength(2)
 
-  await expect(editorTable).toBeDefined()
+    return tables
+  })
 
   const toCellText = (table: HTMLElement) =>
     Array.from(table.querySelectorAll("th, td")).map(
@@ -103,10 +119,16 @@ test("it renders what the editor renders", async () => {
   ).toEqual(toCellText(editorTable as HTMLElement))
 
   // Three task boxes in each, and the first one ticked in each.
-  const checkboxes: HTMLInputElement[] =
-    canvas.getAllByRole("checkbox")
+  // Same wait, same reason: CodeMirror's boxes arrive with its
+  // decorations, so a count taken too early sees only the view's.
+  const checkboxes = await waitFor(() => {
+    const boxes: HTMLInputElement[] =
+      canvas.getAllByRole("checkbox")
 
-  await expect(checkboxes).toHaveLength(6)
+    expect(boxes).toHaveLength(6)
+
+    return boxes
+  })
 
   await expect(
     checkboxes.filter((checkbox) => checkbox.checked),
@@ -114,11 +136,13 @@ test("it renders what the editor renders", async () => {
 
   // The bare URL, autolinked on both sides with nothing typed
   // around it.
-  await expect(
-    canvas.getAllByText(
-      "https://example.invalid/product?id=1234",
-    ).length,
-  ).toBe(2)
+  await waitFor(() => {
+    expect(
+      canvas.getAllByText(
+        "https://example.invalid/product?id=1234",
+      ),
+    ).toHaveLength(2)
+  })
 })
 
 /**
