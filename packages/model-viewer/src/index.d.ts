@@ -44,10 +44,20 @@ export function loadSTL(
   url: string | URL,
   options?: RequestInit,
 ): Promise<THREE.BufferGeometry>
+export interface EdgeCache {
+  get(geometry: THREE.BufferGeometry): THREE.BufferGeometry
+  set(
+    geometry: THREE.BufferGeometry,
+    edges: THREE.BufferGeometry,
+  ): THREE.BufferGeometry
+  dispose(): void
+}
+export function createEdgeCache(angle?: number): EdgeCache
 export function addEdges(
   mesh: THREE.Mesh,
   options?: {
     angle?: number
+    cache?: EdgeCache
     colour?: THREE.ColorRepresentation
     opacity?: number
     isVisible?: boolean
