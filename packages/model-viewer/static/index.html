@@ -34,6 +34,8 @@
   #info .nm{color:#fff;font-weight:600}
   #info .mut{color:var(--muted)}
   summary{cursor:pointer}
+  input[type=range]:disabled{opacity:.4;cursor:not-allowed}
+  label:has(input:disabled){color:var(--muted)}
   #parts-menu[open]{flex-basis:100%}
   #parts-menu #parts{max-height:24vh;overflow:auto;margin-top:6px}
   #info{max-width:94vw;max-height:28vh;overflow:auto}

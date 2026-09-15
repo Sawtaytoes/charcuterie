@@ -42,6 +42,7 @@ it("renders the built standalone page with arrangements, artwork, stable visibil
         label: "Cover",
         color: 0x5ad8a6,
         offset: [0, 0, 15],
+        explode: [0, 40, 0],
       },
     ],
     queryViews: { "inside=1": "inside" },
@@ -171,6 +172,67 @@ it("renders the built standalone page with arrangements, artwork, stable visibil
         exact: true,
       })
       .click()
+    await page.locator("#extras summary").click()
+    const isSliderDisabled = () =>
+      page.evaluate(
+        () => document.getElementById("separate").disabled,
+      )
+    expect(await isSliderDisabled()).toBe(false)
+    // ⚠️ The separation slider must never rebuild geometry.
+    //
+    // It used to call the full arrangement routine on every `input` event,
+    // which disposed and re-extracted every part's EdgesGeometry. On this
+    // repo's review models that is ~270 ms of blocking work per event, and a
+    // drag fires one per pixel. A core pegged, the render loop starved, and
+    // the assembly appeared not to move at all.
+    //
+    // Identity of the edge geometry is the check: a rebuild replaces the
+    // object, repositioning a group does not.
+    const edgesBefore = await page.evaluate(() => {
+      window.__edges = __viewer.parts.map(
+        (part) => part.edge.geometry,
+      )
+      return window.__edges.length
+    })
+    expect(edgesBefore).toBe(2)
+    const cost = await page.evaluate(() => {
+      const control = document.getElementById("separate")
+      const start = performance.now()
+      for (let step = 1; step <= 40; step += 1) {
+        control.value = String(step / 40)
+        control.dispatchEvent(
+          new Event("input", { bubbles: true }),
+        )
+      }
+      return performance.now() - start
+    })
+    expect(cost).toBeLessThan(50)
+    expect(
+      await page.evaluate(() =>
+        __viewer.parts.every(
+          (part, index) =>
+            part.edge.geometry === window.__edges[index],
+        ),
+      ),
+    ).toBe(true)
+    expect(
+      await page.evaluate(
+        () => __viewer.parts[1].group.position.y,
+      ),
+    ).toBeCloseTo(70, 5)
+    // Only the lid can separate, so a view which hides it has nothing to do.
+    await page
+      .getByRole("button", { name: "Inside", exact: true })
+      .click()
+    expect(await isSliderDisabled()).toBe(true)
+    await page
+      .getByRole("button", {
+        name: "Separate parts",
+        exact: true,
+      })
+      .click()
+    expect(await isSliderDisabled()).toBe(false)
+    await page.locator("#extras summary").click()
     if (process.env.MODEL_VIEWER_SCREENSHOTS)
       await page.screenshot({
         path: path.join(

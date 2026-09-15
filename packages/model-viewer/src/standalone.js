@@ -1,5 +1,6 @@
 import {
   addEdges,
+  createEdgeCache,
   createViewer,
   fitBounds,
   loadSTL,
@@ -15,6 +16,7 @@ const viewer = createViewer(element, {
 })
 const { renderer, scene, camera, controls, group } = viewer
 const parts = []
+const edgeCache = createEdgeCache(24)
 const palette = [
   0x5b8ff9, 0xf2617a, 0x5ad8a6, 0xf6bd16, 0x9aa7b8,
   0xa974f0,
@@ -23,7 +25,12 @@ let isWireframe = false
 let isEdges = true
 let isSpinning = false
 let isPlain = false
-let currentView = "iso"
+// The page drew 60 frames a second forever, with nothing moving. Draw only
+// when something changed: a scene edit, an orbit, damping, or the spin.
+let isDirty = true
+const invalidate = () => {
+  isDirty = true
+}
 let manifest
 let bounds
 const directions = {
@@ -67,13 +74,19 @@ const sync = () => {
   document.getElementById("plain").ariaPressed =
     String(isPlain)
   for (const part of parts) {
+    const map = isPlain ? null : part.texture
     part.mesh.material.wireframe = isWireframe
     part.edge.visible = isEdges
-    part.mesh.material.map = isPlain ? null : part.texture
-    part.mesh.material.needsUpdate = true
+    // Assigning a map swaps the shader program, so only flag a genuine change.
+    if (part.mesh.material.map !== map) {
+      part.mesh.material.map = map
+      part.mesh.material.needsUpdate = true
+    }
     part.button.ariaPressed = String(part.group.visible)
   }
+  syncSeparateControl()
   info()
+  invalidate()
 }
 const measure = () => {
   const box = new THREE.Box3()
@@ -85,32 +98,53 @@ const measure = () => {
 const fitView = (direction) => {
   bounds = measure()
   fitBounds(camera, controls, bounds, direction)
+  invalidate()
 }
-function arrange(name, isRefit = true) {
-  currentView = name
-  isSpinning = false
-  group.rotation.y = 0
-  const arrangement = manifest.views?.[name] || {}
+/**
+ * Dragging the separation slider must not touch geometry. Edge extraction over
+ * this repo's review models costs ~270 ms for one pass, and an `input` event
+ * fires on every pixel of a drag, which pegged a core and starved the render
+ * loop. Repositioning a group is arithmetic and costs ~0.1 ms.
+ */
+const separate = () => {
   const separation = Number(
     document.getElementById("separate").value,
   )
+  for (const part of parts)
+    part.group.position
+      .copy(part.base)
+      .addScaledVector(part.explode, separation)
+  invalidate()
+}
+const syncSeparateControl = () => {
+  const slider = document.getElementById("separate")
+  // A manifest without explode vectors cannot separate anything. Say so,
+  // rather than leave a live-looking control which does nothing.
+  const isSeparable = parts.some(
+    (part) =>
+      part.group.visible && part.explode.lengthSq() > 0,
+  )
+  slider.disabled = !isSeparable
+  slider.title = isSeparable
+    ? "Separate the parts of the assembly"
+    : "This model has no separated arrangement"
+}
+function arrange(name, isRefit = true) {
+  isSpinning = false
+  group.rotation.y = 0
+  const arrangement = manifest.views?.[name] || {}
   for (const part of parts) {
     const state = arrangement.parts?.[part.id] || {}
     part.group.visible =
       state.isVisible ?? part.spec.visible !== false
-    part.group.position.fromArray(
-      state.position || [0, 0, 0],
-    )
+    part.base.fromArray(state.position || [0, 0, 0])
     part.group.rotation.fromArray([
       ...(state.rotation || [0, 0, 0]),
       "XYZ",
     ])
     part.group.scale.fromArray(state.scale || [1, 1, 1])
-    const explode = state.explode ||
-      part.spec.explode || [0, 0, 0]
-    part.group.position.addScaledVector(
-      new THREE.Vector3(...explode),
-      separation,
+    part.explode.fromArray(
+      state.explode || part.spec.explode || [0, 0, 0],
     )
     part.mesh.geometry = state.geometry
       ? part.variants[state.geometry]
@@ -119,12 +153,9 @@ function arrange(name, isRefit = true) {
       throw new Error(
         `Unknown geometry ${state.geometry} for ${part.id}`,
       )
-    part.edge.geometry.dispose()
-    part.edge.geometry = new THREE.EdgesGeometry(
-      part.mesh.geometry,
-      24,
-    )
+    part.edge.geometry = edgeCache.get(part.mesh.geometry)
   }
+  separate()
   document.getElementById("caption").textContent =
     arrangement.caption || ""
   document
@@ -248,7 +279,7 @@ try {
     partGroup.add(mesh)
     partGroup.visible = spec.visible !== false
     group.add(partGroup)
-    const edge = addEdges(mesh)
+    const edge = addEdges(mesh, { cache: edgeCache })
     const button = document.createElement("button")
     button.textContent = spec.label || spec.file
     button.onclick = () => {
@@ -267,6 +298,8 @@ try {
       size,
       texture,
       button,
+      base: new THREE.Vector3(),
+      explode: new THREE.Vector3(),
     })
   }
   // Translate geometries so spin has the visible assembly's centre as its origin.
@@ -277,6 +310,8 @@ try {
       ...Object.values(part.variants),
     ])
       geometry.translate(-centre.x, -centre.y, -centre.z)
+    // The cached edges for part.geometry move with it here. A variant's edges
+    // are built on first use, from geometry this loop has already translated.
     part.edge.geometry.translate(
       -centre.x,
       -centre.y,
@@ -337,8 +372,8 @@ try {
     isPlain = !isPlain
     sync()
   }
-  document.getElementById("separate").oninput = () =>
-    arrange(currentView, false)
+  document.getElementById("separate").oninput = separate
+  controls.addEventListener("change", invalidate)
   const resize = () => {
     viewer.resize()
     fitView(camera.position.clone().sub(controls.target))
@@ -364,14 +399,23 @@ try {
     isReady: true,
   }
   renderer.setAnimationLoop(() => {
-    if (isSpinning) group.rotation.y += 0.0035
+    if (isSpinning) {
+      group.rotation.y += 0.0035
+      invalidate()
+    }
+    if (!isDirty) return
+    // Cleared before the draw: controls.update() inside render() re-dirties
+    // the flag through its change event while damping is still settling.
+    isDirty = false
     viewer.render()
   })
   window.addEventListener(
     "pagehide",
     () => {
       observer.disconnect()
+      controls.removeEventListener("change", invalidate)
       viewer.dispose()
+      edgeCache.dispose()
     },
     { once: true },
   )

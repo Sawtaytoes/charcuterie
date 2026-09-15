@@ -153,12 +153,41 @@ export async function loadSTL(url, options) {
   return parseSTL(await response.arrayBuffer())
 }
 
+/**
+ * Edge extraction costs milliseconds per thousand triangles, so a caller which
+ * swaps geometry must never rebuild the same edges twice. Keyed on the geometry
+ * object, which is what an arrangement actually switches between.
+ */
+export function createEdgeCache(angle = 24) {
+  const cache = new Map()
+  return {
+    get(geometry) {
+      let edges = cache.get(geometry)
+      if (!edges) {
+        edges = new THREE.EdgesGeometry(geometry, angle)
+        cache.set(geometry, edges)
+      }
+      return edges
+    },
+    set(geometry, edges) {
+      cache.set(geometry, edges)
+      return edges
+    },
+    dispose() {
+      for (const edges of cache.values()) edges.dispose()
+      cache.clear()
+    },
+  }
+}
+
 export function addEdges(mesh, options = {}) {
   const lines = new THREE.LineSegments(
-    new THREE.EdgesGeometry(
-      mesh.geometry,
-      options.angle ?? 24,
-    ),
+    options.cache
+      ? options.cache.get(mesh.geometry)
+      : new THREE.EdgesGeometry(
+          mesh.geometry,
+          options.angle ?? 24,
+        ),
     new THREE.LineBasicMaterial({
       color: options.colour ?? 0x0b0e12,
       transparent: true,
