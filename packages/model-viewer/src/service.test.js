@@ -10,6 +10,12 @@ import os from "node:os"
 import path from "node:path"
 import { promisify } from "node:util"
 import { expect, it } from "vitest"
+// ⚠️ Read the version, never write it as a literal.
+//
+// Both probe assertions below used to say "0.1.0". That makes every version
+// bump of this package a test failure, so the Version Packages pull request
+// could never go green and the package could never be released.
+import metadata from "../package.json" with { type: "json" }
 
 const run = promisify(execFile)
 it("keeps two previews alive after their launcher exits and isolates their workers", async () => {
@@ -98,7 +104,7 @@ it("keeps two previews alive after their launcher exits and isolates their worke
       (await request({ directory: os.tmpdir() })).status,
     ).toBe(400)
     expect((await request({ probe: true })).version).toBe(
-      "0.1.0",
+      metadata.version,
     )
     // Linux runtime proof: stopping one listening process must not stop its sibling or supervisor.
     if (process.platform === "linux") {
@@ -118,7 +124,7 @@ it("keeps two previews alive after their launcher exits and isolates their worke
         (await fetch(`${urls[1]}/version.json`)).status,
       ).toBe(200)
       expect((await request({ probe: true })).version).toBe(
-        "0.1.0",
+        metadata.version,
       )
     }
   } finally {
