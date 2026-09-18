@@ -9,6 +9,8 @@ import {
   StoryCell,
   StoryGrid,
 } from "../board.storyHelpers.tsx"
+import { Modal } from "../Modal/Modal.tsx"
+import { OverlayStackProvider } from "../Overlay/OverlayStack.tsx"
 import { Toast } from "./Toast.tsx"
 import type { ToastRecord } from "./ToastRegion.tsx"
 import { ToastRegion } from "./ToastRegion.tsx"
@@ -189,6 +191,158 @@ export const Interactive: Story = {
           toasts={toasts}
         />
       </>
+    )
+  },
+}
+
+/**
+ * Twelve at once, which is the case the bottom-anchored column
+ * cannot hold. Without a bound the oldest climb off the top of the
+ * page and take the stack with them; the list is capped, pinned to
+ * its bottom edge, and scrolls. The newest is always the one on
+ * screen.
+ */
+export const ManyAtOnce: Story = {
+  args: { title: "Rip finished" },
+  parameters: { layout: "fullscreen" },
+  render: function ManyRegion() {
+    const [toasts, setToasts] = useState<ToastRecord[]>(
+      Array.from({ length: 12 }, (_, index) => ({
+        description: `Bay ${index + 1} finished.`,
+        duration: 0,
+        intent: "success" as const,
+        key: `rip-${index}`,
+        title: `Rip ${index + 1} finished`,
+      })),
+    )
+
+    return (
+      <div className="h-dvh">
+        <ToastRegion
+          onDismiss={(key) => {
+            setToasts((previous) =>
+              previous.filter((one) => one.key !== key),
+            )
+          }}
+          toasts={toasts}
+        />
+      </div>
+    )
+  },
+}
+
+/**
+ * The story the `z-50` bug needed and never had.
+ *
+ * Two stacked modals and a pinned toast carrying an Undo. Three
+ * things have to be true at once, and each one was false before the
+ * layering change:
+ *
+ * 1. The toast paints **above both modals**, which cascade at
+ *    `--layer-modal + n`.
+ * 2. Pressing its Undo does **not** close the modal — a press on a
+ *    toast is not an outside press.
+ * 3. The toast stays in the accessibility tree while the focus
+ *    manager hides the rest of the page.
+ */
+export const OverStackedModals: Story = {
+  args: { title: "Rip finished" },
+  parameters: { layout: "fullscreen" },
+  render: function OverModalsRegion() {
+    const [isOuterVisible, setIsOuterVisible] =
+      useState(true)
+
+    const [isInnerVisible, setIsInnerVisible] =
+      useState(true)
+
+    const [isUndone, setIsUndone] = useState(false)
+
+    const [toasts, setToasts] = useState<ToastRecord[]>([
+      {
+        description: "Undo",
+        duration: 0,
+        intent: "success",
+        key: "moved",
+        title: "Moved to Done",
+      },
+    ])
+
+    return (
+      <OverlayStackProvider>
+        <div className="h-dvh p-4">
+          {/* Page content beside the region, and load-bearing.
+              `markOthers` marks it, which is what makes
+              `OverlayPanel`'s `outsidePress` predicate decide the
+              press on Undo — a story holding nothing but the
+              region takes a different branch inside floating-ui
+              and passes whether the guard exists or not. */}
+          <h2 className="m-0 text-lg">Rip queue</h2>
+
+          <p className="m-0">
+            Four bays, three of them busy.
+          </p>
+
+          <Modal
+            aria-label="Rip settings"
+            isVisible={isOuterVisible}
+            onClose={() => {
+              setIsOuterVisible(false)
+            }}
+          >
+            <div className="flex flex-col gap-2 p-4">
+              <p className="m-0">The outer modal.</p>
+
+              <Button
+                onClick={() => {
+                  setIsInnerVisible(true)
+                }}
+              >
+                Open the inner modal
+              </Button>
+            </div>
+          </Modal>
+
+          <Modal
+            aria-label="Confirm the rip"
+            isVisible={isOuterVisible && isInnerVisible}
+            onClose={() => {
+              setIsInnerVisible(false)
+            }}
+          >
+            <div className="flex flex-col gap-2 p-4">
+              <p className="m-0">
+                The inner modal, on top of the outer one.
+              </p>
+
+              <p className="m-0">
+                {isUndone ? "Undone" : "Not undone"}
+              </p>
+            </div>
+          </Modal>
+
+          <ToastRegion
+            onDismiss={(key) => {
+              setToasts((previous) =>
+                previous.filter((one) => one.key !== key),
+              )
+            }}
+            toasts={toasts.map((one) => ({
+              ...one,
+              description: (
+                <Button
+                  onClick={() => {
+                    setIsUndone(true)
+                  }}
+                  appearance="ghost"
+                  size="sm"
+                >
+                  Undo
+                </Button>
+              ),
+            }))}
+          />
+        </div>
+      </OverlayStackProvider>
     )
   },
 }
