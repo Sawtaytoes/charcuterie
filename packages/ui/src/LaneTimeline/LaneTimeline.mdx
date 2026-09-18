@@ -1,0 +1,191 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as LaneTimelineStories from "./LaneTimeline.stories";
+
+<Meta of={LaneTimelineStories} />
+
+# LaneTimeline
+
+One horizontal lane per group, across a date axis, with anything that lasts more than a day
+drawn as a **bar**.
+
+<Canvas of={LaneTimelineStories.Playground} />
+
+## Props
+
+<Controls />
+
+## What a month grid cannot do
+
+Two things, and both of them are the reason this component exists.
+
+- **A multi-day thing is one shape.** A grid breaks it into four cells and the fact that it
+  is one thing has to be inferred. A bar keeps its real extent, which is what a person means
+  when they say "the roofers are here Tuesday to Friday".
+- **A grid cell is the same size no matter what is in it.** So a grid cannot show that one
+  lane is carrying most of the week. A lane can: overlapping items stack into rows, so a busy
+  lane is literally three times the height of a quiet one and the asymmetry reads from across
+  the room, before anybody counts anything.
+
+It is **not a calendar**. There is no event, no attendee and no recurrence in this API,
+because the same shape is wanted for things that are not calendars at all — phases over days,
+a hire, a hold. The library owns the **shape**; the app owns the **data**.
+
+## `end` is inclusive, and it is the decision to know
+
+**`end` is the last day the item covers.** `2026-04-06` to `2026-04-06` is one day, and a
+Monday-to-Sunday week is `06` to `12` — seven columns, not eight.
+
+This is stated three times — here, on the type, and in the geometry module — because an
+off-by-one on a date range is invisible **in both directions**. A bar one day short and a bar
+one day long are both bars, and no screenshot, no axe run and no type can tell you which one
+you are looking at.
+
+The alternative is a half-open interval, which is what `Date` ranges and iCalendar's `DTEND`
+use, and it is the better model for *instants*. It is the wrong one here: nobody writes down
+"Monday to Saturday" to mean a working week, so an exclusive end makes every consumer add a
+day on the way in — and forget to on one of the paths.
+
+## The four edge cases
+
+Each of these is a place a naive implementation draws nothing, or draws it somewhere else.
+All four are in the first panel below.
+
+| The item | What happens |
+| --- | --- |
+| **Zero width** — `end` before `start` | Folded to the single day at `start` and **drawn**. Not dropped, because a dropped row is a data fault nobody can see. Not drawn backwards, because there is no such shape — and `grid-column: 4 / span 0` is not a zero-width box, it is undefined behaviour that lands the bar somewhere plausible. |
+| **A single day** — `start` equal to `end` | One column, with the same treatment as any other bar. Not a dot: a dot is a second mark, and the eye then has two vocabularies to learn on one axis. |
+| **Starts before the range** | Clipped to column 1, square leading edge, and its own start date still in its name. The naive subtraction produces a negative column, and CSS grid reads a negative `grid-column-start` as counting back from the **end** of the row — so the bar appears, at the far side of the week, with nothing failing. |
+| **Ends after the range** | Clipped to the last column, square trailing edge. The length it reports is the item's own, not the visible part of it. |
+
+An item entirely outside the range is not drawn **and not counted**. Nothing is missing from
+the picture; the picture is of another week.
+
+<Canvas of={LaneTimelineStories.AllStates} />
+
+## The Narrow View is a list, not a pan surface
+
+Thirty columns have no narrow layout, and the two obvious answers are both wrong. Horizontal
+scrolling hides lanes behind a gesture with no affordance and fights the trackpad's own
+back-navigation — *"no horizontal scroll, ever"*, the same rule
+[Board](?path=/docs/components-layout-board--docs) settled. Squeezing thirty columns into
+390px gives each day 13 pixels, which is not a timeline, it is a texture.
+
+So below the threshold the axis is **abandoned rather than shrunk**. Each lane becomes a
+one-column list, each item a line of text with its span written out in words. Nothing is
+hidden, nothing overflows, and the reading order is the one a text-heavy list already wants.
+
+<Canvas of={LaneTimelineStories.NarrowView} />
+
+It is the **Narrow View**, never "mobile". The name is about the width, which is what the
+component actually measures: a docked sidebar on a 4K monitor gets this layout and a tablet
+in landscape does not.
+
+## It folds on a measurement, not a breakpoint
+
+There is no `@media` and no `cq-` in this component, and neither could do the job. The
+question is not *how wide is the box* but **how wide is one day** — which is the width
+divided by a number that lives in the data.
+
+Thirty columns in 900px is a readable month. Three hundred and sixty five columns in the
+**same** 900px is a grey smear. No query can tell those two apart, because the box never
+changed. `Nav` folds its bar on a measured width for the weaker version of this reason, and
+`useToolbarOverflow` writes the general argument down: mux-magic collapses at a hardcoded
+`480px` and plex-channels at `760px`, and neither number has a reason.
+
+<Canvas of={LaneTimelineStories.Responsive} />
+
+The second row there is the proof: the same three panels, one week and one month. The 24rem
+panel keeps its axis for the week and loses it for the month, and the browser window never
+moved.
+
+⚠️ **It must not be sized by its own contents.** The component reads its own box to decide
+what to draw in it, so a shrink-wrapping parent makes the answer its own input. The root
+declares `container-type: inline-size` — not to query it, the same reason `Main` declares one
+— which forbids the element from being sized by what is inside it. In a story that is what
+`align="stretch"` on the `StoryCell` is for.
+
+### The measurement is taken from a probe, not from the track
+
+A zero-height `aria-hidden` cell that sits in the same grid column the axis would occupy, and
+that renders in **both** layouts. Measuring the real track is a one-way door: the Narrow View
+unmounts it, so the width never updates and the axis can never come back when the window
+widens. Hiding the track with `display: none` instead is worse — a hidden box measures 0, and
+if 0 meant "not measured yet" the component would show the axis, which hides the fallback,
+which measures 0 again, every frame.
+
+Which is why "has it been measured" is its own flag rather than `inlineSize > 0`: **zero is a
+real width here**, because the track is a `minmax(0, 1fr)` column beside a fixed label rail.
+
+## The labels thin; the type does not shrink
+
+Type that shrinks to fit is type somebody cannot read, and the density axis already owns font
+size. So a long range drops to one label a week, and then to one a month. The steps are whole
+weeks — never 2 or 3 — so a labelled column is the same weekday every time; labels landing on
+Tuesday, then Thursday, then Saturday give the eye nothing to lock onto.
+
+<Canvas of={LaneTimelineStories.LongRange} />
+
+## Accessibility
+
+- **Every bar says its own span in words.** A bar carries its meaning in *position and
+  length*, and neither of those reaches a screen reader. So the sentence — "Mon 6 Apr to Thu
+  9 Apr, 4 days" — travels with it, and it uses the item's **own** dates rather than the
+  clipped ones: "when is this on" has one true answer and the viewport is not part of it.
+- **The clipped edge is never the only signal.** A square corner says "this continues" to a
+  reader who has an unclipped bar beside it to compare against, and to nobody else. The name
+  says "starts before this range" out loud.
+- **Colour is reinforcement, not information.** A lane's hue comes from the categorical
+  family and means *which lane* — and the lane is already a named `group` with its name in
+  text, so nothing is carried by hue alone. A lane's colour is
+  `lane.categorical ?? getCategoricalIndex(lane.key)`: hashed from the **key**, never the
+  label, so renaming a lane does not repaint a row the reader had learned to recognise.
+- **The timeline is one landmark and each lane is a `group`.** Eight lanes as eight `region`s
+  would bury the page's real landmarks, and two timelines on one page would put two landmarks
+  with the same name in the document — axe's `landmark-unique`. It is a `<div role="group">`
+  rather than a `<section role="group">` because axe matches `section[aria-labelledby]` on the
+  element and audits it as a landmark even after the role is overridden.
+- **The date axis is `aria-hidden`.** Deliberate, not an oversight: every bar already says its
+  own span, so an axis read aloud is thirty consecutive dates in front of the content. The
+  axis is a *visual* ruler for a mark whose position a sighted reader has to measure against
+  something.
+- **`headingLevel` is yours.** Only the caller knows what the timeline sits under; an `<h3>`
+  directly below the page `<h1>` is an axe `heading-order` failure.
+
+<Canvas of={LaneTimelineStories.AllVariants} />
+
+An item takes an `href` **or** an `onSelect`, never both — a union rather than two optionals,
+the same call `BoardItem` makes. The first renders an `<a>` and the second a `<button>`, so an
+item carrying both would be one of them with the other silently dropped, and the two are
+identical on screen.
+
+An interactive bar takes its name from an `aria-label` rather than from its own text plus a
+`VisuallyHidden`. A name assembled from two elements is assembled by the **browser**, and the
+engines disagree about whether to put a space between the runs — so
+`getByRole("button", { name })` would match on one and not the other.
+
+<Canvas of={LaneTimelineStories.Interactive} />
+
+## Where the line is drawn
+
+| Not here | Because |
+| --- | --- |
+| **Time of day** | This is a calendar-date axis. Two things on one Tuesday stack; they do not sit at 09:00 and 14:00. An hour axis is a different component with a different fold, and the [plain-date decision](https://github.com/Sawtaytoes/charcuterie/blob/master/docs/decisions/2026-08-19-a-date-is-a-calendar-date-not-an-instant.md) is why this one has no `Date` in it at all. |
+| **A range control** | It belongs to the page, and `DatePicker` already is one. |
+| **Dragging a bar** | Moving a bar is a **write**, which is a different component with a different decision behind it — `Board` is the precedent for how much that costs. |
+| **A "now" marker** | A line at today is a page's business, not a lane's, and putting one here would make the component ask what day it is — which is the one question `plainDate.ts` insists you answer out loud. |
+| **Data, sorting, filtering** | All three are operations on the array you pass in. |
+
+## Never invent a token name
+
+The bar fills come from the **categorical** family — ten hues, `--color-categorical-<n>-<role>`
+— through `categoricalStyles.ts`, and every class name in that file is written out in full.
+`` `bg-categorical-${index}-solid` `` generates nothing at all: the bar renders unstyled, with
+no error, no warning and no failing test unless something checks. Docket shipped a board whose
+every priority bar painted `--color-danger-9`, a name this token set has never had, and every
+"is it rendered" assertion passed.
+
+The grid track list is the same trap from the other side. It **must** be an inline style,
+because Tailwind cannot scan `grid-cols-[repeat(30,minmax(0,1fr))]` out of an interpolated
+string — the grid would silently fall back to one column and every bar would land on top of
+every other one.

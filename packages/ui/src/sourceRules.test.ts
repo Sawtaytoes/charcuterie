@@ -233,6 +233,13 @@ test("a container-query component is never storied in a shrink-to-fit cell", () 
     // owner is in whenever he browses zoomed in.
     "DatePicker",
     "EmptyState",
+    // `LaneTimeline` declares one and **never queries it**, which is
+    // the `Main` case rather than a mistake: it wants the
+    // `contain: inline-size` that rides along, because the component
+    // measures its own box to decide whether to draw a date axis at
+    // all. Without the containment a shrink-wrapping parent makes
+    // that answer its own input.
+    "LaneTimeline",
     "Main",
     "MarkdownEditor",
     "MediaTile",
@@ -591,7 +598,21 @@ test("the barrel is the only place components are re-exported", async () => {
   // from `ActionTiles`' "what do you want to do" and would have
   // meant one component whose icon is sometimes a 20px glyph beside
   // a title and sometimes a 144px circle above it.
-  expect(componentNames.length).toBe(65)
+  //
+  // `LaneTimeline` — one horizontal lane per group across a date
+  // axis, with a multi-day thing drawn as a bar — is +1 -> 66. It is
+  // the first component that folds on a **measurement of its own
+  // box** rather than on a container query, and the reason is in the
+  // arithmetic: the question is not how wide the box is but how wide
+  // one day is, which is the width divided by a number that lives in
+  // the data. `laneTimelineGeometry.ts`, `LaneTimelineBar.tsx`,
+  // `LaneTimelineLane.tsx` and `useTrackMeasurements.ts` are its
+  // members and stay out of this count by the `<Name>/<Name>.tsx`
+  // rule. The geometry module is still exported from the barrel — a
+  // consumer deciding whether an item is on screen must ask the
+  // question the same way the bars are placed, or the two answers
+  // drift by a day and nothing says so.
+  expect(componentNames.length).toBe(66)
 
   for (const name of componentNames) {
     expect(barrel).toContain(`export { ${name} }`)
