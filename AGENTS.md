@@ -97,6 +97,24 @@ It also does a second **cold** pass on a story-less docs page, because a missing
 ([decision](docs/decisions/2026-08-05-master-requires-all-four-ci-checks-no-bypass.md)).
 Every user-visible change carries a changeset.
 
+⚠️ **The `chore(release): version packages` pull request reports NO CHECKS until somebody
+approves its run.** The changesets bot pushes `changeset-release/master`, and this repo
+holds a workflow run from a bot actor at `action_required` — so `gh pr checks` says *"no
+checks reported"* and `commits/<sha>/check-runs` returns `0`. That reads exactly like a
+**broken detector**, which the fleet rule says must block a merge, and it is not one: the
+run exists and has simply never started. Find it and approve it, then merge on green:
+
+```sh
+sha=$(gh api repos/Sawtaytoes/charcuterie/pulls/<n> -q .head.sha)
+run=$(gh api "repos/Sawtaytoes/charcuterie/actions/runs?branch=changeset-release/master" \
+  -q ".workflow_runs[] | select(.head_sha==\"$sha\") | .id" | head -1)
+gh api -X POST "repos/Sawtaytoes/charcuterie/actions/runs/$run/approve"
+```
+
+Waiting longer does not help — measured 2026-09-18 on `#272`, which sat at zero check runs
+for 21 minutes and ran to green in 7 as soon as it was approved. **Merging the release
+pull request is what ships the library**; a merged feature pull request publishes nothing.
+
 ## House rules that bite
 
 - **A story's `title` is its place in the sidebar: `Components/<Group>/<Name>`.** The six
