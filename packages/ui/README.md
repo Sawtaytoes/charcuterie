@@ -51,6 +51,18 @@ Moving a card takes **no drag-and-drop dependency**: one handle per card, a `Men
 other lanes as the primary path, Pointer-Event dragging at 1.4 KB gzip beside it
 ([decision](../../docs/decisions/2026-08-19-the-board-owns-the-move-and-takes-no-drag-and-drop-dependency.md)).
 
+**`LaneTimeline` is the first component that folds on a measurement of its own box.**
+One horizontal lane per group across a date axis, with anything lasting more than a day drawn
+as a **bar** — the shape a month grid cannot show, and the only one that makes load asymmetry
+visible, because overlapping items pack into stacked rows and a busy lane is literally taller.
+`end` is **inclusive**, said four times over, because an off-by-one on a date range is
+invisible in both directions. The Narrow View **abandons** the axis rather than panning or
+squeezing it. And the fold is measured rather than queried for a reason no other component
+here has: the question is not how wide the box is but how wide one *day* is, which is the
+width divided by a number that lives in the data — 30 columns in 900px is a readable month
+and 365 columns in the same 900px is a smear
+([decision](../../docs/decisions/2026-09-18-a-timeline-span-ends-on-its-last-day-and-the-axis-folds-on-measurement.md)).
+
 **`DropRail` is the move control for a page `Board`'s `Menu` cannot serve.** A menu of the
 other lanes is right at three lanes; it is wrong at thirty-four groups, where it becomes a
 scrolling list inside a popup and a drag becomes a scroll with the button held down. The
