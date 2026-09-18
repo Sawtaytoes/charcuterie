@@ -159,6 +159,49 @@ export const useToolbarOverflow = ({
    */
   useLayoutEffect(measure)
 
+  /**
+   * Measure again once the webfont has actually arrived.
+   *
+   * Every width above is a **text** width, so it is only as correct
+   * as the font that was loaded when it was read. On a cold cache
+   * the first measurement happens in the fallback face, the items
+   * come out a few pixels off, and `chooseVisibleCount` keeps or
+   * drops one action it should not have — then never revisits it,
+   * because swapping a font changes no box the `ResizeObserver`
+   * watches and triggers no render.
+   *
+   * The user-visible symptom is a bar that settles one button wrong
+   * and stays there. It needs the two faces to disagree across a
+   * collapse boundary, so it is latent rather than observed: no
+   * story in the library crosses one today, which is why `vrt`
+   * reports nothing either way. That makes it a gap to close, not a
+   * regression to chase — the bar is supposed to measure what is on
+   * screen, and until now it could not.
+   *
+   * `document.fonts.ready` resolves immediately when the fonts are
+   * already in, so a warm load pays one microtask and
+   * `setVisibleCount` bails on the unchanged answer.
+   */
+  useLayoutEffect(() => {
+    // jsdom has no `document.fonts`, and neither does a very old
+    // browser. Nothing to wait for is not an error.
+    if (!document.fonts) {
+      return
+    }
+
+    let isActive = true
+
+    document.fonts.ready.then(() => {
+      if (isActive) {
+        measure()
+      }
+    })
+
+    return () => {
+      isActive = false
+    }
+  }, [measure])
+
   useLayoutEffect(() => {
     const container = containerRef.current
 
