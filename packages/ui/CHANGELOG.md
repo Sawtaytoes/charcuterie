@@ -1,5 +1,44 @@
 # @charcuterie/ui
 
+## 4.6.0
+
+### Minor Changes
+
+- 47121f2: The toast is the top of the layer scale, and stacked modals cascade.
+
+  `layer.toast` and `layer.tooltip` swap: the toast is `600` and the
+  tooltip is `500`. A toast is the only surface here that can carry an
+  action with a deadline on it — an Undo — and covering one loses work.
+  A tooltip is transient decoration on a control the pointer is already
+  resting on, and its own requirement was only ever "above a modal".
+
+  `ToastRegion` stops painting at a hand-picked `z-50`, which was below
+  every overlay in the scale: an Undo raised from inside a `Modal` was
+  drawn behind the modal and could not be pressed at all. It reads
+  `--layer-toast` plus the open-modal depth instead.
+
+  `OverlayPanel` cascades. Each open panel paints at
+  `calc(var(--layer-modal) + <its index in the stack>)` rather than all
+  of them sharing one layer, so which of two open modals is on top is
+  the stack's answer instead of a side effect of portal append order.
+  `useOverlayStack()` gains `orderedIds` for it.
+
+  A press on a toast is no longer an outside press, so pressing Undo
+  over a modal runs the action instead of dismissing the modal.
+
+  A tall stack of toasts scrolls instead of climbing off the top of the
+  page: the list is capped at `min(60dvh, 32rem)`, pinned to its bottom
+  edge with an auto margin, and taken to the newest toast on arrival.
+
+  ⚠️ An app that read `layer.toast` or `layer.tooltip` as a number, or
+  that ordered its own surfaces between the two, has to look again.
+
+### Patch Changes
+
+- fa4171e: Re-measure the toolbar once the webfont has loaded. Every width `useToolbarOverflow` reads is a text width, so the first measurement is only as correct as the face that was loaded when the layout effect ran. On a cold cache that is the fallback face, and the bar never revisits the answer: swapping a font changes no box the `ResizeObserver` watches and triggers no render, so neither of the other two measuring points fires. If the two faces disagree across a collapse boundary, `chooseVisibleCount` keeps or drops one action it should not have and the bar stays that way. `document.fonts.ready` is now a third measuring point, which costs one microtask on a warm load because the promise is already resolved and `setVisibleCount` bails on an unchanged answer. No story in the library crosses such a boundary today — this closes a latent gap rather than fixing an observed regression.
+- Updated dependencies [47121f2]
+  - @charcuterie/tokens@1.10.0
+
 ## 4.5.1
 
 ### Patch Changes

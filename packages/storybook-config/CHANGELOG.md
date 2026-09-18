@@ -1,5 +1,12 @@
 # @charcuterie/storybook-config
 
+## 0.4.1
+
+### Patch Changes
+
+- Updated dependencies [47121f2]
+  - @charcuterie/tokens@1.10.0
+
 ## 0.4.0
 
 ### Minor Changes
