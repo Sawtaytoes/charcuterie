@@ -117,12 +117,54 @@ export const OverlayPanel = ({
       // `outsidePress` on a *lower* modal would close it too, so it is
       // scoped to the top — which is also why the scrim needs no click
       // handler of its own.
-      outsidePress: isDismissable && isTop,
+      outsidePress: (event) => {
+        if (!isDismissable || !isTop) return false
+        /*
+         * ⚠️ A press on a toast is NOT an outside press.
+         *
+         * A `ToastRegion` renders in the page, so floating-ui sees a
+         * press on its Undo as a press outside the floating element
+         * — and closing the modal on the way to taking an action
+         * back is the opposite of what the button says. The region
+         * marks itself with `data-charcuterie-toast-region`; nothing
+         * else in the fleet carries that attribute.
+         *
+         * ⚠️ Do not delete this on the evidence of a small story.
+         * floating-ui has a *second*, accidental guard that hides
+         * this one: `closeOnPressOutside` bails out early when the
+         * press target's body-level ancestor contains none of the
+         * `[data-floating-ui-inert]` markers `markOthers` left
+         * behind, on the theory that such an element was injected
+         * after the panel opened. A page that is nothing but a
+         * region takes that branch and never reaches this predicate
+         * at all. A page with content beside the region — every real
+         * app — does reach it. `Toast.stories.tsx`'s
+         * `OverStackedModals` carries a heading and a paragraph for
+         * exactly that reason, and `ToastRegion.test.tsx` fails
+         * without this predicate only because they are there.
+         */
+        const target = event.target as Element | null
+        return (
+          target?.closest?.(
+            "[data-charcuterie-toast-region]",
+          ) == null
+        )
+      },
     }),
     useRole(context, { role }),
   ])
 
   const { register, unregister } = stack
+
+  /**
+   * Where this panel sits in the stack, and therefore how far above
+   * `--layer-modal` it paints. `0` when unprovided — a lone `Modal`
+   * is the only thing open.
+   */
+  const stackIndex = Math.max(
+    stack.orderedIds.indexOf(id),
+    0,
+  )
 
   useEffect(() => {
     if (!isVisible) {
@@ -169,7 +211,26 @@ export const OverlayPanel = ({
       )}
 
       <FloatingPortal>
-        <div className="fixed inset-0 z-[var(--layer-modal)] flex items-center justify-center">
+        <div
+          className="fixed inset-0 flex items-center justify-center"
+          /*
+           * ⚠️ Cascading, not one shared layer.
+           *
+           * Every panel used to render at the one `--layer-modal`, and
+           * which of two open modals painted on top fell out of the
+           * order their portals happened to be appended in. A modal
+           * opened from inside another is the case that made this
+           * visible. The index in the stack is the answer the stack
+           * already knows.
+           *
+           * The scale's gaps are 100, so a cascade this deep is
+           * arithmetic nobody has to think about — and the toast sits
+           * at `--layer-toast` plus the same depth, above all of it.
+           */
+          style={{
+            zIndex: `calc(var(--layer-modal) + ${stackIndex})`,
+          }}
+        >
           <FloatingFocusManager
             context={context}
             // `undefined` keeps the manager's own default (the first

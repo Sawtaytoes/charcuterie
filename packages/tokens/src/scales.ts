@@ -36,6 +36,22 @@ export const space = {
  * z-index. Named, ordered, and the only sanctioned source — the
  * fleet currently has hand-picked `z-10`/`z-50` scattered around
  * with no ordering guarantee between apps.
+ *
+ * ⚠️ **The toast is the top of the scale, above the tooltip.** The
+ * owner's rule, in his own words: *"I think toast should always
+ * exist on top of everything."* A toast is the only thing here that
+ * can carry an action the person has seconds to take — an Undo —
+ * and covering one loses work. A tooltip is transient decoration on
+ * a control the pointer is already resting on. The tooltip's own
+ * requirement was never "above a toast": it is "above a modal", and
+ * 500 still is.
+ *
+ * ⚠️ **The gaps are 100 because the layers CASCADE.** A modal opened
+ * over a modal renders at `calc(var(--layer-modal) + <its index in
+ * the stack>)`, and the toast at `calc(var(--layer-toast) +
+ * <depth>)`, so the ordering holds however deep the stack goes
+ * rather than relying on which portal was appended first. Do not
+ * close these gaps.
  */
 export const layer = {
   base: "0",
@@ -43,8 +59,8 @@ export const layer = {
   dropdown: "200",
   overlay: "300",
   modal: "400",
-  toast: "500",
-  tooltip: "600",
+  tooltip: "500",
+  toast: "600",
 } as const
 
 /**
