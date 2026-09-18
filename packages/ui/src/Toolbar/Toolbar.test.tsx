@@ -284,3 +284,87 @@ test("the shell mounts exactly one toolbar", async () => {
     }),
   ).toHaveLength(1)
 })
+
+/**
+ * The font race, which is latent rather than observed: it needs the
+ * two faces to disagree across a collapse boundary, and no story in
+ * the library crosses one today. The test builds that boundary on
+ * purpose, so the mechanism is checked rather than waited for.
+ *
+ * Every width the bar measures is a **text** width. On a cold cache
+ * the first measurement is taken in the fallback face, and when the
+ * real face swaps in the items change size — but the container does
+ * not, so the `ResizeObserver` stays quiet, and nothing re-renders,
+ * so the layout effect does not run either. The bar keeps an answer
+ * computed against a font that is no longer on screen.
+ *
+ * The stub below is that swap with the timing made explicit: the bar
+ * mounts while `document.fonts.ready` is still pending, the items
+ * are widened with no change to the container's box, and the
+ * promise is then resolved. A bar that only measures on mount and
+ * on resize sees neither event and stays wrong.
+ */
+test("the bar re-measures once the webfont has loaded", async () => {
+  const realFonts = document.fonts
+
+  let markFontsReady = () => {}
+
+  const fontsReady = new Promise<FontFaceSet>((resolve) => {
+    markFontsReady = () => {
+      resolve(realFonts)
+    }
+  })
+
+  // Layered over the real set rather than replacing it, so anything
+  // else that reads `document.fonts` during the mount still works.
+  Object.defineProperty(document, "fonts", {
+    configurable: true,
+    value: Object.create(realFonts, {
+      ready: {
+        get: () => fontsReady,
+      },
+    }),
+  })
+
+  // Widens every action without touching the bar's own box — the
+  // `Frame` around `Playground` is a fixed `34rem`. That is exactly
+  // what a font swap does, and it is why the `ResizeObserver` is
+  // not a substitute for this effect.
+  const widenActions = document.createElement("style")
+
+  widenActions.textContent = `[role="toolbar"] button { padding-inline: 4rem; }`
+
+  try {
+    const { canvas } = await mountStory(Playground)
+
+    const toolbar = expectAgentDrivable(canvas, {
+      name: "Deck actions",
+      role: "toolbar",
+    })
+
+    // It fits in the fallback face.
+    await expect(
+      within(toolbar).queryByRole("button", {
+        name: "More actions",
+      }),
+    ).toBeNull()
+
+    document.head.append(widenActions)
+
+    markFontsReady()
+
+    await waitFor(() => {
+      expect(
+        within(toolbar).getByRole("button", {
+          name: "More actions",
+        }),
+      ).toBeInTheDocument()
+    })
+  } finally {
+    widenActions.remove()
+
+    // Back to the prototype getter — the stub was an own property
+    // shadowing it.
+    Reflect.deleteProperty(document, "fonts")
+  }
+})
