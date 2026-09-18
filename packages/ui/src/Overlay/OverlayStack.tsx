@@ -41,6 +41,11 @@ export type OverlayStackEntry = {
 export type OverlayStackValue = {
   depth: number
   /**
+   * The open ids, oldest first. A panel reads its own index out of
+   * this to cascade its z-index above the one below it.
+   */
+  orderedIds: string[]
+  /**
    * `false` in the context default. An `OverlayPanel` reads this to
    * decide whether to render its own scrim (unprovided) or defer to
    * the provider's shared one.
@@ -56,6 +61,7 @@ export type OverlayStackValue = {
 const DEFAULT_STACK: OverlayStackValue = {
   depth: 0,
   isProvided: false,
+  orderedIds: [],
   register: () => {},
   requestCloseTop: () => {},
   topId: null,
@@ -76,7 +82,6 @@ export const OverlayStackProvider = ({
   const [entries, setEntries] = useState<
     OverlayStackEntry[]
   >([])
-
   // Read through a ref so `requestCloseTop` stays stable while still
   // seeing the live top.
   const entriesRef = useLatestRef(entries)
@@ -112,6 +117,7 @@ export const OverlayStackProvider = ({
     () => ({
       depth: entries.length,
       isProvided: true,
+      orderedIds: entries.map((one) => one.id),
       register,
       requestCloseTop,
       topId: entries.at(-1)?.id ?? null,
