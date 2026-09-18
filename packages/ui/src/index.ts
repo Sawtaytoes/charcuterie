@@ -237,6 +237,19 @@ export {
   INTENT_HOVER_CLASS,
   INTENT_SOLID_FILL_CLASS,
 } from "./intentStyles.ts"
+export type { LaneTimelineProps } from "./LaneTimeline/LaneTimeline.tsx"
+export { LaneTimeline } from "./LaneTimeline/LaneTimeline.tsx"
+export type { TimelineItem } from "./LaneTimeline/LaneTimelineBar.tsx"
+export type { TimelineLane } from "./LaneTimeline/LaneTimelineLane.tsx"
+export type {
+  BarPlacement,
+  TimelineAxis,
+  TimelineSpan,
+} from "./LaneTimeline/laneTimelineGeometry.ts"
+export {
+  toBarPlacement,
+  toTimelineAxis,
+} from "./LaneTimeline/laneTimelineGeometry.ts"
 export type { LightboxProps } from "./Lightbox/Lightbox.tsx"
 export { Lightbox } from "./Lightbox/Lightbox.tsx"
 export type {
