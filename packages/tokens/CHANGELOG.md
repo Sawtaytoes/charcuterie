@@ -1,5 +1,13 @@
 # @charcuterie/tokens
 
+## 1.10.1
+
+### Patch Changes
+
+- 7f7b8c6: Rename the example consumer projects used in doc comments, specimen labels and test
+  fixtures to neutral names. No runtime change: the exports, the token values and the
+  component APIs are identical.
+
 ## 1.10.0
 
 ### Minor Changes
