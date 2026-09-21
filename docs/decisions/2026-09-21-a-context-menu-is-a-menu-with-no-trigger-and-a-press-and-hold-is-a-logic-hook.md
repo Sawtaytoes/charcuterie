@@ -91,6 +91,11 @@ the element would fight every consumer's own.
   expected `220, 184`, and putting the dependency back reproduces it on demand.
 - It is a **layout** effect for the same reason: an ordinary effect sets the reference after
   the browser has painted, so the menu flashes in the corner on its way to the finger.
+- ⚠️ **The fix came back out on its own, once.** `isVisible` as a bare re-read is a
+  dependency the effect never mentions, so `exhaustive-deps --fix` deleted it during a
+  routine `yarn lint` — between a green test run and a red one, with no diff anybody wrote.
+  The effect returns early while the panel is hidden, which is honest (there is nothing to
+  anchor) and is what keeps the dependency.
 - `useLongPress.browser.test.ts` drives the four sequences apart in chromium — a held press,
   a press that travelled 40px, the Android `contextmenu`, and a mouse press that must neither
   fire nor lose its native menu — plus the click that must reach nothing and the tap after it
