@@ -9,11 +9,16 @@ import {
   FloatingFocusManager,
   FloatingPortal,
 } from "@floating-ui/react"
-import type { ReactElement, ReactNode } from "react"
+import type {
+  ReactElement,
+  ReactNode,
+  RefObject,
+} from "react"
 import { useEffect, useRef } from "react"
 
 import { PANEL_ITEM_SIZE_CLASS } from "../controlStyles.ts"
 import { PANEL_SURFACE_CLASS } from "../Overlay/overlayPanelClass.ts"
+import type { AnchoredOverlayAnchor } from "../Overlay/useAnchoredOverlay.ts"
 import { useAnchoredOverlay } from "../Overlay/useAnchoredOverlay.ts"
 import { usePanelItemSize } from "../Overlay/usePanelItemSize.ts"
 import { toClassName } from "../toClassName.ts"
@@ -64,7 +69,48 @@ export type MenuGroup = {
  */
 export type MenuEntry = MenuGroup | MenuItem | MenuSeparator
 
-export type MenuProps = {
+/**
+ * The two ways a menu can be summoned, and they are mutually
+ * exclusive at the type level rather than by a note nobody reads.
+ *
+ * **Trigger mode** is the menu button: the control is cloned, it
+ * gains `aria-haspopup`/`aria-expanded`, and it **names the
+ * panel** through `aria-labelledby` — which is why there is no
+ * `label` prop here and why adding one did nothing (see the
+ * component's own notes).
+ *
+ * **Anchor mode** has no trigger at all. It is the context menu:
+ * summoned by a gesture over a surface, positioned against an
+ * element or a bare point. Nothing names it, so `label` stops
+ * being inert and becomes **required** — a `role="menu"` that no
+ * `aria-labelledby` reaches is an unnamed menu, and a screen
+ * reader announces "menu, 4 items" with no idea what of.
+ */
+type MenuAnchorProps = {
+  /**
+   * What the panel hangs off: the pressed element, or a virtual
+   * element holding the point that was pressed
+   * (`AnchoredOverlayAnchor`). Read when the menu becomes
+   * visible, so the same ref can be re-aimed before each open.
+   */
+  anchorRef: RefObject<AnchoredOverlayAnchor | null>
+  /** Names the panel. Required here; see above. */
+  label: string
+  trigger?: never
+}
+
+type MenuTriggerProps = {
+  anchorRef?: never
+  /**
+   * Absent on purpose. The trigger names the panel, and a `label`
+   * here would be silently discarded by `aria-labelledby`.
+   */
+  label?: never
+  /** The control the menu hangs off. **Cloned, not wrapped.** */
+  trigger: ReactElement
+}
+
+type MenuBaseProps = {
   className?: string
   /**
    * Shown when there is no item to show — a `group` with no members
@@ -92,9 +138,10 @@ export type MenuProps = {
   /** Outside press, Escape, and choosing an item all land here. */
   onDismiss: () => void
   placement?: Placement
-  /** The control the menu hangs off. **Cloned, not wrapped.** */
-  trigger: ReactElement
 }
+
+export type MenuProps = MenuBaseProps &
+  (MenuAnchorProps | MenuTriggerProps)
 
 /**
  * A group heading is not a row — it has no height of its own to take
@@ -188,6 +235,27 @@ const hasAnyItem = (items: MenuEntry[]): boolean =>
  * note has to be one, `aria-disabled` and out of the roving group:
  * announced as "No actions available, dimmed", focusable by nothing.
  *
+ * ### Anchor mode: the same menu, summoned by a gesture
+ *
+ * A context menu is this component with its trigger taken away.
+ * `anchorRef` replaces it — pointing at the pressed element, or at
+ * a **virtual** element that is only a rectangle, which is how the
+ * panel opens at the finger rather than at the corner of the card
+ * underneath. `useLongPress` in `@charcuterie/logic` is the other
+ * half; it hands back the point.
+ *
+ * One thing changes with the trigger gone, and it is the a11y
+ * half: nothing names the panel any more, so `label` becomes
+ * **required** in this mode and inert in the other. That is the
+ * narrowed M3/M4 rule read the other way round — an overlay with
+ * no trigger relationship needs its own name, and this is a menu
+ * that has none.
+ *
+ * Dismissal needs no special case. floating-ui's outside-press
+ * watches `pointerdown`, and the press that opened a context menu
+ * is over before the panel exists, so it cannot close itself on
+ * the way in.
+ *
  * ### No type-ahead, deliberately
  *
  * The APG lists type-ahead as optional for a menu and required for a
@@ -197,11 +265,13 @@ const hasAnyItem = (items: MenuEntry[]): boolean =>
  * a menu you can cross in three arrow presses.
  */
 export const Menu = ({
+  anchorRef,
   className,
   emptyState,
   isVisible,
   items,
   itemSize: requestedItemSize = "lg",
+  label,
   onDismiss,
   placement = "bottom-start",
   trigger,
@@ -227,7 +297,9 @@ export const Menu = ({
     floatingStyles,
     getFloatingProps,
     setFloating,
+    triggerId,
   } = useAnchoredOverlay({
+    anchorRef,
     // A menu had no clamp at all, which was survivable while a row was
     // 32px and is not now: nine `lg` rows are 400px, and on a short
     // window the panel simply ran off the bottom of the screen with no
@@ -387,6 +459,19 @@ export const Menu = ({
           >
             <div
               {...getFloatingProps()}
+              // Anchor mode has no trigger, so `useRole`'s
+              // `aria-labelledby` points at an id that is on no
+              // element in the document — a dangling reference,
+              // which is an **unnamed** menu rather than a
+              // wrongly named one. The `label` this mode
+              // requires takes over, and the dangling attribute
+              // is dropped rather than left beside it: an
+              // `aria-labelledby` that resolves to nothing still
+              // beats `aria-label` in some engines.
+              aria-label={anchorRef ? label : undefined}
+              aria-labelledby={
+                anchorRef ? undefined : triggerId
+              }
               className={toClassName(
                 PANEL_SURFACE_CLASS,
                 // The height is clamped to the space the viewport left,

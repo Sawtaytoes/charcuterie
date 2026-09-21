@@ -31,6 +31,12 @@ export {
 } from "./useFlipList.ts"
 export { useLatestRef } from "./useLatestRef.ts"
 export { useLinkedIds } from "./useLinkedIds.ts"
+export type {
+  LongPressHandlers,
+  LongPressOptions,
+  LongPressPoint,
+} from "./useLongPress.ts"
+export { useLongPress } from "./useLongPress.ts"
 export { useMediaQuery } from "./useMediaQuery.ts"
 export { useMultiplePicker } from "./useMultiplePicker.ts"
 export { useRovingFocus } from "./useRovingFocus.ts"
