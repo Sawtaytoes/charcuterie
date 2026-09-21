@@ -59,6 +59,42 @@ So the rule the other three teach is narrower than it looked:
 A menu has one, so the requirement moves to the trigger — which `Button` and `IconButton`
 already enforce.
 
+## A context menu is this component with no trigger
+
+Press and hold a card on a phone and the menu opens at the finger. That is the same
+component in **anchor mode**: `anchorRef` replaces `trigger`, and the panel hangs off a
+**virtual element** — an object that knows only its own rectangle, which here is the
+zero-sized rect at the point pressed. `flip` and `shift` treat it exactly like a button,
+so a press near the bottom of the window still gets a menu that fits.
+
+`useLongPress` in `@charcuterie/logic` is the other half. It watches the pointer, cancels
+on a 10px drift so a scroll that starts on the card is a scroll, and hands back the point.
+Two details in it are not obvious:
+
+- **The native `contextmenu` is a second trigger, not only something to suppress.** Chrome
+  on Android recognises its own long press at about the same 500ms and fires `pointercancel`
+  at the sequence, which clears the timer a beat before it would have run. Whichever arrives
+  first fires the callback, once.
+- **Touch and pen only, by default.** A mouse already has a context menu, and the browser's
+  own carries "Open link in new tab" and "Copy link address" — taking that over to show four
+  app actions is a loss on a desktop and a gain on a phone. Pass `["mouse"]` deliberately,
+  for a surface that is not a link.
+
+The CSS half belongs to the consumer: `-webkit-touch-callout: none` on the pressed element,
+or iOS shows its link preview sheet over the menu. Safari fires no `contextmenu`, so no
+handler can reach it.
+
+**`label` is required here**, and that is the rule above read from the other side. With the
+trigger gone nothing names the panel, so the prop that was inert in trigger mode becomes the
+only name the menu has. The type enforces it: `anchorRef` and `trigger` are mutually
+exclusive, and `label` belongs to exactly one of them.
+
+Dismissal needs no special case. floating-ui watches `pointerdown` for an outside press, and
+the press that opened a context menu is over before the panel exists — so it cannot close
+itself on the way in.
+
+<Canvas of={MenuStories.ContextMenu} />
+
 ## One kind, and that is the other half of the `Tabs` argument
 
 `Tabs` needed **two** state kinds because a tab is chosen *and* focused, and in `manual`

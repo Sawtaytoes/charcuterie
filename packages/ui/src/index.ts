@@ -334,6 +334,12 @@ export type {
   NavBarProps,
 } from "./NavBar/NavBar.tsx"
 export { NavBar } from "./NavBar/NavBar.tsx"
+/**
+ * What a `Menu` in anchor mode hangs off: an element, or a virtual
+ * one that is only a rectangle. A context menu passes the second,
+ * holding the point that was pressed.
+ */
+export type { AnchoredOverlayAnchor } from "./Overlay/useAnchoredOverlay.ts"
 export type {
   PickerOption,
   PickerProps,

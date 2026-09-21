@@ -16,6 +16,7 @@ import * as stories from "./Menu.stories.tsx"
 const {
   AllStates,
   AllVariants,
+  ContextMenu,
   Empty,
   Grouped,
   Interactive,
@@ -550,4 +551,123 @@ test("a long label wraps rather than pushing the panel off screen", async () => 
   } finally {
     await setViewport(DESKTOP)
   }
+})
+
+/**
+ * Anchor mode, driven with the events a finger produces.
+ *
+ * `pointerdown` then `contextmenu` is the **Android** sequence —
+ * Chrome recognises its own long press and fires `contextmenu`
+ * while the finger is still down, which `useLongPress` uses as the
+ * trigger rather than fighting. It is also the sequence a test can
+ * drive without holding a timer open for half a second.
+ */
+const pressAndHold = async (
+  element: HTMLElement,
+  {
+    clientX,
+    clientY,
+  }: { clientX: number; clientY: number },
+) => {
+  element.dispatchEvent(
+    new PointerEvent("pointerdown", {
+      bubbles: true,
+      clientX,
+      clientY,
+      pointerType: "touch",
+    }),
+  )
+
+  element.dispatchEvent(
+    new MouseEvent("contextmenu", {
+      bubbles: true,
+      cancelable: true,
+      clientX,
+      clientY,
+    }),
+  )
+}
+
+test("a press and hold opens the menu at the point pressed", async () => {
+  const { body, canvas } = await mountStory(ContextMenu)
+
+  const surface = canvas.getByText("Press and hold me")
+
+  await pressAndHold(surface, {
+    clientX: 220,
+    clientY: 180,
+  })
+
+  const menu = await waitFor(() =>
+    expectAgentDrivable(body, {
+      // Named by its own `label`, because anchor mode has no
+      // trigger to borrow a name from. A menu that reaches this
+      // assertion through `aria-labelledby` would be pointing at
+      // an id that is on no element in the document.
+      name: "Actions for Press and hold me",
+      role: "menu",
+    }),
+  )
+
+  // The virtual anchor is a zero-sized rect at the finger, and the
+  // placement is `bottom-start` with a 4px offset — so the panel's
+  // own corner lands on the point that was pressed. Anchoring that
+  // silently failed would leave it at the top-left of the viewport,
+  // which is the failure this measurement exists to catch.
+  //
+  // `waitFor`, because floating-ui computes the first position in an
+  // effect of its own: the panel is in the document a tick before it
+  // knows where to be.
+  await waitFor(() => {
+    const panel = menu.getBoundingClientRect()
+
+    expect(Math.round(panel.left)).toBe(220)
+
+    expect(Math.round(panel.top)).toBe(184)
+  })
+
+  await expectNoAxeViolations(menu)
+})
+
+test("the press that opened the menu does not also click through", async () => {
+  const { body, canvas } = await mountStory(ContextMenu)
+
+  const surface = canvas.getByText("Press and hold me")
+
+  await pressAndHold(surface, {
+    clientX: 200,
+    clientY: 200,
+  })
+
+  await waitFor(() => {
+    expect(
+      body.queryAllByRole("menuitem").length,
+    ).toBeGreaterThan(0)
+  })
+
+  // floating-ui watches `pointerdown` for an outside press, and the
+  // press that opened this menu was over before the panel existed —
+  // so the menu cannot dismiss itself on the way in. The finger
+  // lifting is what would prove it.
+  surface.dispatchEvent(
+    new PointerEvent("pointerup", {
+      bubbles: true,
+      clientX: 200,
+      clientY: 200,
+      pointerType: "touch",
+    }),
+  )
+
+  surface.dispatchEvent(
+    new MouseEvent("click", {
+      bubbles: true,
+      cancelable: true,
+    }),
+  )
+
+  await waitFor(() => {
+    expect(
+      body.queryAllByRole("menuitem").length,
+    ).toBeGreaterThan(0)
+  })
 })

@@ -1,8 +1,12 @@
-import { useVisibility } from "@charcuterie/logic"
+import {
+  useLongPress,
+  useVisibility,
+} from "@charcuterie/logic"
 import { playgroundParameters } from "@charcuterie/storybook-config/story-parameters"
 import type { ControlSize } from "@charcuterie/tokens"
 import type { Meta, StoryObj } from "@storybook/react"
 import type { ReactNode } from "react"
+import { useRef } from "react"
 
 import {
   controlSizeArgType,
@@ -18,6 +22,7 @@ import {
   SettingsIcon,
   UndoIcon,
 } from "../icons.storyHelpers.tsx"
+import type { AnchoredOverlayAnchor } from "../Overlay/useAnchoredOverlay.ts"
 import { Tooltip } from "../Tooltip/Tooltip.tsx"
 import type { MenuEntry, MenuItem } from "./Menu.tsx"
 import { Menu } from "./Menu.tsx"
@@ -148,6 +153,65 @@ const TooltipTriggerHarness = ({
   )
 }
 
+/**
+ * Anchor mode — the same menu with its trigger taken away, opened
+ * by a gesture over a surface and positioned at the point that was
+ * pressed.
+ *
+ * The anchor is a **virtual element**: an object that knows only
+ * its own rectangle, which here is the zero-sized rect at the
+ * finger. `flip` and `shift` treat it exactly like a real one, so
+ * a press near the bottom of the window still gets a menu that
+ * fits.
+ *
+ * `pointerTypes` includes `mouse` here, which the hook's default
+ * deliberately does not: this surface is not a link, so there is
+ * no browser menu worth keeping, and a story nobody can open on a
+ * desktop demonstrates nothing.
+ */
+const ContextMenuHarness = ({
+  surfaceLabel,
+}: {
+  surfaceLabel: string
+}): ReactNode => {
+  const { hide, isVisible, show } = useVisibility()
+
+  const anchorRef = useRef<AnchoredOverlayAnchor | null>(
+    null,
+  )
+
+  const longPressHandlers = useLongPress({
+    onLongPress: ({ clientX, clientY }) => {
+      anchorRef.current = {
+        getBoundingClientRect: () =>
+          new DOMRect(clientX, clientY, 0, 0),
+      }
+
+      show()
+    },
+    pointerTypes: ["mouse", "pen", "touch"],
+  })
+
+  return (
+    <>
+      <div
+        {...longPressHandlers}
+        className="flex h-32 w-64 select-none items-center justify-center rounded-xl border border-border-default bg-surface-raised text-content-secondary text-sm"
+      >
+        {surfaceLabel}
+      </div>
+
+      <Menu
+        anchorRef={anchorRef}
+        isVisible={isVisible}
+        items={BAY_ACTIONS}
+        label={`Actions for ${surfaceLabel}`}
+        onDismiss={hide}
+      />
+    </>
+  )
+}
+
 const meta = {
   title: "Components/Actions/Menu",
   component: Menu,
@@ -270,6 +334,40 @@ export const Interactive: Story = {
   },
   render: () => (
     <MenuHarness triggerLabel="Open bay 4 menu" />
+  ),
+}
+
+/**
+ * **A context menu is this component with no trigger.** Press and
+ * hold the card — or right-click it, which this story enables on
+ * purpose — and the menu opens at the point that was pressed.
+ *
+ * Two pieces make the gesture. `useLongPress`
+ * (`@charcuterie/logic`) watches the pointer and hands back the
+ * point; `anchorRef` takes a **virtual element** holding that
+ * point, so `flip` and `shift` behave exactly as they do against a
+ * button.
+ *
+ * `label` is **required** in this mode and absent in the other,
+ * which is the one thing that changes with the trigger gone:
+ * nothing is left to name the panel through `aria-labelledby`.
+ *
+ * The hold is 500ms and a 10px drift cancels it, so a scroll that
+ * starts on the card is a scroll. On Android the browser's own
+ * `contextmenu` arrives first and is used as the trigger rather
+ * than fought with — see the hook.
+ */
+export const ContextMenu: Story = {
+  args: {
+    isVisible: false,
+    onDismiss: noop,
+    trigger: <Button appearance="outline">Actions</Button>,
+  },
+  parameters: { layout: "padded" },
+  render: () => (
+    <div className="p-16">
+      <ContextMenuHarness surfaceLabel="Press and hold me" />
+    </div>
   ),
 }
 

@@ -2,7 +2,10 @@ import {
   useClonedChild,
   useUniqueId,
 } from "@charcuterie/logic"
-import type { Placement } from "@floating-ui/react"
+import type {
+  Placement,
+  VirtualElement,
+} from "@floating-ui/react"
 import {
   autoUpdate,
   flip,
@@ -15,7 +18,7 @@ import {
   useRole,
 } from "@floating-ui/react"
 import type { ReactElement, RefObject } from "react"
-import { createElement, useEffect } from "react"
+import { createElement, useLayoutEffect } from "react"
 
 /**
  * The floating-ui block every anchored overlay — `Popover`, `Menu`,
@@ -67,6 +70,21 @@ export type AnchoredOverlayRole =
   | "listbox"
   | "menu"
 
+/**
+ * What a panel can hang off in anchor mode: a real element, or a
+ * **virtual** one — an object that only knows its own rectangle.
+ *
+ * The virtual half is what a context menu needs. A menu opened by
+ * a press-and-hold belongs at the finger, not at the corner of the
+ * card underneath it, and floating-ui positions against a rect
+ * without caring where the rect came from. `flip` and `shift` work
+ * unchanged, which is the whole reason to express a point this way
+ * rather than with `top`/`left` of our own.
+ */
+export type AnchoredOverlayAnchor =
+  | HTMLElement
+  | VirtualElement
+
 export type UseAnchoredOverlayOptions = {
   /**
    * Anchor the panel to a **pre-existing** element the consumer already
@@ -75,8 +93,11 @@ export type UseAnchoredOverlayOptions = {
    * value and the query) — there is nothing to clone. Supply exactly one
    * of `anchorRef` / `trigger`; with `anchorRef`, `clonedTrigger` is
    * `null`.
+   *
+   * A **virtual** anchor is allowed here too, which is how a context
+   * menu opens at the point that was pressed.
    */
-  anchorRef?: RefObject<HTMLElement | null>
+  anchorRef?: RefObject<AnchoredOverlayAnchor | null>
   /**
    * Both default **on** — Escape and outside-press are what makes an
    * overlay an overlay. Switch one off for the honest exception (a
@@ -289,17 +310,39 @@ export const useAnchoredOverlay = ({
     (referenceProps.id as string | undefined) ??
     generatedTriggerId
 
-  // In anchor mode floating-ui's reference is the consumer's element, set
-  // imperatively — there is no cloned trigger to carry `refs.setReference`.
-  // `setReference` is stable; re-running on `isVisible` re-applies it when
-  // the panel opens (and after the anchor element mounts).
-  useEffect(() => {
-    if (!isAnchored) {
+  /**
+   * In anchor mode floating-ui's reference is the consumer's own
+   * element, set imperatively — there is no cloned trigger to carry
+   * `refs.setReference`.
+   *
+   * ⚠️ **`isVisible` is a dependency, and leaving it out is a bug
+   * that hides.** A `Combobox`'s anchor is mounted before the panel
+   * ever opens, so reading the ref once was enough for the one
+   * consumer this had; a **context menu** aims its anchor at the
+   * point that was just pressed, milliseconds before it opens, and a
+   * read that only happened on mount saw `null`. floating-ui with no
+   * reference positions at the top-left corner of the viewport —
+   * which is the same picture as "the panel is not anchored", and
+   * says nothing about why.
+   *
+   * ⚠️ And it is a **layout** effect. An ordinary effect sets the
+   * reference after the browser has already painted the panel at
+   * `0, 0`, so the menu flashes in the corner on its way to the
+   * finger.
+   *
+   * ⚠️ The `isVisible` guard is what **keeps** the dependency.
+   * Written as a bare re-read it is a dependency the effect never
+   * mentions, and `exhaustive-deps --fix` deletes it — which is
+   * how the bug came back once, silently, between a green test and
+   * a lint pass.
+   */
+  useLayoutEffect(() => {
+    if (!isAnchored || !isVisible) {
       return
     }
 
     refs.setReference(anchorRef.current)
-  }, [isAnchored, anchorRef, refs])
+  }, [isAnchored, anchorRef, isVisible, refs])
 
   const clonedChild = useClonedChild(
     trigger ?? PLACEHOLDER_TRIGGER,
