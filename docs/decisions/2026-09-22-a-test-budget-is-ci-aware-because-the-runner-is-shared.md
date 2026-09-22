@@ -15,8 +15,43 @@ and leave the tool's own default in place when it is not.**
 | --- | --- | --- |
 | Playwright assertion (`expect.timeout`) | 5s | 15s |
 | Playwright test (`timeout`) | 30s | 90s |
-| Vitest test (`testTimeout`) | 5s | 30s |
-| Vitest hook (`hookTimeout`) | 10s | 30s |
+| Vitest test (`testTimeout`) | 5s node / 15s browser | 30s |
+| Vitest hook (`hookTimeout`) | 10s node / 30s browser | 30s |
+| Testing Library async (`asyncUtilTimeout`) | 1s | 10s |
+
+> [!IMPORTANT]
+> **Correction, 2026-09-22 — the Off CI column is what VITEST picks, and this factory
+> must not name it.** 1.2.0 shipped `testTimeout: 5_000` and `hookTimeout: 10_000` off CI.
+> Those restate Vitest's **node** defaults, and Vitest's defaults are mode-aware:
+> `testTimeout ??= browser.enabled ? 15_000 : 5_000` and
+> `hookTimeout ??= browser.enabled ? 30_000 : 10_000`. Writing the node number down
+> therefore cut every **browser** suite to a third of its budget, off CI only.
+>
+> It was caught the same day. mux-magic's `AudioPreviewModal` and `VideoPreviewModal`
+> stories each take about ten seconds; they passed for months on the 15s browser default
+> and failed the moment that project adopted this factory. Measured both ways on the same
+> two files: 20.8s of test time either side, passing before and timing out at 5000ms after.
+>
+> 1.3.0 names a timeout **only when `CI` is set**, which is what the Decision above always
+> said. The rule generalises: a shared factory may RAISE a tool's default, and must never
+> restate one.
+>
+> The same release adds the `asyncUtilTimeout` row above, as
+> `@charcuterie/vitest-config/testingLibrarySetup.js`. ⚠️ **`waitFor` does not read
+> `testTimeout`** — Testing Library keeps its own clock, 1000ms by default, and it is the
+> smallest budget in the stack. Raising Vitest's did nothing for it, which is why
+> mux-magic's `master` stayed red on `LinkPicker keyboard > Escape closes the picker`
+> after taking 1.2.0.
+>
+> ⚠️ **The app calls `applyCiAsyncUtilTimeout(configure)` from its OWN setup file, and
+> passes Testing Library in.** Two failed attempts are why. A setup file listed straight
+> out of `node_modules` (a) runs in the BROWSER, where `process` does not exist —
+> `ReferenceError: process is not defined`, fixed by defining
+> `import.meta.env.CHARCUTERIE_CI` in the factory — and (b) is outside the project's
+> `optimizeDeps`, so importing `@testing-library/dom` there died on `aria-query` not
+> providing `elementRoles`. ⚠️ And a **Storybook** project must name no `setupFiles` at
+> all: `@storybook/addon-vitest` injects its own, and naming one replaces it, so every
+> story fails with *"Vitest failed to find the runner"*.
 
 Three rules come with it:
 
