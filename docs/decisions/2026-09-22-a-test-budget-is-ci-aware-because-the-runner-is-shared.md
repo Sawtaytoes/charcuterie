@@ -17,6 +17,7 @@ and leave the tool's own default in place when it is not.**
 | Playwright test (`timeout`) | 30s | 90s |
 | Vitest test (`testTimeout`) | 5s node / 15s browser | 30s |
 | Vitest hook (`hookTimeout`) | 10s node / 30s browser | 30s |
+| Testing Library async (`asyncUtilTimeout`) | 1s | 10s |
 
 > [!IMPORTANT]
 > **Correction, 2026-09-22 — the Off CI column is what VITEST picks, and this factory
@@ -31,9 +32,16 @@ and leave the tool's own default in place when it is not.**
 > and failed the moment that project adopted this factory. Measured both ways on the same
 > two files: 20.8s of test time either side, passing before and timing out at 5000ms after.
 >
-> 1.2.1 names a timeout **only when `CI` is set**, which is what the Decision above always
+> 1.3.0 names a timeout **only when `CI` is set**, which is what the Decision above always
 > said. The rule generalises: a shared factory may RAISE a tool's default, and must never
 > restate one.
+>
+> The same release adds the `asyncUtilTimeout` row above, as
+> `@charcuterie/vitest-config/testingLibrarySetup.js`. ⚠️ **`waitFor` does not read
+> `testTimeout`** — Testing Library keeps its own clock, 1000ms by default, and it is the
+> smallest budget in the stack. Raising Vitest's did nothing for it, which is why
+> mux-magic's `master` stayed red on `LinkPicker keyboard > Escape closes the picker`
+> after taking 1.2.0. A browser project adds the setup file to `setupFiles`.
 
 Three rules come with it:
 

@@ -1,11 +1,19 @@
 ---
-"@charcuterie/vitest-config": patch
+"@charcuterie/vitest-config": minor
 ---
 
-Name a Vitest timeout only when `CI` is set.
+Name a Vitest timeout only when `CI` is set, and ship a CI-aware Testing Library setup.
 
 1.2.0 also wrote `testTimeout: 5_000` and `hookTimeout: 10_000` off CI. Those restate
 Vitest's **node** defaults, and Vitest's defaults are mode-aware —
 `testTimeout ??= browser.enabled ? 15_000 : 5_000` and
 `hookTimeout ??= browser.enabled ? 30_000 : 10_000` — so naming the node number cut every
 browser suite to a third of its off-CI budget. The CI values are unchanged.
+
+New export `@charcuterie/vitest-config/testingLibrarySetup.js`, for a browser project's
+`setupFiles`. Testing Library keeps its own clock: `waitFor` does not read `testTimeout`,
+and its 1000ms `asyncUtilTimeout` is the smallest budget in the stack and the first one a
+starved shared runner blows through. On CI the setup raises it to 10s, which is still
+inside the 30s Vitest allows, so a stuck `waitFor` still fails as a `waitFor`.
+`@testing-library/dom` is an optional peer; a project that never lists the setup file
+never loads it.

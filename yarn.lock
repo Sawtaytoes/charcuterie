@@ -1083,6 +1083,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@charcuterie/vitest-config@workspace:packages/vitest-config"
   dependencies:
+    "@testing-library/dom": "npm:^10.4.1"
     "@types/node": "npm:^25.6.2"
     "@vitest/browser": "npm:^4.1.8"
     "@vitest/browser-playwright": "npm:^4.1.8"
@@ -1090,10 +1091,14 @@ __metadata:
     typescript: "npm:^6.0.3"
     vitest: "npm:^4.1.8"
   peerDependencies:
+    "@testing-library/dom": ">=9"
     "@vitest/browser": ">=3"
     "@vitest/browser-playwright": ">=3"
     playwright: ">=1.40"
     vitest: ">=3"
+  peerDependenciesMeta:
+    "@testing-library/dom":
+      optional: true
   bin:
     charcuterie-check-optimize-deps: ./src/cli/checkOptimizeDeps.js
   languageName: unknown
