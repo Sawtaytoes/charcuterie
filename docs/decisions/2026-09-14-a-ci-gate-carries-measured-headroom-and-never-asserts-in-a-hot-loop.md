@@ -1,5 +1,12 @@
 # A CI gate carries measured headroom, and never asserts in a hot loop
 
+> [!NOTE]
+> **Headroom over a test's own cost is not the whole budget.** A shared runner can
+> deschedule a 33ms test for longer than a 5 000ms limit — 150x, measured 2026-09-22 — so
+> the 4x rule below can hold and the job can still time out. The shared config factories
+> now set a larger CI-only default for exactly that case. See
+> [A test budget is CI-aware, because the runner is shared](2026-09-22-a-test-budget-is-ci-aware-because-the-runner-is-shared.md).
+
 - **Status:** Accepted
 - **Date:** 2026-09-14
 - **Type:** Testing / CI
