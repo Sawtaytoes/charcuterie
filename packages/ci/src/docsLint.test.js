@@ -52,6 +52,16 @@ describe("lintDecisionRecord", () => {
     ).toEqual([])
   })
 
+  it("ignores the template a record is copied from", () => {
+    expect(
+      lintDecisionRecord(
+        "docs/decisions/TEMPLATE.md",
+        "<!-- copy me -->\n\n# YYYY-MM-DD — Short imperative title\n",
+        null,
+      ),
+    ).toEqual([])
+  })
+
   it("accepts the early un-bolded header style", () => {
     expect(
       rulesOf(
