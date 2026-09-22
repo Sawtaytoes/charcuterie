@@ -17,8 +17,8 @@ import { defineConfig, mergeConfig } from "vitest/config"
 const requireFromHere = createRequire(import.meta.url)
 
 /**
- * Vitest's own default — 5s for a test — is a budget for a machine
- * running one suite.
+ * Vitest's own defaults — 5s for a test in node, 15s in a browser —
+ * are budgets for a machine running one suite.
  *
  * This fleet's runner is not that machine. It takes every repo's
  * jobs, and one merge round puts several repos' CI plus image builds
@@ -51,8 +51,27 @@ const createBaseConfig = () => {
   return defineConfig({
     test: {
       globals: true,
-      testTimeout: isCi ? CI_TIMEOUT : 5_000,
-      hookTimeout: isCi ? CI_TIMEOUT : 10_000,
+      /*
+       * ⚠️ On CI ONLY. Off CI this factory names no number at all,
+       * because Vitest's own defaults are MODE-AWARE and naming one
+       * here would lower them:
+       *
+       *   testTimeout ??= browser.enabled ? 15_000 : 5_000
+       *   hookTimeout ??= browser.enabled ? 30_000 : 10_000
+       *
+       * 1.2.0 wrote `5_000` and `10_000` off CI, which restated the
+       * node defaults and quietly CUT every browser suite's budget to
+       * a third. mux-magic's two preview-modal stories take about ten
+       * seconds each; they passed for months on the 15s browser
+       * default and failed the moment their project adopted this
+       * factory.
+       */
+      ...(isCi
+        ? {
+            testTimeout: CI_TIMEOUT,
+            hookTimeout: CI_TIMEOUT,
+          }
+        : {}),
       exclude: [
         "**/dist/**",
         "**/node_modules/**",

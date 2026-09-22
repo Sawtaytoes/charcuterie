@@ -39,15 +39,24 @@ describe("createVitestConfig", () => {
     })
   })
 
-  test("keeps Vitest's own 5s off CI, so a hung test fails fast", () => {
+  /*
+   * Vitest resolves `testTimeout ??= browser.enabled ? 15_000 : 5_000`
+   * and `hookTimeout ??= browser.enabled ? 30_000 : 10_000`. Naming
+   * either number here would cut a browser suite to a third of its
+   * budget, so off CI the factory must leave both UNSET and let
+   * Vitest choose for the mode the project actually runs in.
+   */
+  test("names no timeout off CI, so Vitest's mode-aware default stands", () => {
     delete process.env.CI
 
-    expect(
-      createVitestConfig(nodeOverrides).test,
-    ).toMatchObject({
-      testTimeout: 5_000,
-      hookTimeout: 10_000,
-    })
+    const nodeConfig =
+      createVitestConfig(nodeOverrides).test
+    const browserConfig = createVitestConfig().test
+
+    expect(nodeConfig.testTimeout).toBeUndefined()
+    expect(nodeConfig.hookTimeout).toBeUndefined()
+    expect(browserConfig.testTimeout).toBeUndefined()
+    expect(browserConfig.hookTimeout).toBeUndefined()
   })
 
   test("an app's own timeout wins over the shared one", () => {
