@@ -8,6 +8,9 @@ export default defineConfig({
       "**/storybook-static/**",
     ],
     projects: [
+      // `ci` carries its own config and was never listed here, so its
+      // suite has not run since the package landed in #248.
+      "packages/ci/vitest.config.ts",
       "packages/tokens/vitest.config.ts",
       "packages/logic/vitest.config.ts",
       "packages/logic/vitest.browser.config.ts",
