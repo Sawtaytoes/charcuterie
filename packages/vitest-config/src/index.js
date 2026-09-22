@@ -87,6 +87,24 @@ const createBaseConfig = () => {
         ],
       },
     },
+    /*
+     * ⚠️ How `testingLibrarySetup.js` learns it is on CI.
+     *
+     * A setup file for a BROWSER project runs in the browser, where
+     * `process` does not exist at all — reading `process.env.CI`
+     * there throws `ReferenceError: process is not defined` and takes
+     * the whole test file down with it. Vite only ever substitutes
+     * `process.env.NODE_ENV`, so the flag has to be handed over
+     * deliberately.
+     *
+     * This config is evaluated in node, so it knows the answer. Vite
+     * replaces the expression at transform time and the browser sees
+     * a literal.
+     */
+    define: {
+      "import.meta.env.CHARCUTERIE_CI":
+        JSON.stringify(isCi),
+    },
   })
 }
 

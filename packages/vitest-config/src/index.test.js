@@ -59,6 +59,28 @@ describe("createVitestConfig", () => {
     expect(browserConfig.hookTimeout).toBeUndefined()
   })
 
+  /*
+   * A setup file for a browser project runs in the browser, where
+   * `process` does not exist. The flag has to cross that boundary as
+   * a literal or `testingLibrarySetup.js` throws on import and takes
+   * the whole test file with it.
+   */
+  test("hands the CI flag to the browser through define", () => {
+    process.env.CI = "true"
+
+    expect(createVitestConfig().define).toMatchObject({
+      "import.meta.env.CHARCUTERIE_CI": "true",
+    })
+  })
+
+  test("hands over a false flag off CI, rather than nothing", () => {
+    delete process.env.CI
+
+    expect(createVitestConfig().define).toMatchObject({
+      "import.meta.env.CHARCUTERIE_CI": "false",
+    })
+  })
+
   test("an app's own timeout wins over the shared one", () => {
     process.env.CI = "true"
 

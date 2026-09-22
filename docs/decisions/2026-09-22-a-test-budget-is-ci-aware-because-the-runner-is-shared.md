@@ -41,7 +41,17 @@ and leave the tool's own default in place when it is not.**
 > `testTimeout`** — Testing Library keeps its own clock, 1000ms by default, and it is the
 > smallest budget in the stack. Raising Vitest's did nothing for it, which is why
 > mux-magic's `master` stayed red on `LinkPicker keyboard > Escape closes the picker`
-> after taking 1.2.0. A browser project adds the setup file to `setupFiles`.
+> after taking 1.2.0.
+>
+> ⚠️ **The app calls `applyCiAsyncUtilTimeout(configure)` from its OWN setup file, and
+> passes Testing Library in.** Two failed attempts are why. A setup file listed straight
+> out of `node_modules` (a) runs in the BROWSER, where `process` does not exist —
+> `ReferenceError: process is not defined`, fixed by defining
+> `import.meta.env.CHARCUTERIE_CI` in the factory — and (b) is outside the project's
+> `optimizeDeps`, so importing `@testing-library/dom` there died on `aria-query` not
+> providing `elementRoles`. ⚠️ And a **Storybook** project must name no `setupFiles` at
+> all: `@storybook/addon-vitest` injects its own, and naming one replaces it, so every
+> story fails with *"Vitest failed to find the runner"*.
 
 Three rules come with it:
 
