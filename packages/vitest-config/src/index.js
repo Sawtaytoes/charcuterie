@@ -4,8 +4,8 @@
  * Ships a factory, not a static file: each app calls
  * `createVitestConfig({ ... })` and supplies its own 20% (project
  * name, setup files, extra `test` fields) while the shared
- * defaults — globals, sensible excludes, v8 coverage — come from
- * here. Mirrors `@charcuterie/eslint-config`'s
+ * defaults — globals, sensible excludes, CI-aware timeouts, v8
+ * coverage — come from here. Mirrors `@charcuterie/eslint-config`'s
  * factory-not-fixed-array shape, so one package serves apps whose
  * suites otherwise diverge.
  */
@@ -16,25 +16,60 @@ import { defineConfig, mergeConfig } from "vitest/config"
 
 const requireFromHere = createRequire(import.meta.url)
 
-const baseConfig = defineConfig({
-  test: {
-    globals: true,
-    exclude: [
-      "**/dist/**",
-      "**/node_modules/**",
-      "**/storybook-static/**",
-    ],
-    coverage: {
-      provider: "v8",
-      reporter: ["text", "html"],
+/**
+ * Vitest's own default — 5s for a test — is a budget for a machine
+ * running one suite.
+ *
+ * This fleet's runner is not that machine. It takes every repo's
+ * jobs, and one merge round puts several repos' CI plus image builds
+ * on it at the same time. On 2026-09-22 mail-sifter's `unit-tests`
+ * job timed out on ONE synchronous better-sqlite3 test — no `await`
+ * in it, 33ms on this workstation — while its 65 siblings in the same
+ * file passed. That is a 150x slowdown, which is machine starvation
+ * and not a defect in the test.
+ *
+ * A larger budget costs a PASSING test nothing: the clock stops when
+ * the test returns. It changes only how long a hung one waits, and
+ * only on CI.
+ *
+ * ⚠️ This is a budget, not a cure for a slow test. A suite that is
+ * slow because it does too much work is still slow. Raise this only
+ * when the evidence is machine starvation.
+ */
+const CI_TIMEOUT = 30_000
+
+/*
+ * `process.env.CI` is read at CALL time, not at module load: a test
+ * can then set the variable and call the factory, rather than import
+ * a fresh copy of the module — which Vite's import analysis refuses.
+ * Vitest evaluates this config once per run, so the answer is the
+ * same either way.
+ */
+const createBaseConfig = () => {
+  const isCi = Boolean(process.env.CI)
+
+  return defineConfig({
+    test: {
+      globals: true,
+      testTimeout: isCi ? CI_TIMEOUT : 5_000,
+      hookTimeout: isCi ? CI_TIMEOUT : 10_000,
       exclude: [
         "**/dist/**",
-        "**/*.config.*",
-        "**/*.stories.*",
+        "**/node_modules/**",
+        "**/storybook-static/**",
       ],
+      coverage: {
+        provider: "v8",
+        reporter: ["text", "html"],
+        exclude: [
+          "**/dist/**",
+          "**/*.config.*",
+          "**/*.stories.*",
+        ],
+      },
     },
-  },
-})
+  })
+}
 
 /**
  * Chromium through Playwright — the default, and the only
@@ -75,6 +110,8 @@ export const createVitestConfig = (overrides = {}) => {
   // build the object being merged.
   const isBrowserEnabled =
     overrides?.test?.browser?.enabled !== false
+
+  const baseConfig = createBaseConfig()
 
   const base = isBrowserEnabled
     ? mergeConfig(baseConfig, createBrowserConfig())
