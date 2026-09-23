@@ -124,23 +124,25 @@ export const ProgressCard = ({
             />
           </div>
           {metrics.length > 0 ? (
-            <dl className="mt-3 grid grid-cols-1 gap-2 cq-sm:grid-cols-3">
-              {metrics.map(
-                ({ label, value: metricValue }) => (
-                  <div
-                    className="flex items-baseline justify-between gap-2 rounded-lg border border-border-subtle bg-surface-sunken/70 px-2.5 py-2 cq-sm:block"
-                    key={label}
-                  >
-                    <dt className="min-w-0 wrap-anywhere font-semibold text-content-muted text-xs uppercase tracking-wide">
-                      {label}
-                    </dt>
-                    <dd className="m-0 min-w-0 wrap-anywhere font-semibold text-lg tabular-nums cq-sm:mt-1">
-                      {metricValue ?? "—"}
-                    </dd>
-                  </div>
-                ),
-              )}
-            </dl>
+            <div className="@container">
+              <dl className="mt-3 grid grid-cols-1 gap-2 cq-sm:grid-cols-3">
+                {metrics.map(
+                  ({ label, value: metricValue }) => (
+                    <div
+                      className="flex items-baseline justify-between gap-2 rounded-lg border border-border-subtle bg-surface-sunken/70 px-2.5 py-2 cq-sm:block"
+                      key={label}
+                    >
+                      <dt className="min-w-0 wrap-anywhere font-semibold text-content-muted text-xs uppercase tracking-wide">
+                        {label}
+                      </dt>
+                      <dd className="m-0 min-w-0 wrap-anywhere font-semibold text-lg tabular-nums cq-sm:mt-1">
+                        {metricValue ?? "—"}
+                      </dd>
+                    </div>
+                  ),
+                )}
+              </dl>
+            </div>
           ) : null}
           {children}
         </div>

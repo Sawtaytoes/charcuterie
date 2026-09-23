@@ -4,6 +4,10 @@ import { test } from "vitest"
 
 import { mountStory } from "../mountStory.testHelpers.ts"
 import { expectAgentDrivable } from "../testing/index.ts"
+import {
+  DESKTOP,
+  setViewport,
+} from "../viewport.testHelpers.ts"
 import * as stories from "./ProgressCard.stories.tsx"
 
 const {
@@ -77,6 +81,7 @@ test("issues tint the complete card and indeterminate progress has no invented v
 })
 
 test("the card fits each container width with a long title, media, and actions", async () => {
+  await setViewport(DESKTOP)
   const { canvas } = await mountStory(Responsive)
   for (const width of ["15rem", "24rem", "34rem"]) {
     const card = expectAgentDrivable(canvas, {
@@ -86,6 +91,12 @@ test("the card fits each container width with a long title, media, and actions",
     await expect(card.scrollWidth).toBeLessThanOrEqual(
       card.clientWidth,
     )
+    const metrics = card.querySelector("dl") as HTMLElement
+    await expect(
+      getComputedStyle(metrics).gridTemplateColumns.split(
+        " ",
+      ),
+    ).toHaveLength(width === "34rem" ? 3 : 1)
   }
 })
 

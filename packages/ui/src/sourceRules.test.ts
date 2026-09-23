@@ -251,6 +251,8 @@ test("a container-query component is never storied in a shrink-to-fit cell", () 
     // answer neither, because a track is about the same width in
     // both.
     "PortraitTiles",
+    // Metrics query the space remaining beside the media, not the entire card.
+    "ProgressCard",
     // `Stepper`'s container is the one that decides whether a
     // `horizontal` sequence is actually horizontal. Below `--cq-md`
     // it falls back to the vertical column, because four steps side

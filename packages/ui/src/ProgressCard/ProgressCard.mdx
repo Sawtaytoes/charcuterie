@@ -28,7 +28,8 @@ The band overlay stays outside the progressbar role so its content retains seman
 ## Layouts and states
 
 `band` is the default. `hierarchy` places the same headline above a thin progress track.
-Metrics stack at narrow container widths, not viewport widths. Labels should be unique.
+Metrics stack when their own content area is narrow, even if media makes the whole card
+wide. The viewport does not decide this. Labels should be unique.
 
 <Canvas of={ProgressCardStories.AllVariants} />
 <Canvas of={ProgressCardStories.AllStates} />
