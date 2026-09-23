@@ -251,6 +251,8 @@ test("a container-query component is never storied in a shrink-to-fit cell", () 
     // answer neither, because a track is about the same width in
     // both.
     "PortraitTiles",
+    // Metrics query the space remaining beside the media, not the entire card.
+    "ProgressCard",
     // `Stepper`'s container is the one that decides whether a
     // `horizontal` sequence is actually horizontal. Below `--cq-md`
     // it falls back to the vertical column, because four steps side
@@ -612,7 +614,8 @@ test("the barrel is the only place components are re-exported", async () => {
   // consumer deciding whether an item is on screen must ask the
   // question the same way the bars are placed, or the two answers
   // drift by a day and nothing says so.
-  expect(componentNames.length).toBe(66)
+  // ProgressCard composes Card and ProgressBar for progress-first dashboards.
+  expect(componentNames.length).toBe(67)
 
   for (const name of componentNames) {
     expect(barrel).toContain(`export { ${name} }`)
