@@ -35,6 +35,8 @@ export type ProgressBarProps = Omit<
   /** Required. A progressbar with no name is a grey rectangle. */
   label: string
   max?: number
+  /** Content above a full-height, muted track. It stays outside the ARIA widget. */
+  overlay?: ReactNode
   size?: ProgressBarSize
   thresholds?: readonly ProgressThreshold[]
   value?: number
@@ -80,6 +82,7 @@ export const ProgressBar = ({
   isValueShown = false,
   label,
   max = 100,
+  overlay,
   size = "md",
   thresholds,
   value = 0,
@@ -133,38 +136,59 @@ export const ProgressBar = ({
       )}
 
       <div
-        aria-busy={isIndeterminate || undefined}
-        aria-labelledby={labelId}
-        aria-valuemax={max}
-        aria-valuemin={0}
-        aria-valuenow={
-          isIndeterminate ? undefined : clampedValue
+        className={
+          overlay == null
+            ? undefined
+            : "grid overflow-hidden rounded-xl"
         }
-        className={toClassName(
-          "relative w-full overflow-hidden rounded-full bg-surface-sunken",
-          TRACK_SIZE_CLASS[size],
-        )}
-        role="progressbar"
       >
-        {isIndeterminate ? (
-          <span
-            className={toClassName(
-              // The sweep animates `inset-inline-start`, so it runs
-              // the other way in RTL for free — and its
-              // reduced-motion fallback hatches the whole track
-              // rather than parking at one end.
-              "charcuterie-sweep absolute inset-y-0 w-2/5 rounded-full",
-              INTENT_SOLID_FILL_CLASS[fillIntent],
-            )}
-          />
-        ) : (
-          <span
-            className={toClassName(
-              "block h-full rounded-full transition-[inline-size] duration-(--duration-normal) ease-standard",
-              INTENT_SOLID_FILL_CLASS[fillIntent],
-            )}
-            style={{ inlineSize: `${percent}%` }}
-          />
+        <div
+          aria-busy={isIndeterminate || undefined}
+          aria-labelledby={labelId}
+          aria-valuemax={max}
+          aria-valuemin={0}
+          aria-valuenow={
+            isIndeterminate ? undefined : clampedValue
+          }
+          className={toClassName(
+            "relative w-full overflow-hidden rounded-full bg-surface-sunken",
+            overlay == null
+              ? TRACK_SIZE_CLASS[size]
+              : "h-full rounded-xl [grid-area:1/1]",
+          )}
+          role="progressbar"
+        >
+          {isIndeterminate ? (
+            <span
+              className={toClassName(
+                // The sweep animates `inset-inline-start`, so it runs
+                // the other way in RTL for free — and its
+                // reduced-motion fallback hatches the whole track
+                // rather than parking at one end.
+                "charcuterie-sweep absolute inset-y-0 w-2/5 rounded-full",
+                INTENT_SOLID_FILL_CLASS[fillIntent],
+                overlay == null
+                  ? undefined
+                  : "rounded-none opacity-30",
+              )}
+            />
+          ) : (
+            <span
+              className={toClassName(
+                "block h-full rounded-full transition-[inline-size] duration-(--duration-normal) ease-standard",
+                INTENT_SOLID_FILL_CLASS[fillIntent],
+                overlay == null
+                  ? undefined
+                  : "rounded-none opacity-30",
+              )}
+              style={{ inlineSize: `${percent}%` }}
+            />
+          )}
+        </div>
+        {overlay == null ? null : (
+          <div className="relative min-w-0 [grid-area:1/1]">
+            {overlay}
+          </div>
         )}
       </div>
     </div>

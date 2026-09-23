@@ -365,6 +365,12 @@ export {
   toProgressValue,
 } from "./ProgressBar/progressValue.ts"
 export type {
+  ProgressCardLayout,
+  ProgressCardMetric,
+  ProgressCardProps,
+} from "./ProgressCard/ProgressCard.tsx"
+export { ProgressCard } from "./ProgressCard/ProgressCard.tsx"
+export type {
   QueryBuilderLabels,
   QueryBuilderProps,
 } from "./QueryBuilder/QueryBuilder.tsx"
