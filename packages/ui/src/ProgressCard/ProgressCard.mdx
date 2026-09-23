@@ -1,0 +1,42 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+import * as ProgressCardStories from "./ProgressCard.stories";
+
+<Meta of={ProgressCardStories} />
+
+# ProgressCard
+
+A progress-first card with a large value over a filled band and distinct metric blocks.
+Use it for transfers, imports, backups, or other measurable work. `Card` owns the shell;
+`ProgressBar` owns clamping, the named ARIA widget, and indeterminate motion.
+
+<Canvas of={ProgressCardStories.Playground} />
+
+## Ownership
+
+The library owns layout, responsive typography, metric contrast, and whole-card intent.
+The app supplies identity, media, formatted values, actions, and meaningful issue text.
+Neither an absent diagnosis nor a numeric percentage implies a warning here.
+
+`intent` colors the entire card; `progressIntent` colors the fill independently.
+`valueText` is app-formatted text, while `value` and `max` drive measurable progress.
+Set `isIndeterminate` when progress cannot yet be measured and use a state such as
+"Preparing" for `valueText`. Set `isValueEmphasized={false}` for terminal state text.
+The band overlay stays outside the progressbar role so its content retains semantics.
+
+<Controls />
+
+## Layouts and states
+
+`band` is the default. `hierarchy` places the same headline above a thin progress track.
+Metrics stack at narrow container widths, not viewport widths. Labels should be unique.
+
+<Canvas of={ProgressCardStories.AllVariants} />
+<Canvas of={ProgressCardStories.AllStates} />
+<Canvas of={ProgressCardStories.Responsive} />
+
+## App-owned controls
+
+Action slots use the same controls as the rest of the app. The card does not define cancel,
+retry, or confirmation policy. Additional issue details belong in `children`.
+
+<Canvas of={ProgressCardStories.Interactive} />

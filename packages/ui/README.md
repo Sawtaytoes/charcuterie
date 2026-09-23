@@ -4,7 +4,7 @@ The components. Look from `@charcuterie/tokens`, state from `@charcuterie/logic`
 that Playwright and an AI agent can actually drive.
 
 M3 ships the **P0 pure-presentation** set: `Spinner`, `Skeleton`, `Button`, `IconButton`,
-`Badge`, `ProgressBar`, `EmptyState`, `Card`, `LiveStatusIndicator`, `MediaTile` — plus
+`Badge`, `ProgressBar`, `ProgressCard`, `EmptyState`, `Card`, `LiveStatusIndicator`, `MediaTile` — plus
 `VisuallyHidden`, which the first three of those need. M4 adds the overlays: `Modal`,
 `Popover`, `Tabs`.
 

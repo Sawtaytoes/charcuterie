@@ -612,7 +612,8 @@ test("the barrel is the only place components are re-exported", async () => {
   // consumer deciding whether an item is on screen must ask the
   // question the same way the bars are placed, or the two answers
   // drift by a day and nothing says so.
-  expect(componentNames.length).toBe(66)
+  // ProgressCard composes Card and ProgressBar for progress-first dashboards.
+  expect(componentNames.length).toBe(67)
 
   for (const name of componentNames) {
     expect(barrel).toContain(`export { ${name} }`)
