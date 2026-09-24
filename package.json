@@ -38,6 +38,7 @@
     "@yarnpkg/sdks": "^3.2.3",
     "eslint": "^10.3.0",
     "eslint-plugin-react": "^7.37.5",
+    "quickpickle": "^1.11.2",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.59.2",
     "vitest": "^4.1.8"
