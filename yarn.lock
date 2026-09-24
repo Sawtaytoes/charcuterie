@@ -5,6 +5,13 @@ __metadata:
   version: 9
   cacheKey: 10c0
 
+"@a11y-tools/aria-roles@npm:^1.0.0":
+  version: 1.0.0
+  resolution: "@a11y-tools/aria-roles@npm:1.0.0"
+  checksum: 10c0/f9c120c436c517ac95b1d87aa84e9bffe403eb10715096da7202be55d115e4cd4a08390aa8e881161d24a84483b21596123766b7fcbedb50fe8eb14f87b73dd8
+  languageName: node
+  linkType: hard
+
 "@adobe/css-tools@npm:^4.4.0":
   version: 4.5.0
   resolution: "@adobe/css-tools@npm:4.5.0"
@@ -1226,6 +1233,43 @@ __metadata:
     style-mod: "npm:^4.1.0"
     w3c-keyname: "npm:^2.2.4"
   checksum: 10c0/c64b076f2739a9fa8b8c67e01091ddc8d7f653dd66954088fa5837ab30b59152efb959b359b7806662add8cd97011030e0eef8eb77ca71840acd5d824af00b8e
+  languageName: node
+  linkType: hard
+
+"@cucumber/cucumber-expressions@npm:^18.0.1":
+  version: 18.1.0
+  resolution: "@cucumber/cucumber-expressions@npm:18.1.0"
+  dependencies:
+    regexp-match-indices: "npm:1.0.2"
+  checksum: 10c0/47457ac33e706316c5308a4c46db2094993ae291d4977b06d17633613bf7e283fb5cea8dc555c1bf16ddda0a483b9266039653ba82057582613569dcebb4eb38
+  languageName: node
+  linkType: hard
+
+"@cucumber/gherkin@npm:^32.1.0":
+  version: 32.2.0
+  resolution: "@cucumber/gherkin@npm:32.2.0"
+  dependencies:
+    "@cucumber/messages": "npm:>=19.1.4 <28"
+  checksum: 10c0/43794c59ad1a43b09637455bad18f010fcb76e0b62103102f39007d43c09419027ee652cba329cc3c4f3ba07595246f197e13f618e0f92cfa3111373e5a41073
+  languageName: node
+  linkType: hard
+
+"@cucumber/messages@npm:>=19.1.4 <28, @cucumber/messages@npm:^27.2.0":
+  version: 27.2.0
+  resolution: "@cucumber/messages@npm:27.2.0"
+  dependencies:
+    "@types/uuid": "npm:10.0.0"
+    class-transformer: "npm:0.5.1"
+    reflect-metadata: "npm:0.2.2"
+    uuid: "npm:11.0.5"
+  checksum: 10c0/6b21e99976f1463ee7dc1fe36d74844cae559f1cf45f53e3b62b6cc9c7b1ca191ad971c9c3899fef5de0d2421c5b369cc64c4b9254ed2690791b2ecce096caf0
+  languageName: node
+  linkType: hard
+
+"@cucumber/tag-expressions@npm:^6.1.2":
+  version: 6.2.0
+  resolution: "@cucumber/tag-expressions@npm:6.2.0"
+  checksum: 10c0/bcfe3ea0c34f489603da66796513da8e7b62a4cb4032689acfea27c634455efd121b95ba0453b6f67b780b41fbc8dc5de210a7a7a9cdd8a671a0d6345df6829a
   languageName: node
   linkType: hard
 
@@ -3296,6 +3340,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/uuid@npm:10.0.0":
+  version: 10.0.0
+  resolution: "@types/uuid@npm:10.0.0"
+  checksum: 10c0/9a1404bf287164481cb9b97f6bb638f78f955be57c40c6513b7655160beb29df6f84c915aaf4089a1559c216557dc4d2f79b48d978742d3ae10b937420ddac60
+  languageName: node
+  linkType: hard
+
 "@types/webxr@npm:*":
   version: 0.5.24
   resolution: "@types/webxr@npm:0.5.24"
@@ -4375,6 +4426,7 @@ __metadata:
     "@yarnpkg/sdks": "npm:^3.2.3"
     eslint: "npm:^10.3.0"
     eslint-plugin-react: "npm:^7.37.5"
+    quickpickle: "npm:^1.11.2"
     typescript: "npm:^6.0.3"
     typescript-eslint: "npm:^8.59.2"
     vitest: "npm:^4.1.8"
@@ -4413,6 +4465,13 @@ __metadata:
   version: 4.4.0
   resolution: "ci-info@npm:4.4.0"
   checksum: 10c0/44156201545b8dde01aa8a09ee2fe9fc7a73b1bef9adbd4606c9f61c8caeeb73fb7a575c88b0443f7b4edb5ee45debaa59ed54ba5f99698339393ca01349eb3a
+  languageName: node
+  linkType: hard
+
+"class-transformer@npm:0.5.1":
+  version: 0.5.1
+  resolution: "class-transformer@npm:0.5.1"
+  checksum: 10c0/19809914e51c6db42c036166839906420bb60367df14e15f49c45c8c1231bf25ae661ebe94736ee29cc688b77101ef851a8acca299375cc52fc141b64acde18a
   languageName: node
   linkType: hard
 
@@ -6139,6 +6198,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"image-crop-or-pad@npm:^1.0.1":
+  version: 1.0.1
+  resolution: "image-crop-or-pad@npm:1.0.1"
+  checksum: 10c0/dd123d7f7989e5226eb1c0767a1dc849aa4fd67a61b9c13a4f38b7b54ddf0b125f0465dc51e173ce5ec9878bd3781be9c09fa2370d4a55b7105c69cee4d9d542
+  languageName: node
+  linkType: hard
+
 "img-diff-js@npm:0.5.4":
   version: 0.5.4
   resolution: "img-diff-js@npm:0.5.4"
@@ -7057,6 +7123,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"lodash-es@npm:^4.17.23":
+  version: 4.18.1
+  resolution: "lodash-es@npm:4.18.1"
+  checksum: 10c0/35d4dcf87ef07f8d090f409447575800108057e360b445f590d0d25d09e3d1e33a163d2fc100d4d072b0f901d5e2fc533cd7c4bfd8eeb38a06abec693823c8b8
+  languageName: node
+  linkType: hard
+
 "lodash.startcase@npm:^4.4.0":
   version: 4.4.0
   resolution: "lodash.startcase@npm:4.4.0"
@@ -7064,7 +7137,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"lodash@npm:4.18.1, lodash@npm:^4.17.20, lodash@npm:^4.17.21":
+"lodash@npm:4.18.1, lodash@npm:^4.17.20, lodash@npm:^4.17.21, lodash@npm:^4.17.23":
   version: 4.18.1
   resolution: "lodash@npm:4.18.1"
   checksum: 10c0/757228fc68805c59789e82185135cf85f05d0b2d3d54631d680ca79ec21944ec8314d4533639a14b8bcfbd97a517e78960933041a5af17ecb693ec6eecb99a27
@@ -8807,6 +8880,31 @@ __metadata:
   languageName: node
   linkType: hard
 
+"quickpickle@npm:^1.11.2":
+  version: 1.11.2
+  resolution: "quickpickle@npm:1.11.2"
+  dependencies:
+    "@a11y-tools/aria-roles": "npm:^1.0.0"
+    "@cucumber/cucumber-expressions": "npm:^18.0.1"
+    "@cucumber/gherkin": "npm:^32.1.0"
+    "@cucumber/messages": "npm:^27.2.0"
+    "@cucumber/tag-expressions": "npm:^6.1.2"
+    buffer: "npm:^6.0.3"
+    image-crop-or-pad: "npm:^1.0.1"
+    js-yaml: "npm:^4.1.1"
+    lodash: "npm:^4.17.23"
+    lodash-es: "npm:^4.17.23"
+    pngjs: "npm:^7.0.0"
+  peerDependencies:
+    pixelmatch: ^6.0.0
+    vitest: ^1.0.0 || >=2.0.0
+  peerDependenciesMeta:
+    pixelmatch:
+      optional: true
+  checksum: 10c0/295fe071b718d0bcb5b95710027ee37777d6a996cbcf9ac0e1312cf08873af8fe86eddadaec5d58745c3c82c378dfc8f9578cc39412db63f576ce870b8d5eaa4
+  languageName: node
+  linkType: hard
+
 "react-docgen-typescript@npm:^2.2.2":
   version: 2.4.0
   resolution: "react-docgen-typescript@npm:2.4.0"
@@ -8963,6 +9061,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"reflect-metadata@npm:0.2.2":
+  version: 0.2.2
+  resolution: "reflect-metadata@npm:0.2.2"
+  checksum: 10c0/1cd93a15ea291e420204955544637c264c216e7aac527470e393d54b4bb075f10a17e60d8168ec96600c7e0b9fcc0cb0bb6e91c3fbf5b0d8c9056f04e6ac1ec2
+  languageName: node
+  linkType: hard
+
 "reflect.getprototypeof@npm:^1.0.10, reflect.getprototypeof@npm:^1.0.9":
   version: 1.0.10
   resolution: "reflect.getprototypeof@npm:1.0.10"
@@ -9072,6 +9177,24 @@ __metadata:
   bin:
     reg-suit: lib/cli.js
   checksum: 10c0/fe1cc64c80a5f0cec372d0905fef93f55019d83a0aa24d87a10eb0eb2f6ac835a92d54f809972ad21c9d85aa8b3e9fd6cb79b6360bce1f6e5d7a515302bb1dd7
+  languageName: node
+  linkType: hard
+
+"regexp-match-indices@npm:1.0.2":
+  version: 1.0.2
+  resolution: "regexp-match-indices@npm:1.0.2"
+  dependencies:
+    regexp-tree: "npm:^0.1.11"
+  checksum: 10c0/35e8af9844a4d08f54000766a7f364579c2082080b6f0f6edb9af9faab0452a83e68ef71304e3b2d12ff6d71a615d30b43de60cafeabbce3e1fa95c56383d147
+  languageName: node
+  linkType: hard
+
+"regexp-tree@npm:^0.1.11":
+  version: 0.1.27
+  resolution: "regexp-tree@npm:0.1.27"
+  bin:
+    regexp-tree: bin/regexp-tree
+  checksum: 10c0/f636f44b4a0d93d7d6926585ecd81f63e4ce2ac895bc417b2ead0874cd36b337dcc3d0fedc63f69bf5aaeaa4340f36ca7e750c9687cceaf8087374e5284e843c
   languageName: node
   linkType: hard
 
@@ -10398,6 +10521,15 @@ __metadata:
   version: 1.0.2
   resolution: "util-deprecate@npm:1.0.2"
   checksum: 10c0/41a5bdd214df2f6c3ecf8622745e4a366c4adced864bc3c833739791aeeeb1838119af7daed4ba36428114b5c67dcda034a79c882e97e43c03e66a4dd7389942
+  languageName: node
+  linkType: hard
+
+"uuid@npm:11.0.5":
+  version: 11.0.5
+  resolution: "uuid@npm:11.0.5"
+  bin:
+    uuid: dist/esm/bin/uuid
+  checksum: 10c0/6f59f0c605e02c14515401084ca124b9cb462b4dcac866916a49862bcf831874508a308588c23a7718269226ad11a92da29b39d761ad2b86e736623e3a33b6e7
   languageName: node
   linkType: hard
 

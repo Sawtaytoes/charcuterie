@@ -10,6 +10,7 @@
     "storybook": "storybook dev -p 6006 --config-dir .storybook",
     "test:storybook": "vitest run --config vitest.storybook.config.ts",
     "test:ui-dom": "vitest run --config vitest.ui.config.ts",
+    "test:requirements": "vitest run --config vitest.requirements.config.ts",
     "typecheck": "tsc --noEmit",
     "vrt:capture": "node scripts/vrtCapture.mjs",
     "vrt:configure": "node scripts/writeRegConfig.mjs",
