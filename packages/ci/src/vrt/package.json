@@ -1,0 +1,14 @@
+{
+  "name": "@charcuterie/ci-vrt-tools",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The browser and reg-suit that shared-vrt.yml installs into a bare checkout of Charcuterie. Not a workspace; installed with `npm ci` from this directory.",
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "playwright": "1.63.0",
+    "reg-keygen-git-hash-plugin": "0.14.5",
+    "reg-publish-s3-plugin": "0.14.4",
+    "reg-suit": "0.14.5"
+  }
+}
