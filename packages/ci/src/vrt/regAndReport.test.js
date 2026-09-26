@@ -14,7 +14,10 @@ import {
   requestHeaders,
   summarize,
 } from "./reportStatus.js"
-import { buildRegConfig } from "./writeRegConfig.js"
+import {
+  buildRegConfig,
+  toCustomDomain,
+} from "./writeRegConfig.js"
 
 const storeEnvironment = {
   VRT_REPORT_BASE_URL: "https://reports.example.test",
@@ -39,7 +42,7 @@ describe("buildRegConfig", () => {
         "reg-keygen-git-hash-plugin": {},
         "reg-publish-s3-plugin": {
           bucketName: "vrt-example",
-          customDomain: "https://reports.example.test",
+          customDomain: "reports.example.test",
           sdkOptions: {
             endpoint: "http://s3.example.test:3900",
             forcePathStyle: true,
@@ -59,6 +62,15 @@ describe("buildRegConfig", () => {
 
     expect(config.core.actualDir).toBe("shots")
     expect(config.core.workingDir).toBe(".reg-web")
+  })
+
+  it("hands the S3 plugin a bare host, whichever way the secret is written", () => {
+    expect(
+      toCustomDomain("https://reports.example.test/"),
+    ).toBe("reports.example.test")
+    expect(toCustomDomain("reports.example.test")).toBe(
+      "reports.example.test",
+    )
   })
 
   it("names every missing secret at once", () => {

@@ -12,7 +12,9 @@
  *   VRT_S3_BUCKET        the repo's own bucket
  *   VRT_S3_ENDPOINT      S3 API endpoint (LAN only)
  *   VRT_S3_REGION        region name the store expects
- *   VRT_S3_PUBLIC_URL    where the published report is served
+ *   VRT_S3_PUBLIC_URL    host the published report is served from. The S3
+ *                        plugin prepends `https://` itself, so a full URL is
+ *                        cut down to its host here rather than doubled.
  *   VRT_REPORT_BASE_URL  report host, read by reportStatus.js; required here
  *                        too so a missing secret fails before the capture
  *   VRT_ACTUAL_DIR       shots directory (default .vrt-actual)
@@ -36,6 +38,17 @@ export const REQUIRED_ENVIRONMENT = Object.freeze([
 ])
 
 export const DEFAULT_WORKING_DIR = ".reg"
+
+/**
+ * `reg-publish-s3-plugin` builds the report URL as
+ * `https://<customDomain>/<key>/index.html`, so it wants a bare host. A
+ * secret written as a URL produced `https://https://…` on the first Forgejo
+ * run; accept either spelling.
+ *
+ * @param {string} value
+ */
+export const toCustomDomain = (value) =>
+  value.replace(/^[a-z]+:\/\//i, "").replace(/\/+$/, "")
 
 /**
  * @param {Record<string, string | undefined>} env
@@ -66,7 +79,9 @@ export const buildRegConfig = (env) => {
       "reg-keygen-git-hash-plugin": {},
       "reg-publish-s3-plugin": {
         bucketName: env.VRT_S3_BUCKET,
-        customDomain: env.VRT_S3_PUBLIC_URL,
+        customDomain: toCustomDomain(
+          env.VRT_S3_PUBLIC_URL ?? "",
+        ),
         sdkOptions: {
           endpoint: env.VRT_S3_ENDPOINT,
           forcePathStyle: true,
