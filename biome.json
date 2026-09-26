@@ -14,7 +14,8 @@
       "!packages/eslint-config/**/__fixtures__",
       "!**/*.gen.ts",
       "!**/*.gen.tsx",
-      "!**/__generated__"
+      "!**/__generated__",
+      "!packages/ci/src/vrt/package-lock.json"
     ]
   }
 }
