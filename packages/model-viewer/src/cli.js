@@ -33,7 +33,7 @@ try {
     (!positionals.length && !values.manifest)
   ) {
     console.log(
-      "model-viewer [--title TEXT] [--note TEXT] [--name NAME] [--port N] FILE.stl[,label=TEXT,color=0xRRGGBB,visible=false,offset=x;y;z]\nmodel-viewer --manifest models.json [--stage-only | --no-share]\nmodel-viewer daemon  # runtime-owned service; installed once per container",
+      "model-viewer [--title TEXT] [--note TEXT] [--name NAME] [--port N] FILE.stl[,label=TEXT,color=0xRRGGBB,visible=false,offset=x;y;z]\nmodel-viewer --manifest models.json [--stage-only | --no-share]  # a manifest with a replay section stages the G-code replay page\nmodel-viewer daemon  # runtime-owned service; installed once per container",
     )
   } else if (positionals[0] === "daemon") await daemon()
   else {
