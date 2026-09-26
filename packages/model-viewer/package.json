@@ -1,6 +1,6 @@
 {
   "name": "@charcuterie/model-viewer",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Reusable Three.js model review, standalone previews and a local preview service.",
   "license": "MIT",
   "type": "module",
