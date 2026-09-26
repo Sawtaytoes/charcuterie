@@ -1,0 +1,352 @@
+# Shared across the fleet — this file is IMPORTED, not copied.
+#
+# Visual regression: the repo produces PNG shots into ONE directory,
+# reg-suit compares them against the baseline in the repo's own S3 bucket,
+# publishes the report there, and the verdict comes back as a commit status
+# and one pull-request comment.
+#
+#   # a GitHub repo
+#   vrt:
+#     needs: [changes]
+#     if: needs.changes.outputs.isDocsOnly != 'true'
+#     permissions: { contents: read, statuses: write, pull-requests: write }
+#     uses: Sawtaytoes/charcuterie/.github/workflows/shared-vrt.yml@workflows-v1
+#     with:
+#       buildCommand: yarn build-storybook
+#       storybookStaticDirs: storybook-static
+#     secrets: inherit
+#
+#   # a Forgejo repo — the mirror, TWICE (see charcuterieRepository), and the
+#   # runner label is plain `vrt`
+#   vrt:
+#     needs: [changes]
+#     if: needs.changes.outputs.isDocsOnly != 'true'
+#     uses: sawtaytoes/charcuterie/.github/workflows/shared-vrt.yml@workflows-v1
+#     with:
+#       charcuterieRepository: sawtaytoes/charcuterie
+#       runsOn: '["vrt"]'
+#       buildCommand: yarn build-storybook
+#       storybookStaticDirs: storybook-static
+#     secrets: inherit
+#
+# Two producers, either or both, writing into `$VRT_ACTUAL_DIR`:
+#
+#   1. `storybookStaticDirs` — the built-in capture
+#      (`packages/ci/src/vrt/storybookCapture.js`) screenshots every story of
+#      each built Storybook.
+#   2. `captureCommand` — the repo's own command, typically a Playwright or
+#      Vitest browser test that saves screenshots. It receives the absolute
+#      directory as `VRT_ACTUAL_DIR` and writes PNGs there.
+#
+# ⚠️ The tools run FROM A CHECKOUT of Charcuterie, not from npm, for the same
+# reasons as the docs lint: `@charcuterie/ci` is deliberately unpublished,
+# and the tag in `uses:` and the capture it runs are then the same commit.
+# Only the tools' own pinned dependencies are installed
+# (`packages/ci/src/vrt/package-lock.json`) — no workspace install, no build.
+#
+# ⚠️ The inner job is `visualRegression`, not `vrt` or `lint`. Forgejo posts
+# a status context for the INNER job name as well as the caller's, and a
+# caller job named `vrt` beside an inner `vrt` is two contexts with one name.
+#
+# ⚠️ This job runs on a SELF-HOSTED runner on the LAN (the baseline store is
+# only reachable there), and every GitHub repo in the fleet is public. A pull
+# request from a fork must never execute here, so the job-level `if:` below
+# refuses one on both hosts. It is written against the event PAYLOAD, not
+# `github.event_name`: inside a called workflow Forgejo reports the event as
+# `workflow_call`, so a guard that tested for `pull_request` would wave every
+# fork straight through there.
+name: Shared — visual regression
+
+on:
+  workflow_call:
+    inputs:
+      runsOn:
+        description: >-
+          JSON list of runner labels. GitHub's LAN runners carry
+          `["self-hosted","vrt"]`; the Forgejo runner's label is just
+          `["vrt"]`.
+        type: string
+        required: false
+        default: '["self-hosted","vrt"]'
+      setupCommand:
+        description: "Install the repo's dependencies."
+        type: string
+        required: false
+        default: yarn install --immutable
+      buildCommand:
+        description: "Build what the capture needs, e.g. the Storybook(s). Optional."
+        type: string
+        required: false
+        default: ""
+      storybookStaticDirs:
+        description: >-
+          Built Storybooks to capture, one per line, `prefix=path`. The
+          prefix becomes a subfolder of the shots directory. A single
+          Storybook may be given as a bare `path`, which writes at the top
+          level. Leave empty to skip the built-in capture.
+        type: string
+        required: false
+        default: ""
+      storybookSchemeGlobal:
+        description: >-
+          The Storybook global that selects a color scheme, if the repo has
+          one (Charcuterie's is `scheme`). Empty shoots one unsuffixed pass.
+        type: string
+        required: false
+        default: ""
+      storybookSchemes:
+        description: "Values of that global to shoot, comma-separated (e.g. `dark,light`)."
+        type: string
+        required: false
+        default: ""
+      storybookSchemeAttribute:
+        description: >-
+          An attribute the preview stamps on <html> once the scheme is
+          applied (Charcuterie's is `data-scheme`). Waited for before each
+          shot. Optional.
+        type: string
+        required: false
+        default: ""
+      storybookViewport:
+        description: "Page size, `<width>x<height>`."
+        type: string
+        required: false
+        default: 1280x800
+      storybookConcurrency:
+        description: "Parallel pages."
+        type: number
+        required: false
+        default: 4
+      storybookInclude:
+        description: "Story-id substrings or `*` globs to keep, space- or comma-separated. Empty keeps all."
+        type: string
+        required: false
+        default: ""
+      storybookExclude:
+        description: "Story-id substrings or `*` globs to drop."
+        type: string
+        required: false
+        default: ""
+      captureCommand:
+        description: >-
+          The repo's own capture, run after the Storybook capture. It gets
+          `VRT_ACTUAL_DIR` (absolute) in its environment and writes PNGs
+          there. Optional.
+        type: string
+        required: false
+        default: ""
+      actualDir:
+        description: "Where the shots go, relative to the repo root."
+        type: string
+        required: false
+        default: .vrt-actual
+      statusContext:
+        description: "The commit-status context the verdict is posted under."
+        type: string
+        required: false
+        default: vrt
+      timeoutMinutes:
+        type: number
+        required: false
+        default: 60
+      charcuterieRepository:
+        description: >-
+          Where to read the capture tools from. A Forgejo caller MUST set
+          this to the mirror: `actions/checkout` resolves a bare
+          `owner/repo` against the runner's own host, so the GitHub default
+          would not exist there.
+        type: string
+        required: false
+        default: Sawtaytoes/charcuterie
+      charcuterieRef:
+        description: "Pin the tools. Keep this equal to the ref in `uses:`."
+        type: string
+        required: false
+        default: workflows-v1
+    secrets:
+      GARAGE_S3_ACCESS_KEY:
+        required: false
+      GARAGE_S3_SECRET_KEY:
+        required: false
+      VRT_S3_BUCKET:
+        required: false
+      VRT_S3_ENDPOINT:
+        required: false
+      VRT_S3_REGION:
+        required: false
+      VRT_S3_PUBLIC_URL:
+        required: false
+      VRT_REPORT_BASE_URL:
+        required: false
+      VRT_STATUS_TOKEN:
+        description: >-
+          Optional. Overrides the job's automatic token for posting the
+          status and comment. Neither host needs it today: the automatic
+          token posts both on GitHub and on Forgejo 16.
+        required: false
+
+jobs:
+  visualRegression:
+    runs-on: ${{ fromJSON(inputs.runsOn) }}
+    timeout-minutes: ${{ inputs.timeoutMinutes }}
+    # No fork pull request reaches the self-hosted runner. See the header for
+    # why this reads the payload rather than `github.event_name`.
+    if: >-
+      ${{ !github.event.pull_request ||
+      github.event.pull_request.head.repo.full_name == github.repository }}
+    permissions:
+      contents: read
+      statuses: write
+      pull-requests: write
+    env:
+      VRT_ACTUAL_DIR_RELATIVE: ${{ inputs.actualDir }}
+      VRT_REPORT_BASE_URL: ${{ secrets.VRT_REPORT_BASE_URL }}
+      VRT_S3_BUCKET: ${{ secrets.VRT_S3_BUCKET }}
+      VRT_S3_ENDPOINT: ${{ secrets.VRT_S3_ENDPOINT }}
+      VRT_S3_PUBLIC_URL: ${{ secrets.VRT_S3_PUBLIC_URL }}
+      VRT_S3_REGION: ${{ secrets.VRT_S3_REGION }}
+
+    steps:
+      # fetch-depth 0: reg-keygen-git-hash-plugin walks history to find the
+      # commit whose snapshot is the baseline. A shallow clone starves it.
+      - uses: actions/checkout@v6
+        with: { fetch-depth: 0 }
+
+      # actions/checkout leaves a detached HEAD on a pull request, and
+      # reg-keygen-git-hash-plugin needs a branch name to key the baseline.
+      - name: Attach HEAD to its branch
+        env:
+          BRANCH: ${{ github.head_ref || github.ref_name }}
+        run: git checkout -B "$BRANCH"
+
+      - uses: actions/checkout@v6
+        with:
+          repository: ${{ inputs.charcuterieRepository || 'Sawtaytoes/charcuterie' }}
+          ref: ${{ inputs.charcuterieRef || 'workflows-v1' }}
+          path: .charcuterie-vrt
+          fetch-depth: 1
+
+      # Out of the workspace before the repo's own commands run: a test
+      # runner's default glob would otherwise find Charcuterie's own tests,
+      # and a linter its sources.
+      - name: Move the tools out of the workspace
+        run: |
+          set -euo pipefail
+          rm -rf "$RUNNER_TEMP/charcuterie-vrt"
+          mv .charcuterie-vrt "$RUNNER_TEMP/charcuterie-vrt"
+          echo "VRT_TOOLS=$RUNNER_TEMP/charcuterie-vrt/packages/ci/src/vrt" >> "$GITHUB_ENV"
+          # Absolute, so a capture command that runs in a subdirectory still
+          # writes to the right place. reg-suit accepts an absolute path too.
+          echo "VRT_ACTUAL_DIR=$GITHUB_WORKSPACE/$VRT_ACTUAL_DIR_RELATIVE" >> "$GITHUB_ENV"
+          echo "VRT_WORKING_DIR=$GITHUB_WORKSPACE/.reg" >> "$GITHUB_ENV"
+
+      # No setup-node: the runner image (agent-sandbox-base) IS the pinned
+      # toolchain, and its fonts and node keep the pixels deterministic.
+      # Its yarn is a login-shell corepack shim the non-login Actions shell
+      # cannot see, and the image's /usr/bin is root-owned, so the shim goes
+      # into a directory the job owns.
+      - name: Prepare the toolchain
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.local/bin"
+          corepack enable --install-directory "$HOME/.local/bin"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+          # The image bakes browsers into a root-owned PLAYWRIGHT_BROWSERS_PATH.
+          # The repo's own commands may need to install into it, so point
+          # them at a directory the job can write unless that one is writable.
+          if [ -z "${PLAYWRIGHT_BROWSERS_PATH:-}" ] || [ ! -w "${PLAYWRIGHT_BROWSERS_PATH}" ]; then
+            echo "VRT_IMAGE_BROWSERS_PATH=${PLAYWRIGHT_BROWSERS_PATH:-}" >> "$GITHUB_ENV"
+            echo "PLAYWRIGHT_BROWSERS_PATH=$HOME/.cache/ms-playwright" >> "$GITHUB_ENV"
+          else
+            echo "VRT_IMAGE_BROWSERS_PATH=${PLAYWRIGHT_BROWSERS_PATH}" >> "$GITHUB_ENV"
+          fi
+
+      - name: Install the capture and compare tools
+        run: |
+          set -euo pipefail
+          npm ci --prefix "$VRT_TOOLS" --no-audit --no-fund
+
+          # Reuse the image's baked browser when it is the revision the pinned
+          # Playwright wants — the job container on Forgejo starts empty every
+          # run, so this saves a download each time. Otherwise install it
+          # where the job can write.
+          revision="$(node -p "require('$VRT_TOOLS/node_modules/playwright-core/browsers.json').browsers.find((b) => b.name === 'chromium-headless-shell').revision")"
+          if [ -n "${VRT_IMAGE_BROWSERS_PATH:-}" ] && [ -d "$VRT_IMAGE_BROWSERS_PATH/chromium_headless_shell-$revision" ]; then
+            echo "Using the image's chromium_headless_shell-$revision."
+            echo "VRT_BROWSERS_PATH=$VRT_IMAGE_BROWSERS_PATH" >> "$GITHUB_ENV"
+          else
+            PLAYWRIGHT_BROWSERS_PATH="$HOME/.cache/ms-playwright" \
+              node "$VRT_TOOLS/node_modules/playwright/cli.js" install chromium
+            echo "VRT_BROWSERS_PATH=$HOME/.cache/ms-playwright" >> "$GITHUB_ENV"
+          fi
+
+      - name: Clear the shots directory
+        run: |
+          set -euo pipefail
+          rm -rf "$VRT_ACTUAL_DIR"
+          mkdir -p "$VRT_ACTUAL_DIR"
+
+      - name: Set up
+        if: ${{ inputs.setupCommand != '' }}
+        run: ${{ inputs.setupCommand }}
+
+      - name: Build
+        if: ${{ inputs.buildCommand != '' }}
+        run: ${{ inputs.buildCommand }}
+
+      - name: Capture Storybook stories
+        if: ${{ inputs.storybookStaticDirs != '' }}
+        env:
+          VRT_STORYBOOK_STATIC_DIRS: ${{ inputs.storybookStaticDirs }}
+          VRT_SCHEME_GLOBAL: ${{ inputs.storybookSchemeGlobal }}
+          VRT_SCHEMES: ${{ inputs.storybookSchemes }}
+          VRT_SCHEME_ATTRIBUTE: ${{ inputs.storybookSchemeAttribute }}
+          VRT_VIEWPORT: ${{ inputs.storybookViewport }}
+          VRT_CONCURRENCY: ${{ inputs.storybookConcurrency }}
+          VRT_INCLUDE: ${{ inputs.storybookInclude }}
+          VRT_EXCLUDE: ${{ inputs.storybookExclude }}
+        run: PLAYWRIGHT_BROWSERS_PATH="$VRT_BROWSERS_PATH" node "$VRT_TOOLS/storybookCapture.js"
+
+      - name: Capture with the repo's own command
+        if: ${{ inputs.captureCommand != '' }}
+        run: ${{ inputs.captureCommand }}
+
+      # An empty directory is not "no changes": reg-suit would report every
+      # baseline as deleted and the check would stay green.
+      - name: Check that something was captured
+        run: |
+          set -euo pipefail
+          count="$(find "$VRT_ACTUAL_DIR" -type f -name '*.png' | wc -l)"
+          echo "Captured ${count} shot(s) into ${VRT_ACTUAL_DIR_RELATIVE}."
+          if [ "$count" -eq 0 ]; then
+            echo "::error::No PNG was captured. Set storybookStaticDirs, captureCommand, or both."
+            exit 1
+          fi
+
+      - name: Write the reg-suit config
+        run: node "$VRT_TOOLS/writeRegConfig.js"
+
+      - name: Compare against the baseline and publish
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.GARAGE_S3_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.GARAGE_S3_SECRET_KEY }}
+          AWS_REGION: ${{ secrets.VRT_S3_REGION }}
+        run: |
+          set -euo pipefail
+          # reg-suit resolves its plugins from the repo root. They live with
+          # the tools, and NODE_PATH is how a `require.resolve` with `paths`
+          # still finds them. Scoped to this step only.
+          NODE_PATH="$VRT_TOOLS/node_modules" \
+            "$VRT_TOOLS/node_modules/.bin/reg-suit" --config .regconfig.json run \
+            | tee "$RUNNER_TEMP/reg-suit-output.txt"
+
+      - name: Post the commit status and PR comment
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          VRT_STATUS_TOKEN: ${{ secrets.VRT_STATUS_TOKEN }}
+          VRT_STATUS_CONTEXT: ${{ inputs.statusContext }}
+          VRT_STATUS_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          VRT_PR_NUMBER: ${{ github.event.pull_request.number }}
+          VRT_REG_OUTPUT: ${{ runner.temp }}/reg-suit-output.txt
+        run: node "$VRT_TOOLS/reportStatus.js"
