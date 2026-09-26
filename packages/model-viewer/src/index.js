@@ -3,6 +3,11 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js"
 import { STLLoader } from "three/addons/loaders/STLLoader.js"
 import metadata from "../package.json" with { type: "json" }
 
+export {
+  analyzeGcode,
+  objectFootprints,
+  readHeader,
+} from "./gcode.js"
 export { THREE }
 export const VERSION = metadata.version
 

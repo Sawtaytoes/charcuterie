@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>G-code replay</title>
+<style>
+  :root{
+    --bg:#101318; --panel:#171b22; --line:#262c36;
+    --ink:#e7ecf3; --muted:#8e9aab; --accent:#5b8ff9;
+    --good:#7ee2a8; --bad:#ff8a8a;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);
+    font:14px/1.5 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  header{padding:12px 16px 8px;border-bottom:1px solid var(--line)}
+  h1{font-size:15px;margin:0 0 2px;font-weight:650}
+  h2{font-size:13px;margin:0 0 6px;font-weight:650}
+  #note{margin:0;color:var(--muted);font-size:12.5px;max-width:1100px}
+  .bar{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:8px 16px;
+    border-bottom:1px solid var(--line)}
+  button{background:var(--panel);color:var(--ink);border:1px solid var(--line);
+    border-radius:7px;padding:5px 10px;font:inherit;font-size:12.5px;cursor:pointer}
+  button:hover{border-color:#3a4350}
+  button[aria-pressed="true"]{background:#20304d;border-color:var(--accent);color:#cfe0ff}
+  #scrub{flex:1;min-width:160px}
+  #clock{font:12px ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted)}
+  .main{display:grid;grid-template-columns:minmax(0,1fr) 340px}
+  /* minmax(0, …): a 1fr track keeps its content's width, and the canvas would
+     then hold the page wide after the window narrows. */
+  @media(max-width:900px){.main{grid-template-columns:minmax(0,1fr)}}
+  #app{position:relative;height:68vh;min-height:360px;min-width:0;overflow:hidden}
+  #app canvas{display:block;touch-action:none}
+  aside{border-left:1px solid var(--line);padding:10px 12px;font-size:12.5px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:9px;
+    padding:9px 11px;margin-bottom:9px}
+  .row{display:flex;justify-content:space-between;gap:10px;padding:1px 0}
+  .row>span:first-child{color:var(--muted)}
+  .good{color:var(--good)}
+  .bad{color:var(--bad)}
+  .swatch{display:inline-block;width:11px;height:11px;border-radius:3px;
+    vertical-align:-1px;margin-right:6px;border:1px solid #ffffff33}
+  .notes{padding:10px 16px 22px;font-size:12.5px;color:#c4ccd8;max-width:1100px}
+  .notes li{margin:3px 0}
+  table{border-collapse:collapse;font-size:12.5px}
+  th,td{text-align:left;padding:4px 10px;border-bottom:1px solid var(--line)}
+  th{color:var(--muted);font-weight:600}
+  #err{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:9;
+    max-width:640px;background:#2b1416;border:1px solid #7f2f36;color:#ffd7da;
+    padding:16px 18px;border-radius:10px;display:none;font-size:13px}
+  body.clean header,body.clean .bar,body.clean aside,body.clean .notes{display:none}
+  body.clean .main{grid-template-columns:minmax(0,1fr)}
+  body.clean #app{height:100vh}
+</style>
+</head>
+<body>
+<header>
+  <h1 id="title">G-code replay</h1>
+  <p id="note"></p>
+</header>
+<div class="bar" id="plates"></div>
+<div class="bar">
+  <button type="button" id="play" aria-pressed="false">Play</button>
+  <button type="button" id="speed">Speed 1x</button>
+  <input id="scrub" type="range" min="0" max="0" value="0" aria-label="Position in the print">
+  <span id="clock"></span>
+</div>
+<div class="main">
+  <div id="app"></div>
+  <aside>
+    <div class="card" id="now"></div>
+    <div class="card" id="checks"></div>
+    <div class="card" id="changes"></div>
+  </aside>
+</div>
+<div class="notes">
+  <h2>All plates</h2>
+  <table id="plates-table"></table>
+  <h2 style="margin-top:14px">How to read the head model</h2>
+  <ul id="legend">
+    <li>The cone is the nozzle tip. It takes the color of the filament that is loaded.</li>
+    <li>The translucent cylinder is the slicer's clearance model (<code>extruder_clearance_max_radius</code>). It turns red when a printed part that is taller than the nozzle tip is inside it.</li>
+    <li>The bar across the bed is the X gantry (<code>extruder_clearance_height_to_rod</code> above the tip). A part taller than that must print last.</li>
+    <li>This is the slicer's collision model, not toolhead CAD.</li>
+  </ul>
+  <h2 style="margin-top:14px">What the checks read</h2>
+  <ul>
+    <li>Every move in the G-code, arcs included, with filament changes and purges.</li>
+    <li>Color, only when the plate names a split height: each part extrudes its bottom tool below the split and the top tool above it.</li>
+    <li>Collisions: the nozzle tip never goes below the top of a part that is already printed.</li>
+    <li>Clearance: no part taller than the nozzle tip is inside the clearance circle.</li>
+  </ul>
+</div>
+<div id="err" role="alert"></div>
+
+<script type="importmap">{"imports":{"three":"./vendor/three.module.js"}}</script>
+<script type="module" src="./replay.js"></script></body></html>
