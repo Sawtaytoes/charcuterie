@@ -714,11 +714,29 @@ const buildContainerQueryVariants = () =>
   )
 
 /**
+ * `hover:` — Tailwind's own, gated on `any-hover` instead of `hover`.
+ *
+ * Tailwind v4 wraps every `hover:` (and so every `group-hover:` and
+ * `peer-hover:`) in `@media (hover: hover)`, which asks about the
+ * *primary* pointer only. A Surface with a touchscreen reports touch
+ * as primary, so it answers `hover: none` with a Type Cover trackpad,
+ * a USB mouse, and the pen all attached — and every hover style in
+ * every app went dark on it, including the controls that exist only
+ * on hover (Mail Sifter's card checkbox). `any-hover` asks whether
+ * *any* attached pointer can hover, which is the question those
+ * styles mean. A phone still answers `none`, so the sticky-hover
+ * problem the upstream gate exists to prevent stays prevented.
+ */
+const HOVER_VARIANT =
+  "@custom-variant hover { @media (any-hover: hover) { &:hover { @slot; } } }"
+
+/**
  * The Tailwind v4 entry point. `@theme` turns `--color-*` into
  * `bg-*` / `text-*` / `border-*` utilities; `@custom-variant dark`
  * points Tailwind's `dark:` at our attribute rather than at its
  * default `prefers-color-scheme` media query, because the scheme
- * here is a deliberate choice rather than an OS setting.
+ * here is a deliberate choice rather than an OS setting; `hover:` is
+ * re-gated for hybrid devices (see `HOVER_VARIANT`).
  */
 export const buildThemeCss = () =>
   [
@@ -727,6 +745,8 @@ export const buildThemeCss = () =>
     '@import "./variables.css";',
     "",
     '@custom-variant dark (&:where([data-scheme="dark"], [data-scheme="dark"] *));',
+    "",
+    HOVER_VARIANT,
     "",
     ...buildContainerQueryVariants(),
     "",

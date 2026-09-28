@@ -311,6 +311,15 @@ test("the dark variant keys off data-scheme, not a media query", () => {
   expect(themeCss).not.toContain("prefers-color-scheme")
 })
 
+test("the hover variant asks whether any pointer can hover", () => {
+  // A Surface reports touch as its primary pointer, so Tailwind's
+  // default `(hover: hover)` switched every hover style off with a
+  // mouse and a pen attached.
+  expect(themeCss).toContain("@custom-variant hover")
+  expect(themeCss).toContain("@media (any-hover: hover)")
+  expect(themeCss).not.toContain("(hover: hover)")
+})
+
 test("theme.css pulls in the runtime substrate", () => {
   expect(themeCss).toContain('@import "./variables.css";')
 })
