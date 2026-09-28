@@ -100,6 +100,56 @@ export const ProgressBar = ({
     thresholds,
   )
 
+  // The grid wrapper exists only for an overlay. Without one the
+  // track is a direct child again, as it was before `overlay` —
+  // apps size `[role="progressbar"]` against its parent, and an
+  // always-present wrapper with no height collapsed their fill.
+  const track = (
+    <div
+      aria-busy={isIndeterminate || undefined}
+      aria-labelledby={labelId}
+      aria-valuemax={max}
+      aria-valuemin={0}
+      aria-valuenow={
+        isIndeterminate ? undefined : clampedValue
+      }
+      className={toClassName(
+        "relative w-full overflow-hidden rounded-full bg-surface-sunken",
+        overlay == null
+          ? TRACK_SIZE_CLASS[size]
+          : "h-full rounded-xl [grid-area:1/1]",
+      )}
+      role="progressbar"
+    >
+      {isIndeterminate ? (
+        <span
+          className={toClassName(
+            // The sweep animates `inset-inline-start`, so it runs
+            // the other way in RTL for free — and its
+            // reduced-motion fallback hatches the whole track
+            // rather than parking at one end.
+            "charcuterie-sweep absolute inset-y-0 w-2/5 rounded-full",
+            INTENT_SOLID_FILL_CLASS[fillIntent],
+            overlay == null
+              ? undefined
+              : "rounded-none opacity-30",
+          )}
+        />
+      ) : (
+        <span
+          className={toClassName(
+            "block h-full rounded-full transition-[inline-size] duration-(--duration-normal) ease-standard",
+            INTENT_SOLID_FILL_CLASS[fillIntent],
+            overlay == null
+              ? undefined
+              : "rounded-none opacity-30",
+          )}
+          style={{ inlineSize: `${percent}%` }}
+        />
+      )}
+    </div>
+  )
+
   return (
     <div
       {...divProps}
@@ -135,62 +185,16 @@ export const ProgressBar = ({
         </VisuallyHidden>
       )}
 
-      <div
-        className={
-          overlay == null
-            ? undefined
-            : "grid overflow-hidden rounded-xl"
-        }
-      >
-        <div
-          aria-busy={isIndeterminate || undefined}
-          aria-labelledby={labelId}
-          aria-valuemax={max}
-          aria-valuemin={0}
-          aria-valuenow={
-            isIndeterminate ? undefined : clampedValue
-          }
-          className={toClassName(
-            "relative w-full overflow-hidden rounded-full bg-surface-sunken",
-            overlay == null
-              ? TRACK_SIZE_CLASS[size]
-              : "h-full rounded-xl [grid-area:1/1]",
-          )}
-          role="progressbar"
-        >
-          {isIndeterminate ? (
-            <span
-              className={toClassName(
-                // The sweep animates `inset-inline-start`, so it runs
-                // the other way in RTL for free — and its
-                // reduced-motion fallback hatches the whole track
-                // rather than parking at one end.
-                "charcuterie-sweep absolute inset-y-0 w-2/5 rounded-full",
-                INTENT_SOLID_FILL_CLASS[fillIntent],
-                overlay == null
-                  ? undefined
-                  : "rounded-none opacity-30",
-              )}
-            />
-          ) : (
-            <span
-              className={toClassName(
-                "block h-full rounded-full transition-[inline-size] duration-(--duration-normal) ease-standard",
-                INTENT_SOLID_FILL_CLASS[fillIntent],
-                overlay == null
-                  ? undefined
-                  : "rounded-none opacity-30",
-              )}
-              style={{ inlineSize: `${percent}%` }}
-            />
-          )}
-        </div>
-        {overlay == null ? null : (
+      {overlay == null ? (
+        track
+      ) : (
+        <div className="grid overflow-hidden rounded-xl">
+          {track}
           <div className="relative min-w-0 [grid-area:1/1]">
             {overlay}
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   )
 }
