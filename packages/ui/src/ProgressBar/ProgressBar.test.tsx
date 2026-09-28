@@ -72,3 +72,17 @@ test("aria-valuenow tracks the fill to completion", async () => {
     bar.querySelector(".bg-intent-success-solid"),
   ).toBeInTheDocument()
 })
+
+test("with no overlay the track is a direct child of the root", async () => {
+  // An app's CSS sizes `[role="progressbar"]` against its parent —
+  // rip-deck's kiosk sets the track to `block-size: 100%`. The overlay
+  // grid wrapper, present unconditionally in 4.9.0-4.10.1, has no
+  // height, so that fill collapsed to nothing.
+  const { canvas } = await mountStory(Playground)
+
+  const bar = canvas.getByRole("progressbar")
+
+  await expect(bar.parentElement?.className).toContain(
+    "flex-col",
+  )
+})
