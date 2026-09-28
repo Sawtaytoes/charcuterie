@@ -40,6 +40,7 @@ Start here. Find the row that matches what you are about to build.
 | Page chrome — header, rails, the content column | `Shell` / `Header` / `Rail` / `Main` | a new `AppShell.tsx` |
 | The sections of ONE screen, each with its own address | `Tabs` with `href` items + `activeHref` | a `Nav` (that is the app's destinations, and its current item is a pill); a `Tabs` whose choice is state, so reload and Back lose the section |
 | The path back up a hierarchy (`Places › Office › Office Shelves`) | `Breadcrumbs` — `href` rungs for URLs, `onSelect` rungs for state with no URL | a `<div>` of links and `/` spans; a `truncate` on the current segment; a `›` glyph the font may lack |
+| A thing's secondary actions behind one vertical-dots button | `ActionMenu` — `items`, and a `label` naming the thing (`Actions for Cables`) | an `IconButton` + `Menu` + `useState` wired by hand; a `⋮` character; a trigger named only "More" |
 | The app's destinations, wherever they sit, and how they collapse | `Nav` + `useNavLayout` | `NavBar` (deprecated); a `Toolbar` of `onSelect` items; a row of `NavLink`s and a `flex-wrap` in your own stylesheet; the same nav rendered twice behind `hidden md:flex` |
 | A grid of cards that should reflow | `AdaptiveGrid` | `grid-cols-*` breakpoints; `auto-fill, minmax()` |
 | Measurable work with a prominent value and supporting metrics | `ProgressCard` | a custom progress-band card or CSS that reaches into `ProgressBar` |
