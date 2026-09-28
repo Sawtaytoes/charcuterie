@@ -1,0 +1,51 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as ActionMenuStories from "./ActionMenu.stories";
+
+<Meta of={ActionMenuStories} />
+
+# ActionMenu
+
+The overflow control: a thing's secondary actions behind one labelled vertical-dots button.
+
+Docket's `TaskActionMenu` and Whereabouts' `PlaceActionsMenu` were the same component — a
+ghost neutral `IconButton`, a `useState` for visibility, a `Menu` at `placement="bottom-end"`.
+This owns that whole shape. The caller passes the actions and a name.
+
+<Canvas of={ActionMenuStories.Playground} />
+
+## Props
+
+<Controls />
+
+```tsx
+<ActionMenu
+  items={[
+    { key: "rename", label: "Rename", onSelect: rename },
+    { key: "move", label: "Move to another place", onSelect: move },
+  ]}
+  label={`Actions for ${place.name}`}
+/>
+```
+
+## Name the thing, not the gesture
+
+`label` becomes the button's accessible name, and the menu takes its name from the button.
+Write `Actions for Cables`, never `More`: a page with twenty of these needs twenty
+different buttons, for a screen reader and for `getByRole("button", { name })`.
+
+## The dots
+
+The default is three round boxes drawn in CSS. It is not a `⋮` character — a font that
+lacks one paints nothing — and not an SVG, because the library ships no icons. Pass `icon`
+to use the app's own glyph; Docket and Whereabouts use lucide's `EllipsisVertical` at
+`strokeWidth={1.75}`.
+
+<Canvas of={ActionMenuStories.AllVariants} />
+
+## Open state
+
+It owns its own. Clicking the trigger toggles it. Choosing an item, Escape and an outside
+press close it. Nothing outside the button has a reason to open it.
+
+<Canvas of={ActionMenuStories.Responsive} />
