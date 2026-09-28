@@ -1,5 +1,12 @@
 # @charcuterie/ui
 
+## 4.10.1
+
+### Patch Changes
+
+- Updated dependencies [e5af779]
+  - @charcuterie/tokens@1.10.2
+
 ## 4.10.0
 
 ### Minor Changes
