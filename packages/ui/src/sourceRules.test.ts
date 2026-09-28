@@ -615,7 +615,8 @@ test("the barrel is the only place components are re-exported", async () => {
   // question the same way the bars are placed, or the two answers
   // drift by a day and nothing says so.
   // ProgressCard composes Card and ProgressBar for progress-first dashboards.
-  expect(componentNames.length).toBe(67)
+  // Breadcrumbs composes TextLink for the path back up a hierarchy.
+  expect(componentNames.length).toBe(68)
 
   for (const name of componentNames) {
     expect(barrel).toContain(`export { ${name} }`)
