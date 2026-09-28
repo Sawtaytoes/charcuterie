@@ -1,0 +1,71 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as BreadcrumbsStories from "./Breadcrumbs.stories";
+
+<Meta of={BreadcrumbsStories} />
+
+# Breadcrumbs
+
+A path back up a hierarchy: `Places › Office › Office Shelves`.
+
+Folio, image-viewer and mux-magic each hand-rolled one, and no two agreed on the landmark,
+the list, the current page or what happens to a long name. This is the WAI-ARIA APG
+breadcrumb pattern — a named `<nav>` around an `<ol>` — with the link paint of `TextLink`.
+
+<Canvas of={BreadcrumbsStories.Playground} />
+
+## Props
+
+<Controls />
+
+## What each rung becomes
+
+A rung is read off the fields it carries. The caller says where it goes, never what it is.
+
+| Item | Renders | Use it for |
+| --- | --- | --- |
+| `{ label, href }` | a `TextLink` — a real `<a href>`, routed through `RouterLinkProvider` | a trail over URLs: Folio, Whereabouts |
+| `{ label, onSelect }` | a `<button>` painted as the same link | a trail over state with no URL: image-viewer's folders, mux-magic's file explorer |
+| `{ label }`, last | text with `aria-current="page"` | the current page |
+| `{ label }`, not last | plain text | a level that has no page of its own |
+
+`href` and `onSelect` together render the link and run `onSelect` on click as well.
+
+<Canvas of={BreadcrumbsStories.AllVariants} />
+
+## A trail above a heading has no current rung
+
+When the page already names itself in a heading, the trail stops at the parent and every
+rung is a link. Nothing gets `aria-current`, because the heading is the current page's
+name and it should be announced once.
+
+```tsx
+<Breadcrumbs
+  items={[
+    { href: "/places", label: "Places" },
+    { href: "/places/office", label: "Office" },
+  ]}
+/>
+<h1>Office Shelves</h1>
+```
+
+## It wraps, and it never truncates
+
+A long trail wraps between rungs, and a rung with no spaces breaks inside itself. Nothing
+is cut to `Office Sh…`: the word that would be cut is the one the reader came to find.
+
+<Canvas of={BreadcrumbsStories.Responsive} />
+
+## The separator
+
+The default is a chevron drawn in CSS borders, not a `›` character — the library ships no
+symbol glyphs in a default, because a font that lacks one paints nothing. It points the
+way the trail reads in a right-to-left page too. Pass `separator` to use your own; it is
+always `aria-hidden`.
+
+## Keyboard
+
+Tab walks the rungs in order. Enter follows a link; Enter or Space presses a button rung.
+The current page is text, so Tab skips it.
+
+<Canvas of={BreadcrumbsStories.Interactive} />
