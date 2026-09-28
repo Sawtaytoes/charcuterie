@@ -37,6 +37,8 @@ export type {
   AccordionProps,
 } from "./Accordion/Accordion.tsx"
 export { Accordion } from "./Accordion/Accordion.tsx"
+export type { ActionMenuProps } from "./ActionMenu/ActionMenu.tsx"
+export { ActionMenu } from "./ActionMenu/ActionMenu.tsx"
 export type {
   ActionTileItem,
   ActionTilesAccent,
