@@ -99,6 +99,11 @@ export {
   getIsMoveMeaningful,
   toSettledIndex,
 } from "./Board/boardMove.ts"
+export type {
+  BreadcrumbItem,
+  BreadcrumbsProps,
+} from "./Breadcrumbs/Breadcrumbs.tsx"
+export { Breadcrumbs } from "./Breadcrumbs/Breadcrumbs.tsx"
 export type { ButtonProps } from "./Button/Button.tsx"
 export { Button } from "./Button/Button.tsx"
 export type { ButtonLinkProps } from "./ButtonLink/ButtonLink.tsx"
