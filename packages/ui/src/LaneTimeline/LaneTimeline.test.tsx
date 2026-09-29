@@ -253,6 +253,39 @@ test("the same width keeps its axis for a week and loses it for a month", async 
 })
 
 /**
+ * A title is words, and one line is one line however wide the box
+ * gets. So a bar in a column the timeline measured as wide enough
+ * wraps onto more lines, and the same title in a narrow column clips
+ * to one — decided from the column, never from the bar, which is why
+ * one story wraps what the other clips.
+ */
+test("a bar's title wraps in a wide column and clips in a narrow one", async () => {
+  const toLineCount = (element: HTMLElement) =>
+    element.getBoundingClientRect().height /
+    Number.parseFloat(getComputedStyle(element).lineHeight)
+
+  // Playground: seven columns across 64rem, so about 7em a day.
+  const { canvas: week } = await mountStory(Playground)
+
+  const wrapped = week.getByText("Mic locker inventory")
+
+  await expect(toLineCount(wrapped)).toBeGreaterThanOrEqual(
+    1.8,
+  )
+
+  // LongRange: thirty columns across 72rem, so about 2em a day.
+  const { canvas: month } = await mountStory(LongRange)
+
+  const clipped = month.getByText("Mic locker inventory")
+
+  await expect(toLineCount(clipped)).toBeLessThan(1.5)
+
+  await expect(clipped.scrollWidth).toBeGreaterThan(
+    clipped.clientWidth,
+  )
+})
+
+/**
  * Thinning the labels rather than shrinking the type, because type
  * that shrinks to fit is type somebody cannot read.
  */

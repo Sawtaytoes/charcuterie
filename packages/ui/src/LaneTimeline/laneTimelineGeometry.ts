@@ -358,6 +358,49 @@ export const getIsAxisReadable = ({
   inlineSize / columnCount >= minColumnInlineSize
 
 /**
+ * How a bar prints its title: on one line with an ellipsis, or
+ * wrapped onto up to three.
+ *
+ * `clip` is the honest answer when a column is narrow — a wrapped
+ * title in 30px is three lines of two letters each, which is
+ * neither the word nor a shape. `wrap` is the honest answer when
+ * the column is wide, and it is the one the whole component was
+ * measured wanting: at seven columns across a 64rem page a single-
+ * day bar has 7em of room and was still printing `Regional Rob…`,
+ * because one line is one line however wide the box gets.
+ */
+export type TimelineTitleLayout = "clip" | "wrap"
+
+/**
+ * Wrap the titles only once a day column is wide enough for a word.
+ *
+ * Measured, for the same reason `getIsAxisReadable` is: the
+ * question is the width of ONE column, which is the box divided by
+ * a number that lives in the data. Before the first measurement it
+ * clips, because that is the layout with no vertical surprise in
+ * it — a server render that wrapped would move every lane on the
+ * client's first paint.
+ */
+export const chooseTitleLayout = ({
+  columnCount,
+  inlineSize,
+  isMeasured,
+  wrapColumnInlineSize,
+}: {
+  columnCount: number
+  /** The measured inline size of the track, in CSS pixels. */
+  inlineSize: number
+  isMeasured: boolean
+  /** The narrowest column that wraps, in CSS pixels. */
+  wrapColumnInlineSize: number
+}): TimelineTitleLayout =>
+  isMeasured &&
+  columnCount > 0 &&
+  inlineSize / columnCount >= wrapColumnInlineSize
+    ? "wrap"
+    : "clip"
+
+/**
  * Label every day, every week, or every four weeks.
  *
  * Thinning the ticks rather than shrinking the type, because type
