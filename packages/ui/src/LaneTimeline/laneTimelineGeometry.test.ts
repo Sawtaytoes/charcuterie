@@ -17,6 +17,7 @@ import { expect, test } from "vitest"
 
 import {
   chooseAxisTickStep,
+  chooseTitleLayout,
   describeTimelineSpan,
   getIsAxisReadable,
   toBarPlacement,
@@ -426,4 +427,38 @@ test("a single day says the day and nothing about a span", () => {
       span,
     }),
   ).toBe("Wed 8 Apr")
+})
+
+/**
+ * The wrap threshold is a column width, so the same box answers
+ * differently for a week and for a month — and before a measurement
+ * it clips, so a server render has no vertical surprise in it.
+ */
+test("a title wraps only once a measured column is wide enough", () => {
+  expect(
+    chooseTitleLayout({
+      columnCount: 7,
+      inlineSize: 812,
+      isMeasured: true,
+      wrapColumnInlineSize: 96,
+    }),
+  ).toBe("wrap")
+
+  expect(
+    chooseTitleLayout({
+      columnCount: 30,
+      inlineSize: 812,
+      isMeasured: true,
+      wrapColumnInlineSize: 96,
+    }),
+  ).toBe("clip")
+
+  expect(
+    chooseTitleLayout({
+      columnCount: 7,
+      inlineSize: 0,
+      isMeasured: false,
+      wrapColumnInlineSize: 96,
+    }),
+  ).toBe("clip")
 })

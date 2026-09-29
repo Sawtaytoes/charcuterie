@@ -12,7 +12,10 @@ import { TextLink } from "../TextLink/TextLink.tsx"
 import { toClassName } from "../toClassName.ts"
 import type { TimelineItem } from "./LaneTimelineBar.tsx"
 import { LaneTimelineBar } from "./LaneTimelineBar.tsx"
-import type { TimelineAxis } from "./laneTimelineGeometry.ts"
+import type {
+  TimelineAxis,
+  TimelineTitleLayout,
+} from "./laneTimelineGeometry.ts"
 import {
   describeTimelineSpan,
   toPackedLane,
@@ -64,6 +67,12 @@ export type LaneTimelineLaneProps = {
   shape: "axis" | "list"
   /** Draw a separator every this many columns. */
   tickStep: number
+  /**
+   * Whether a bar's title clips to one line or wraps onto up to
+   * three. The parent measures the column and decides; the Narrow
+   * View ignores it, because a row always has room to wrap.
+   */
+  titleLayout?: TimelineTitleLayout
 }
 
 /**
@@ -108,6 +117,7 @@ export const LaneTimelineLane = ({
   position,
   shape,
   tickStep,
+  titleLayout = "clip",
 }: LaneTimelineLaneProps): ReactNode => {
   const headingId = useUniqueId()
 
@@ -315,6 +325,7 @@ export const LaneTimelineLane = ({
                   hasLaterEnd={placement.hasLaterEnd}
                   item={item}
                   shape="bar"
+                  titleLayout={titleLayout}
                 />
               </li>
             )),

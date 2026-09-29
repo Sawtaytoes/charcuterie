@@ -117,6 +117,20 @@ which measures 0 again, every frame.
 Which is why "has it been measured" is its own flag rather than `inlineSize > 0`: **zero is a
 real width here**, because the track is a `minmax(0, 1fr)` column beside a fixed label rail.
 
+## A title wraps when its column has room
+
+A bar's title is words, and one line is one line however wide the box gets: a week across
+a desktop page gives every day about 7em, and a single-day bar in it still printed
+`Regional Rob…`. So the timeline measures the column and chooses. At or above
+`wrapColumnSize` (default `6`, in em of the timeline's own type) a title wraps onto up to
+three lines; below it, the title clips to one line with an ellipsis, because three lines
+of two letters each is neither the word nor a shape. The full title is in the bar's
+`title` attribute and its accessible name either way.
+
+The threshold is the **column's** width, not the box's, which is why the same 64rem panel
+wraps a week's titles and clips a month's. It is decided by the timeline, never by the
+bar, so every bar in a range agrees.
+
 ## The labels thin; the type does not shrink
 
 Type that shrinks to fit is type somebody cannot read, and the density axis already owns font
