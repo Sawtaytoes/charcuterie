@@ -154,14 +154,24 @@ export const LaneTimelineBar = ({
        * `break-word`, for the reason `Main` gives: only `anywhere`
        * also shrinks the min-content size, so a long word cannot
        * push the bar out of its column.
+       *
+       * `hyphens-auto` in front of it, because a column just past
+       * the wrap threshold is narrower than one long word: at 5em a
+       * column, an eleven-letter word broke as `Optometris` / `t`
+       * on the first live fortnight. A browser with a hyphenation
+       * dictionary breaks it as `Optom-` / `etrist` instead; one
+       * without (a headless shell has none) falls through to
+       * `anywhere`, which still keeps the bar in its column. It
+       * needs a `lang` on an ancestor, which every app's `<html>`
+       * carries.
        */}
       <span
         className={toClassName(
           "min-w-0 flex-1 text-sm",
           shape === "row"
-            ? "wrap-anywhere"
+            ? "wrap-anywhere hyphens-auto"
             : titleLayout === "wrap"
-              ? "line-clamp-3 wrap-anywhere"
+              ? "line-clamp-3 wrap-anywhere hyphens-auto"
               : "truncate",
         )}
       >
