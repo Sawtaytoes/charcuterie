@@ -157,6 +157,10 @@ test("it renders what the editor renders", async () => {
 test("a link is a real anchor in the tab order", async () => {
   const { canvas } = await mountStory(Interactive)
 
+  // Markdown decorations arrive after the editor's asynchronous parse.
+  // Wait for the link before checking its accessibility and keyboard behavior.
+  await canvas.findByRole("link", { name: "the runbook" })
+
   const link = expectAgentDrivable(canvas, {
     name: "the runbook",
     role: "link",
