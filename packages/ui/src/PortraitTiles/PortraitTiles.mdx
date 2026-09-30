@@ -151,3 +151,11 @@ for less. The shadow and the coloured border stay, so the hover is still legible
   fill and the number is pulled toward readable, and that is the whole of what it can promise.
 - **Crop or focus a face.** `object-fit: cover` centres, and that is all. An app that needs a
   focal point owns the crop.
+
+## Bounded choices fill their row
+
+Use `isFillingRow` for a known set of people. Empty tracks collapse rather than reserving
+space for another person. `minTileInlineSize` still decides when the next column fits.
+The default continues to reserve empty tracks for a growing gallery.
+
+<Canvas of={PortraitTilesStories.BoundedSet} />

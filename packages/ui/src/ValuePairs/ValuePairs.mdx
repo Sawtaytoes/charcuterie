@@ -1,0 +1,15 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+import * as Stories from "./ValuePairs.stories";
+
+<Meta of={Stories} />
+
+# ValuePairs
+
+A label above each value, used identically in a card, row, table cell or dialog.
+The app owns the values and units. The library owns spacing, type and wrapping.
+Pairs keep their natural width; a single value does not drift to the far side of a column.
+
+<Canvas of={Stories.Playground} />
+<Controls />
+<Canvas of={Stories.Single} />
+<Canvas of={Stories.Narrow} />

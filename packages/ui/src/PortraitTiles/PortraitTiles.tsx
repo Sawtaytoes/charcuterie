@@ -114,6 +114,8 @@ export type PortraitTilesProps = {
   layout?: PortraitTilesLayout
   /** The narrowest a portrait track may be, in CSS px. */
   minTileInlineSize?: number
+  /** Collapse empty tracks so a bounded set fills its available row. */
+  isFillingRow?: boolean
   /** What `isExternal` announces. Not shown. */
   newTabLabel?: string
   /** Fired by a portrait that carries no `href`. */
@@ -367,6 +369,7 @@ export const PortraitTiles = ({
   label,
   layout = "auto",
   minTileInlineSize = 200,
+  isFillingRow = false,
   newTabLabel = "(opens in a new tab)",
   onChoose,
   size = "md",
@@ -385,7 +388,9 @@ export const PortraitTiles = ({
         aria-label={label}
         className={toClassName(
           "grid",
-          TILE_COLUMNS_CLASS,
+          isFillingRow
+            ? "grid-cols-[repeat(auto-fit,minmax(min(var(--charcuterie-tile-min-inline-size),100%),1fr))]"
+            : TILE_COLUMNS_CLASS,
           GAP_CLASS[size],
         )}
         role="group"
@@ -431,7 +436,7 @@ export const PortraitTiles = ({
                   // for anyone who has asked the OS for less. The
                   // shadow and the border stay, so the hover is
                   // still legible without it.
-                  "motion-reduce:hover:translate-y-0",
+                  "active:bg-intent-neutral-surface motion-safe:active:translate-y-0 motion-safe:active:scale-[0.985] motion-reduce:hover:translate-y-0 motion-reduce:transition-none",
                   categorical === null
                     ? COLOUR_TILE_HOVER_CLASS
                     : CATEGORICAL_HOVER_BORDER_CLASS[
