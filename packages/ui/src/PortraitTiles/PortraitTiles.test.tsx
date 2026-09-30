@@ -397,3 +397,17 @@ test("a portrait is the same box as an action tile", async () => {
     Number.parseFloat(style.paddingTop),
   ).toBeGreaterThan(0)
 })
+
+test("a bounded set keeps three portraits beside each other without an empty fourth track", async () => {
+  const { BoundedSet } = composeStories(stories)
+  const { canvasElement } = await mountStory(BoundedSet)
+  const buttons = [
+    ...canvasElement.querySelectorAll("button"),
+  ]
+  await waitFor(() => expect(buttons).toHaveLength(3))
+  const rectangles = buttons.map((button) =>
+    button.getBoundingClientRect(),
+  )
+  await expect(rectangles[0]?.top).toBe(rectangles[2]?.top)
+  await expect(rectangles[0]?.width).toBeGreaterThan(240)
+})
