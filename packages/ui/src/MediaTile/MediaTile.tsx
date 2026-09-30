@@ -5,6 +5,7 @@ import type {
 } from "react"
 import { useEffect, useRef } from "react"
 
+import { UnstyledLink } from "../RouterLink/UnstyledLink.tsx"
 import { Skeleton } from "../Skeleton/Skeleton.tsx"
 import { toClassName } from "../toClassName.ts"
 import { mediaTransitions } from "./mediaStatus.ts"
@@ -26,6 +27,13 @@ export type MediaTileProps = Omit<
   badge?: ReactNode
   /** Shown in place of the image when it fails. */
   fallback?: ReactNode
+  /** Untruncated content beneath the title and subtitle. No nested controls in an interactive tile. */
+  details?: ReactNode
+  /** Keep the entire object visible, or fill the frame. */
+  imageFit?: "cover" | "contain"
+  /** Put a thumbnail beside the caption for a compact list. */
+  layout?: "vertical" | "horizontal"
+  isTitleTruncated?: boolean
   href?: string
   /**
    * Makes the tile a button. Hover, focus-visible and
@@ -46,7 +54,7 @@ export type MediaTileProps = Omit<
  * Collection thumbnail looked inert under the pointer.
  */
 const INTERACTIVE_CLASS =
-  "group flex cursor-pointer flex-col rounded-md outline-offset-2 hover:opacity-90 focus-visible:outline-solid focus-visible:outline-(length:--focus-ring-width) focus-visible:outline-focus-ring"
+  "group flex cursor-pointer rounded-md outline-offset-2 hover:opacity-90 focus-visible:outline-solid focus-visible:outline-(length:--focus-ring-width) focus-visible:outline-focus-ring"
 
 const RATIO_CLASS: Record<MediaTileRatio, string> = {
   // 2:3 is the standard poster trim, which is what Plex, Kavita, and
@@ -87,6 +95,10 @@ export const MediaTile = ({
   badge,
   className,
   fallback,
+  details,
+  imageFit = "cover",
+  layout = "vertical",
+  isTitleTruncated = true,
   href,
   isDisabled = false,
   onClick,
@@ -105,6 +117,8 @@ export const MediaTile = ({
   useEffect(() => {
     // A new `src` is a new load, including after a failure.
     reset()
+
+    if (!src) return
 
     const image = imageRef.current
 
@@ -126,16 +140,18 @@ export const MediaTile = ({
     if (can("error")) {
       transitionTo("error")
     }
-  }, [can, reset, transitionTo])
+  }, [can, reset, src, transitionTo])
 
   const media = (
     <div
       className={toClassName(
         "relative overflow-hidden rounded-md bg-surface-sunken",
         RATIO_CLASS[aspectRatio],
+        layout === "horizontal" &&
+          "w-24 shrink-0 self-start cq-sm:w-32",
       )}
     >
-      {status === "error" ? (
+      {!src || status === "error" ? (
         <div
           // Unconditionally an `img` carrying the same `alt`, even
           // inside a link. The link's own `aria-label` is a name from
@@ -164,7 +180,10 @@ export const MediaTile = ({
           <img
             alt={href || onClick ? "" : alt}
             className={toClassName(
-              "size-full object-cover transition-opacity duration-(--duration-normal) ease-standard",
+              "size-full transition-opacity duration-(--duration-normal) ease-standard",
+              imageFit === "contain"
+                ? "object-contain"
+                : "object-cover",
               status === "loaded"
                 ? "opacity-100"
                 : "opacity-0",
@@ -197,8 +216,19 @@ export const MediaTile = ({
 
   const caption =
     title === "" ? null : (
-      <figcaption className="flex flex-col gap-0.5 pt-2">
-        <span className="truncate font-medium text-content-primary text-sm cq-sm:text-md">
+      <figcaption
+        className={toClassName(
+          "min-w-0 flex-1 flex flex-col gap-1",
+          layout === "vertical" && "pt-2",
+        )}
+      >
+        <span
+          className={toClassName(
+            "font-medium text-content-primary text-sm cq-sm:text-md",
+            isTitleTruncated ? "truncate" : "wrap-anywhere",
+          )}
+          title={isTitleTruncated ? title : undefined}
+        >
           {title}
         </span>
 
@@ -206,6 +236,11 @@ export const MediaTile = ({
           <span className="truncate text-content-muted text-xs">
             {subtitle}
           </span>
+        ) : null}
+        {details ? (
+          <div className="min-w-0 wrap-anywhere text-sm text-content-secondary">
+            {details}
+          </div>
         ) : null}
       </figcaption>
     )
@@ -221,7 +256,12 @@ export const MediaTile = ({
     <figure
       {...figureProps}
       className={toClassName(
-        "@container flex flex-col",
+        "@container flex",
+        !href && !onClick
+          ? layout === "horizontal"
+            ? "flex-row gap-4"
+            : "flex-col"
+          : "flex-col",
         className,
       )}
     >
@@ -232,20 +272,28 @@ export const MediaTile = ({
         // have to know whether a subtitle happened to be rendered.
         // The `<img>` inside goes `alt=""` for the same reason: two
         // names for one link is a screen reader reading it twice.
-        <a
+        <UnstyledLink
           aria-label={accessibleName}
-          className={INTERACTIVE_CLASS}
+          className={toClassName(
+            INTERACTIVE_CLASS,
+            layout === "horizontal"
+              ? "flex-row gap-4"
+              : "flex-col",
+          )}
           href={href}
         >
           {media}
 
           {caption}
-        </a>
+        </UnstyledLink>
       ) : onClick ? (
         <button
           aria-label={accessibleName}
           className={toClassName(
             INTERACTIVE_CLASS,
+            layout === "horizontal"
+              ? "flex-row gap-4"
+              : "flex-col",
             "w-full border-0 bg-transparent p-0 text-start disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:opacity-50",
           )}
           disabled={isDisabled}

@@ -54,3 +54,14 @@ The caption's type steps up past `--cq-sm`, so a tile in a dense 8-across grid a
 tile in a 3-across one are both legible.
 
 <Canvas of={MediaTileStories.Responsive} />
+
+## Cards and compact rows
+
+`layout="horizontal"` places a bounded thumbnail beside the caption. Use
+`imageFit="contain"` for product images that must remain uncropped, and
+`isTitleTruncated={false}` to wrap distinguishing model names. `details` accepts
+wrapped metadata beneath the caption; it must not contain controls when the tile is a link
+or button. Links use the shared router adapter. An absent source shows the fallback
+immediately, while a supplied source retains the loading and failure states.
+
+<Canvas of={MediaTileStories.Compact} />
