@@ -253,6 +253,7 @@ test("a container-query component is never storied in a shrink-to-fit cell", () 
     "PortraitTiles",
     // Metrics query the space remaining beside the media, not the entire card.
     "ProgressCard",
+    "ScheduleBoard",
     // `Stepper`'s container is the one that decides whether a
     // `horizontal` sequence is actually horizontal. Below `--cq-md`
     // it falls back to the vertical column, because four steps side
@@ -618,7 +619,7 @@ test("the barrel is the only place components are re-exported", async () => {
   // Breadcrumbs composes TextLink for the path back up a hierarchy.
   // ActionMenu composes IconButton and Menu for the overflow control.
   // ValuePairs owns compact label-over-value summaries.
-  expect(componentNames.length).toBe(70)
+  expect(componentNames.length).toBe(72)
 
   for (const name of componentNames) {
     expect(barrel).toContain(`export { ${name} }`)
