@@ -222,3 +222,13 @@ logic. Those arrive in M4 on `@floating-ui/react`, which is *controlled by const
 you pass state in, it never stores it — so `VisibilityGroup` stays the sole owner. Radix,
 Base UI, and Ark UI all own `open` themselves, which is the conflict this package exists to
 avoid.
+
+## Priority layouts
+
+`selectPriorityLayout` from `@charcuterie/logic/core` compares measured layout
+candidates. Each section declares a numeric `priority`, allocated `width` and
+`height`, optional minimum dimensions, and an optional media `aspectRatio`.
+Required content fits first; useful area is then maximized in descending
+priority order. `idealArea` caps a section once it has enough space. Candidate
+order breaks ties. The function is framework independent; apps own their
+measurements, content, and rendering.
