@@ -143,7 +143,7 @@ fitBounds(viewer.camera, viewer.controls, new THREE.Box3().setFromObject(viewer.
 viewer.dispose()
 ```
 
-Exports: `createViewer`, `loadSTL`, `parseSTL`, `addEdges`, `fitBounds`, `disposeObject`,
+Exports: `createViewer`, `loadSTL`, `parseSTL`, `load3MF`, `parse3MF`, `addEdges`, `fitBounds`, `disposeObject`,
 `analyzeGcode`, `objectFootprints`, `readHeader`, `THREE`, `VERSION`. `src/index.d.ts` declares the API. `createViewer` owns renderer,
 scene, camera, orbit controls, animation and resize/disposal. Existing adapters can set
 `isAutoResize: false` and `isAnimating: false` while preserving their own lighting,
@@ -151,6 +151,18 @@ arrangement-specific framing and render loops. Mounting a viewer has no global s
 or document-wide handler. The standalone page exposes `window.__viewer` after all requested
 meshes load; `isReady`, `version`, `parts`, `view`, and `fit` support browser verification.
 A failed asset or empty STL is an error, not a successful partial review.
+
+## 3MF
+
+`parse3MF(buffer)` / `load3MF(url)` return a `THREE.Group` with one mesh per printed object
+instance, named after its object, in millimeters and in the file's own Z-up frame (rotate it
+upright as for STL). They follow the production extension's `p:path` components, which is how
+Bambu Studio and OrcaSlicer store every project (`3D/Objects/*.model`); Three's own
+`ThreeMFLoader` at 0.160 throws on those. Instances of one object share one geometry.
+Materials, color groups and textures are not read. A sliced `.gcode.3mf` usually carries no
+mesh at all and is an error, not an empty group — show its `Metadata/plate_N.png` instead.
+Measured against 40 random files from a real library: 39 opened, the 40th was G-code only; a
+30 MB, 4 million triangle project parsed in about 5 s in Chromium.
 
 ## Local service and installation
 

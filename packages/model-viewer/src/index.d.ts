@@ -44,6 +44,18 @@ export function loadSTL(
   url: string | URL,
   options?: RequestInit,
 ): Promise<THREE.BufferGeometry>
+/**
+ * Read a 3MF package, following Bambu Studio/OrcaSlicer `p:path` components. One mesh
+ * per printed object instance, flat normals, millimeters, the file's own Z-up frame.
+ * Materials and colours are not read.
+ */
+export function parse3MF(
+  buffer: ArrayBuffer | ArrayBufferView,
+): THREE.Group
+export function load3MF(
+  url: string | URL,
+  options?: RequestInit,
+): Promise<THREE.Group>
 export interface EdgeCache {
   get(geometry: THREE.BufferGeometry): THREE.BufferGeometry
   set(
