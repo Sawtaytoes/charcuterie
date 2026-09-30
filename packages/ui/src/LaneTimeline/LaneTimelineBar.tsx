@@ -159,11 +159,20 @@ export const LaneTimelineBar = ({
        * the wrap threshold is narrower than one long word: at 5em a
        * column, an eleven-letter word broke as `Optometris` / `t`
        * on the first live fortnight. A browser with a hyphenation
-       * dictionary breaks it as `Optom-` / `etrist` instead; one
-       * without (a headless shell has none) falls through to
-       * `anywhere`, which still keeps the bar in its column. It
-       * needs a `lang` on an ancestor, which every app's `<html>`
-       * carries.
+       * dictionary breaks `optometrist` as `op-` / `tometrist`
+       * instead; one without falls through to `anywhere`, which
+       * still keeps the bar in its column. It needs a `lang` on an
+       * ancestor, which every app's `<html>` carries.
+       *
+       * ⚠️ It does NOT reach a CAPITALIZED word. Chromium and
+       * Firefox both skip a word whose first letter is upper case,
+       * as a proper-noun heuristic, and a 60px probe box confirmed
+       * it in both: `taekwondo` broke as `tae-` / `kwondo` and
+       * `Taekwondo` as `Taekwond` / `o`. Most calendar titles start
+       * with a capital, so this helps the second word of a title
+       * more than the first. A capitalized word needs a soft
+       * hyphen (U+00AD) placed in the DATA by the app; `auto`
+       * honors one wherever it is.
        */}
       <span
         className={toClassName(
