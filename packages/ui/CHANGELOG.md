@@ -1,5 +1,11 @@
 # @charcuterie/ui
 
+## 4.14.0
+
+### Minor Changes
+
+- f2692ac: Add ScheduleBoard with aligned time bands, an hour axis with overlap packing, and a measured day-card fallback. Add WeekdayIndicator for compact Monday-first recurrence patterns with an accessible text description.
+
 ## 4.13.1
 
 ### Patch Changes
