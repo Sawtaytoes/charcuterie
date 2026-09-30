@@ -93,6 +93,21 @@ describe("3MF packages", () => {
     expect(bounds.max.toArray()).toEqual([130, 110, 15])
   })
 
+  it("names objects and volumes from the slicer's settings and skips volumes that are never printed", () => {
+    const component = (id, x) =>
+      `<component p:path="/3D/Objects/parts.model" objectid="${id}" transform="1 0 0 0 1 0 0 0 1 ${x} 0 0"/>`
+    const group = parse3MF(
+      pack({
+        "3D/3dmodel.model": `<model xmlns="${CORE}" xmlns:p="${PRODUCTION}"><resources><object id="9" type="model"><components>${component(1, 0)}${component(2, 20)}${component(3, 40)}</components></object><object id="12" type="model"><components>${component(1, 100)}</components></object></resources><build><item objectid="9"/><item objectid="12"/></build></model>`,
+        "3D/Objects/parts.model": `<model xmlns="${CORE}"><resources><object id="1">${cubeMesh(10)}</object><object id="2">${cubeMesh(10)}</object><object id="3">${cubeMesh(10)}</object></resources><build/></model>`,
+        "Metadata/model_settings.config": `<?xml version="1.0"?><config><object id="9"><metadata key="name" value="Housing"/><part id="1" subtype="normal_part"><metadata key="name" value="Body"/></part><part id="2" subtype="normal_part"><metadata key="name" value="Lid"/></part><part id="3" subtype="modifier_part"><metadata key="name" value="Infill modifier"/></part></object><object id="12"><metadata key="name" value="Knob"/><part id="1" subtype="normal_part"><metadata key="name" value="knob.stl"/></part></object></config>`,
+      }),
+    )
+    expect(group.children.map((mesh) => mesh.name)).toEqual(
+      ["Body", "Lid", "Knob"],
+    )
+  })
+
   it("defaults the root part when there is no relationship file", () => {
     const group = parse3MF(
       pack({

@@ -158,7 +158,10 @@ A failed asset or empty STL is an error, not a successful partial review.
 instance, named after its object, in millimeters and in the file's own Z-up frame (rotate it
 upright as for STL). They follow the production extension's `p:path` components, which is how
 Bambu Studio and OrcaSlicer store every project (`3D/Objects/*.model`); Three's own
-`ThreeMFLoader` at 0.160 throws on those. Instances of one object share one geometry.
+`ThreeMFLoader` at 0.160 throws on those. Instances of one object share one geometry. When the package carries Bambu Studio/OrcaSlicer
+`Metadata/model_settings.config`, meshes take the names a person gave the objects and
+volumes there, and modifier, negative and support-blocker volumes are skipped: they are
+meshes in the file but are never printed.
 Materials, color groups and textures are not read. A sliced `.gcode.3mf` usually carries no
 mesh at all and is an error, not an empty group — show its `Metadata/plate_N.png` instead.
 Measured against 40 random files from a real library: 39 opened, the 40th was G-code only; a

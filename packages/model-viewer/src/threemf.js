@@ -171,6 +171,50 @@ export function parseModelPart(text) {
   return { scale, objects, items }
 }
 
+const SETTINGS_PATH = "Metadata/model_settings.config"
+
+/**
+ * Bambu Studio and OrcaSlicer keep what a person named each object,
+ * and what each volume IS, in their own settings file rather than the
+ * model. A modifier, a negative volume or a support blocker is a mesh
+ * in the package but is never printed, so it must not be drawn as one.
+ * Keys are the root object id, and `root:component` for its volumes.
+ */
+function readSlicerSettings(files) {
+  const objectNames = new Map()
+  const volumes = new Map()
+  const bytes = files[SETTINGS_PATH]
+  if (!bytes) return { objectNames, volumes }
+  for (const [, objectText, body] of strFromU8(
+    bytes,
+  ).matchAll(/<object\b([^>]*)>([\s\S]*?)<\/object>/g)) {
+    const objectId = readAttributes(objectText).id
+    const head = body.split(/<part\b/)[0]
+    const name = readMetadataName(head)
+    if (name) objectNames.set(objectId, name)
+    for (const [, partText, partBody] of body.matchAll(
+      /<part\b([^>]*)>([\s\S]*?)<\/part>/g,
+    )) {
+      const part = readAttributes(partText)
+      volumes.set(`${objectId}:${part.id}`, {
+        name: readMetadataName(partBody) ?? "",
+        subtype: part.subtype ?? "normal_part",
+      })
+    }
+  }
+  return { objectNames, volumes }
+}
+
+function readMetadataName(text) {
+  for (const [, attributeText] of text.matchAll(
+    /<metadata\b([^>]*)>/g,
+  )) {
+    const metadata = readAttributes(attributeText)
+    if (metadata.key === "name") return metadata.value
+  }
+  return undefined
+}
+
 function findRootPath(files) {
   const relationships = files["_rels/.rels"]
   if (relationships)
@@ -205,7 +249,8 @@ export function parse3MF(buffer) {
   const files = unzipSync(toBytes(buffer), {
     filter: (file) =>
       file.name.endsWith(".model") ||
-      file.name === "_rels/.rels",
+      file.name === "_rels/.rels" ||
+      file.name === SETTINGS_PATH,
   })
   const parts = new Map()
   const readPart = (path) => {
@@ -218,6 +263,7 @@ export function parse3MF(buffer) {
     }
     return parts.get(key)
   }
+  const settings = readSlicerSettings(files)
   const rootPath = findRootPath(files)
   const root = readPart(rootPath)
   const group = new THREE.Group()
@@ -233,6 +279,7 @@ export function parse3MF(buffer) {
     matrix,
     name,
     depth,
+    rootObjectId,
   ) => {
     if (depth > MAX_DEPTH)
       throw new Error("The 3MF components nest too deeply")
@@ -242,7 +289,12 @@ export function parse3MF(buffer) {
       throw new Error(
         `The 3MF part "${partPath}" has no object ${objectId}`,
       )
-    const label = name || object.name
+    const label =
+      name ||
+      (depth === 0
+        ? settings.objectNames.get(objectId)
+        : "") ||
+      object.name
     if (object.mesh) {
       const key = `${partPath}#${objectId}`
       let geometry = geometries.get(key)
@@ -271,14 +323,25 @@ export function parse3MF(buffer) {
         group.add(mesh)
       }
     }
-    for (const component of object.components)
+    const isAssembly = object.components.length > 1
+    for (const component of object.components) {
+      const volume =
+        depth === 0
+          ? settings.volumes.get(
+              `${rootObjectId}:${component.objectId}`,
+            )
+          : undefined
+      if (volume && volume.subtype !== "normal_part")
+        continue
       place(
         component.path ?? partPath,
         component.objectId,
         matrix.clone().multiply(component.transform),
-        label,
+        isAssembly && volume?.name ? volume.name : label,
         depth + 1,
+        rootObjectId,
       )
+    }
   }
   for (const item of root.items)
     place(
@@ -287,6 +350,7 @@ export function parse3MF(buffer) {
       item.transform,
       "",
       0,
+      item.objectId,
     )
   if (group.children.length === 0)
     throw new Error(
