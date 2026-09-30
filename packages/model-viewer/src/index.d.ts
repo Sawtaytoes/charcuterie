@@ -47,7 +47,8 @@ export function loadSTL(
 /**
  * Read a 3MF package, following Bambu Studio/OrcaSlicer `p:path` components. One mesh
  * per printed object instance, flat normals, millimeters, the file's own Z-up frame.
- * Materials and colours are not read.
+ * Slicer object names are used and modifier volumes skipped when the package carries
+ * `Metadata/model_settings.config`. Materials and colors are not read.
  */
 export function parse3MF(
   buffer: ArrayBuffer | ArrayBufferView,
