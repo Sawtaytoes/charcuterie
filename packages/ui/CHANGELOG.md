@@ -1,5 +1,11 @@
 # @charcuterie/ui
 
+## 4.12.1
+
+### Patch Changes
+
+- 2a6587c: Center incomplete final rows in bounded PortraitTiles while preserving the full row tile width and responsive wrapping.
+
 ## 4.12.0
 
 ### Minor Changes
