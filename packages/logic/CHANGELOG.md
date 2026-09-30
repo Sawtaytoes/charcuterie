@@ -1,5 +1,11 @@
 # @charcuterie/logic
 
+## 2.5.0
+
+### Minor Changes
+
+- 395e35e: Choose measured layouts by section priority, contained media area, and required content fit.
+
 ## 2.4.0
 
 ### Minor Changes
