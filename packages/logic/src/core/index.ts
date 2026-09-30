@@ -141,6 +141,11 @@ export type {
 } from "./rangeSelection.ts"
 export { applySelectionClick } from "./rangeSelection.ts"
 export type {
+  LayoutCandidate,
+  LayoutSection,
+} from "./selectPriorityLayout.ts"
+export { selectPriorityLayout } from "./selectPriorityLayout.ts"
+export type {
   AsyncStatus,
   ConnectionStatus,
 } from "./statusMachines.ts"
