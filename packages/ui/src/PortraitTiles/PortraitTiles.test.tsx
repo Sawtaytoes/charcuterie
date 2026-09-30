@@ -411,3 +411,47 @@ test("a bounded set keeps three portraits beside each other without an empty fou
   await expect(rectangles[0]?.top).toBe(rectangles[2]?.top)
   await expect(rectangles[0]?.width).toBeGreaterThan(240)
 })
+
+test("a wrapping bounded set centers its final row and responds to container resizing", async () => {
+  const { CenteredLastRow } = composeStories(stories)
+  const { canvas, canvasElement } =
+    await mountStory(CenteredLastRow)
+  const group = expectAgentDrivable(canvas, {
+    name: "People",
+    role: "group",
+  })
+  const tiles = Array.from(group.querySelectorAll("button"))
+  const wrapper = group.parentElement?.parentElement
+  if (!wrapper) throw new Error("Missing story wrapper")
+  for (const width of [780, 540, 1100, 200, 780]) {
+    wrapper.style.width = `${width}px`
+    await waitFor(() => {
+      const bounds = group.getBoundingClientRect()
+      const rects = tiles.map((tile) =>
+        tile.getBoundingClientRect(),
+      )
+      const lastTop = rects.at(-1)?.top
+      const last = rects.filter(
+        (rect) => rect.top === lastTop,
+      )
+      expect(
+        Math.abs(
+          ((last[0]?.left ?? 0) +
+            (last.at(-1)?.right ?? 0)) /
+            2 -
+            (bounds.left + bounds.right) / 2,
+        ),
+      ).toBeLessThan(1)
+      expect(
+        Math.abs(
+          (rects[0]?.width ?? 0) -
+            (rects.at(-1)?.width ?? 0),
+        ),
+      ).toBeLessThan(1)
+      expect(group.scrollWidth).toBeLessThanOrEqual(
+        group.clientWidth,
+      )
+    })
+  }
+  await expectNoAxeViolations(canvasElement)
+})
