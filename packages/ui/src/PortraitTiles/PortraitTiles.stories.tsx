@@ -417,3 +417,24 @@ export const BoundedSet: Story = {
     </div>
   ),
 }
+
+/** An incomplete row keeps the full row's tile widths and centers as a group. */
+export const CenteredLastRow: Story = {
+  args: {
+    ...BoundedSet.args,
+    items: [
+      ...PINNED_ITEMS,
+      {
+        value: "admin",
+        label: "Admin",
+        initials: "A",
+        hint: "Manage",
+      },
+    ],
+  },
+  render: (props) => (
+    <div style={{ width: 780 }}>
+      <PortraitTiles {...props} />
+    </div>
+  ),
+}
