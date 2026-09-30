@@ -103,12 +103,12 @@ export const AllStates: Story = {
 
       <StoryCell
         align="stretch"
-        label="loading — skeleton holds the box"
+        label="missing — honest fallback"
       >
         <MediaTile
-          alt="Poster loading"
-          subtitle="waiting for the image"
-          title="Still loading"
+          alt="No cover added"
+          subtitle="Add a cover when one is available"
+          title="No cover"
         />
       </StoryCell>
 
@@ -223,5 +223,39 @@ export const InteractiveButton: Story = {
     onClick: () => undefined,
     src: toPosterSrc("Blade Runner"),
     title: "",
+  },
+}
+
+export const Compact: Story = {
+  args: {
+    alt: "Portable field recorder",
+    aspectRatio: "square",
+    details: (
+      <>
+        <p>3 here</p>
+        <p>Audio · Portable</p>
+      </>
+    ),
+    href: "#recorder",
+    imageFit: "contain",
+    isTitleTruncated: false,
+    layout: "horizontal",
+    src: toPosterSrc("Recorder"),
+    title:
+      "Portable field recorder with interchangeable microphones",
+  },
+  render: (args) => (
+    <ContainerBoard>
+      <MediaTile {...args} />
+    </ContainerBoard>
+  ),
+}
+
+export const MissingImage: Story = {
+  args: {
+    alt: "No photo of field recorder",
+    fallback: "No photo yet",
+    title: "Field recorder",
+    aspectRatio: "video",
   },
 }
