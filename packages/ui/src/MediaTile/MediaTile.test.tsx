@@ -1,5 +1,5 @@
 import { composeStories } from "@storybook/react"
-import { expect, userEvent } from "storybook/test"
+import { expect, userEvent, within } from "storybook/test"
 import { test } from "vitest"
 
 import { mountStory } from "../mountStory.testHelpers.ts"
@@ -54,4 +54,40 @@ test("a clickable tile is one button with a pointer cursor", async () => {
   await userEvent.tab()
 
   await expect(button).toHaveFocus()
+})
+
+test("compact tiles contain the whole image and keep long names readable", async () => {
+  const { canvas } = await mountStory(
+    composeStories(stories).Compact,
+  )
+  const links = canvas.getAllByRole("link", {
+    name: "Portable field recorder with interchangeable microphones",
+  })
+  for (const link of links) {
+    expectAgentDrivable(
+      within(link.parentElement as HTMLElement),
+      {
+        role: "link",
+        name: "Portable field recorder with interchangeable microphones",
+      },
+    )
+    const image = link.querySelector("img")
+    await expect(image).toHaveStyle({
+      objectFit: "contain",
+    })
+    expect(link.scrollWidth).toBeLessThanOrEqual(
+      link.clientWidth,
+    )
+  }
+})
+
+test("an absent image shows the fallback without waiting for a failed request", async () => {
+  const { canvas } = await mountStory(
+    composeStories(stories).MissingImage,
+  )
+  const fallback = expectAgentDrivable(canvas, {
+    role: "img",
+    name: "No photo of field recorder",
+  })
+  await expect(fallback).toHaveTextContent("No photo yet")
 })
