@@ -1,5 +1,11 @@
 # @charcuterie/ui
 
+## 4.12.0
+
+### Minor Changes
+
+- 01f2e51: Add ValuePairs for consistent label-over-value summaries, and an opt-in bounded row layout for PortraitTiles. Portrait tiles also provide pressed feedback and respect reduced motion.
+
 ## 4.11.1
 
 ### Patch Changes
