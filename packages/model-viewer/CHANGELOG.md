@@ -1,5 +1,11 @@
 # @charcuterie/model-viewer
 
+## 0.4.0
+
+### Minor Changes
+
+- e747722: Read 3MF files: `parse3MF` and `load3MF` return one mesh per printed object instance, in millimeters, following the `p:path` components that Bambu Studio and OrcaSlicer projects use for every object. Three's own `ThreeMFLoader` throws on those files.
+
 ## 0.3.0
 
 ### Minor Changes
