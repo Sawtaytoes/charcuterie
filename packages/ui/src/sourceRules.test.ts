@@ -617,7 +617,8 @@ test("the barrel is the only place components are re-exported", async () => {
   // ProgressCard composes Card and ProgressBar for progress-first dashboards.
   // Breadcrumbs composes TextLink for the path back up a hierarchy.
   // ActionMenu composes IconButton and Menu for the overflow control.
-  expect(componentNames.length).toBe(69)
+  // ValuePairs owns compact label-over-value summaries.
+  expect(componentNames.length).toBe(70)
 
   for (const name of componentNames) {
     expect(barrel).toContain(`export { ${name} }`)

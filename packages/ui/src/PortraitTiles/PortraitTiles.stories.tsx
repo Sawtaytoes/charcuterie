@@ -403,3 +403,17 @@ export const Interactive: Story = {
     label: "Who's shopping?",
   },
 }
+
+export const BoundedSet: Story = {
+  args: {
+    label: "People",
+    items: PINNED_ITEMS,
+    minTileInlineSize: 220,
+    isFillingRow: true,
+  },
+  render: (props) => (
+    <div style={{ width: 780 }}>
+      <PortraitTiles {...props} />
+    </div>
+  ),
+}

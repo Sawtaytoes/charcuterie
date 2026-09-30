@@ -532,6 +532,11 @@ export { Toolbar } from "./Toolbar/Toolbar.tsx"
 export type { TooltipProps } from "./Tooltip/Tooltip.tsx"
 export { Tooltip } from "./Tooltip/Tooltip.tsx"
 export { toClassName } from "./toClassName.ts"
+export type {
+  ValuePair,
+  ValuePairsProps,
+} from "./ValuePairs/ValuePairs.tsx"
+export { ValuePairs } from "./ValuePairs/ValuePairs.tsx"
 export { DEFAULT_GRID_GAP_PX } from "./VirtualizedGrid/gridGap.ts"
 export type { VirtualizedGridProps } from "./VirtualizedGrid/VirtualizedGrid.tsx"
 export { VirtualizedGrid } from "./VirtualizedGrid/VirtualizedGrid.tsx"
