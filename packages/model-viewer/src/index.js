@@ -8,6 +8,7 @@ export {
   objectFootprints,
   readHeader,
 } from "./gcode.js"
+export { load3MF, parse3MF } from "./threemf.js"
 export { THREE }
 export const VERSION = metadata.version
 
