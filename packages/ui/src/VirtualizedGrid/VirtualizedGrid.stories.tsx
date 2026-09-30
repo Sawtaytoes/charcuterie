@@ -286,6 +286,12 @@ export const Responsive: Story = {
   args: {
     blockSizeResolver: fixedBlockSize(600),
     minColumnInlineSize: 160,
+    // Every row mounted. This story is about the column count, not
+    // the window, and the VRT shot of the whole root is taller than
+    // the viewport: the grids re-window while it is taken, so which
+    // rows were drawn depended on the runner's timing (release PR
+    // #319 drew 13 rows where the baseline drew 5).
+    overscanRows: 60,
   },
   render: (gridProps) => (
     <div className="flex flex-wrap items-start gap-6">
