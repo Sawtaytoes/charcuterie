@@ -1,5 +1,11 @@
 # @charcuterie/ui
 
+## 4.13.0
+
+### Minor Changes
+
+- 07e3bcf: Add compact horizontal media tiles, uncropped image fitting, wrapping titles, and a details slot. Show an honest fallback when no image is supplied and preserve router navigation for linked tiles.
+
 ## 4.12.1
 
 ### Patch Changes
