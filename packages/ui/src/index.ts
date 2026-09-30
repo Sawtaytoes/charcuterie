@@ -417,6 +417,14 @@ export type {
 export { getIsRoutedHref } from "./RouterLink/routerLink.ts"
 export type { UnstyledLinkProps } from "./RouterLink/UnstyledLink.tsx"
 export { UnstyledLink } from "./RouterLink/UnstyledLink.tsx"
+export type {
+  ScheduleBand,
+  ScheduleBoardProps,
+  ScheduleDay,
+  ScheduleLayout,
+} from "./ScheduleBoard/ScheduleBoard.tsx"
+export { ScheduleBoard } from "./ScheduleBoard/ScheduleBoard.tsx"
+export type { ScheduleEntry } from "./ScheduleBoard/ScheduleItem.tsx"
 export type { SearchInputProps } from "./SearchInput/SearchInput.tsx"
 export { SearchInput } from "./SearchInput/SearchInput.tsx"
 export type {
@@ -542,3 +550,5 @@ export type { VirtualizedGridProps } from "./VirtualizedGrid/VirtualizedGrid.tsx
 export { VirtualizedGrid } from "./VirtualizedGrid/VirtualizedGrid.tsx"
 export type { VisuallyHiddenProps } from "./VisuallyHidden/VisuallyHidden.tsx"
 export { VisuallyHidden } from "./VisuallyHidden/VisuallyHidden.tsx"
+export type { WeekdayIndicatorProps } from "./WeekdayIndicator/WeekdayIndicator.tsx"
+export { WeekdayIndicator } from "./WeekdayIndicator/WeekdayIndicator.tsx"

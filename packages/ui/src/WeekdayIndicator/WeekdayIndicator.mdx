@@ -1,0 +1,29 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+import * as Stories from "./WeekdayIndicator.stories";
+
+<Meta of={Stories} />
+
+# WeekdayIndicator
+
+Seven labeled circles in Monday-first order. Pass zero-based weekday offsets (Monday 0, Sunday 6). The accessible name spells out selected days. The app decides whether the pattern is a recurrence rule or only the weekdays observed in the displayed period, and supplies the label accordingly. This is a display, not a weekday picker.
+
+<Canvas of={Stories.Playground} />
+
+## Props
+
+<Controls />
+
+## Layouts and states
+
+<Canvas of={Stories.AllVariants} />
+<Canvas of={Stories.AllStates} />
+
+## Narrow containers
+
+<Canvas of={Stories.Responsive} />
+
+## Keyboard interaction
+
+Tab reaches each action. Enter or Space activates it. The display itself adds no tab stops.
+
+<Canvas of={Stories.Interactive} />
