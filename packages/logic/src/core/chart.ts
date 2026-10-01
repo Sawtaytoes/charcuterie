@@ -77,8 +77,14 @@ export const renderChartSvg = ({
   const values = series.flatMap((entry) =>
     entry.values.filter(isFiniteValue),
   )
-  const minimum = Math.min(0, ...values)
-  const maximum = Math.max(1, ...values)
+  const minimum = values.reduce(
+    (lowest, value) => Math.min(lowest, value),
+    0,
+  )
+  const maximum = values.reduce(
+    (highest, value) => Math.max(highest, value),
+    1,
+  )
   const span = maximum - minimum
   const positionY = (value: number): number =>
     bottom - ((value - minimum) / span) * (bottom - top)
@@ -118,8 +124,19 @@ export const renderChartSvg = ({
       index % stride === 0 ||
       index === labels.length - 1
     ) {
+      const capacity = Math.max(
+        6,
+        Math.min(
+          18,
+          Math.floor((step * stride) / (labelSize * 0.65)),
+        ),
+      )
+      const shortLabel =
+        label.length > capacity
+          ? `${label.slice(0, capacity - 1)}…`
+          : label
       elements.push(
-        `<text x="${coordinate(positionX(index))}" y="${chartHeight - 10}" text-anchor="middle" fill="currentColor" font-size="${labelSize}">${escapeXml(label)}</text>`,
+        `<text x="${coordinate(positionX(index))}" y="${chartHeight - 10}" text-anchor="middle" fill="currentColor" font-size="${labelSize}"><title>${escapeXml(label)}</title>${escapeXml(shortLabel)}</text>`,
       )
     }
   })
