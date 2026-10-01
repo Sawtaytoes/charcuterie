@@ -1,5 +1,11 @@
 # @charcuterie/logic
 
+## 2.6.1
+
+### Patch Changes
+
+- 2b366a1: Preserve configured chart series colors while rejecting external references and unsafe SVG attributes.
+
 ## 2.6.0
 
 ### Minor Changes
