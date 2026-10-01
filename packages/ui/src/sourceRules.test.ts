@@ -619,7 +619,8 @@ test("the barrel is the only place components are re-exported", async () => {
   // Breadcrumbs composes TextLink for the path back up a hierarchy.
   // ActionMenu composes IconButton and Menu for the overflow control.
   // ValuePairs owns compact label-over-value summaries.
-  expect(componentNames.length).toBe(72)
+  // Chart shares portable SVG geometry with Preact and image consumers.
+  expect(componentNames.length).toBe(73)
 
   for (const name of componentNames) {
     expect(barrel).toContain(`export { ${name} }`)
@@ -732,6 +733,7 @@ const ENTRY_POINT_RUNTIMES: Record<
       // browser, and it does so through this subpath so the coupling
       // is named rather than smuggled in through the main entry.
       "@charcuterie/logic/browser",
+      "@charcuterie/logic/core",
       "@charcuterie/tokens",
       "@floating-ui/react",
       // `Combobox`'s virtualization — the second runtime dependency

@@ -1,0 +1,16 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks"
+import * as stories from "./Chart.stories.tsx"
+
+<Meta of={stories} />
+
+# Chart
+
+Bar and line plots with a zero baseline, negative values, explicit missing samples, and an optional values table. The app owns the data and its meaning. Null means unavailable, never zero. Color is optional; mark titles, labels, and the table preserve the information without it.
+
+The framework-free `renderChartSvg` export from `@charcuterie/logic/core` draws exactly the same plot for Preact kiosks and image renderers. It escapes all producer text and rejects external color references. Use `Chart` in React. Use the portable renderer where a React tree is not available.
+
+<Canvas of={stories.Playground} />
+<Canvas of={stories.AllVariants} />
+<Canvas of={stories.AllStates} />
+<Canvas of={stories.Responsive} />
+<Canvas of={stories.Interactive} />

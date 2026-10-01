@@ -117,6 +117,8 @@ export type {
 } from "./Card/Card.tsx"
 export { Card } from "./Card/Card.tsx"
 export type { CardAccentEdge } from "./Card/cardAccentEdge.ts"
+export type { ChartProps } from "./Chart/Chart.tsx"
+export { Chart } from "./Chart/Chart.tsx"
 export type { CheckboxProps } from "./Checkbox/Checkbox.tsx"
 export { Checkbox } from "./Checkbox/Checkbox.tsx"
 export type { ColorSchemeSwitcherProps } from "./ColorSchemeSwitcher/ColorSchemeSwitcher.tsx"
