@@ -1,5 +1,16 @@
 # @charcuterie/ui
 
+## 4.15.0
+
+### Minor Changes
+
+- 3174d58: Add accessible bar and line charts with a shared framework-free SVG renderer, missing-data gaps, negative values, and an optional values table.
+
+### Patch Changes
+
+- Updated dependencies [3174d58]
+  - @charcuterie/logic@2.6.0
+
 ## 4.14.0
 
 ### Minor Changes
