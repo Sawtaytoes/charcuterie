@@ -1,5 +1,11 @@
 # @charcuterie/logic
 
+## 2.6.0
+
+### Minor Changes
+
+- 3174d58: Add accessible bar and line charts with a shared framework-free SVG renderer, missing-data gaps, negative values, and an optional values table.
+
 ## 2.5.0
 
 ### Minor Changes
