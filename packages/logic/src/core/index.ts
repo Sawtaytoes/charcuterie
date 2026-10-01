@@ -14,6 +14,8 @@
  */
 
 export { areArraysEqual } from "./arrays.ts"
+export type { ChartOptions, ChartSeries } from "./chart.ts"
+export { renderChartSvg } from "./chart.ts"
 export type {
   ColorScheme,
   ColorSchemeApplier,

@@ -327,3 +327,5 @@ rename breaks only the rendered page).
    shows up in a screenshot, which is how it shipped in M3's `LiveStatusIndicator`
    board. `sourceRules.test.ts` now derives the container-declaring components from
    source and fails on this, so the component M4 adds joins the rule automatically.
+
+**`Chart`** provides responsive bar and line plots, negative values, gaps for missing data, and an optional semantic values table. Its escaped SVG renderer lives in `@charcuterie/logic/core` for Preact and image consumers. Apps supply their own series, labels, and semantic colors.
