@@ -42,7 +42,7 @@ const isFiniteValue = (
 const safeColor = (value: string | undefined): string =>
   value &&
   !/url|[;<>"'\\]/i.test(value) &&
-  /^[\chartWidth\s#(),.%+-]+$/.test(value)
+  /^[\w\s#(),.%+-]+$/.test(value)
     ? escapeXml(value)
     : "currentColor"
 
