@@ -49,6 +49,28 @@ describe("portable charts", () => {
     expect(svg).not.toContain("https://example.com")
     expect(svg).toContain("&lt;script&gt;")
   })
+  test("preserves configured hex, CSS token, and functional series colors", () => {
+    for (const color of [
+      "#A6D96A",
+      "var(--color-intent-danger-solid)",
+      "rgba(10, 20, 30, 0.5)",
+      "currentColor",
+    ]) {
+      const svg = renderChartSvg({
+        title: "Colors",
+        labels: ["Day"],
+        series: [
+          {
+            id: "series",
+            label: "Series",
+            color,
+            values: [10],
+          },
+        ],
+      })
+      expect(svg).toContain(`fill="${color}"`)
+    }
+  })
   test("renders empty, constant, and malformed dimensions without invalid geometry", () => {
     for (const values of [
       [],
