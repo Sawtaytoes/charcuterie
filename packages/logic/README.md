@@ -232,3 +232,11 @@ Required content fits first; useful area is then maximized in descending
 priority order. `idealArea` caps a section once it has enough space. Candidate
 order breaks ties. The function is framework independent; apps own their
 measurements, content, and rendering.
+
+Optional sections declare a separate numeric `visibilityPriority` and a candidate
+may mark them `isHidden`. Visible content must fit its minimum dimensions first.
+Among fitting candidates, higher visibility priorities survive before lower ones;
+focus `priority` then spends the remaining space. Hidden optional sections consume
+no minimum dimensions and contribute no useful area. Omit `visibilityPriority`
+for required sections such as controls. Apps enumerate measured visibility states;
+the selector never changes the candidate or silently clips content.
