@@ -22,6 +22,8 @@ The same daily rows use TanStack Charts 0.18.0, Airbnb visx XYChart 4.0.0, Nivo 
 | Tested JS errors | None | None | None | None |
 | Chart license fee | $0, MIT | $0, MIT | $0, MIT | $0, existing code |
 
+Standalone SVG exports normalize the XML namespace and explicit 640×280 dimensions; the verifier decodes each as an image, and PNG captures contain just the chart. React/static serialization alone is not sufficient evidence that an SVG file can be consumed as an image.
+
 Exact results: `results.json`, `compatibility-results.json`, `static-results.json`, `extra-results.json`. Screenshots: `evidence/`. Exports are generated under ignored `dist/static/` and served above.
 
 Production-minified esbuild bundles use identical React 19.2.8 and esbuild 0.28.1. React-only baseline: 60,339 gzip bytes. Measurements cover this chart's imports, including candidate interactions/motion, not whole packages. Nivo's catalog does not all ship automatically; additional imported chart types add code, with shared dependency reuse. Lazy-loading reports prevents charging the shopping page for chart code. Ours lacks feature parity: its tiny size does not include stacking, managed tooltips, keyboard navigation, touch, or motion.

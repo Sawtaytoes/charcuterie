@@ -2,12 +2,12 @@
   {
     "library": "tanstack",
     "hasSvg": true,
-    "bytes": 16130
+    "bytes": 16163
   },
   {
     "library": "visx",
     "hasSvg": true,
-    "bytes": 1067
+    "bytes": 1102
   },
   {
     "library": "nivo",
@@ -17,6 +17,6 @@
   {
     "library": "ours",
     "hasSvg": true,
-    "bytes": 6384
+    "bytes": 6382
   }
 ]

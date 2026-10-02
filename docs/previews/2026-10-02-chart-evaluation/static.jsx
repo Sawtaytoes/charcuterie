@@ -14,7 +14,7 @@ const results = []
 for (const [library, component] of [['tanstack',null],['visx',Visx],['nivo',Nivo],['ours',Ours]]) {
  try {
   const markup = library === 'tanstack' ? renderChartSvg(createChartScene(definitionFor(rows,color),{width:640,height:280}),{ariaLabel:'Daily points'}) : renderToStaticMarkup(React.createElement(component,{rows,color,width:640,isAnimated:false}))
-  const svg = markup.slice(markup.indexOf('<svg'),markup.lastIndexOf('</svg>')+6)
+  const svg = markup.slice(markup.indexOf('<svg'),markup.lastIndexOf('</svg>')+6).replace(/^<svg\b([^>]*)>/, (_, attributes) => `<svg${attributes.replace(/\s(?:width|height)="[^"]*"/g, '')}${attributes.includes('xmlns=') ? '' : ' xmlns="http://www.w3.org/2000/svg"'} width="640" height="280">`)
   if (!svg.endsWith('</svg>')) throw new Error('No SVG exported')
   writeFileSync(`dist/static/${library}.svg`,svg)
   writeFileSync(`dist/static/${library}.html`,`<html lang="en"><head><title>${library} static chart</title><link rel="stylesheet" href="../style.css"></head><body style="width:640px">${svg}</body></html>`)
