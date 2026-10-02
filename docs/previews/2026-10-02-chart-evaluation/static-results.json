@@ -1,0 +1,22 @@
+[
+  {
+    "library": "tanstack",
+    "hasSvg": true,
+    "bytes": 16130
+  },
+  {
+    "library": "visx",
+    "hasSvg": true,
+    "bytes": 1067
+  },
+  {
+    "library": "nivo",
+    "hasSvg": true,
+    "bytes": 17009
+  },
+  {
+    "library": "ours",
+    "hasSvg": true,
+    "bytes": 6384
+  }
+]

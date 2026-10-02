@@ -1,0 +1,144 @@
+{
+  "versions": {
+    "tanstack": "0.18.0",
+    "visx": "4.0.0",
+    "nivo": "0.99.0",
+    "react": "19.2.8",
+    "esbuild": "0.28.1"
+  },
+  "baselineGzip": 60339,
+  "bundles": {
+    "tanstack": {
+      "bytes": 360867,
+      "gzip": 117612,
+      "incrementalGzip": 57273,
+      "inputModules": 365
+    },
+    "visx": {
+      "bytes": 375568,
+      "gzip": 124801,
+      "incrementalGzip": 64462,
+      "inputModules": 582
+    },
+    "nivo": {
+      "bytes": 457233,
+      "gzip": 150915,
+      "incrementalGzip": 90576,
+      "inputModules": 516
+    },
+    "ours": {
+      "bytes": 197419,
+      "gzip": 62247,
+      "incrementalGzip": 1908,
+      "inputModules": 14
+    }
+  },
+  "browser": [
+    {
+      "library": "tanstack",
+      "hasTooltip": true,
+      "hasOverflow": false,
+      "tableRows": 366,
+      "svgCount": 3,
+      "errors": []
+    },
+    {
+      "library": "visx",
+      "hasTooltip": true,
+      "hasOverflow": false,
+      "tableRows": 366,
+      "svgCount": 43,
+      "errors": []
+    },
+    {
+      "library": "nivo",
+      "hasTooltip": true,
+      "hasOverflow": false,
+      "tableRows": 366,
+      "svgCount": 3,
+      "errors": []
+    },
+    {
+      "library": "ours",
+      "hasTooltip": false,
+      "hasOverflow": false,
+      "tableRows": 366,
+      "svgCount": 3,
+      "errors": []
+    }
+  ],
+  "standalone": [
+    {
+      "library": "tanstack",
+      "medianNavigationToSvgMs": 118.67251699999906,
+      "samplesMs": [
+        387.0853620000016,
+        194.50573400000212,
+        118.67251699999906,
+        112.57422600000064,
+        103.32503300000099,
+        87.93269800000053
+      ],
+      "focused": {
+        "tag": "svg",
+        "role": "img",
+        "label": "Daily points"
+      },
+      "keyboardText": "09-01\n09-02\n09-03\n09-04\n09-05\n09-06\n09-07\n-50\n0\n50\n100\n150\n200\n250\n2026-09-01\nTasks\n0\nBonuses\n20\nPenalties\n-50\nReversals\n0"
+    },
+    {
+      "library": "visx",
+      "medianNavigationToSvgMs": 251.35215199999948,
+      "samplesMs": [
+        292.8001230000009,
+        127.8838680000008,
+        117.8063570000013,
+        258.1485570000041,
+        251.35215199999948,
+        171.3537389999983
+      ],
+      "focused": {
+        "tag": "BODY",
+        "role": null,
+        "label": null
+      },
+      "keyboardText": "09-01\n09-02\n09-03\n09-04\n09-05\n09-06\n09-07\n-100\n0\n100\n200\n300\n300"
+    },
+    {
+      "library": "nivo",
+      "medianNavigationToSvgMs": 326.253085999997,
+      "samplesMs": [
+        398.39605499999743,
+        326.253085999997,
+        275.8995549999963,
+        388.1688490000015,
+        238.85115699999733,
+        142.04495000000315
+      ],
+      "focused": {
+        "tag": "svg",
+        "role": "img",
+        "label": "Daily points"
+      },
+      "keyboardText": "09-01\n09-02\n09-03\n09-04\n09-05\n09-06\n09-07\n0\n20\n40\n60\n80\n100\n120\n140\n160\n180\n200\n220\n240"
+    },
+    {
+      "library": "ours",
+      "medianNavigationToSvgMs": 112.16525099999853,
+      "samplesMs": [
+        169.8605269999971,
+        93.70709799999895,
+        90.39990299999772,
+        112.16525099999853,
+        126.41211699999985,
+        91.4282400000011
+      ],
+      "focused": {
+        "tag": "BODY",
+        "role": null,
+        "label": null
+      },
+      "keyboardText": "-50\n17.5\n85\n152.5\n220\n09-01\n09-02\n09-03\n09-04\n09-05\n09-06\n09-07"
+    }
+  ]
+}
