@@ -163,3 +163,5 @@ export type {
   StoreOptions,
   Unsubscribe,
 } from "./types.ts"
+export type { WizardStep } from "./wizardSteps.ts"
+export { getWizardSteps } from "./wizardSteps.ts"
