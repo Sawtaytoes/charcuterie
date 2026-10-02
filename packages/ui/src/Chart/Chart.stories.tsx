@@ -78,15 +78,65 @@ export const Interactive: Story = {
   render: (props) => {
     const [isTableVisible, setIsTableVisible] =
       useState(false)
+    const [isUpdated, setIsUpdated] = useState(false)
     return (
       <>
+        <Button onClick={() => setIsUpdated(!isUpdated)}>
+          Update values
+        </Button>
         <Button
           onClick={() => setIsTableVisible(!isTableVisible)}
         >
           {isTableVisible ? "Hide values" : "Show values"}
         </Button>
-        <Chart {...props} isTableVisible={isTableVisible} />
+        <Chart
+          {...props}
+          series={props.series.map((entry) => ({
+            ...entry,
+            values: entry.values.map((value) =>
+              value === null
+                ? null
+                : value + (isUpdated ? 100 : 0),
+            ),
+          }))}
+          isTableVisible={isTableVisible}
+        />
       </>
     )
   },
+}
+
+export const StackedDaily: Story = {
+  args: {
+    barLayout: "stacked",
+    series: [
+      {
+        id: "tasks",
+        label: "Tasks",
+        values: [200, 280, 180, 260, 300],
+        color: "var(--color-intent-accent-solid)",
+      },
+      {
+        id: "bonuses",
+        label: "Bonuses",
+        values: [10, 20, 0, 10, 0],
+        color: "var(--color-intent-success-solid)",
+      },
+      {
+        id: "penalties",
+        label: "Penalties",
+        values: [0, -50, -50, 0, 0],
+        color: "var(--color-intent-danger-solid)",
+      },
+      {
+        id: "reversals",
+        label: "Reversals",
+        values: [0, -10, 0, 0, 0],
+        color: "var(--color-content-muted)",
+      },
+    ],
+  },
+}
+export const PortableFallback: Story = {
+  args: { renderer: "portable" },
 }

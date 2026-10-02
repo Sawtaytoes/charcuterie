@@ -700,6 +700,33 @@ const ENTRY_POINT_RUNTIMES: Record<
     // into `core` — which is why `ColorSchemeApplier` lives in the
     // core rather than beside the hook, so this entry never pulls
     // `react`.
+    "./charts": [
+      "@tanstack/charts",
+      "@tanstack/charts/scales/band",
+      "@tanstack/charts/scales/linear",
+      "@tanstack/charts/svg",
+    ],
+    "./charts/preact": [
+      "@tanstack/charts",
+      "@tanstack/charts/adapter/renderer",
+      "@tanstack/charts/motion",
+      "@tanstack/charts/scales/band",
+      "@tanstack/charts/scales/linear",
+      "@tanstack/charts/svg/renderer",
+      "@tanstack/charts/tooltip",
+      "preact",
+      "preact/hooks",
+    ],
+    "./charts/react": [
+      "@tanstack/charts",
+      "@tanstack/charts/motion",
+      "@tanstack/charts/react/core",
+      "@tanstack/charts/scales/band",
+      "@tanstack/charts/scales/linear",
+      "@tanstack/charts/svg/renderer",
+      "@tanstack/charts/tooltip",
+      "react",
+    ],
     "./browser": [],
     "./core": [],
     "./jotai": ["jotai"],
@@ -733,6 +760,7 @@ const ENTRY_POINT_RUNTIMES: Record<
       // browser, and it does so through this subpath so the coupling
       // is named rather than smuggled in through the main entry.
       "@charcuterie/logic/browser",
+      "@charcuterie/logic/charts/react",
       "@charcuterie/logic/core",
       "@charcuterie/tokens",
       "@floating-ui/react",

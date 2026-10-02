@@ -13,6 +13,8 @@ export type ChartOptions = {
   labels: readonly string[]
   series: readonly ChartSeries[]
   kind?: "bar" | "line"
+  /** Positive and negative bar contributions stack independently. */
+  barLayout?: "grouped" | "stacked"
   width?: number
   height?: number
   fontSize?: number
@@ -39,11 +41,13 @@ const isFiniteValue = (
   typeof value === "number" && Number.isFinite(value)
 
 /** Color references never permit a remote URL or an injected SVG attribute. */
-const safeColor = (value: string | undefined): string =>
+export const safeChartColor = (
+  value: string | undefined,
+): string =>
   value &&
   !/url|[;<>"'\\]/i.test(value) &&
   /^[\w\s#(),.%+-]+$/.test(value)
-    ? escapeXml(value)
+    ? value
     : "currentColor"
 
 /**
@@ -57,6 +61,7 @@ export const renderChartSvg = ({
   labels,
   series,
   kind = "bar",
+  barLayout = "grouped",
   width = 640,
   height = 240,
   fontSize = 11,
@@ -74,8 +79,35 @@ export const renderChartSvg = ({
   const end = chartWidth - 12
   const top = 14
   const bottom = chartHeight - labelSize * 3.2
-  const values = series.flatMap((entry) =>
-    entry.values.filter(isFiniteValue),
+  const stackedBase = (
+    seriesIndex: number,
+    index: number,
+    value: number,
+  ) =>
+    barLayout === "stacked"
+      ? series
+          .slice(0, seriesIndex)
+          .reduce((sum, entry) => {
+            const preceding = entry.values[index]
+            return (entry.kind ?? kind) === "bar" &&
+              typeof preceding === "number" &&
+              Number.isFinite(preceding) &&
+              preceding >= 0 === value >= 0
+              ? sum + preceding
+              : sum
+          }, 0)
+      : 0
+  const values = series.flatMap((entry, seriesIndex) =>
+    entry.values.flatMap((value, index) =>
+      isFiniteValue(value)
+        ? [
+            value +
+              ((entry.kind ?? kind) === "bar"
+                ? stackedBase(seriesIndex, index, value)
+                : 0),
+          ]
+        : [],
+    ),
   )
   const minimum = values.reduce(
     (lowest, value) => Math.min(lowest, value),
@@ -141,7 +173,7 @@ export const renderChartSvg = ({
     }
   })
   series.forEach((entry, seriesIndex) => {
-    const color = safeColor(entry.color)
+    const color = escapeXml(safeChartColor(entry.color))
     const dash =
       seriesIndex % 3 === 0
         ? ""
@@ -150,7 +182,10 @@ export const renderChartSvg = ({
           : "2 3"
     const barWidth = Math.max(
       0.5,
-      (step * 0.8) / Math.max(1, series.length),
+      (step * 0.8) /
+        (barLayout === "stacked"
+          ? 1
+          : Math.max(1, series.length)),
     )
     let segment: string[] = []
     const flush = () => {
@@ -174,10 +209,16 @@ export const renderChartSvg = ({
         const atX =
           positionX(index) -
           (step * 0.8) / 2 +
-          seriesIndex * barWidth
-        const atY = Math.min(positionY(value), positionY(0))
+          (barLayout === "stacked"
+            ? 0
+            : seriesIndex * barWidth)
+        const base = stackedBase(seriesIndex, index, value)
+        const atY = Math.min(
+          positionY(base + value),
+          positionY(base),
+        )
         elements.push(
-          `<rect x="${coordinate(atX)}" y="${coordinate(atY)}" width="${coordinate(barWidth * 0.9)}" height="${coordinate(Math.abs(positionY(value) - positionY(0)))}" fill="${color}" stroke="currentColor" stroke-width="0.4"><title>${markTitle}</title></rect>`,
+          `<rect x="${coordinate(atX)}" y="${coordinate(atY)}" width="${coordinate(barWidth * 0.9)}" height="${coordinate(Math.abs(positionY(base + value) - positionY(base)))}" fill="${color}" stroke="currentColor" stroke-width="0.4"><title>${markTitle}</title></rect>`,
         )
       } else {
         segment.push(
