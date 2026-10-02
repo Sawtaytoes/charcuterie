@@ -1,6 +1,7 @@
 import { FLIP_KEY_ATTRIBUTE } from "@charcuterie/logic"
 import type { ReactNode } from "react"
 
+import { Button } from "../Button/Button.tsx"
 import { toClassName } from "../toClassName.ts"
 import { VisuallyHidden } from "../VisuallyHidden/VisuallyHidden.tsx"
 
@@ -72,6 +73,8 @@ export type StepperProps = {
    * vertical — a column cannot hold a list.
    */
   readonly orientation?: StepperOrientation
+  /** Completed stages become buttons; the caller resets dependent answers. */
+  readonly onStepSelect?: (key: string) => void
   readonly steps: readonly Step[]
 }
 
@@ -114,6 +117,7 @@ export const Stepper = ({
   isResponsive = true,
   label,
   orientation = "vertical",
+  onStepSelect,
   steps,
 }: StepperProps) => {
   const Heading = `h${headingLevel}` as "h3"
@@ -174,6 +178,9 @@ export const Stepper = ({
              * nobody reads it, which is why it is not opt-in.
              */
             <li
+              aria-current={
+                status === "current" ? "step" : undefined
+              }
               {...{ [FLIP_KEY_ATTRIBUTE]: step.key }}
               className={toClassName(
                 "relative grid grid-cols-[auto_minmax(0,1fr)] grid-rows-[auto_minmax(0,1fr)] gap-x-3",
@@ -254,7 +261,16 @@ export const Stepper = ({
                     isCompact ? "text-xs" : "text-md",
                   )}
                 >
-                  {step.label}
+                  {onStepSelect && status === "done" ? (
+                    <Button
+                      appearance="ghost"
+                      onClick={() => onStepSelect(step.key)}
+                    >
+                      {step.label}
+                    </Button>
+                  ) : (
+                    step.label
+                  )}
 
                   {/* The status as a WORD. Four marker colours is
                     four colours as far as assistive technology is
