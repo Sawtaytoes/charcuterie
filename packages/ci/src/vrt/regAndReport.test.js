@@ -16,6 +16,8 @@ import {
 } from "./reportStatus.js"
 import {
   buildRegConfig,
+  DEFAULT_THRESHOLD_RATE,
+  parseThresholdRate,
   toCustomDomain,
 } from "./writeRegConfig.js"
 
@@ -62,6 +64,39 @@ describe("buildRegConfig", () => {
 
     expect(config.core.actualDir).toBe("shots")
     expect(config.core.workingDir).toBe(".reg-web")
+  })
+
+  it("takes the threshold from VRT_THRESHOLD_RATE, 0 included", () => {
+    expect(
+      buildRegConfig({
+        ...storeEnvironment,
+        VRT_THRESHOLD_RATE: "0",
+      }).core.thresholdRate,
+    ).toBe(0)
+    expect(
+      buildRegConfig({
+        ...storeEnvironment,
+        VRT_THRESHOLD_RATE: "0.005",
+      }).core.thresholdRate,
+    ).toBe(0.005)
+  })
+
+  it("keeps the 2% default when the threshold is unset or empty", () => {
+    expect(parseThresholdRate(undefined)).toBe(
+      DEFAULT_THRESHOLD_RATE,
+    )
+    expect(parseThresholdRate("  ")).toBe(
+      DEFAULT_THRESHOLD_RATE,
+    )
+    expect(DEFAULT_THRESHOLD_RATE).toBe(0.02)
+  })
+
+  it("refuses a threshold that is not a number from 0 to 1", () => {
+    for (const value of ["2%", "-0.1", "1.5", "NaN"]) {
+      expect(() => parseThresholdRate(value)).toThrow(
+        `VRT_THRESHOLD_RATE must be a number from 0 to 1, not "${value}".`,
+      )
+    }
   })
 
   it("hands the S3 plugin a bare host, whichever way the secret is written", () => {

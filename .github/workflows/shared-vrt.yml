@@ -140,6 +140,17 @@ on:
         type: string
         required: false
         default: .vrt-actual
+      thresholdRate:
+        description: >-
+          The share of a shot's pixels that may differ before it counts as
+          changed, from 0 to 1. The default 0.02 absorbs a browser's
+          rendering jitter. A capture that is already byte-identical from
+          run to run should pass 0: a small change, such as one theme
+          color in a menu, moves well under 2% of the pixels and would
+          otherwise pass unseen.
+        type: number
+        required: false
+        default: 0.02
       statusContext:
         description: "The commit-status context the verdict is posted under."
         type: string
@@ -325,6 +336,8 @@ jobs:
           fi
 
       - name: Write the reg-suit config
+        env:
+          VRT_THRESHOLD_RATE: ${{ inputs.thresholdRate }}
         run: node "$VRT_TOOLS/writeRegConfig.js"
 
       - name: Compare against the baseline and publish
