@@ -8,6 +8,7 @@ decision overrides an instinct.
 
 | Date | Decision | Summary |
 | --- | --- | --- |
+| 2026-10-02 | [Layout visibility is separate from focus priority](2026-10-02-layout-visibility-is-separate-from-focus-priority.md) | Optional sections have their own retention order and explicit hidden candidates; required content fits before focus grows. |
 | 2026-09-30 | [Bounded portrait sets center the final row](2026-09-30-bounded-portrait-sets-center-the-final-row.md) | Incomplete rows stay centered and keep the full-row tile width. |
 | 2026-09-28 | [Hover styles ask whether any pointer can hover](2026-09-28-hover-styles-ask-whether-any-pointer-can-hover.md) | `theme.css` redefines Tailwind's `hover:` on `@media (any-hover: hover)` instead of `(hover: hover)`. A Surface reports touch as its primary pointer, so the default switched every hover style off with a mouse and pen attached, and Mail Sifter's hover-only card checkbox vanished. `group-hover:` and `peer-hover:` follow. A phone still answers `none`, so sticky hover stays prevented. |
 | 2026-09-28 | [The overflow action menu is a library shape, and its dots are drawn in CSS](2026-09-28-the-overflow-action-menu-is-a-library-shape.md) | `ActionMenu` is a ghost neutral `IconButton` opening a `Menu` at `bottom-end`, with internal open state. `label` names the thing and the menu. The default dots are three CSS boxes, not a glyph or an SVG; `icon` takes the app's own (lucide `EllipsisVertical`). |
