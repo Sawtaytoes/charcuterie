@@ -1,5 +1,11 @@
 # @charcuterie/logic
 
+## 2.8.0
+
+### Minor Changes
+
+- 2f5dfae: Add framework-independent wizard stage descriptors and accessible navigation to completed Stepper stages.
+
 ## 2.7.0
 
 ### Minor Changes
