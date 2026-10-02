@@ -6,8 +6,9 @@ const results={static:[],preact:[],touch:[]}
 for(const library of ['tanstack','visx','nivo','ours']) {
  const page=await browser.newPage({viewport:{width:680,height:320}})
  const errors=[];page.on('pageerror',error=>errors.push(error.message))
- await page.goto(`${url}/static/${library}.html`);await page.locator('svg').first().waitFor();await page.screenshot({path:`dist/static/${library}.png`})
- results.static.push({library,rects:await page.locator('svg rect').count(),paths:await page.locator('svg path').count(),errors:[...errors]})
+ await page.goto(`${url}/static/${library}.html`);await page.locator('svg').first().waitFor();await page.locator('svg').first().screenshot({path:`dist/static/${library}.png`})
+ const standaloneImage = await page.evaluate(async path => { const img = new Image(); img.src = path; await img.decode(); return {width:img.naturalWidth,height:img.naturalHeight} }, `${url}/static/${library}.svg`)
+ results.static.push({library,standaloneImage,rects:await page.locator('svg rect').count(),paths:await page.locator('svg path').count(),errors:[...errors]})
  await page.goto(`${url}/${library}-preact.html`);await page.waitForTimeout(900)
  results.preact.push({library,svgCount:await page.locator('svg').count(),rects:await page.locator('svg rect').count(),errors:[...errors]})
  await page.close()

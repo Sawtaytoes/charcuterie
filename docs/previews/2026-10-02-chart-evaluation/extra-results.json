@@ -2,24 +2,40 @@
   "static": [
     {
       "library": "tanstack",
+      "standaloneImage": {
+        "width": 640,
+        "height": 280
+      },
       "rects": 28,
       "paths": 0,
       "errors": []
     },
     {
       "library": "visx",
+      "standaloneImage": {
+        "width": 640,
+        "height": 280
+      },
       "rects": 1,
       "paths": 0,
       "errors": []
     },
     {
       "library": "nivo",
+      "standaloneImage": {
+        "width": 640,
+        "height": 280
+      },
       "rects": 29,
       "paths": 0,
       "errors": []
     },
     {
       "library": "ours",
+      "standaloneImage": {
+        "width": 640,
+        "height": 280
+      },
       "rects": 28,
       "paths": 0,
       "errors": []
