@@ -1,5 +1,11 @@
 # @charcuterie/logic
 
+## 2.7.0
+
+### Minor Changes
+
+- 965f512: Separate optional-content visibility from focus priority in measured layouts.
+
 ## 2.6.1
 
 ### Patch Changes
