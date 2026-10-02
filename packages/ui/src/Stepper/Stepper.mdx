@@ -84,3 +84,15 @@ A stepper is a **document outline**, not a widget: an `<ol>` of headings. Advanc
 app's operation and the component only reports where the sequence got to, so there is no
 roving focus, no `aria-current` on a control, and nothing to arrow between. If your steps
 are *navigable* — a checkout you can click back into — you want `Tabs`.
+
+
+## Wizard navigation
+
+Provide `onStepSelect` to make completed stages keyboard-accessible buttons.
+Current and upcoming stages remain progress indicators. The caller owns the answers:
+returning to an earlier stage should clear choices that depend on it.
+
+<Canvas of={StepperStories.WizardNavigation} />
+
+Preact displays can use `getWizardSteps` from `@charcuterie/logic/core` to derive the
+same numbered stages and backward navigation without importing React components.

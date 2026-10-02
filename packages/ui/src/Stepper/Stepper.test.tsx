@@ -12,6 +12,7 @@ const {
   Playground,
   Interactive,
   Responsive,
+  WizardNavigation,
 } = composeStories(stories)
 
 test("the sequence is an ordered list with a name", async () => {
@@ -141,4 +142,22 @@ test("a compact card can keep the horizontal ladder below cq-md", async () => {
       canvas.getByRole("list", { name: "Ingest sequence" }),
     ).flexDirection,
   ).toBe("row")
+})
+
+test("wizard stages can be revisited, while upcoming stages cannot be skipped", async () => {
+  const { canvas, canvasElement } = await mountStory(
+    WizardNavigation,
+  )
+  await expect(
+    canvas.queryByRole("button", { name: "File" }),
+  ).toBeNull()
+  await userEvent.click(
+    canvas.getByRole("button", { name: "Rip" }),
+  )
+  await expect(
+    canvas.getByRole("heading", {
+      name: /Rip In progress/,
+    }),
+  ).toBeVisible()
+  await expectNoAxeViolations(canvasElement)
 })
