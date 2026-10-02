@@ -1,5 +1,19 @@
 # @charcuterie/ui
 
+## 4.17.0
+
+### Minor Changes
+
+- 5f0be1c: Use pinned TanStack Charts for interactive React charts, with shared day tooltips,
+  keyboard and touch navigation, transitions, reduced-motion support, grouped and
+  signed stacked bars. Add native Preact and standalone SVG subpaths. Preserve the
+  portable renderer as an explicit fallback without adding runtime imports to core.
+
+### Patch Changes
+
+- Updated dependencies [5f0be1c]
+  - @charcuterie/logic@2.9.0
+
 ## 4.16.0
 
 ### Minor Changes
