@@ -4,7 +4,8 @@
  * commits one and no endpoint, bucket or host name lands in a public repo.
  *
  * The same settings `packages/docs/scripts/writeRegConfig.mjs` has used
- * since the first VRT run: a 2% threshold with antialiasing tolerated, the
+ * since the first VRT run: a 2% threshold by default with antialiasing
+ * tolerated, the
  * git-hash key generator (the baseline is the snapshot of the merge base's
  * nearest keyed ancestor), and the S3 publisher over path-style addressing,
  * which is what Garage speaks.
@@ -18,6 +19,9 @@
  *   VRT_REPORT_BASE_URL  report host, read by reportStatus.js; required here
  *                        too so a missing secret fails before the capture
  *   VRT_ACTUAL_DIR       shots directory (default .vrt-actual)
+ *   VRT_THRESHOLD_RATE   share of a shot's pixels that may differ before it
+ *                        counts as changed, 0 to 1 (default 0.02). A
+ *                        byte-identical capture passes 0.
  *   VRT_WORKING_DIR      reg-suit scratch (default .reg)
  *
  *   node writeRegConfig.js [--out .regconfig.json]
@@ -38,6 +42,31 @@ export const REQUIRED_ENVIRONMENT = Object.freeze([
 ])
 
 export const DEFAULT_WORKING_DIR = ".reg"
+
+export const DEFAULT_THRESHOLD_RATE = 0.02
+
+/**
+ * The workflow input arrives as text. Empty means the default; anything
+ * that is not a number from 0 to 1 fails before reg-suit runs, so a typo
+ * never turns into a gate that passes everything.
+ *
+ * @param {string | undefined} value
+ */
+export const parseThresholdRate = (value) => {
+  if (value == null || value.trim() === "") {
+    return DEFAULT_THRESHOLD_RATE
+  }
+
+  const rate = Number(value)
+
+  if (!Number.isFinite(rate) || rate < 0 || rate > 1) {
+    throw new Error(
+      `VRT_THRESHOLD_RATE must be a number from 0 to 1, not "${value}".`,
+    )
+  }
+
+  return rate
+}
 
 /**
  * `reg-publish-s3-plugin` builds the report URL as
@@ -70,7 +99,9 @@ export const buildRegConfig = (env) => {
       actualDir: env.VRT_ACTUAL_DIR || DEFAULT_ACTUAL_DIR,
       addIgnore: true,
       enableAntialias: true,
-      thresholdRate: 0.02,
+      thresholdRate: parseThresholdRate(
+        env.VRT_THRESHOLD_RATE,
+      ),
       workingDir:
         env.VRT_WORKING_DIR || DEFAULT_WORKING_DIR,
       ximgdiff: { invocationType: "client" },

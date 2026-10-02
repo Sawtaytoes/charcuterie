@@ -216,6 +216,7 @@ vrt:
 | `storybookInclude` / `storybookExclude` | — | Story-id substrings or `*` globs. |
 | `captureCommand` | — | The repo's own capture. Gets `VRT_ACTUAL_DIR` (absolute) and writes PNGs there. |
 | `actualDir` | `.vrt-actual` | Where the shots go, relative to the repo root. |
+| `thresholdRate` | `0.02` | Share of a shot's pixels, 0 to 1, that may differ before it counts as changed. The default absorbs browser rendering jitter. A capture that is byte-identical from run to run should pass `0`: one theme color changed in a game menu moved 0.1% and 0.4% of the pixels of two shots, and both passed at `0.02`. |
 | `statusContext` | `vrt` | Commit-status context of the verdict. |
 | `timeoutMinutes` | `60` | Job timeout. |
 | `charcuterieRepository` | `Sawtaytoes/charcuterie` | Where the tools come from. **A Forgejo caller sets `sawtaytoes/charcuterie`.** |
