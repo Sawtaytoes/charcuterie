@@ -7,10 +7,19 @@ import * as stories from "./Chart.stories.tsx"
 
 Bar and line plots with a zero baseline, negative values, explicit missing samples, and an optional values table. The app owns the data and its meaning. Null means unavailable, never zero. Color is optional; mark titles, labels, and the table preserve the information without it.
 
-The framework-free `renderChartSvg` export from `@charcuterie/logic/core` draws exactly the same plot for Preact kiosks and image renderers. It escapes all producer text and rejects external color references. Use `Chart` in React. Use the portable renderer where a React tree is not available.
+TanStack Charts 0.18.0 is the primary renderer. Hover, tap, or focus the plot and use arrow keys, Home, and End to inspect values. Tooltips show every series for the selected label, including unavailable samples. Positive and negative contributions stack independently with `barLayout="stacked"`; grouped bars remain the default. `isAnimated={false}` disables motion, and changes to `prefers-reduced-motion` are honored while mounted.
+
+Use `renderer="portable"` for the existing lightweight SVG fallback. Its static output and the optional semantic values table remain available. Neither renderer fetches data.
+
+`@charcuterie/logic/charts` exports `createChartDefinition` and a standalone `renderChartSvg` with explicit image dimensions. `@charcuterie/logic/charts/preact` exports native `ChartPlot` without React or a compatibility layer. `@charcuterie/logic/core` keeps the dependency-free portable renderer for constrained consumers. Static consumers supply resolved colors rather than browser CSS variables.
+
+TanStack remains alpha and is pinned exactly. Upgrades require the interaction and export checks recorded in the decision and evaluation.
 
 <Canvas of={stories.Playground} />
 <Canvas of={stories.AllVariants} />
 <Canvas of={stories.AllStates} />
 <Canvas of={stories.Responsive} />
 <Canvas of={stories.Interactive} />
+
+<Canvas of={stories.StackedDaily} />
+<Canvas of={stories.PortableFallback} />

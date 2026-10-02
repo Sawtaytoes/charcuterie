@@ -240,3 +240,9 @@ focus `priority` then spends the remaining space. Hidden optional sections consu
 no minimum dimensions and contribute no useful area. Omit `visibilityPriority`
 for required sections such as controls. Apps enumerate measured visibility states;
 the selector never changes the candidate or silently clips content.
+
+## Charts
+
+`@charcuterie/logic/charts` exposes the shared TanStack chart definition and standalone SVG renderer. `/charts/react` and `/charts/preact` expose `ChartPlot` for native framework surfaces, with common `ChartOptions`, hover/touch/keyboard interaction, and optional reduced-motion-aware transitions. TanStack is pinned to 0.18.0 while alpha. Importing the core or existing bindings does not load this engine.
+
+The existing `renderChartSvg` in `/core` remains the portable fallback for constrained clients. Both engines accept grouped bars, signed stacks (`barLayout: "stacked"`), lines, and null samples. Null is unavailable, never zero. Apps supply series and labels; no engine performs requests or calculates report data.
