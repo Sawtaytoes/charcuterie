@@ -1,0 +1,6 @@
+import React from 'react'
+import { Bar } from '@nivo/bar'
+import { categories, shades, shortDay } from './fixtures.mjs'
+export default function DailyChart({ rows, color, width = 640, isAnimated = true }) {
+  return <Bar width={width} height={280} data={rows} keys={categories} indexBy="day" groupMode="stacked" minValue={-100} maxValue={350} margin={{ top: 15, right: 12, bottom: 35, left: 45 }} padding={.25} colors={({ id }) => shades(color)[categories.indexOf(id)]} enableLabel={false} animate={isAnimated} motionConfig="gentle" axisBottom={{ tickRotation: 0, format: shortDay, tickValues: rows.filter((_, index) => index % Math.max(1, Math.ceil(rows.length / 8)) === 0).map(row => row.day) }} theme={{ text: { fill: 'currentColor', fontSize: 11 }, axis: { ticks: { text: { fill: 'currentColor' } }, legend: { text: { fill: 'currentColor' } } }, grid: { line: { stroke: '#71839d55' } }, tooltip: { container: { background: 'var(--surface)', color: 'var(--ink)' } } }} tooltip={({ data }) => <div className="value-tooltip">{data.day}{categories.map(category => <div key={category}>{category}: {rows.find(row => row.day === data.day)?.[category] ?? 0}</div>)}</div>} role="img" ariaLabel="Daily points" isFocusable={true} barAriaLabel={bar => `${bar.indexValue}, ${bar.id}: ${bar.value}`} />
+}

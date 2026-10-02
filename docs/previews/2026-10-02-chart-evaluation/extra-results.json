@@ -1,0 +1,72 @@
+{
+  "static": [
+    {
+      "library": "tanstack",
+      "rects": 28,
+      "paths": 0,
+      "errors": []
+    },
+    {
+      "library": "visx",
+      "rects": 1,
+      "paths": 0,
+      "errors": []
+    },
+    {
+      "library": "nivo",
+      "rects": 29,
+      "paths": 0,
+      "errors": []
+    },
+    {
+      "library": "ours",
+      "rects": 28,
+      "paths": 0,
+      "errors": []
+    }
+  ],
+  "preact": [
+    {
+      "library": "tanstack",
+      "svgCount": 1,
+      "rects": 28,
+      "errors": []
+    },
+    {
+      "library": "visx",
+      "svgCount": 14,
+      "rects": 29,
+      "errors": []
+    },
+    {
+      "library": "nivo",
+      "svgCount": 1,
+      "rects": 29,
+      "errors": []
+    },
+    {
+      "library": "ours",
+      "svgCount": 1,
+      "rects": 28,
+      "errors": []
+    }
+  ],
+  "touch": [
+    {
+      "library": "tanstack",
+      "hasTouchTooltip": true
+    },
+    {
+      "library": "visx",
+      "hasTouchTooltip": true
+    },
+    {
+      "library": "nivo",
+      "hasTouchTooltip": false
+    },
+    {
+      "library": "ours",
+      "hasTouchTooltip": false
+    }
+  ]
+}
