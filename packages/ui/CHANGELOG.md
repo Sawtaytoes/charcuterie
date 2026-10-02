@@ -1,5 +1,16 @@
 # @charcuterie/ui
 
+## 4.16.0
+
+### Minor Changes
+
+- 2f5dfae: Add framework-independent wizard stage descriptors and accessible navigation to completed Stepper stages.
+
+### Patch Changes
+
+- Updated dependencies [2f5dfae]
+  - @charcuterie/logic@2.8.0
+
 ## 4.15.2
 
 ### Patch Changes
