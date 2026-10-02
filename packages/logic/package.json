@@ -52,7 +52,22 @@
       "types": "./dist/openapi/index.d.ts",
       "default": "./dist/openapi/index.js"
     },
-    "./src/*": "./src/*"
+    "./src/*": "./src/*",
+    "./charts": {
+      "source": "./src/charts/index.ts",
+      "types": "./dist/charts/index.d.ts",
+      "default": "./dist/charts/index.js"
+    },
+    "./charts/react": {
+      "source": "./src/charts/react.ts",
+      "types": "./dist/charts/react.d.ts",
+      "default": "./dist/charts/react.js"
+    },
+    "./charts/preact": {
+      "source": "./src/charts/preact.ts",
+      "types": "./dist/charts/preact.d.ts",
+      "default": "./dist/charts/preact.js"
+    }
   },
   "files": [
     "dist",
@@ -118,5 +133,8 @@
     "type": "git",
     "url": "git+https://github.com/Sawtaytoes/charcuterie.git",
     "directory": "packages/logic"
+  },
+  "dependencies": {
+    "@tanstack/charts": "0.18.0"
   }
 }

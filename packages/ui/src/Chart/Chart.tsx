@@ -1,9 +1,12 @@
 // biome-ignore-all lint/security/noDangerouslySetInnerHtml: The portable renderer escapes text and restricts color references; security tests cover this boundary.
+
+import { ChartPlot } from "@charcuterie/logic/charts/react"
 import {
   type ChartOptions,
   renderChartSvg,
 } from "@charcuterie/logic/core"
 import {
+  type CSSProperties,
   type ReactNode,
   useEffect,
   useRef,
@@ -15,12 +18,17 @@ export type ChartProps = ChartOptions & {
   className?: string
   /** A text table exposes every value without relying on color, hover, or SVG. */
   isTableVisible?: boolean
+  /** The portable renderer is an explicit fallback for constrained environments. */
+  renderer?: "tanstack" | "portable"
+  isAnimated?: boolean
 }
 
 /** The same escaped SVG renderer is available without React for kiosk/image consumers. */
 export const Chart = ({
   className,
   isTableVisible = false,
+  renderer = "tanstack",
+  isAnimated = true,
   ...options
 }: ChartProps): ReactNode => {
   const container = useRef<HTMLDivElement>(null)
@@ -47,6 +55,17 @@ export const Chart = ({
   }, [options.width])
   return (
     <figure
+      style={
+        {
+          "--ts-chart-tooltip-background":
+            "var(--color-surface-raised)",
+          "--ts-chart-tooltip-color":
+            "var(--color-content-primary)",
+          "--ts-chart-tooltip-border":
+            "1px solid var(--color-border-subtle)",
+          "--ts-chart-tooltip-font": "inherit",
+        } as CSSProperties
+      }
       className={toClassName(
         "min-w-0 text-content-primary",
         className,
@@ -58,13 +77,25 @@ export const Chart = ({
       <div
         ref={container}
         style={{ height: options.height ?? 240 }}
-        dangerouslySetInnerHTML={{
-          __html: renderChartSvg({
-            ...options,
-            width: options.width ?? measuredWidth,
-          }),
-        }}
-      />
+      >
+        {renderer === "portable" ? (
+          <div
+            style={{ height: "100%" }}
+            dangerouslySetInnerHTML={{
+              __html: renderChartSvg({
+                ...options,
+                width: options.width ?? measuredWidth,
+              }),
+            }}
+          />
+        ) : (
+          <ChartPlot
+            {...options}
+            width={options.width ?? measuredWidth}
+            isAnimated={isAnimated}
+          />
+        )}
+      </div>
       <ul
         aria-label={`${options.title} legend`}
         className="mt-2 flex flex-wrap gap-3 text-xs"
