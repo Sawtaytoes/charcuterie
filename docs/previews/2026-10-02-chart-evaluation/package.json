@@ -1,0 +1,16 @@
+{
+  "name": "chart-evaluation",
+  "private": true,
+  "type": "module",
+  "scripts": { "build": "node build.mjs", "verify": "node verify.mjs" },
+  "dependencies": {
+    "@tanstack/charts": "0.18.0",
+    "@visx/xychart": "4.0.0",
+    "@nivo/bar": "0.99.0",
+    "@react-spring/web": "10.0.3",
+    "preact": "10.29.0",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": { "esbuild": "0.28.1", "playwright": "1.62.0" }
+}

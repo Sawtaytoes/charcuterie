@@ -1,0 +1,22 @@
+[
+  {
+    "library": "tanstack",
+    "gzipBytes": 65328,
+    "reactModules": []
+  },
+  {
+    "library": "visx",
+    "gzipBytes": 72302,
+    "reactModules": []
+  },
+  {
+    "library": "nivo",
+    "gzipBytes": 97613,
+    "reactModules": []
+  },
+  {
+    "library": "ours",
+    "gzipBytes": 8759,
+    "reactModules": []
+  }
+]
