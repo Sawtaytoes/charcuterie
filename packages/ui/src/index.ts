@@ -493,6 +493,8 @@ export {
   getConnectionLabel,
   getIsConnectionBusy,
 } from "./statusIntent.ts"
+export type { TableViewportProps } from "./TableViewport/TableViewport.tsx"
+export { TableViewport } from "./TableViewport/TableViewport.tsx"
 export type {
   TabsLinkProps,
   TabsPanelProps,
