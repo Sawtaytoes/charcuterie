@@ -620,7 +620,8 @@ test("the barrel is the only place components are re-exported", async () => {
   // ActionMenu composes IconButton and Menu for the overflow control.
   // ValuePairs owns compact label-over-value summaries.
   // Chart shares portable SVG geometry with Preact and image consumers.
-  expect(componentNames.length).toBe(73)
+  // TableViewport owns readable comparisons and full-window expansion.
+  expect(componentNames.length).toBe(74)
 
   for (const name of componentNames) {
     expect(barrel).toContain(`export { ${name} }`)

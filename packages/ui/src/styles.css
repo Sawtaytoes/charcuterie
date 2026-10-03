@@ -208,3 +208,55 @@
       transparent;
   }
 }
+
+/* Comparisons keep their column geometry instead of splitting prose into narrow strips.
+   Inline has no block-size clamp: the document owns vertical scrolling. */
+.charcuterie-table-scroll {
+  overflow-x: auto;
+}
+.charcuterie-table-content table {
+  display: table;
+  inline-size: 100%;
+  min-inline-size: var(--table-min-inline-size);
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+  font-size: var(--font-size-sm);
+  line-height: 1.65;
+}
+.charcuterie-table-content :is(th, td) {
+  padding: 0.75rem 1rem;
+  border-inline-end: 1px solid var(--color-border-subtle);
+  border-block-end: 1px solid var(--color-border-subtle);
+  vertical-align: top;
+  text-align: start;
+  overflow-wrap: break-word;
+  color: var(--color-content-primary);
+  background: var(--color-surface-base);
+}
+.charcuterie-table-content thead th {
+  background: var(--color-surface-raised);
+  font-weight: 600;
+}
+[role="dialog"] .charcuterie-table-content thead th {
+  position: sticky;
+  inset-block-start: -1rem;
+  z-index: 2;
+}
+[role="dialog"]
+  .charcuterie-table-content
+  :is(th, td):first-child {
+  position: sticky;
+  inset-inline-start: -1rem;
+  background: var(--color-surface-raised);
+  z-index: 1;
+}
+.charcuterie-table-content thead th:first-child {
+  inline-size: clamp(10rem, 18vw, 16rem);
+}
+[role="dialog"]
+  .charcuterie-table-content
+  thead
+  th:first-child {
+  z-index: 3;
+}
