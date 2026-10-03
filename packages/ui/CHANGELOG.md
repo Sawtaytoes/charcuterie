@@ -1,5 +1,11 @@
 # @charcuterie/ui
 
+## 4.18.0
+
+### Minor Changes
+
+- 6fe75ac: Add TableViewport for readable comparison columns and full-window expansion, with page-height inline tables and fixed headers in the expanded view.
+
 ## 4.17.0
 
 ### Minor Changes
