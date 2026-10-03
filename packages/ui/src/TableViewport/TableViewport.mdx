@@ -1,0 +1,23 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks"
+import * as Stories from "./TableViewport.stories.tsx"
+
+<Meta of={Stories} />
+
+# TableViewport
+
+A comparison table keeps its columns wide enough to read. The inline surface grows with
+its rows and uses the page's vertical scroll. Expand table opens a full-window `Dialog`.
+The dialog body is the only scroll surface; headers and the first column stay visible.
+Escape and Close return focus to the trigger. Only one table is mounted, so links and IDs
+are never duplicated. The inline height and horizontal position survive expansion.
+
+Apps provide the semantic table, its column count, and its accessible label. Sanitizing
+Markdown HTML and delegating document links remain the app's responsibilities. Use
+`DataTable` for interactive records that reflow into labeled rows; use this surface for
+comparisons where columns must stay aligned.
+
+<Canvas of={Stories.Playground} />
+<Canvas of={Stories.AllVariants} />
+<Canvas of={Stories.AllStates} />
+<Canvas of={Stories.Responsive} />
+<Canvas of={Stories.Interactive} />
