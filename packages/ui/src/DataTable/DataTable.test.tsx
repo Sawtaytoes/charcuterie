@@ -17,6 +17,8 @@ const {
   Interactive,
   Responsive,
   LongColumnLabels,
+  DenseComparison,
+  StackedList,
 } = composeStories(stories)
 
 /**
@@ -424,4 +426,53 @@ test("stacked cells show complete long column names within a narrow container", 
     ),
   )
   await expectNoAxeViolations(canvasElement)
+})
+
+test("dense comparisons reflow by container width while retaining every column", async () => {
+  await setViewport(DESKTOP)
+  const { canvas, canvasElement } =
+    await mountStory(DenseComparison)
+  const narrow = expectAgentDrivable(canvas, {
+    role: "table",
+    name: "Dense comparison at 60rem",
+  })
+  const wide = expectAgentDrivable(canvas, {
+    role: "table",
+    name: "Dense comparison at 75rem",
+  })
+  await expect(
+    getComputedStyle(
+      narrow.querySelector("tbody td") as HTMLElement,
+    ).display,
+  ).toBe("flex")
+  await expect(
+    getComputedStyle(
+      wide.querySelector("tbody td") as HTMLElement,
+    ).display,
+  ).toBe("table-cell")
+  for (const table of [narrow, wide]) {
+    await expect(
+      table.querySelectorAll("tbody tr:first-child td"),
+    ).toHaveLength(8)
+    await expect(table.scrollWidth).toBeLessThanOrEqual(
+      (table.parentElement as HTMLElement).clientWidth + 1,
+    )
+  }
+  await expectNoAxeViolations(canvasElement)
+})
+test("the explicit list layout stays stacked in a wide container", async () => {
+  await setViewport(DESKTOP)
+  const { canvas } = await mountStory(StackedList)
+  const table = expectAgentDrivable(canvas, {
+    role: "table",
+    name: "Tasks as a list",
+  })
+  await expect(
+    getComputedStyle(
+      table.querySelector("tbody td") as HTMLElement,
+    ).display,
+  ).toBe("flex")
+  await expect(
+    table.querySelector("tbody td > span[aria-hidden]"),
+  ).toBeVisible()
 })

@@ -58,7 +58,13 @@ export type DataTableSelection<Row> = {
   selectedRowKeys: readonly string[]
 }
 
+export type DataTableReflowAt = "md" | "lg" | "xl"
+
 export type DataTableProps<Row> = {
+  /** Auto uses the container width; stacked keeps the labelled list at every width. */
+  layout?: "auto" | "stacked"
+  /** Dense tables can reflow earlier: md=32rem, lg=48rem, xl=64rem. */
+  reflowAt?: DataTableReflowAt
   className?: string
   columns: readonly DataTableColumn<Row>[]
   /**
@@ -100,6 +106,99 @@ export type DataTableProps<Row> = {
  * empty-state cell.
  */
 const CELL_PADDING_CLASS = "px-3 py-2"
+/** Complete literals keep Tailwind generation and consumer builds identical. */
+const WIDE_LAYOUT_CLASS = {
+  "cq-md:align-middle": {
+    md: "cq-md:align-middle",
+    lg: "cq-lg:align-middle",
+    xl: "cq-xl:align-middle",
+  },
+  "cq-md:bg-transparent": {
+    md: "cq-md:bg-transparent",
+    lg: "cq-lg:bg-transparent",
+    xl: "cq-xl:bg-transparent",
+  },
+  "cq-md:border-0": {
+    md: "cq-md:border-0",
+    lg: "cq-lg:border-0",
+    xl: "cq-xl:border-0",
+  },
+  "cq-md:border-b": {
+    md: "cq-md:border-b",
+    lg: "cq-lg:border-b",
+    xl: "cq-xl:border-b",
+  },
+  "cq-md:border-b-0": {
+    md: "cq-md:border-b-0",
+    lg: "cq-lg:border-b-0",
+    xl: "cq-xl:border-b-0",
+  },
+  "cq-md:border-border-subtle": {
+    md: "cq-md:border-border-subtle",
+    lg: "cq-lg:border-border-subtle",
+    xl: "cq-xl:border-border-subtle",
+  },
+  "cq-md:gap-0": {
+    md: "cq-md:gap-0",
+    lg: "cq-lg:gap-0",
+    xl: "cq-xl:gap-0",
+  },
+  "cq-md:hidden": {
+    md: "cq-md:hidden",
+    lg: "cq-lg:hidden",
+    xl: "cq-xl:hidden",
+  },
+  "cq-md:p-0": {
+    md: "cq-md:p-0",
+    lg: "cq-lg:p-0",
+    xl: "cq-xl:p-0",
+  },
+  "cq-md:pt-0": {
+    md: "cq-md:pt-0",
+    lg: "cq-lg:pt-0",
+    xl: "cq-xl:pt-0",
+  },
+  "cq-md:py-2": {
+    md: "cq-md:py-2",
+    lg: "cq-lg:py-2",
+    xl: "cq-xl:py-2",
+  },
+  "cq-md:rounded-none": {
+    md: "cq-md:rounded-none",
+    lg: "cq-lg:rounded-none",
+    xl: "cq-xl:rounded-none",
+  },
+  "cq-md:table": {
+    md: "cq-md:table",
+    lg: "cq-lg:table",
+    xl: "cq-xl:table",
+  },
+  "cq-md:table-cell": {
+    md: "cq-md:table-cell",
+    lg: "cq-lg:table-cell",
+    xl: "cq-xl:table-cell",
+  },
+  "cq-md:table-header-group": {
+    md: "cq-md:table-header-group",
+    lg: "cq-lg:table-header-group",
+    xl: "cq-xl:table-header-group",
+  },
+  "cq-md:table-row": {
+    md: "cq-md:table-row",
+    lg: "cq-lg:table-row",
+    xl: "cq-xl:table-row",
+  },
+  "cq-md:table-row-group": {
+    md: "cq-md:table-row-group",
+    lg: "cq-lg:table-row-group",
+    xl: "cq-xl:table-row-group",
+  },
+  "cq-md:wrap-normal": {
+    md: "cq-md:wrap-normal",
+    lg: "cq-lg:wrap-normal",
+    xl: "cq-xl:wrap-normal",
+  },
+} as const
 
 /**
  * `role` on every part, and it is not belt-and-braces.
@@ -206,11 +305,19 @@ export const DataTable = <Row,>({
   getRowKey,
   isLabelVisible = false,
   label,
+  layout = "auto",
+  reflowAt = "md",
   onSortChange,
   rows,
   selection,
   sort,
 }: DataTableProps<Row>): ReactNode => {
+  const wideClass = (
+    key: keyof typeof WIDE_LAYOUT_CLASS,
+  ) =>
+    layout === "stacked"
+      ? undefined
+      : WIDE_LAYOUT_CLASS[key][reflowAt]
   const tableRef = useRef<HTMLTableElement>(null)
 
   const selectedRowKeys = selection?.selectedRowKeys
@@ -280,7 +387,10 @@ export const DataTable = <Row,>({
     // the table a width, a margin, or a grid placement.
     <div className={toClassName("@container", className)}>
       <table
-        className="block w-full border-collapse text-start text-content-primary text-md cq-md:table"
+        className={toClassName(
+          "block w-full border-collapse text-start text-content-primary text-md",
+          wideClass("cq-md:table"),
+        )}
         ref={tableRef}
         role="table"
       >
@@ -296,20 +406,31 @@ export const DataTable = <Row,>({
         </caption>
 
         <thead
-          className="block cq-md:table-header-group"
+          className={toClassName(
+            "block",
+            wideClass("cq-md:table-header-group"),
+          )}
           role={ROW_GROUP_ROLE}
         >
           {/* Narrow: a wrapping strip of sort controls, so sorting
               survives the layout that has no header row. Wide: the
               header row. */}
           <tr
-            className="flex flex-wrap items-center gap-x-1 border-border-subtle border-b cq-md:table-row cq-md:border-b-0"
+            className={toClassName(
+              "flex flex-wrap items-center gap-x-1 border-border-subtle border-b",
+              wideClass("cq-md:table-row"),
+              wideClass("cq-md:border-b-0"),
+            )}
             role="row"
           >
             {selection ? (
               <th
                 className={toClassName(
-                  "border-border-subtle p-2 text-start cq-md:table-cell cq-md:border-b",
+                  toClassName(
+                    "border-border-subtle p-2 text-start",
+                    wideClass("cq-md:table-cell"),
+                    wideClass("cq-md:border-b"),
+                  ),
                 )}
                 role="columnheader"
                 scope="col"
@@ -338,7 +459,10 @@ export const DataTable = <Row,>({
                   // one underline per chip reads as five separate
                   // rules rather than one header edge.
                   className={toClassName(
-                    "border-b-0 cq-md:border-b",
+                    toClassName(
+                      "border-b-0",
+                      wideClass("cq-md:border-b"),
+                    ),
                     column.className,
                   )}
                   direction={
@@ -359,7 +483,11 @@ export const DataTable = <Row,>({
               ) : (
                 <th
                   className={toClassName(
-                    "border-border-subtle text-start font-medium text-content-secondary text-sm uppercase tracking-wide cq-md:table-cell cq-md:border-b",
+                    toClassName(
+                      "border-border-subtle text-start font-medium text-content-secondary text-sm uppercase tracking-wide",
+                      wideClass("cq-md:table-cell"),
+                      wideClass("cq-md:border-b"),
+                    ),
                     CELL_PADDING_CLASS,
                     column.className,
                   )}
@@ -375,16 +503,27 @@ export const DataTable = <Row,>({
         </thead>
 
         <tbody
-          className="flex flex-col gap-2 pt-2 cq-md:table-row-group cq-md:gap-0 cq-md:pt-0"
+          className={toClassName(
+            "flex flex-col gap-2 pt-2",
+            wideClass("cq-md:table-row-group"),
+            wideClass("cq-md:gap-0"),
+            wideClass("cq-md:pt-0"),
+          )}
           role={ROW_GROUP_ROLE}
         >
           {rows.length === 0 ? (
             <tr
-              className="block cq-md:table-row"
+              className={toClassName(
+                "block",
+                wideClass("cq-md:table-row"),
+              )}
               role="row"
             >
               <td
-                className="block p-0 cq-md:table-cell"
+                className={toClassName(
+                  "block p-0",
+                  wideClass("cq-md:table-cell"),
+                )}
                 colSpan={columnCount}
                 role="cell"
               >
@@ -405,10 +544,23 @@ export const DataTable = <Row,>({
                     // than in a stylesheet so a reader can see the
                     // whole of a row's shape in one place.
                     "flex flex-col gap-1 rounded-lg border border-border-subtle p-3 transition-colors duration-(--duration-fast) ease-standard",
-                    "cq-md:table-row cq-md:gap-0 cq-md:rounded-none cq-md:border-0 cq-md:border-border-subtle cq-md:border-b cq-md:p-0",
+                    toClassName(
+                      wideClass("cq-md:table-row"),
+                      wideClass("cq-md:gap-0"),
+                      wideClass("cq-md:rounded-none"),
+                      wideClass("cq-md:border-0"),
+                      wideClass(
+                        "cq-md:border-border-subtle",
+                      ),
+                      wideClass("cq-md:border-b"),
+                      wideClass("cq-md:p-0"),
+                    ),
                     isSelected
                       ? "bg-intent-accent-surface"
-                      : "bg-surface-raised hover:bg-intent-neutral-surface cq-md:bg-transparent",
+                      : toClassName(
+                          "bg-surface-raised hover:bg-intent-neutral-surface",
+                          wideClass("cq-md:bg-transparent"),
+                        ),
                   )}
                   // Not `aria-selected`: that property belongs to
                   // `grid`/`treegrid` rows, and this is a `table`.
@@ -421,7 +573,11 @@ export const DataTable = <Row,>({
                 >
                   {selection ? (
                     <td
-                      className="block p-2 cq-md:table-cell cq-md:align-middle"
+                      className={toClassName(
+                        "block p-2",
+                        wideClass("cq-md:table-cell"),
+                        wideClass("cq-md:align-middle"),
+                      )}
                       role="cell"
                     >
                       <Checkbox
@@ -451,9 +607,15 @@ export const DataTable = <Row,>({
                   {columns.map((column) => (
                     <td
                       className={toClassName(
-                        "flex items-baseline gap-3 py-0.5 cq-md:table-cell cq-md:align-middle",
+                        toClassName(
+                          "flex items-baseline gap-3 py-0.5",
+                          wideClass("cq-md:table-cell"),
+                          wideClass("cq-md:align-middle"),
+                        ),
                         CELL_PADDING_CLASS,
-                        "cq-md:py-2",
+                        toClassName(
+                          wideClass("cq-md:py-2"),
+                        ),
                         column.className,
                       )}
                       key={column.key}
@@ -467,7 +629,10 @@ export const DataTable = <Row,>({
                           out twice per cell. */}
                       <span
                         aria-hidden="true"
-                        className="w-20 shrink-0 wrap-anywhere cq-xs:w-28 text-content-secondary text-xs uppercase tracking-wide cq-md:hidden"
+                        className={toClassName(
+                          "w-20 shrink-0 wrap-anywhere cq-xs:w-28 text-content-secondary text-xs uppercase tracking-wide",
+                          wideClass("cq-md:hidden"),
+                        )}
                       >
                         {column.header}
                       </span>
@@ -481,7 +646,12 @@ export const DataTable = <Row,>({
                           break-anywhere text asks for almost nothing
                           and gets it — a title column one word wide
                           with "extract or fan filter" underneath. */}
-                      <span className="min-w-0 flex-1 wrap-anywhere cq-md:wrap-normal">
+                      <span
+                        className={toClassName(
+                          "min-w-0 flex-1 wrap-anywhere",
+                          wideClass("cq-md:wrap-normal"),
+                        )}
+                      >
                         {column.renderCell(row)}
                       </span>
                     </td>

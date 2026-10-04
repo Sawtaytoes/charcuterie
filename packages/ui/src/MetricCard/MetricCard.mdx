@@ -1,0 +1,26 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+import * as MetricCardStories from "./MetricCard.stories";
+
+<Meta of={MetricCardStories} />
+
+# MetricCard
+
+A prominent measure with a stable category colour on its optional app-supplied icon and leading edge. The heading remains text, so colour is additional information. Apps format the value and supply supporting content. A zero and an unavailable reading remain different values.
+
+<Canvas of={MetricCardStories.Playground} />
+
+## Props
+
+<Controls />
+
+## Categories and available space
+
+<Canvas of={MetricCardStories.AllVariants} />
+<Canvas of={MetricCardStories.AllStates} />
+<Canvas of={MetricCardStories.Responsive} />
+
+## Actions
+
+Place actions in the inherited Card footer. Decorative icons are hidden from assistive technology; use the visible heading to identify the metric.
+
+<Canvas of={MetricCardStories.Interactive} />
