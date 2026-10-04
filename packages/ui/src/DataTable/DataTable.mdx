@@ -45,7 +45,12 @@ cells. This is a **table**: rows of data with the odd control in them.
 Below `--cq-md` (32rem) each row becomes a labelled block — the column name beside its
 value — and the header row wraps into a strip of sort controls that stays reachable.
 Long column labels wrap within their label space instead of hiding their endings. Above
-it, an ordinary table.
+it, an ordinary table. Dense comparisons can set `reflowAt="lg"` (48rem) or
+`reflowAt="xl"` (64rem). `layout="stacked"` keeps the labelled list at every width,
+with all columns and sorting still available. The default remains `md` (32rem).
+
+<Canvas of={DataTableStories.DenseComparison} />
+<Canvas of={DataTableStories.StackedList} />
 
 The two alternatives, and why neither:
 
@@ -85,7 +90,9 @@ owns one checkbox's checkedness, and nothing at all owns "these five rows".
 
 **Column widths.** No drag handle and no measured layout. The browser's own auto table
 layout sizes columns to their content, and `column.className` overrides it — `w-32` on a
-column lands on that column's `<th>` and every one of its `<td>`s. Drag-to-resize is a
+column lands on that column's `<th>` and every one of its `<td>`s.
+In a stacked list those comparison widths are reset, so the label and value have the
+whole record width even when a wider column utility is active. Drag-to-resize is a
 *persistence* question (whose widths, stored where, keyed on what) that a component cannot
 answer for its consumer.
 
