@@ -17,6 +17,8 @@ const {
   Interactive,
   Responsive,
   LongColumnLabels,
+  DenseComparison,
+  StackedList,
 } = composeStories(stories)
 
 /**
@@ -424,4 +426,84 @@ test("stacked cells show complete long column names within a narrow container", 
     ),
   )
   await expectNoAxeViolations(canvasElement)
+})
+
+test("dense comparisons reflow by container width while retaining every column", async () => {
+  await setViewport(DESKTOP)
+  const { canvas, canvasElement } =
+    await mountStory(DenseComparison)
+  const narrow = expectAgentDrivable(canvas, {
+    role: "table",
+    name: "Dense comparison at 60rem",
+  })
+  const wide = expectAgentDrivable(canvas, {
+    role: "table",
+    name: "Dense comparison at 75rem",
+  })
+  await expect(
+    getComputedStyle(
+      narrow.querySelector("tbody td") as HTMLElement,
+    ).display,
+  ).toBe("flex")
+  await expect(
+    getComputedStyle(
+      wide.querySelector("tbody td") as HTMLElement,
+    ).display,
+  ).toBe("table-cell")
+  for (const header of wide.querySelectorAll<HTMLElement>(
+    "thead th button",
+  )) {
+    await expect(
+      getComputedStyle(header).overflowWrap,
+    ).toBe("normal")
+  }
+  for (const cell of narrow.querySelectorAll<HTMLElement>(
+    "tbody td",
+  )) {
+    await expect(
+      cell.getBoundingClientRect().width,
+    ).toBeGreaterThan(800)
+  }
+  const priority = narrow.querySelector(
+    "tbody tr td:nth-child(3) > span:last-child",
+  ) as HTMLElement
+  await expect(
+    priority.getBoundingClientRect().height,
+  ).toBeLessThan(
+    Number.parseFloat(
+      getComputedStyle(priority).lineHeight,
+    ) * 1.1,
+  )
+  for (const table of [narrow, wide]) {
+    await expect(
+      table.querySelectorAll("tbody tr:first-child td"),
+    ).toHaveLength(8)
+    await expect(table.scrollWidth).toBeLessThanOrEqual(
+      (table.parentElement as HTMLElement).clientWidth + 1,
+    )
+  }
+  await expectNoAxeViolations(canvasElement)
+})
+test("the explicit list layout stays stacked in a wide container", async () => {
+  await setViewport(DESKTOP)
+  const { canvas } = await mountStory(StackedList)
+  const table = expectAgentDrivable(canvas, {
+    role: "table",
+    name: "Tasks as a list",
+  })
+  await expect(
+    getComputedStyle(
+      table.querySelector("tbody td") as HTMLElement,
+    ).display,
+  ).toBe("flex")
+  await expect(
+    table.querySelector("tbody td > span[aria-hidden]"),
+  ).toBeVisible()
+  for (const cell of table.querySelectorAll<HTMLElement>(
+    "tbody td",
+  )) {
+    await expect(
+      cell.getBoundingClientRect().width,
+    ).toBeGreaterThan(900)
+  }
 })

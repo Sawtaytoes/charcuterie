@@ -158,6 +158,7 @@ export {
 export type {
   DataTableColumn,
   DataTableProps,
+  DataTableReflowAt,
   DataTableSelection,
   DataTableSort,
 } from "./DataTable/DataTable.tsx"
@@ -316,6 +317,8 @@ export type {
   MenuProps,
 } from "./Menu/Menu.tsx"
 export { Menu } from "./Menu/Menu.tsx"
+export type { MetricCardProps } from "./MetricCard/MetricCard.tsx"
+export { MetricCard } from "./MetricCard/MetricCard.tsx"
 export type { ModalProps } from "./Modal/Modal.tsx"
 export { Modal } from "./Modal/Modal.tsx"
 export type {
