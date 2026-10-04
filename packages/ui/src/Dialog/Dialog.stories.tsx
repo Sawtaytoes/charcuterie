@@ -454,7 +454,7 @@ const PickerDraftDemo = () => {
   )
   const [value, setValue] = useState("")
   return (
-    <>
+    <div className="min-h-screen">
       <Button onClick={() => setIsVisible(true)}>
         Open draft
       </Button>
@@ -481,7 +481,7 @@ const PickerDraftDemo = () => {
           onChange={setValue}
         />
       </Dialog>
-    </>
+    </div>
   )
 }
 
