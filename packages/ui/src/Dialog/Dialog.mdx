@@ -54,6 +54,15 @@ differential — the dialog that ignores Escape is then closed by its own button
 
 <Canvas of={DialogStories.AllStates} />
 
+## Pickers inside a draft
+
+An open picker, menu, or popover owns the first Escape or outside press inside a
+modal. Dismissing that child keeps the enclosing dialog and its unsaved fields open.
+After the child closes, Escape dismisses the dialog normally. Selecting a picker
+option also keeps the draft open and returns focus to its trigger.
+
+<Canvas of={DialogStories.PickerDraft} />
+
 ## Stacking, and the one shared scrim
 
 A lone dialog needs no setup. Stack one over another and an `OverlayStackProvider` at the
