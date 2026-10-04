@@ -1,5 +1,11 @@
 # @charcuterie/ui
 
+## 4.18.3
+
+### Patch Changes
+
+- dae3021: Show complete column labels in stacked table rows by giving labels more room and wrapping long names instead of truncating them.
+
 ## 4.18.2
 
 ### Patch Changes
