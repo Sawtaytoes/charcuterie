@@ -782,6 +782,28 @@ const ENTRY_POINT_RUNTIMES: Record<
       // silently, which is how it shipped broken in three repos.
       "tailwind-merge",
     ],
+    // Retained HTML has its own format family and optional rich editor
+    // peers. The main entry never reaches this parser or editor core.
+    "./html-view": [
+      "@charcuterie/tokens",
+      "parse5",
+      "react",
+      "tailwind-merge",
+    ],
+    "./html-editor": [
+      "@charcuterie/logic",
+      "@charcuterie/logic/browser",
+      "@charcuterie/tokens",
+      "@floating-ui/react",
+      "@tiptap/extension-image",
+      "@tiptap/extension-text-align",
+      "@tiptap/extension-text-style",
+      "@tiptap/react",
+      "@tiptap/starter-kit",
+      "parse5",
+      "react",
+      "tailwind-merge",
+    ],
     // The opt-in live-preview editor. Every `@codemirror/*` and
     // `@lezer/*` package appears **only** here, as an optional peer,
     // which is the entire reason it is a subpath: measured at ~176 KB

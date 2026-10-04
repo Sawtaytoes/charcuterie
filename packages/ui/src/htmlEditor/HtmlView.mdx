@@ -1,0 +1,37 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+import * as HtmlViewStories from "./HtmlView.stories";
+
+<Meta of={HtmlViewStories} />
+
+# HtmlView
+
+Read saved HTML notes with the same safe document policy and document styling as `HtmlEditor`.
+It renders React nodes, with no `innerHTML` and no editor instance. `value` is controlled because
+a reader has no caret or undo history to preserve. `label` names the document. Its `@charcuterie/ui/html-view` entry requires only the optional
+`parse5` peer and loads no editor core.
+
+<Canvas of={HtmlViewStories.Playground} />
+
+```tsx
+import { HtmlView } from "@charcuterie/ui/html-view"
+
+<HtmlView label="Project notes" value={record.notes} />
+```
+
+The parser decodes HTML entities before checking URL schemes. Only known document tags,
+safe links/images, accessible image text, list start numbers and safe colour/alignment styles
+reach the page. Scripts, embeds, event handlers, arbitrary classes/IDs, foreign namespaces and
+resource-loading CSS cannot reach the DOM. Unknown wrappers retain ordinary readable children;
+executable/foreign content is discarded. Safe links use the shared `TextLink` shape.
+
+Reading a note never writes its filtered projection back to storage. Plain HTML source remains
+available to its owner independently of this component; no conversion to markdown occurs.
+
+<Canvas of={HtmlViewStories.AllVariants} />
+<Canvas of={HtmlViewStories.AllStates} />
+<Canvas of={HtmlViewStories.Responsive} />
+<Canvas of={HtmlViewStories.Interactive} />
+
+## Props
+
+<Controls />

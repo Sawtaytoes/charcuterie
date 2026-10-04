@@ -8,6 +8,7 @@ decision overrides an instinct.
 
 | Date | Decision | Summary |
 | --- | --- | --- |
+| 2026-10-04 | [HTML notes preserve untouched source](2026-10-04-html-notes-use-distinct-opt-in-surfaces-and-preserve-untouched-source.md) | Distinct optional HtmlView/HtmlEditor share safe document policy; original HTML survives until a real edit. |
 | 2026-10-04 | [Metric colour and dense table reflow are shared](2026-10-04-metric-colour-and-dense-table-reflow-are-shared.md) | MetricCard uses categorical icon/edge colour; dense DataTable comparisons can opt into wider CSS container thresholds or a stacked list. |
 | 2026-10-02 | [TanStack is the primary chart engine](2026-10-02-tanstack-is-the-primary-chart-engine.md) | The chart facade uses pinned TanStack with portable SVG as an explicit fallback and isolated native Preact/static subpaths. |
 | 2026-10-02 | [Layout visibility is separate from focus priority](2026-10-02-layout-visibility-is-separate-from-focus-priority.md) | Optional sections have their own retention order and explicit hidden candidates; required content fits before focus grows. |
