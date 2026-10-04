@@ -1,5 +1,11 @@
 # @charcuterie/ui
 
+## 4.20.0
+
+### Minor Changes
+
+- 7290b37: Add opt-in HtmlView and HtmlEditor for retained HTML notes, with shared document sanitization, rich authoring, accessible formatting controls and exact preservation of untouched source.
+
 ## 4.19.0
 
 ### Minor Changes
