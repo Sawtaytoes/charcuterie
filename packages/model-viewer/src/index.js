@@ -9,6 +9,11 @@ export {
   readHeader,
 } from "./gcode.js"
 export { load3MF, parse3MF } from "./threemf.js"
+export {
+  createToolpathObject,
+  parseToolpaths,
+  TOOLPATH_STRIDE,
+} from "./toolpaths.js"
 export { THREE }
 export const VERSION = metadata.version
 
