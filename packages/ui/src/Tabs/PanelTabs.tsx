@@ -6,12 +6,12 @@ import {
 } from "@charcuterie/logic"
 import type { ReactNode } from "react"
 import { useCallback, useEffect, useRef } from "react"
-
 import { toClassName } from "../toClassName.ts"
 import type { TabsPanelProps } from "./Tabs.tsx"
 import { TabTrigger } from "./TabTrigger.tsx"
 import type { TabsOrientation } from "./tabItems.ts"
 import { toTabListClass } from "./tabStyles.ts"
+import { useRevealCurrentTab } from "./useRevealCurrentTab.ts"
 
 const ORIENTATION_KEYS: Record<
   TabsOrientation,
@@ -128,6 +128,10 @@ export const PanelTabs = ({
    */
   const shownKey =
     selection.selectedValue ?? selection.pendingValue
+  const revealRef = useRevealCurrentTab(
+    shownKey,
+    orientation,
+  )
 
   const selectTab = useCallback(
     (key: string) => {
@@ -214,7 +218,10 @@ export const PanelTabs = ({
             select(activeValue)
           }
         }}
-        ref={tablistRef}
+        ref={(element) => {
+          tablistRef.current = element
+          revealRef.current = element
+        }}
         role="tablist"
       >
         {tabs.map((tab, index) => (
