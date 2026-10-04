@@ -76,17 +76,19 @@ jobs:
           changedFiles="$(git diff --name-only "${mergeBase}" HEAD)"
           printf 'Changed files:\n%s\n\n' "${changedFiles}"
 
+          # Consume the full input: grep -q exits early and gives printf SIGPIPE
+          # under pipefail on large diffs, making a code diff look docs-only.
           isDocsOnly=true
 
           if [ -z "${changedFiles}" ]
           then
             isDocsOnly=false
-          elif printf '%s\n' "${changedFiles}" | grep -q '^\.changeset/'
+          elif printf '%s\n' "${changedFiles}" | grep '^\.changeset/' >/dev/null
           then
             # A changeset file is markdown, but it is a RELEASE input rather
             # than documentation. Treat it as code.
             isDocsOnly=false
-          elif printf '%s\n' "${changedFiles}" | grep -qvE '^(.+\.md|LICENSE)$'
+          elif printf '%s\n' "${changedFiles}" | grep -vE '^(.+\.md|LICENSE)$' >/dev/null
           then
             # `.mdx` deliberately does NOT match `.md$` — it is Storybook
             # source in several repos here, and it compiles.
