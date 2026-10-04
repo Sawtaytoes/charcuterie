@@ -8,6 +8,7 @@ import { toClassName } from "../toClassName.ts"
 import { TabLink } from "./TabLink.tsx"
 import type { TabsLinkProps } from "./Tabs.tsx"
 import { toTabListClass } from "./tabStyles.ts"
+import { useRevealCurrentTab } from "./useRevealCurrentTab.ts"
 
 /**
  * The routed bar: a named `<nav>` of real links wearing the tab
@@ -32,9 +33,14 @@ export const RoutedTabs = ({
   tabs,
 }: TabsLinkProps): ReactNode => {
   const activeKey = resolveActiveKey(tabs, activeHref)
+  const containerRef = useRevealCurrentTab(
+    activeKey,
+    orientation,
+  )
 
   return (
     <nav
+      ref={containerRef}
       aria-label={label}
       className={toClassName(
         toTabListClass(orientation),
