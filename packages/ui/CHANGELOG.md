@@ -1,5 +1,13 @@
 # @charcuterie/ui
 
+## 4.18.2
+
+### Patch Changes
+
+- bc971d7: Dismiss the top anchored picker, menu, or popover before its enclosing modal.
+  Escape and outside presses keep the dialog and its unsaved draft open until the
+  anchored child closes. Selecting an option still leaves the dialog open.
+
 ## 4.18.1
 
 ### Patch Changes
