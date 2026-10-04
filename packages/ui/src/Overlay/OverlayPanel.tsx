@@ -13,6 +13,10 @@ import {
 import type { ReactNode, RefObject } from "react"
 import { useCallback, useEffect } from "react"
 
+import {
+  AnchoredOverlayScopeContext,
+  useAnchoredOverlayScope,
+} from "./AnchoredOverlayScope.ts"
 import { lockScrollBehind } from "./lockScrollBehind.ts"
 import { useOverlayStack } from "./OverlayStack.tsx"
 import { SharedBackdrop } from "./SharedBackdrop.tsx"
@@ -100,6 +104,8 @@ export const OverlayPanel = ({
   }, [onCloseRef])
 
   const isTop = !stack.isProvided || stack.topId === id
+  const anchors = useAnchoredOverlayScope()
+  const hasOpenAnchor = anchors.topId !== null
 
   const { context, refs } = useFloating({
     open: isVisible,
@@ -112,13 +118,14 @@ export const OverlayPanel = ({
 
   const { getFloatingProps } = useInteractions([
     useDismiss(context, {
-      escapeKey: isDismissable && isTop,
+      escapeKey: isDismissable && isTop && !hasOpenAnchor,
       // The top's outside press is the backdrop click. A per-panel
       // `outsidePress` on a *lower* modal would close it too, so it is
       // scoped to the top — which is also why the scrim needs no click
       // handler of its own.
       outsidePress: (event) => {
-        if (!isDismissable || !isTop) return false
+        if (!isDismissable || !isTop || hasOpenAnchor)
+          return false
         /*
          * ⚠️ A press on a toast is NOT an outside press.
          *
@@ -262,7 +269,11 @@ export const OverlayPanel = ({
               ref={refs.setFloating}
               role={role}
             >
-              {children}
+              <AnchoredOverlayScopeContext.Provider
+                value={anchors}
+              >
+                {children}
+              </AnchoredOverlayScopeContext.Provider>
             </div>
           </FloatingFocusManager>
         </div>
