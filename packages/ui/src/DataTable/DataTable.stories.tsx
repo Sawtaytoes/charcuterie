@@ -454,7 +454,10 @@ export const DenseComparison: Story = {
           label={width}
           key={width}
         >
-          <div style={{ maxInlineSize: width }}>
+          <div
+            className="wrap-anywhere"
+            style={{ maxInlineSize: width }}
+          >
             <DataTable<Task>
               label={`Dense comparison at ${width}`}
               reflowAt="xl"

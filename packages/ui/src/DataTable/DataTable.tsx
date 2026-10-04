@@ -491,7 +491,7 @@ export const DataTable = <Row,>({
                 <th
                   className={toClassName(
                     toClassName(
-                      "border-border-subtle text-start font-medium text-content-secondary text-sm uppercase tracking-wide",
+                      "border-border-subtle text-start wrap-normal font-medium text-content-secondary text-sm uppercase tracking-wide",
                       wideClass("cq-md:table-cell"),
                       wideClass("cq-md:border-b"),
                     ),

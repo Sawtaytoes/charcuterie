@@ -450,6 +450,13 @@ test("dense comparisons reflow by container width while retaining every column",
       wide.querySelector("tbody td") as HTMLElement,
     ).display,
   ).toBe("table-cell")
+  for (const header of wide.querySelectorAll<HTMLElement>(
+    "thead th button",
+  )) {
+    await expect(
+      getComputedStyle(header).overflowWrap,
+    ).toBe("normal")
+  }
   for (const cell of narrow.querySelectorAll<HTMLElement>(
     "tbody td",
   )) {
