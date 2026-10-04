@@ -1,5 +1,11 @@
 # @charcuterie/model-viewer
 
+## 0.5.0
+
+### Minor Changes
+
+- d08f3ed: Add bounded commanded G-code path parsing and Three.js center-line rendering, with layer, tool, object, feature and source-line identities. Unsupported movement interpretation and exhausted limits hold the preview instead of returning partial geometry.
+
 ## 0.4.0
 
 ### Minor Changes
