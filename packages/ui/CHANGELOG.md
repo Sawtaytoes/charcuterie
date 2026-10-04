@@ -1,5 +1,13 @@
 # @charcuterie/ui
 
+## 4.19.0
+
+### Minor Changes
+
+- 3870074: Allow dense DataTable comparisons to reflow at wider container breakpoints and offer an explicit stacked list layout without dropping columns or sorting.
+
+  Add MetricCard for a prominent formatted measure with an optional categorical icon and accent edge, shared Card actions and responsive supporting content.
+
 ## 4.18.3
 
 ### Patch Changes
