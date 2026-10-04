@@ -411,3 +411,33 @@ export const Interactive: Story = {
     />
   ),
 }
+
+/** Long labels must remain complete in a narrow container, even on a wide screen. */
+export const LongColumnLabels: Story = {
+  render: () => (
+    <div className="max-w-xs">
+      <DataTable<Task>
+        label="Tasks with complete column labels"
+        rows={TASKS.slice(0, 2)}
+        getRowKey={(task) => task.id}
+        columns={[
+          {
+            key: "title",
+            header: "Requested task description",
+            renderCell: (task) => task.title,
+          },
+          {
+            key: "assignee",
+            header: "Responsible maintainer",
+            renderCell: (task) => task.assignee,
+          },
+          {
+            key: "updatedAt",
+            header: "Most recent update date",
+            renderCell: (task) => task.updatedAt,
+          },
+        ]}
+      />
+    </div>
+  ),
+}

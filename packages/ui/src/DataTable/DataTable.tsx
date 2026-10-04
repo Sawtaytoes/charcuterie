@@ -467,7 +467,7 @@ export const DataTable = <Row,>({
                           out twice per cell. */}
                       <span
                         aria-hidden="true"
-                        className="w-20 shrink-0 truncate text-content-secondary text-xs uppercase tracking-wide cq-sm:w-24 cq-md:hidden"
+                        className="w-20 shrink-0 wrap-anywhere cq-xs:w-28 text-content-secondary text-xs uppercase tracking-wide cq-md:hidden"
                       >
                         {column.header}
                       </span>
