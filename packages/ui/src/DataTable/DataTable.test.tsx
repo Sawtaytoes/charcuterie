@@ -11,8 +11,13 @@ import {
 } from "../viewport.testHelpers.ts"
 import * as stories from "./DataTable.stories.tsx"
 
-const { AllVariants, Playground, Interactive, Responsive } =
-  composeStories(stories)
+const {
+  AllVariants,
+  Playground,
+  Interactive,
+  Responsive,
+  LongColumnLabels,
+} = composeStories(stories)
 
 /**
  * The `<caption>` is the table's accessible name. Without one a
@@ -383,4 +388,40 @@ test("an empty table keeps its headers", async () => {
       .closest("table")
       ?.querySelectorAll("thead th"),
   ).toHaveLength(5)
+})
+
+test("stacked cells show complete long column names within a narrow container", async () => {
+  const { canvas, canvasElement } = await mountStory(
+    LongColumnLabels,
+  )
+  expectAgentDrivable(canvas, {
+    role: "table",
+    name: "Tasks with complete column labels",
+  })
+  const labels = Array.from(
+    canvasElement.querySelectorAll<HTMLElement>(
+      'tbody td > span[aria-hidden="true"]',
+    ),
+  )
+  await expect(labels).toHaveLength(6)
+  for (const label of labels) {
+    await expect(label).toBeVisible()
+    await expect(label.scrollWidth).toBeLessThanOrEqual(
+      label.clientWidth + 1,
+    )
+    await expect(label.scrollHeight).toBeLessThanOrEqual(
+      label.clientHeight + 1,
+    )
+    await expect(
+      getComputedStyle(label).textOverflow,
+    ).not.toBe("ellipsis")
+  }
+  await expect(
+    labels[0].getBoundingClientRect().height,
+  ).toBeGreaterThan(
+    Number.parseFloat(
+      getComputedStyle(labels[0]).lineHeight,
+    ),
+  )
+  await expectNoAxeViolations(canvasElement)
 })
