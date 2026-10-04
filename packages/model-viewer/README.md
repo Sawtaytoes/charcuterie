@@ -193,3 +193,38 @@ extract it under `/opt`, then link `/usr/local/bin/model-viewer` to
 `/opt/model-viewer/src/cli.js`. Container builds must pin and verify the archive SHA-256.
 The npm-compatible package/API can also be consumed from a Yarn-packed tarball. npm first
 publication and trusted-publisher setup are independent of using this release.
+
+## Commanded toolpaths
+
+`parseToolpaths(text, options)` reconstructs bounded commanded FDM center lines.
+`createToolpathObject(paths, options)` turns a selected layer range into disposable
+Three.js line segments, grouped by tool, with optional travel lines. Geometry uses
+millimeters and Z-up coordinates; rotate the returned group as for STL. Callers own
+colour choices, controls, camera fitting and `disposeObject(group)` on replacement.
+
+The packed `Float32Array` uses `TOOLPATH_STRIDE = 12`:
+`[x0,y0,z0,x1,y1,z1,layer,tool,object,extrusion,line,feature]`.
+Layer, tool, object, feature and original line identities survive filtering. Unknown
+tool/object IDs are `-1`. Bounds include extrusion only. Travel visibility does not
+change parsing or bounds. Without layer comments, paths use layer zero.
+
+Supported interpretation includes G0/G1, XY G2/G3 arcs (I/J or signed R, including
+full circles, helical Z and explicit single-turn P1), explicit M82/M83 extrusion modes, G90/G91 XYZ modes,
+G20/G21 units, and G92 resets. Homing invalidates position until a subsequent move
+establishes all three axes. Arc chords use a declared maximum XY sagitta, default
+0.02 mm. Line/layer/object comments from common slicers and M486 object IDs are
+preserved. Firmware-specific non-motion commands are ignored.
+
+This is a view of commanded paths, not firmware simulation, physical qualification,
+collision approval, deposited-width geometry, print duration, or filament estimates.
+The XYZ and extrusion modes are interpreted independently; provider adapters must
+hold unsupported firmware dialects. Machine/work coordinate switching, other arc
+planes, spline/probe movements, additional movement axes, ambiguous compound
+commands, malformed coordinates, unpositioned extrusion, and exhausted limits
+throw instead of returning misleading partial geometry. An extrusion-only startup move
+can precede M82/M83 because it contributes no XYZ geometry; an unknown absolute
+extrusion baseline still holds until reset. Conditional firmware branches are not
+executed or selected: the preview includes their literal commanded paths. Default limits are 64 MiB
+of text, two million lines, one million rendered segments, and 4,096 chords per arc.
+Callers should parse large files in a worker and display any hold as a hold, never
+as a successful empty preview. `src/index.d.ts` declares options and return types.
