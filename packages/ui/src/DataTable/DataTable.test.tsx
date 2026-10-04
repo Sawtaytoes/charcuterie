@@ -450,6 +450,23 @@ test("dense comparisons reflow by container width while retaining every column",
       wide.querySelector("tbody td") as HTMLElement,
     ).display,
   ).toBe("table-cell")
+  for (const cell of narrow.querySelectorAll<HTMLElement>(
+    "tbody td",
+  )) {
+    await expect(
+      cell.getBoundingClientRect().width,
+    ).toBeGreaterThan(800)
+  }
+  const priority = narrow.querySelector(
+    "tbody tr td:nth-child(3) > span:last-child",
+  ) as HTMLElement
+  await expect(
+    priority.getBoundingClientRect().height,
+  ).toBeLessThan(
+    Number.parseFloat(
+      getComputedStyle(priority).lineHeight,
+    ) * 1.1,
+  )
   for (const table of [narrow, wide]) {
     await expect(
       table.querySelectorAll("tbody tr:first-child td"),
@@ -475,4 +492,11 @@ test("the explicit list layout stays stacked in a wide container", async () => {
   await expect(
     table.querySelector("tbody td > span[aria-hidden]"),
   ).toBeVisible()
+  for (const cell of table.querySelectorAll<HTMLElement>(
+    "tbody td",
+  )) {
+    await expect(
+      cell.getBoundingClientRect().width,
+    ).toBeGreaterThan(900)
+  }
 })

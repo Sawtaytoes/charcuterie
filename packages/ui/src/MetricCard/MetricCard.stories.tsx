@@ -19,7 +19,7 @@ const meta = {
   args: {
     heading: "Energy",
     value: "0.35 kWh",
-    categorical: 10,
+    categorical: 3,
     icon: <SettingsIcon />,
     children: <p>Measured during the selected period</p>,
   },

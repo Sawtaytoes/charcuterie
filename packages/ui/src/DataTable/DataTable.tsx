@@ -385,7 +385,14 @@ export const DataTable = <Row,>({
     // below it. `className` stays on this element — the outermost
     // box the component renders — which is what lets a caller give
     // the table a width, a margin, or a grid placement.
-    <div className={toClassName("@container", className)}>
+    <div
+      className={toClassName(
+        "@container charcuterie-data-table",
+        className,
+      )}
+      data-layout={layout}
+      data-reflow-at={reflowAt}
+    >
       <table
         className={toClassName(
           "block w-full border-collapse text-start text-content-primary text-md",
