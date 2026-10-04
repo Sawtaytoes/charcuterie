@@ -153,3 +153,43 @@ export function readHeader(text: string): {
   densities: number[]
   minutes: number | null
 }
+
+/** [x0,y0,z0,x1,y1,z1,layer,tool,object,extrusion,line,feature]. Coordinates are millimeters, Z-up. */
+export const TOOLPATH_STRIDE: 12
+export interface Toolpaths {
+  records: Float32Array
+  segmentCount: number
+  extrusionCount: number
+  travelCount: number
+  layers: number[]
+  features: string[]
+  bounds: {
+    min: [number, number, number]
+    max: [number, number, number]
+  }
+  arcTolerance: number
+}
+export interface ToolpathParseOptions {
+  /** Default 1,000,000. Exceeding the limit is an error, never a partial preview. */
+  maxSegments?: number
+  /** Maximum XY chord sagitta in millimeters for G2/G3; default 0.02. */
+  arcTolerance?: number
+}
+/** Bounded commanded FDM paths, not firmware simulation, collision approval, or usage estimates. */
+export function parseToolpaths(
+  text: string,
+  options?: ToolpathParseOptions,
+): Toolpaths
+export interface ToolpathObjectOptions {
+  fromLayer?: number
+  toLayer?: number
+  isTravelVisible?: boolean
+  colour?: THREE.ColorRepresentation
+  travelColour?: THREE.ColorRepresentation
+  colourForTool?(tool: number): THREE.ColorRepresentation
+}
+/** Draw selected center lines in source Z-up coordinates. The caller owns and disposes the group. */
+export function createToolpathObject(
+  paths: Toolpaths,
+  options?: ToolpathObjectOptions,
+): THREE.Group
