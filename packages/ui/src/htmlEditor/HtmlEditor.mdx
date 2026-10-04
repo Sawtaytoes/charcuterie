@@ -1,0 +1,61 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+import * as HtmlEditorStories from "./HtmlEditor.stories";
+
+<Meta of={HtmlEditorStories} />
+
+# HtmlEditor
+
+Rich authoring for records stored as **HTML**. It lives in the opt-in
+`@charcuterie/ui/html-editor` subpath. Markdown remains a separate format.
+
+<Canvas of={HtmlEditorStories.Playground} />
+
+## Preserve untouched records
+
+`defaultValue` initializes the document once. Focus, selection, blur and toolbar navigation
+never call `onChange`. An optional `name` renders a hidden form control whose original HTML
+bytes stay intact until a real edit. Changes emit sanitized HTML. A changed external default
+does not replace the document or its undo history; use a React `key` to switch records.
+
+```tsx
+import { Field } from "@charcuterie/ui"
+import { HtmlEditor } from "@charcuterie/ui/html-editor"
+
+<Field label="Project notes">
+  <HtmlEditor key={record.id} defaultValue={record.notes} name="notes" />
+</Field>
+```
+
+The editor supports bold, italic, underline, lists, alignment, links, text colours, images and
+undo/redo. Keyboard shortcuts and document history come from Tiptap/ProseMirror; controls,
+overflow, dialogs and field wiring come from Charcuterie. Apps supply optional icons.
+
+<Canvas of={HtmlEditorStories.AllVariants} />
+
+## HTML is untrusted
+
+Initial content and rich clipboard HTML pass through the same HTML5 parser and closed
+document allowlist as `HtmlView`. Scripts, foreign namespaces, event handlers, arbitrary
+attributes and resource-loading CSS are removed. URL attributes use the shared link/image
+scheme guards. Colours and text alignment are the only retained inline CSS properties.
+This is a safe display/edit projection, not an automatic rewrite of the stored source.
+
+On the first real edit, unsupported markup is omitted from the edited HTML. Preserve the
+original field for an untouched save. This format is intended for document notes, not arbitrary
+web pages. Server-side authorization and storage validation remain the app's responsibility.
+
+<Canvas of={HtmlEditorStories.AllStates} />
+
+## Install only when used
+
+The subpath's optional peers are `parse5`, `@tiptap/core`, `@tiptap/react`, `@tiptap/pm`,
+`@tiptap/starter-kit`, `@tiptap/extension-image`, `@tiptap/extension-text-style` and
+`@tiptap/extension-text-align`. Importing the main UI entry loads none of them. A reader-only app uses `@charcuterie/ui/html-view`
+and installs only `parse5`.
+
+<Canvas of={HtmlEditorStories.Responsive} />
+<Canvas of={HtmlEditorStories.Interactive} />
+
+## Props
+
+<Controls />
