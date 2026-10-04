@@ -329,3 +329,5 @@ rename breaks only the rendered page).
    source and fails on this, so the component M4 adds joins the rule automatically.
 
 **`Chart`** provides responsive bar and line plots, negative values, gaps for missing data, and an optional semantic values table. TanStack provides hover/touch tooltips, keyboard navigation, and transitions with reduced-motion support. Set `renderer="portable"` for the lightweight fallback. The `@charcuterie/logic/charts`, `/charts/preact`, and `/charts/react` subpaths expose static and framework-specific surfaces; `/core` remains dependency-free. Apps supply their own series, labels, and semantic colors.
+
+**HTML notes** use optional `@charcuterie/ui/html-view` and `/html-editor` entries: `HtmlView` renders a safe document projection and `HtmlEditor` preserves original HTML until a real edit. The existing markdown editors keep their markdown-only storage contracts.
