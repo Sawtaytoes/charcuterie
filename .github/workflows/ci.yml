@@ -79,6 +79,9 @@ jobs:
       - run: yarn build
       # `yarn test` is bare `vitest` for local watch mode; CI needs run-once.
       - run: yarn vitest run
+      # Prove the same security patch works in the standalone npm-installed tools.
+      - run: npm ci --prefix packages/ci/src/vrt
+      - run: yarn test:security
 
   # **Its own job, and on every PR — not appended to `test`, not path-gated.**
   #
