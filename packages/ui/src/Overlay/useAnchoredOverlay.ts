@@ -18,7 +18,12 @@ import {
   useRole,
 } from "@floating-ui/react"
 import type { ReactElement, RefObject } from "react"
-import { createElement, useLayoutEffect } from "react"
+import {
+  createElement,
+  useContext,
+  useLayoutEffect,
+} from "react"
+import { AnchoredOverlayScopeContext } from "./AnchoredOverlayScope.ts"
 
 /**
  * The floating-ui block every anchored overlay — `Popover`, `Menu`,
@@ -178,6 +183,18 @@ export const useAnchoredOverlay = ({
   role,
   trigger,
 }: UseAnchoredOverlayOptions) => {
+  const scope = useContext(AnchoredOverlayScopeContext)
+  const anchorId = useUniqueId()
+  const register = scope?.register
+  const unregister = scope?.unregister
+  useLayoutEffect(() => {
+    if (!isVisible || !register || !unregister) return
+    register(anchorId)
+    return () => unregister(anchorId)
+  }, [isVisible, anchorId, register, unregister])
+  const isTopAnchor =
+    scope === null || scope.topId === anchorId
+
   const middleware = [
     offset(offsetValue),
     flip(),
@@ -249,8 +266,9 @@ export const useAnchoredOverlay = ({
   const { getFloatingProps, getReferenceProps } =
     useInteractions([
       useDismiss(context, {
-        escapeKey: isEscapeDismissable,
-        outsidePress: isOutsidePressDismissable,
+        escapeKey: isEscapeDismissable && isTopAnchor,
+        outsidePress:
+          isOutsidePressDismissable && isTopAnchor,
       }),
       useRole(context, { role }),
     ])
