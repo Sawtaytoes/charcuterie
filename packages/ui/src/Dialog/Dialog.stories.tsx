@@ -2,12 +2,13 @@ import { useVisibility } from "@charcuterie/logic"
 import { playgroundParameters } from "@charcuterie/storybook-config/story-parameters"
 import type { Meta, StoryObj } from "@storybook/react"
 import type { ReactNode } from "react"
-import { useRef } from "react"
-
+import { useRef, useState } from "react"
 import { toStoryChoice } from "../argTypes.storyHelpers.ts"
 import { Button } from "../Button/Button.tsx"
 import { StoryRow } from "../board.storyHelpers.tsx"
+import { Field } from "../Field/Field.tsx"
 import { OverlayStackProvider } from "../Overlay/OverlayStack.tsx"
+import { Picker } from "../Picker/Picker.tsx"
 import type { DialogSize } from "./Dialog.tsx"
 import { Dialog } from "./Dialog.tsx"
 
@@ -444,4 +445,52 @@ export const Interactive: Story = {
       heading="Stop the rip?"
     />
   ),
+}
+
+const PickerDraftDemo = () => {
+  const [isVisible, setIsVisible] = useState(true)
+  const [draft, setDraft] = useState(
+    "Keep the unsaved draft",
+  )
+  const [value, setValue] = useState("")
+  return (
+    <div className="min-h-screen">
+      <Button onClick={() => setIsVisible(true)}>
+        Open draft
+      </Button>
+      <Dialog
+        heading="Edit a draft"
+        isVisible={isVisible}
+        onClose={() => setIsVisible(false)}
+      >
+        <Field label="Draft name">
+          <input
+            value={draft}
+            onChange={(event) =>
+              setDraft(event.currentTarget.value)
+            }
+          />
+        </Field>
+        <Picker
+          label="Draft parent"
+          value={value}
+          options={[
+            { value: "", label: "No parent" },
+            { value: "other", label: "Another draft" },
+          ]}
+          onChange={setValue}
+        />
+      </Dialog>
+    </div>
+  )
+}
+
+/** Escape dismisses the picker's portal before its enclosing dialog. */
+export const PickerDraft: Story = {
+  args: {
+    heading: "Edit a draft",
+    isVisible: true,
+    onClose: () => {},
+  },
+  render: () => <PickerDraftDemo />,
 }
