@@ -194,3 +194,11 @@ bar below and the underline stays put until Enter: focus has moved to a tab that
 selected, which is a state a three-kind model cannot represent at all.
 
 <Canvas of={TabsStories.Manual} />
+
+
+## Current tabs in a narrow bar
+
+An overflowing bar keeps its current tab in view on first render, route changes,
+and reflow. It scrolls only itself, without moving focus or the surrounding page.
+Manual panel activation keeps the focused tab visible even while another panel
+remains selected. A reader can still scroll to other tabs.

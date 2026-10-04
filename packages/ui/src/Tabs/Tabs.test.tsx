@@ -16,6 +16,7 @@ const {
   Routed,
   RoutedAllStates,
   RoutedAllVariants,
+  CurrentTabVisible,
 } = composeStories(stories)
 
 test("selecting a tab wires the panel back to it", async () => {
@@ -449,4 +450,88 @@ test("a routed tab and a panel tab are painted identically", async () => {
       panelStyle[property],
     )
   }
+})
+
+test("current routed and panel tabs remain visible without moving focus", async () => {
+  const { canvas } = await mountStory(CurrentTabVisible)
+  const assertVisible = async (
+    bar: HTMLElement,
+    selector: string,
+  ) => {
+    await waitFor(() => {
+      const selected =
+        bar.querySelector<HTMLElement>(selector)
+      expect(selected).not.toBeNull()
+      const item = selected?.getBoundingClientRect()
+      const bounds = bar.getBoundingClientRect()
+      expect(
+        item?.left ?? -Infinity,
+      ).toBeGreaterThanOrEqual(bounds.left - 1)
+      expect(item?.right ?? Infinity).toBeLessThanOrEqual(
+        bounds.right + 1,
+      )
+    })
+  }
+  const routed = expectAgentDrivable(canvas, {
+    role: "navigation",
+    name: "Current routed section",
+  })
+  const rtl = expectAgentDrivable(canvas, {
+    role: "navigation",
+    name: "Current RTL section",
+  })
+  const panel = expectAgentDrivable(canvas, {
+    role: "tablist",
+    name: "Current manual panel",
+  })
+  await assertVisible(routed, '[aria-current="page"]')
+  await assertVisible(rtl, '[aria-current="page"]')
+  await assertVisible(panel, '[aria-selected="true"]')
+  const width = expectAgentDrivable(canvas, {
+    role: "spinbutton",
+    name: "Available width",
+  })
+  await userEvent.clear(width)
+  await userEvent.type(width, "160")
+  await assertVisible(routed, '[aria-current="page"]')
+  await expect(width).toHaveFocus()
+  const activity = expectAgentDrivable(canvas, {
+    role: "button",
+    name: "Show activity",
+  })
+  await userEvent.click(activity)
+  await assertVisible(routed, '[aria-current="page"]')
+  await expect(activity).toHaveFocus()
+  const reports = expectAgentDrivable(canvas, {
+    role: "button",
+    name: "Show reports",
+  })
+  await userEvent.click(reports)
+  await assertVisible(routed, '[aria-current="page"]')
+  await expect(reports).toHaveFocus()
+  await userEvent.clear(width)
+  await userEvent.type(width, "80")
+  await userEvent.click(activity)
+  await waitFor(() => {
+    const bounds = routed.getBoundingClientRect()
+    const selected = routed
+      .querySelector<HTMLElement>('[aria-current="page"]')
+      ?.getBoundingClientRect()
+    expect(
+      selected?.left ?? -Infinity,
+    ).toBeGreaterThanOrEqual(bounds.left - 1)
+    expect(Math.abs(routed.scrollLeft)).toBeLessThanOrEqual(
+      1,
+    )
+  })
+  const disc = panel.querySelector<HTMLElement>(
+    '[aria-selected="true"]',
+  )
+  disc?.focus()
+  await userEvent.keyboard("{ArrowLeft}")
+  await assertVisible(panel, ":focus")
+  await expect(disc).toHaveAttribute(
+    "aria-selected",
+    "true",
+  )
 })
