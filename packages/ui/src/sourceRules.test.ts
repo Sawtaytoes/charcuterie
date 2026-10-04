@@ -621,7 +621,8 @@ test("the barrel is the only place components are re-exported", async () => {
   // ValuePairs owns compact label-over-value summaries.
   // Chart shares portable SVG geometry with Preact and image consumers.
   // TableViewport owns readable comparisons and full-window expansion.
-  expect(componentNames.length).toBe(74)
+  // MetricCard shares prominent values and category-coloured icons through Card.
+  expect(componentNames.length).toBe(75)
 
   for (const name of componentNames) {
     expect(barrel).toContain(`export { ${name} }`)

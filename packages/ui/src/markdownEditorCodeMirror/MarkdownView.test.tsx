@@ -367,10 +367,14 @@ test.each([
   async (_case, name) => {
     const { canvas } = await mountStory(NestedLinkText)
 
-    const link = expectAgentDrivable(canvas, {
-      name,
-      role: "link",
-    })
+    // CodeMirror finishes its viewport decorations on a scheduled frame.
+    // Wait for the accessible anchor rather than assuming mount means paint.
+    const link = await waitFor(() =>
+      expectAgentDrivable(canvas, {
+        name,
+        role: "link",
+      }),
+    )
 
     await expect(link.tagName).toBe("A")
   },

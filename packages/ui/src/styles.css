@@ -260,3 +260,49 @@
   th:first-child {
   z-index: 3;
 }
+
+/* Column width utilities describe comparison columns, never labelled list cells.
+   These rules are unlayered, like the component's existing structural styles,
+   so a consumer's cq-lg:w-32 cannot crush a list reflowing at cq-xl. */
+.charcuterie-data-table[data-layout="stacked"]
+  > table
+  > :is(thead, tbody)
+  > tr
+  > :is(th, td) {
+  inline-size: auto;
+  min-inline-size: 0;
+  max-inline-size: none;
+}
+@container (width < 32rem) {
+  .charcuterie-data-table[data-reflow-at="md"]
+    > table
+    > :is(thead, tbody)
+    > tr
+    > :is(th, td) {
+    inline-size: auto;
+    min-inline-size: 0;
+    max-inline-size: none;
+  }
+}
+@container (width < 48rem) {
+  .charcuterie-data-table[data-reflow-at="lg"]
+    > table
+    > :is(thead, tbody)
+    > tr
+    > :is(th, td) {
+    inline-size: auto;
+    min-inline-size: 0;
+    max-inline-size: none;
+  }
+}
+@container (width < 64rem) {
+  .charcuterie-data-table[data-reflow-at="xl"]
+    > table
+    > :is(thead, tbody)
+    > tr
+    > :is(th, td) {
+    inline-size: auto;
+    min-inline-size: 0;
+    max-inline-size: none;
+  }
+}
