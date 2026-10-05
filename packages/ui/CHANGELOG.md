@@ -1,5 +1,11 @@
 # @charcuterie/ui
 
+## 4.20.1
+
+### Patch Changes
+
+- 00fd151: Keep portalled HTML formatting dialogs from submitting an enclosing record form. Applying or rejecting a link, image or text colour edits the draft; saving the record remains an explicit action.
+
 ## 4.20.0
 
 ### Minor Changes
