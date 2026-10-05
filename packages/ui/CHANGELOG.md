@@ -1,5 +1,17 @@
 # @charcuterie/ui
 
+## 4.21.0
+
+### Minor Changes
+
+- 751e20c: Add horizontal nested comparisons with separate lanes for equal values and reusable table column visibility and ordering controls.
+- 67a1026: Lightbox can open an ordered image gallery at a selected thumbnail, with Previous/Next controls, arrow-key navigation, and an announced image position.
+
+### Patch Changes
+
+- Updated dependencies [751e20c]
+  - @charcuterie/logic@2.10.0
+
 ## 4.20.1
 
 ### Patch Changes
