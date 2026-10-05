@@ -1,5 +1,11 @@
 # @charcuterie/logic
 
+## 2.10.0
+
+### Minor Changes
+
+- 751e20c: Add horizontal nested comparisons with separate lanes for equal values and reusable table column visibility and ordering controls.
+
 ## 2.9.0
 
 ### Minor Changes
