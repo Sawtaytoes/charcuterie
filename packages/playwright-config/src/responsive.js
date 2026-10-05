@@ -20,8 +20,12 @@
  * Not flagged, because the clipping is the design:
  * - a deliberate side-scroller, which is `overflow-x: auto`/`scroll`
  *   (Charcuterie puts a wide table in one);
- * - a single-line truncation, `text-overflow: ellipsis`;
- * - a visually hidden (`sr-only`) element, 1px wide on purpose;
+ * - a single-line truncation, `text-overflow: ellipsis` — unless it
+ *   has been squeezed narrower than one character, which shows
+ *   nothing at all. portly-controllers#27: every seated pad's name
+ *   was 0px wide at 384px, a tile of swatches nobody could tell
+ *   apart, and the ellipsis exemption passed it;
+ * - a visually hidden (`sr-only`) element, 1px by 1px on purpose;
  * - anything inside an `ignore` selector, for the rare component
  *   that clips on purpose (a ticker). Name it, so the exception is
  *   visible in the test.
@@ -36,68 +40,97 @@ export const expectNoHorizontalOverflow = async (
   page,
   { ignore = [] } = {},
 ) => {
-  const { clipped, innerWidth, offenders, scrollWidth } =
-    await page.evaluate((ignoreSelectors) => {
-      const windowWidth =
-        document.documentElement.clientWidth
+  const {
+    clipped,
+    collapsed,
+    innerWidth,
+    offenders,
+    scrollWidth,
+  } = await page.evaluate((ignoreSelectors) => {
+    const windowWidth = document.documentElement.clientWidth
 
-      const describe = (element) =>
-        [
-          element.tagName.toLowerCase(),
-          element.id ? `#${element.id}` : "",
-          typeof element.className === "string" &&
-          element.className
-            ? `.${element.className.trim().split(/\s+/).slice(0, 2).join(".")}`
-            : "",
-        ].join("")
+    const describe = (element) =>
+      [
+        element.tagName.toLowerCase(),
+        element.id ? `#${element.id}` : "",
+        typeof element.className === "string" &&
+        element.className
+          ? `.${element.className.trim().split(/\s+/).slice(0, 2).join(".")}`
+          : "",
+      ].join("")
 
-      const isIgnored = (element) =>
-        ignoreSelectors.some((selector) =>
-          element.closest(selector),
-        )
+    const isIgnored = (element) =>
+      ignoreSelectors.some((selector) =>
+        element.closest(selector),
+      )
 
-      const elements = [
-        ...document.body.querySelectorAll("*"),
-      ].filter((element) => !isIgnored(element))
+    const elements = [
+      ...document.body.querySelectorAll("*"),
+    ].filter((element) => !isIgnored(element))
 
-      return {
-        clipped: [document.body, ...elements]
-          .filter((element) => {
-            const style = getComputedStyle(element)
+    return {
+      // A truncation that shows no text: the ellipsis exemption is
+      // for a label that runs out of room, not one that has none.
+      // Narrower than its own font size is less than one character
+      // and its ellipsis. `sr-only` is 1px in BOTH directions; a
+      // collapsed label still has its line height.
+      collapsed: elements
+        .filter((element) => {
+          const style = getComputedStyle(element)
+          const { height } = element.getBoundingClientRect()
 
-            return (
-              (style.overflowX === "hidden" ||
-                style.overflowX === "clip") &&
-              style.textOverflow !== "ellipsis" &&
-              element.clientWidth > 1 &&
-              element.scrollWidth > element.clientWidth + 1
-            )
-          })
-          .map((element) => ({
-            clientWidth: element.clientWidth,
-            label: describe(element),
-            scrollWidth: element.scrollWidth,
-          }))
-          // The innermost box first: an outer clip region only
-          // inherits the overflow of the one inside it.
-          .reverse()
-          .slice(0, 5),
-        innerWidth: windowWidth,
-        offenders: elements
-          .map((element) => ({
-            label: describe(element),
-            right: Math.round(
-              element.getBoundingClientRect().right,
-            ),
-          }))
-          .filter(({ right }) => right > windowWidth + 1)
-          .sort(
-            (first, second) => second.right - first.right,
+          return (
+            style.textOverflow === "ellipsis" &&
+            (style.overflowX === "hidden" ||
+              style.overflowX === "clip") &&
+            height > 1 &&
+            element.checkVisibility() &&
+            (element.textContent ?? "").trim() !== "" &&
+            element.scrollWidth > element.clientWidth &&
+            element.clientWidth < parseFloat(style.fontSize)
           )
-          .slice(0, 5),
-        scrollWidth: document.documentElement.scrollWidth,
-      }
-    }, ignore)
+        })
+        .map((element) => ({
+          clientWidth: element.clientWidth,
+          label: describe(element),
+          scrollWidth: element.scrollWidth,
+        }))
+        .slice(0, 5),
+      clipped: [document.body, ...elements]
+        .filter((element) => {
+          const style = getComputedStyle(element)
+
+          return (
+            (style.overflowX === "hidden" ||
+              style.overflowX === "clip") &&
+            style.textOverflow !== "ellipsis" &&
+            element.clientWidth > 1 &&
+            element.scrollWidth > element.clientWidth + 1
+          )
+        })
+        .map((element) => ({
+          clientWidth: element.clientWidth,
+          label: describe(element),
+          scrollWidth: element.scrollWidth,
+        }))
+        // The innermost box first: an outer clip region only
+        // inherits the overflow of the one inside it.
+        .reverse()
+        .slice(0, 5),
+      innerWidth: windowWidth,
+      offenders: elements
+        .map((element) => ({
+          label: describe(element),
+          right: Math.round(
+            element.getBoundingClientRect().right,
+          ),
+        }))
+        .filter(({ right }) => right > windowWidth + 1)
+        .sort((first, second) => second.right - first.right)
+        .slice(0, 5),
+      scrollWidth: document.documentElement.scrollWidth,
+    }
+  }, ignore)
 
   if (scrollWidth > innerWidth) {
     throw new Error(
@@ -108,6 +141,21 @@ export const expectNoHorizontalOverflow = async (
               `${label} ends at ${right}px`,
           )
           .join("; ")}`,
+    )
+  }
+
+  if (collapsed.length > 0) {
+    throw new Error(
+      `A truncated label shows nothing in a ${innerWidth}px window: ${collapsed
+        .map(
+          ({
+            clientWidth,
+            label,
+            scrollWidth: textWidth,
+          }) =>
+            `${label} is ${clientWidth}px wide for ${textWidth}px of text`,
+        )
+        .join("; ")}`,
     )
   }
 

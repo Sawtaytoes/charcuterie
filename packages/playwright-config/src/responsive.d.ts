@@ -3,7 +3,8 @@ import type { Page } from "@playwright/test"
 /**
  * Throws when anything makes the document wider than the window, or
  * when a box with `overflow-x: hidden | clip` (`Shell`, `Main`) holds
- * content wider than itself — overflow cut off out of sight. Names
+ * content wider than itself — overflow cut off out of sight — or when
+ * an ellipsis truncation is squeezed narrower than one character. Names
  * the offenders. `ignore` lists selectors whose subtree clips on
  * purpose.
  */

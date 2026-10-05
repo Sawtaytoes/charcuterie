@@ -98,6 +98,33 @@ describe("expectNoHorizontalOverflow", () => {
     ).resolves.toBeUndefined()
   })
 
+  /*
+   * portly-controllers#27: a flex row gave every pad's name 0px at
+   * 384px. The label truncates with an ellipsis, so the clipped-box
+   * rule exempts it, and it showed nothing at all.
+   */
+  test("names a truncated label squeezed to nothing", async () => {
+    const page = await openPage(
+      `<body style="margin: 0"><div style="display: flex; width: 120px"><span style="flex: none; width: 120px">swatch</span><span class="name" style="min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 16px">Green pad</span></div></body>`,
+    )
+
+    await expect(
+      expectNoHorizontalOverflow(page),
+    ).rejects.toThrow(
+      /A truncated label shows nothing in a 384px window: span\.name is 0px wide for \d+px of text/,
+    )
+  })
+
+  test("passes a truncated label that still shows a character", async () => {
+    const page = await openPage(
+      `<body style="margin: 0"><div style="display: flex; width: 160px"><span style="flex: none; width: 120px">swatch</span><span style="min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 16px">Green pad</span></div></body>`,
+    )
+
+    await expect(
+      expectNoHorizontalOverflow(page),
+    ).resolves.toBeUndefined()
+  })
+
   test("skips a box the test names as clipping on purpose", async () => {
     const page = await openPage(
       `<body style="margin: 0"><div class="ticker" style="overflow: hidden"><div style="width: 2000px">news ticker</div></div></body>`,
