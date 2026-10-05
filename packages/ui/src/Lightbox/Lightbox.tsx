@@ -1,10 +1,20 @@
 import { useVisibility } from "@charcuterie/logic"
-import type { ReactNode } from "react"
+import { type ReactNode, useEffect, useState } from "react"
 
+import { Button } from "../Button/Button.tsx"
 import { Dialog } from "../Dialog/Dialog.tsx"
 import { toClassName } from "../toClassName.ts"
 
+export type LightboxImage = {
+  readonly alt: string
+  readonly src: string
+  readonly caption?: ReactNode
+}
+
 export type LightboxProps = {
+  /** Optional ordered gallery. The trigger opens at initialIndex. */
+  images?: readonly LightboxImage[]
+  initialIndex?: number
   /**
    * Required, and the whole reason this is not a bare `<img>` in a
    * dialog. It names both the enlarged image and — via `heading`'s
@@ -64,6 +74,8 @@ export const Lightbox = ({
   caption,
   className,
   heading,
+  images,
+  initialIndex = 0,
   isOpen,
   onOpenChange,
   src,
@@ -72,10 +84,66 @@ export const Lightbox = ({
   const isControlled = isOpen !== undefined
 
   const { hide, isVisible, show } = useVisibility()
+  const [index, setIndex] = useState(initialIndex)
 
   const isShown = isControlled ? isOpen : isVisible
+  const gallery = images?.length
+    ? images
+    : [{ alt, caption, src }]
+  const activeIndex = Math.max(
+    0,
+    Math.min(index, gallery.length - 1),
+  )
+  const active = gallery[activeIndex] ?? {
+    alt,
+    caption,
+    src,
+  }
+  const hasMultiple = gallery.length > 1
+
+  useEffect(() => {
+    if (!isShown || !hasMultiple) return
+    const navigate = (event: KeyboardEvent) => {
+      if (
+        event.altKey ||
+        event.ctrlKey ||
+        event.metaKey ||
+        event.shiftKey
+      )
+        return
+      if (
+        event.target instanceof HTMLElement &&
+        event.target.closest(
+          "input, textarea, [contenteditable=true]",
+        )
+      )
+        return
+      const delta =
+        event.key === "ArrowLeft"
+          ? -1
+          : event.key === "ArrowRight"
+            ? 1
+            : 0
+      if (delta === 0) return
+      event.preventDefault()
+      setIndex(
+        (current) =>
+          (Math.max(
+            0,
+            Math.min(current, gallery.length - 1),
+          ) +
+            delta +
+            gallery.length) %
+          gallery.length,
+      )
+    }
+    document.addEventListener("keydown", navigate)
+    return () =>
+      document.removeEventListener("keydown", navigate)
+  }, [isShown, hasMultiple, gallery.length])
 
   const requestOpen = () => {
+    setIndex(initialIndex)
     if (!isControlled) {
       show()
     }
@@ -120,20 +188,56 @@ export const Lightbox = ({
         isVisible={isShown}
         onClose={requestClose}
         size="xl"
+        footer={
+          hasMultiple ? (
+            <div className="flex w-full items-center justify-between gap-3">
+              <Button
+                appearance="ghost"
+                size="sm"
+                onClick={() =>
+                  setIndex(
+                    (activeIndex + gallery.length - 1) %
+                      gallery.length,
+                  )
+                }
+              >
+                Previous image
+              </Button>
+              <span
+                className="text-content-secondary text-sm"
+                role="status"
+                aria-live="polite"
+              >
+                {activeIndex + 1} of {gallery.length}
+              </span>
+              <Button
+                appearance="ghost"
+                size="sm"
+                onClick={() =>
+                  setIndex(
+                    (activeIndex + 1) % gallery.length,
+                  )
+                }
+              >
+                Next image
+              </Button>
+            </div>
+          ) : undefined
+        }
       >
         <figure className="flex flex-col items-center gap-3">
           <img
-            alt={alt}
+            alt={active.alt}
             // `object-contain`, not `cover`: the enlarged view must
             // show the whole image, and the clamp is `dvh` for the
             // same address-bar reason `Modal`'s is.
             className="max-h-[75dvh] w-auto max-w-full rounded-md object-contain"
-            src={src}
+            src={active.src}
           />
 
-          {caption ? (
+          {active.caption ? (
             <figcaption className="text-center text-content-muted text-sm">
-              {caption}
+              {active.caption}
             </figcaption>
           ) : null}
         </figure>
