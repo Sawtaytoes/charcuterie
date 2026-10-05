@@ -1,3 +1,4 @@
+import { createViewportInstances } from "@charcuterie/vitest-config"
 import { playwright } from "@vitest/browser-playwright"
 import { defineConfig } from "vitest/config"
 
@@ -22,7 +23,7 @@ export default defineConfig({
       enabled: true,
       provider: playwright(),
       headless: true,
-      instances: [{ browser: "chromium" }],
+      instances: createViewportInstances(),
     },
   },
   // Pre-declared so Vite optimises every test dependency at

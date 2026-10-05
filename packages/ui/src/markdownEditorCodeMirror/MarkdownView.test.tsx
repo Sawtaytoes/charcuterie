@@ -59,14 +59,17 @@ test("it is an article whose headings are headings", async () => {
     "false",
   )
 
+  // `findBy`, not `getBy`: CodeMirror draws its decorations after the
+  // first paint, and with four browser windows sharing the runner the
+  // second heading was not drawn yet when a synchronous query looked.
   await expect(
-    canvas.getByRole("heading", {
+    await canvas.findByRole("heading", {
       name: "Rack move, phase two",
     }),
   ).toHaveAttribute("aria-level", "1")
 
   await expect(
-    canvas.getByRole("heading", {
+    await canvas.findByRole("heading", {
       name: "Before the window",
     }),
   ).toHaveAttribute("aria-level", "2")

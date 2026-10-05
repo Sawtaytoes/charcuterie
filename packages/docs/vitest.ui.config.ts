@@ -1,4 +1,5 @@
 import { join } from "node:path"
+import { createViewportInstances } from "@charcuterie/vitest-config"
 
 import tailwindcss from "@tailwindcss/vite"
 import react from "@vitejs/plugin-react"
@@ -64,7 +65,7 @@ export default defineConfig({
       enabled: true,
       provider: playwright(),
       headless: true,
-      instances: [{ browser: "chromium" }],
+      instances: createViewportInstances(),
       screenshotFailures: false,
     },
   },

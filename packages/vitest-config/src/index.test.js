@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, test } from "vitest"
 
-import { createVitestConfig } from "./index.js"
+import {
+  createViewportInstances,
+  createVitestConfig,
+} from "./index.js"
 
 const originalCi = process.env.CI
 
@@ -24,8 +27,61 @@ describe("createVitestConfig", () => {
     expect(config.test.browser).toMatchObject({
       enabled: true,
       headless: true,
-      instances: [{ browser: "chromium" }],
     })
+    expect(
+      config.test.browser.instances.every(
+        ({ browser }) => browser === "chromium",
+      ),
+    ).toBe(true)
+  })
+
+  test("runs every browser test in all four named windows", () => {
+    const { instances } = createVitestConfig().test.browser
+
+    expect(instances).toEqual([
+      {
+        browser: "chromium",
+        name: "chromium-narrow",
+        provide: { viewport: "narrow" },
+        viewport: { height: 824, width: 384 },
+      },
+      {
+        browser: "chromium",
+        name: "chromium-tall",
+        provide: { viewport: "tall" },
+        viewport: { height: 1920, width: 1080 },
+      },
+      {
+        browser: "chromium",
+        name: "chromium-wide",
+        provide: { viewport: "wide" },
+        viewport: { height: 1080, width: 1920 },
+      },
+      {
+        browser: "chromium",
+        name: "chromium-ultrawide",
+        provide: { viewport: "ultrawide" },
+        viewport: { height: 1440, width: 3440 },
+      },
+    ])
+  })
+
+  /*
+   * `mergeConfig` concatenates arrays, so without the replacement an
+   * app naming one window would silently run five.
+   */
+  test("lets an app's own instances REPLACE the four, not add to them", () => {
+    const config = createVitestConfig({
+      test: {
+        browser: {
+          instances: createViewportInstances(["wide"]),
+        },
+      },
+    })
+
+    expect(
+      config.test.browser.instances.map(({ name }) => name),
+    ).toEqual(["chromium-wide"])
   })
 
   test("gives a test 30s on CI, where the runner is shared", () => {

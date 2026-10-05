@@ -1,4 +1,5 @@
 import { join } from "node:path"
+import { createViewportInstances } from "@charcuterie/vitest-config"
 
 import { storybookTest } from "@storybook/addon-vitest/vitest-plugin"
 import { playwright } from "@vitest/browser-playwright"
@@ -23,7 +24,7 @@ export default defineConfig({
       enabled: true,
       provider: playwright(),
       headless: true,
-      instances: [{ browser: "chromium" }],
+      instances: createViewportInstances(),
     },
   },
 })

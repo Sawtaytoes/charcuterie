@@ -14,6 +14,8 @@ import { createRequire } from "node:module"
 
 import { defineConfig, mergeConfig } from "vitest/config"
 
+import { viewportNames, viewports } from "./viewports.js"
+
 const requireFromHere = createRequire(import.meta.url)
 
 /**
@@ -131,10 +133,31 @@ const createBrowserConfig = () =>
           "@vitest/browser-playwright",
         ).playwright(),
         headless: true,
-        instances: [{ browser: "chromium" }],
+        instances: createViewportInstances(),
       },
     },
   })
+
+/**
+ * One Chromium instance per viewport, so every browser test runs in
+ * all four windows. Each instance provides its own name, which a test
+ * reads with `inject("viewport")` when an assertion only makes sense
+ * in some of them.
+ *
+ * @param {readonly import("./viewports.js").ViewportName[]} [names]
+ */
+export const createViewportInstances = (
+  names = viewportNames,
+) =>
+  names.map((name) => ({
+    browser: "chromium",
+    name: `chromium-${name}`,
+    provide: { viewport: name },
+    viewport: {
+      height: viewports[name].height,
+      width: viewports[name].width,
+    },
+  }))
 
 /**
  * @param {import("vitest/config").UserConfig} [overrides]
@@ -154,5 +177,21 @@ export const createVitestConfig = (overrides = {}) => {
     ? mergeConfig(baseConfig, createBrowserConfig())
     : baseConfig
 
-  return mergeConfig(base, defineConfig(overrides))
+  /*
+   * `mergeConfig` CONCATENATES arrays. An app that names its own
+   * `instances` would otherwise run the four shared windows plus its
+   * own — so a caller's list replaces the default instead.
+   */
+  const overrideInstances =
+    overrides?.test?.browser?.instances
+
+  const merged = mergeConfig(base, defineConfig(overrides))
+
+  if (isBrowserEnabled && overrideInstances) {
+    merged.test.browser.instances = overrideInstances
+  }
+
+  return merged
 }
+
+export { viewportNames, viewports } from "./viewports.js"
