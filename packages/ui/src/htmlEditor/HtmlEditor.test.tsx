@@ -85,6 +85,9 @@ test("link dialog rejects script schemes; canceling does not edit the document",
   await expect(
     fields.getByText("Enter a safe link URL."),
   ).toBeInTheDocument()
+  await expect(
+    canvas.getByLabelText("Submitted HTML").textContent,
+  ).toBe("")
   await expectNoAxeViolations(dialog)
   await userEvent.click(
     fields.getByRole("button", { name: "Cancel" }),
@@ -97,7 +100,7 @@ test("link dialog rejects script schemes; canceling does not edit the document",
   ).toHaveTextContent(ORIGINAL_HTML)
 })
 
-test("a safe relative link is applied to the retained selection", async () => {
+test("applying a safe relative link edits the draft without submitting its record form", async () => {
   const { canvas, body } = await mountStory(Interactive)
   const editor = await canvas.findByRole("textbox", {
     name: "Saved notes",
@@ -122,6 +125,15 @@ test("a safe relative link is applied to the retained selection", async () => {
   await expect(editor.querySelector("a")).toHaveTextContent(
     "Original & untouched",
   )
+  await expect(
+    canvas.getByLabelText("Submitted HTML").textContent,
+  ).toBe("")
+  await userEvent.click(
+    canvas.getByRole("button", { name: "Save notes" }),
+  )
+  await expect(
+    canvas.getByLabelText("Submitted HTML").textContent,
+  ).toBe(canvas.getByLabelText("Stored HTML").textContent)
 })
 
 test("the editor and shared toolbar are named controls with keyboard access", async () => {
