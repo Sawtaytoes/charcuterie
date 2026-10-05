@@ -622,7 +622,8 @@ test("the barrel is the only place components are re-exported", async () => {
   // Chart shares portable SVG geometry with Preact and image consumers.
   // TableViewport owns readable comparisons and full-window expansion.
   // MetricCard shares prominent values and category-coloured icons through Card.
-  expect(componentNames.length).toBe(75)
+  // ComparisonChart and TableColumns share compact comparisons and column controls.
+  expect(componentNames.length).toBe(77)
 
   for (const name of componentNames) {
     expect(barrel).toContain(`export { ${name} }`)
