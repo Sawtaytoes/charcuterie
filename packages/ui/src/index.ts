@@ -260,7 +260,10 @@ export {
   toBarPlacement,
   toTimelineAxis,
 } from "./LaneTimeline/laneTimelineGeometry.ts"
-export type { LightboxImage, LightboxProps } from "./Lightbox/Lightbox.tsx"
+export type {
+  LightboxImage,
+  LightboxProps,
+} from "./Lightbox/Lightbox.tsx"
 export { Lightbox } from "./Lightbox/Lightbox.tsx"
 export type {
   ListboxItem,
