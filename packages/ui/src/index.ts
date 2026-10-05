@@ -130,6 +130,8 @@ export type {
 export { ColorSchemeToggle } from "./ColorSchemeToggle/ColorSchemeToggle.tsx"
 export type { ComboboxProps } from "./Combobox/Combobox.tsx"
 export { Combobox } from "./Combobox/Combobox.tsx"
+export type { ComparisonChartProps } from "./ComparisonChart/ComparisonChart.tsx"
+export { ComparisonChart } from "./ComparisonChart/ComparisonChart.tsx"
 export type {
   CopyButtonProps,
   CopyStatus,
@@ -496,6 +498,11 @@ export {
   getConnectionLabel,
   getIsConnectionBusy,
 } from "./statusIntent.ts"
+export type {
+  TableColumnChoice,
+  TableColumnsProps,
+} from "./TableColumns/TableColumns.tsx"
+export { TableColumns } from "./TableColumns/TableColumns.tsx"
 export type { TableViewportProps } from "./TableViewport/TableViewport.tsx"
 export { TableViewport } from "./TableViewport/TableViewport.tsx"
 export type {
