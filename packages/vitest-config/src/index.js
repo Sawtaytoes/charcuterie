@@ -14,6 +14,8 @@ import { createRequire } from "node:module"
 
 import { defineConfig, mergeConfig } from "vitest/config"
 
+import { viewportNames, viewports } from "./viewports.js"
+
 const requireFromHere = createRequire(import.meta.url)
 
 /**
@@ -45,10 +47,26 @@ const CI_TIMEOUT = 30_000
  * Vitest evaluates this config once per run, so the answer is the
  * same either way.
  */
-const createBaseConfig = () => {
-  const isCi = Boolean(process.env.CI)
+/**
+ * The CI budget on its own, for a config that cannot adopt the whole
+ * factory — Charcuterie's Storybook and DOM projects are hand-rolled
+ * and sat on Vitest's 15s browser default until four test windows
+ * multiplied the runner's load and a 4s story took 17s (CI,
+ * 2026-10-05). Spread it into `test`. Off CI it is empty, for the
+ * reason below.
+ *
+ * @returns {{ hookTimeout?: number, testTimeout?: number }}
+ */
+export const createCiTimeouts = () =>
+  process.env.CI
+    ? {
+        hookTimeout: CI_TIMEOUT,
+        testTimeout: CI_TIMEOUT,
+      }
+    : {}
 
-  return defineConfig({
+const createBaseConfig = () =>
+  defineConfig({
     test: {
       globals: true,
       /*
@@ -66,12 +84,7 @@ const createBaseConfig = () => {
        * default and failed the moment their project adopted this
        * factory.
        */
-      ...(isCi
-        ? {
-            testTimeout: CI_TIMEOUT,
-            hookTimeout: CI_TIMEOUT,
-          }
-        : {}),
+      ...createCiTimeouts(),
       exclude: [
         "**/dist/**",
         "**/node_modules/**",
@@ -102,11 +115,11 @@ const createBaseConfig = () => {
      * a literal.
      */
     define: {
-      "import.meta.env.CHARCUTERIE_CI":
-        JSON.stringify(isCi),
+      "import.meta.env.CHARCUTERIE_CI": JSON.stringify(
+        Boolean(process.env.CI),
+      ),
     },
   })
-}
 
 /**
  * Chromium through Playwright — the default, and the only
@@ -122,7 +135,8 @@ const createBaseConfig = () => {
  * own config without installing a browser provider it never runs.
  * Four repos hit that on one afternoon.
  */
-const createBrowserConfig = () =>
+/** @param {string} [project] the Vitest project name, when there is one */
+const createBrowserConfig = (project) =>
   defineConfig({
     test: {
       browser: {
@@ -131,10 +145,42 @@ const createBrowserConfig = () =>
           "@vitest/browser-playwright",
         ).playwright(),
         headless: true,
-        instances: [{ browser: "chromium" }],
+        instances: createViewportInstances({ project }),
       },
     },
   })
+
+/**
+ * One Chromium instance per viewport, so every browser test runs in
+ * all four windows. Each instance provides its own name, which a test
+ * reads with `inject("viewport")` when an assertion only makes sense
+ * in some of them.
+ *
+ * ⚠️ Vitest wants every instance name unique across the WHOLE run, not
+ * just within one project. A repo whose root config lists three
+ * browser projects would otherwise define `chromium-narrow` three times
+ * and refuse to start, so the name leads with the project's own name
+ * when it has one: `ui-dom-narrow`, `storybook-narrow`. One window
+ * across every project is `vitest --project '*-narrow'`.
+ *
+ * @param {{
+ *   names?: readonly import("./viewports.js").ViewportName[],
+ *   project?: string,
+ * }} [options]
+ */
+export const createViewportInstances = ({
+  names = viewportNames,
+  project = "chromium",
+} = {}) =>
+  names.map((name) => ({
+    browser: "chromium",
+    name: `${project}-${name}`,
+    provide: { viewport: name },
+    viewport: {
+      height: viewports[name].height,
+      width: viewports[name].width,
+    },
+  }))
 
 /**
  * @param {import("vitest/config").UserConfig} [overrides]
@@ -151,8 +197,27 @@ export const createVitestConfig = (overrides = {}) => {
   const baseConfig = createBaseConfig()
 
   const base = isBrowserEnabled
-    ? mergeConfig(baseConfig, createBrowserConfig())
+    ? mergeConfig(
+        baseConfig,
+        createBrowserConfig(overrides?.test?.name),
+      )
     : baseConfig
 
-  return mergeConfig(base, defineConfig(overrides))
+  /*
+   * `mergeConfig` CONCATENATES arrays. An app that names its own
+   * `instances` would otherwise run the four shared windows plus its
+   * own — so a caller's list replaces the default instead.
+   */
+  const overrideInstances =
+    overrides?.test?.browser?.instances
+
+  const merged = mergeConfig(base, defineConfig(overrides))
+
+  if (isBrowserEnabled && overrideInstances) {
+    merged.test.browser.instances = overrideInstances
+  }
+
+  return merged
 }
+
+export { viewportNames, viewports } from "./viewports.js"

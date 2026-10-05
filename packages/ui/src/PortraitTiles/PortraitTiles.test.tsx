@@ -104,17 +104,23 @@ test("a picture that fails to load falls back to the initials", async () => {
     role: "group",
   })
 
-  await waitFor(async () => {
-    const broken = Array.from(
-      group.querySelectorAll<HTMLImageElement>("img"),
-    ).find((one) =>
-      one.src.includes("charcuterie-missing-portrait"),
-    )
+  // A real 404 over the network, not a mocked error event, so it gets
+  // longer than `waitFor`'s 1 s default: with four browser windows
+  // sharing a CI runner the failure arrived after it.
+  await waitFor(
+    async () => {
+      const broken = Array.from(
+        group.querySelectorAll<HTMLImageElement>("img"),
+      ).find((one) =>
+        one.src.includes("charcuterie-missing-portrait"),
+      )
 
-    // Gone from the DOM entirely, replaced by the letter — not left
-    // in place with a broken-image glyph in it.
-    await expect(broken).toBeUndefined()
-  })
+      // Gone from the DOM entirely, replaced by the letter — not left
+      // in place with a broken-image glyph in it.
+      await expect(broken).toBeUndefined()
+    },
+    { timeout: 5000 },
+  )
 
   const bailey = expectAgentDrivable(canvas, {
     name: "Bailey 860 points",

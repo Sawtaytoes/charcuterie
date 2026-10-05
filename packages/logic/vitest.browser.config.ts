@@ -1,3 +1,7 @@
+import {
+  createCiTimeouts,
+  createViewportInstances,
+} from "@charcuterie/vitest-config"
 import { playwright } from "@vitest/browser-playwright"
 import { defineConfig } from "vitest/config"
 
@@ -16,13 +20,18 @@ import { defineConfig } from "vitest/config"
  */
 export default defineConfig({
   test: {
+    // Four windows on a shared runner is four times the load; the
+    // factory's CI budget, which a hand-rolled config does not get.
+    ...createCiTimeouts(),
     name: "logic-dom",
     include: ["src/**/*.browser.test.ts"],
     browser: {
       enabled: true,
       provider: playwright(),
       headless: true,
-      instances: [{ browser: "chromium" }],
+      instances: createViewportInstances({
+        project: "logic-dom",
+      }),
     },
   },
   // Pre-declared so Vite optimises every test dependency at
