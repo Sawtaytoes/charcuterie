@@ -133,3 +133,29 @@ export const Interactive: Story = {
     thumbnail: <PosterThumb />,
   },
 }
+
+/** Any thumbnail can start the same ordered gallery at its own image. */
+export const Gallery: Story = {
+  args: {
+    heading: "Poster gallery",
+    initialIndex: 1,
+    images: [
+      {
+        alt: "First poster",
+        src: toPosterSrc("FIRST"),
+        caption: "First view",
+      },
+      {
+        alt: "Second poster",
+        src: toPosterSrc("SECOND"),
+        caption: "Second view",
+      },
+      {
+        alt: "Third poster",
+        src: toPosterSrc("THIRD"),
+        caption: "Third view",
+      },
+    ],
+    thumbnail: <PosterThumb />,
+  },
+}

@@ -122,3 +122,56 @@ test("a controlled lightbox opens from an outside button", async () => {
 
   await expect(dialog).not.toBeInTheDocument()
 })
+
+test("a gallery opens at its thumbnail and navigates with controls and arrow keys", async () => {
+  const { Gallery } = composeStories(stories)
+  const { body, canvas } = await mountStory(Gallery)
+  const trigger = expectAgentDrivable(canvas, {
+    name: "Enlarge Poster gallery",
+    role: "button",
+  })
+  await userEvent.click(trigger)
+  const dialog = expectAgentDrivable(body, {
+    name: "Poster gallery",
+    role: "dialog",
+  })
+  expectAgentDrivable(body, {
+    name: "Second poster",
+    role: "img",
+  })
+  await userEvent.keyboard("{ArrowRight}")
+  expectAgentDrivable(body, {
+    name: "Third poster",
+    role: "img",
+  })
+  await userEvent.click(
+    body.getByRole("button", { name: "Next image" }),
+  )
+  expectAgentDrivable(body, {
+    name: "First poster",
+    role: "img",
+  })
+  await userEvent.keyboard("{ArrowLeft}")
+  expectAgentDrivable(body, {
+    name: "Third poster",
+    role: "img",
+  })
+  await userEvent.click(
+    body.getByRole("button", { name: "Previous image" }),
+  )
+  expectAgentDrivable(body, {
+    name: "Second poster",
+    role: "img",
+  })
+  await expectNoAxeViolations(dialog)
+  await userEvent.keyboard("{Escape}")
+  await waitFor(() =>
+    expect(body.queryByRole("dialog")).toBeNull(),
+  )
+  await expect(document.activeElement).toBe(trigger)
+  await userEvent.click(trigger)
+  expectAgentDrivable(body, {
+    name: "Second poster",
+    role: "img",
+  })
+})
