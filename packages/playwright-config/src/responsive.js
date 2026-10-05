@@ -19,7 +19,13 @@
  *
  * Not flagged, because the clipping is the design:
  * - a deliberate side-scroller, which is `overflow-x: auto`/`scroll`
- *   (Charcuterie puts a wide table in one);
+ *   (Charcuterie puts a wide table in one) — unless its own text is
+ *   set to WRAP (`white-space: pre-wrap`/`break-spaces`) and still
+ *   scrolls, which is an unbreakable string the box forgot to break.
+ *   `overflow-y: auto` alone computes `overflow-x` to `auto` too, so
+ *   gallery-downloader#51's stack trace scrolled sideways at 384px
+ *   while looking like a side-scroller on purpose. A code block is
+ *   `white-space: pre` and still passes;
  * - a single-line truncation, `text-overflow: ellipsis` — unless it
  *   has been squeezed narrower than one character, which shows
  *   nothing at all. portly-controllers#27: every seated pad's name
@@ -102,7 +108,11 @@ export const expectNoHorizontalOverflow = async (
 
           return (
             (style.overflowX === "hidden" ||
-              style.overflowX === "clip") &&
+              style.overflowX === "clip" ||
+              ((style.overflowX === "auto" ||
+                style.overflowX === "scroll") &&
+                (style.whiteSpace === "pre-wrap" ||
+                  style.whiteSpace === "break-spaces"))) &&
             style.textOverflow !== "ellipsis" &&
             element.clientWidth > 1 &&
             element.scrollWidth > element.clientWidth + 1

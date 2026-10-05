@@ -125,6 +125,32 @@ describe("expectNoHorizontalOverflow", () => {
     ).resolves.toBeUndefined()
   })
 
+  /*
+   * gallery-downloader#51: a stack trace in `pre-wrap` with only
+   * `overflow-y: auto` scrolled a long path sideways at 384px.
+   * `overflow-y: auto` makes `overflow-x` compute to `auto`, so it
+   * looked like a side-scroller on purpose.
+   */
+  test("names wrapping text that scrolls sideways anyway", async () => {
+    const page = await openPage(
+      `<body style="margin: 0"><pre class="trace" style="width: 300px; overflow-y: auto; white-space: pre-wrap; margin: 0">at /a/very/long/unbreakable/path/to/a/module/that/never/wraps/index.js</pre></body>`,
+    )
+
+    await expect(
+      expectNoHorizontalOverflow(page),
+    ).rejects.toThrow(/pre\.trace holds \d+px in 300px/)
+  })
+
+  test("leaves a code block that scrolls on purpose alone", async () => {
+    const page = await openPage(
+      `<body style="margin: 0"><pre style="width: 300px; overflow-x: auto; white-space: pre; margin: 0">const aVeryLongLineOfCodeThatScrollsSidewaysOnPurpose = true</pre></body>`,
+    )
+
+    await expect(
+      expectNoHorizontalOverflow(page),
+    ).resolves.toBeUndefined()
+  })
+
   test("skips a box the test names as clipping on purpose", async () => {
     const page = await openPage(
       `<body style="margin: 0"><div class="ticker" style="overflow: hidden"><div style="width: 2000px">news ticker</div></div></body>`,
