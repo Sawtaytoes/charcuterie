@@ -819,6 +819,7 @@ __metadata:
     "@charcuterie/storybook-config": "workspace:*"
     "@charcuterie/tokens": "workspace:*"
     "@charcuterie/ui": "workspace:*"
+    "@charcuterie/vitest-config": "workspace:^"
     "@storybook/addon-a11y": "npm:^10.3.6"
     "@storybook/addon-docs": "npm:^10.3.6"
     "@storybook/addon-vitest": "npm:^10.3.6"
@@ -866,6 +867,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@charcuterie/logic@workspace:packages/logic"
   dependencies:
+    "@charcuterie/vitest-config": "workspace:^"
     "@preact/signals-core": "npm:^1.8.0"
     "@tanstack/charts": "npm:0.18.0"
     "@tanstack/react-query": "npm:^5.100.9"
@@ -929,6 +931,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@charcuterie/playwright-config@workspace:packages/playwright-config"
   dependencies:
+    "@charcuterie/vitest-config": "workspace:^"
     "@playwright/test": "npm:^1.61.1"
     "@types/node": "npm:^25.6.2"
     typescript: "npm:^6.0.3"
@@ -1022,6 +1025,7 @@ __metadata:
     "@charcuterie/logic": "workspace:*"
     "@charcuterie/storybook-config": "workspace:*"
     "@charcuterie/tokens": "workspace:*"
+    "@charcuterie/vitest-config": "workspace:^"
     "@codemirror/commands": "npm:^6"
     "@codemirror/lang-markdown": "npm:^6"
     "@codemirror/language": "npm:^6"
@@ -1112,7 +1116,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@charcuterie/vitest-config@workspace:packages/vitest-config":
+"@charcuterie/vitest-config@workspace:^, @charcuterie/vitest-config@workspace:packages/vitest-config":
   version: 0.0.0-use.local
   resolution: "@charcuterie/vitest-config@workspace:packages/vitest-config"
   dependencies:

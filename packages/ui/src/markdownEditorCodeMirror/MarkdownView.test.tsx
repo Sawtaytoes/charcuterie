@@ -59,14 +59,17 @@ test("it is an article whose headings are headings", async () => {
     "false",
   )
 
+  // `findBy`, not `getBy`: CodeMirror draws its decorations after the
+  // first paint, and with four browser windows sharing the runner the
+  // second heading was not drawn yet when a synchronous query looked.
   await expect(
-    canvas.getByRole("heading", {
+    await canvas.findByRole("heading", {
       name: "Rack move, phase two",
     }),
   ).toHaveAttribute("aria-level", "1")
 
   await expect(
-    canvas.getByRole("heading", {
+    await canvas.findByRole("heading", {
       name: "Before the window",
     }),
   ).toHaveAttribute("aria-level", "2")
@@ -202,7 +205,7 @@ test("a link is a real anchor in the tab order", async () => {
 test("a checkbox is inert until a consumer says where the tick goes", async () => {
   const { canvas } = await mountStory(AllStates)
 
-  const inert = canvas.getByRole("checkbox", {
+  const inert = await canvas.findByRole("checkbox", {
     name: "Photograph the current cabling",
   })
 
@@ -239,9 +242,11 @@ test("hostile markdown renders as characters, not as behaviour", async () => {
   const { canvas, canvasElement } =
     await mountStory(HostileMarkdown)
 
-  const hrefs = canvas
-    .getAllByRole("link")
-    .map((link: HTMLElement) => link.getAttribute("href"))
+  // `findAllBy`: the links are CodeMirror decorations, drawn after the
+  // first paint — the same race as the headings test above.
+  const hrefs = (await canvas.findAllByRole("link")).map(
+    (link: HTMLElement) => link.getAttribute("href"),
+  )
 
   await expect(hrefs).toEqual([
     "https://example.invalid/runbook",
@@ -336,7 +341,7 @@ test("inline markup in link text does not drop the document to raw source", asyn
   // The canary. This heading has nothing to do with links, and it
   // is what stopped rendering when the plugin died.
   await expect(
-    canvas.getByRole("heading", {
+    await canvas.findByRole("heading", {
       name: "Where the fix landed",
     }),
   ).toHaveAttribute("aria-level", "2")

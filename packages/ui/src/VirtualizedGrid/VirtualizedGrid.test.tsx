@@ -308,15 +308,28 @@ test("a grid inside a hidden panel mounts nothing and reveals without scrolling"
   // Wait for the revealed grid to have MEASURED, not merely to
   // have mounted — the adjustment, when it happens, happens on the
   // virtualizer's resize path.
+  //
+  // Two signals, because one of them depends on the window. The end
+  // padding stands in for rows below the window, so it is only ever
+  // positive when the list is longer than the window. In a 3440x1440
+  // window all 48 cards fit, the padding is rightly 0, and waiting for
+  // it timed out on a grid that was working. There the signal is the
+  // LAST card drawn with a real height.
   await waitFor(async () => {
-    await expect(
-      Number(
-        getShownList().style.paddingBlockEnd.replace(
-          "px",
-          "",
-        ),
-      ),
-    ).toBeGreaterThan(0)
+    const list = getShownList()
+
+    const isPadded =
+      Number(list.style.paddingBlockEnd.replace("px", "")) >
+      0
+
+    const lastCell = list.querySelector<HTMLElement>(
+      `li[aria-posinset="${list.querySelector("li")?.getAttribute("aria-setsize")}"]`,
+    )
+
+    const isEveryCardDrawn =
+      (lastCell?.getBoundingClientRect().height ?? 0) > 0
+
+    await expect(isPadded || isEveryCardDrawn).toBe(true)
   })
 
   // The symptom, kept as a guard rather than as the proof. It is

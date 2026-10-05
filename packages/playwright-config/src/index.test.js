@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, test } from "vitest"
 
-import { createPlaywrightConfig } from "./index.js"
+import {
+  createPlaywrightConfig,
+  createViewportProjects,
+} from "./index.js"
 
 const originalCi = process.env.CI
 
@@ -43,5 +46,41 @@ describe("createPlaywrightConfig", () => {
       expect: { timeout: 1_000 },
       timeout: 2_000,
     })
+  })
+
+  test("runs the suite once per named window", () => {
+    const { projects } = createPlaywrightConfig()
+
+    expect(
+      projects.map(({ name, use }) => [
+        name,
+        use.viewport.width,
+        use.viewport.height,
+        use.isMobile,
+      ]),
+    ).toEqual([
+      ["chromium-narrow", 384, 824, true],
+      ["chromium-tall", 1080, 1920, false],
+      ["chromium-wide", 1920, 1080, false],
+      ["chromium-ultrawide", 3440, 1440, false],
+    ])
+  })
+
+  test("renders the phone at its own pixel ratio, with touch", () => {
+    const [narrow] = createViewportProjects(["narrow"])
+
+    expect(narrow.use).toMatchObject({
+      deviceScaleFactor: 3.75,
+      hasTouch: true,
+    })
+    expect(narrow.metadata).toEqual({ viewport: "narrow" })
+  })
+
+  test("an app's own projects still replace the default", () => {
+    const projects = [{ name: "only-this" }]
+
+    expect(
+      createPlaywrightConfig({ projects }).projects,
+    ).toBe(projects)
   })
 })

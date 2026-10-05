@@ -75,6 +75,11 @@ jobs:
       # playwright lives in the docs/logic workspaces, not the root — run its
       # installer from a workspace that has it; browsers land in the shared cache.
       - run: yarn workspace @charcuterie/docs exec playwright install chromium --with-deps
+      # A second install, because the lockfile resolves two Playwright
+      # versions and each wants its own Chromium revision. The
+      # playwright-config tests drive a real page with the package's
+      # own `@playwright/test`, which is not the docs workspace's.
+      - run: yarn workspace @charcuterie/playwright-config exec playwright install chromium
       # Browser-mode projects (logic, docs) resolve components from dist.
       - run: yarn build
       # `yarn test` is bare `vitest` for local watch mode; CI needs run-once.
