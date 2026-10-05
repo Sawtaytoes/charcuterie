@@ -330,6 +330,8 @@ export const HtmlEditor = ({
           className="space-y-4"
           onSubmit={(event) => {
             event.preventDefault()
+            // A portalled formatting form must never submit its record form.
+            event.stopPropagation()
             if (!editor || hasDisabledActions) return
             const data = new FormData(event.currentTarget)
             const value = String(
