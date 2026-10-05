@@ -46,8 +46,12 @@ test("copies the value and confirms in place", async () => {
   await expect(copy).toHaveBeenCalledWith("335590")
   // The press and its proof are the same object — no toast, no
   // second place to look.
+  //
+  // `findBy`: `copy` is async, so the label changes a render after
+  // the click resolves. A synchronous read lost that race in CI's
+  // ultrawide window (master run 37298376242).
   await expect(
-    canvas.getByRole("button", { name: "Copied" }),
+    await canvas.findByRole("button", { name: "Copied" }),
   ).toBeVisible()
 })
 
@@ -73,7 +77,9 @@ test("says so when the clipboard refuses", async () => {
   )
 
   await expect(
-    canvas.getByRole("button", { name: "Copy failed" }),
+    await canvas.findByRole("button", {
+      name: "Copy failed",
+    }),
   ).toBeVisible()
   await expect(onCopy).toHaveBeenCalledWith(false, "335590")
 })
@@ -103,26 +109,30 @@ test("tells the caller what happened, both ways", async () => {
 test("announces the outcome in a status region", async () => {
   const { canvas } = await mountStory(Confirmed)
 
-  await expect(
-    canvas.getByRole("status"),
-  ).toHaveTextContent("Copied to the clipboard.")
+  await waitFor(async () => {
+    await expect(
+      canvas.getByRole("status"),
+    ).toHaveTextContent("Copied to the clipboard.")
+  })
 })
 
 test("the failure says what to do instead", async () => {
   const { canvas } = await mountStory(Refused)
 
-  await expect(
-    canvas.getByRole("status"),
-  ).toHaveTextContent(
-    "The clipboard refused. Select the value and press Control C.",
-  )
+  await waitFor(async () => {
+    await expect(
+      canvas.getByRole("status"),
+    ).toHaveTextContent(
+      "The clipboard refused. Select the value and press Control C.",
+    )
+  })
 })
 
 /** The confirmation goes back on its own. */
 test("returns to the resting label", async () => {
   const { canvas } = await mountStory(
     composeStory(
-      { args: { confirmDuration: 20, copy: () => true } },
+      { args: { confirmDuration: 500, copy: () => true } },
       meta,
     ),
   )
@@ -130,8 +140,11 @@ test("returns to the resting label", async () => {
   await userEvent.click(
     canvas.getByRole("button", { name: "Copy" }),
   )
+  // 500ms, not 20: on a loaded runner a 20ms confirmation can come
+  // and go before the test looks, which fails the read below for the
+  // opposite reason to the race above.
   await expect(
-    canvas.getByRole("button", { name: "Copied" }),
+    await canvas.findByRole("button", { name: "Copied" }),
   ).toBeVisible()
 
   await waitFor(async () => {
