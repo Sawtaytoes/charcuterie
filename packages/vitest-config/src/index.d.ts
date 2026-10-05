@@ -7,3 +7,40 @@ import type { UserConfig } from "vitest/config"
 export declare const createVitestConfig: (
   overrides?: UserConfig,
 ) => UserConfig
+
+/**
+ * One Chromium browser instance per named viewport — all four by
+ * default, named `<project>-<viewport>` (`chromium-narrow` when the
+ * project has no name). Pass `names` when a suite genuinely needs
+ * fewer windows, and `project` in a hand-rolled config whose project
+ * has a name, or two browser projects in one run collide.
+ */
+export declare const createViewportInstances: (options?: {
+  names?: readonly import("./viewports.js").ViewportName[]
+  project?: string
+}) => {
+  browser: "chromium"
+  name: string
+  provide: {
+    viewport: import("./viewports.js").ViewportName
+  }
+  viewport: { height: number; width: number }
+}[]
+
+export {
+  type Viewport,
+  type ViewportName,
+  viewportNames,
+  viewports,
+} from "./viewports.js"
+
+/**
+ * The CI timeout budget alone — 30s for a test and a hook on CI, and
+ * nothing off CI so Vitest's mode-aware defaults stand. For a
+ * hand-rolled config that cannot adopt `createVitestConfig()`; spread
+ * it into `test`.
+ */
+export declare const createCiTimeouts: () => {
+  hookTimeout?: number
+  testTimeout?: number
+}

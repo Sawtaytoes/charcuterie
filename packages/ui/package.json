@@ -137,6 +137,7 @@
   },
   "devDependencies": {
     "@charcuterie/storybook-config": "workspace:*",
+    "@charcuterie/vitest-config": "workspace:^",
     "@codemirror/commands": "^6",
     "@codemirror/lang-markdown": "^6",
     "@codemirror/language": "^6",

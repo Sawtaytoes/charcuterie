@@ -24,6 +24,7 @@
     "react-dom": "^19.2.8"
   },
   "devDependencies": {
+    "@charcuterie/vitest-config": "workspace:^",
     "@storybook/addon-a11y": "^10.3.6",
     "@storybook/addon-docs": "^10.3.6",
     "@storybook/addon-vitest": "^10.3.6",

@@ -35,5 +35,8 @@
     "type": "git",
     "url": "git+https://github.com/Sawtaytoes/charcuterie.git",
     "directory": "packages/playwright-config"
+  },
+  "dependencies": {
+    "@charcuterie/vitest-config": "workspace:^"
   }
 }

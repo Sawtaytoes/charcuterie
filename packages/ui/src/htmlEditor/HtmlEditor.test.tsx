@@ -212,6 +212,35 @@ test("external defaults never overwrite the document; real edits emit HTML and k
   ).not.toHaveTextContent("data-old-format")
 })
 
+/**
+ * A toolbar action wherever the toolbar put it. On the phone the whole
+ * row folds into the overflow panel, so a test that looked for "Bold"
+ * in the row asserted about the window rather than the editor — and a
+ * read-only editor must refuse formatting from the panel too.
+ */
+const findToolbarAction = async (
+  toolbar: HTMLElement,
+  name: string,
+) => {
+  const inRow = within(toolbar).queryByRole("button", {
+    name,
+  })
+
+  if (inRow) {
+    return inRow
+  }
+
+  await userEvent.click(
+    within(toolbar).getByRole("button", {
+      name: "More actions",
+    }),
+  )
+
+  return within(
+    await within(document.body).findByRole("dialog"),
+  ).getByRole("button", { name })
+}
+
 test("read-only and disabled editors refuse typing and formatting", async () => {
   const { canvas } = await mountStory(AllStates)
   const readOnly = await canvas.findByRole("textbox", {
@@ -234,11 +263,12 @@ test("read-only and disabled editors refuse typing and formatting", async () => 
   )
   await expect(disabled).toHaveAttribute("tabindex", "-1")
   await expect(
-    within(
+    await findToolbarAction(
       canvas.getByRole("toolbar", {
         name: "Read-only note formatting",
       }),
-    ).getByRole("button", { name: "Bold" }),
+      "Bold",
+    ),
   ).toBeDisabled()
   const required = canvas.getByRole("textbox", {
     name: "Required notes",

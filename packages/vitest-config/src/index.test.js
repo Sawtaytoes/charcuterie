@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, test } from "vitest"
 
-import { createVitestConfig } from "./index.js"
+import {
+  createCiTimeouts,
+  createViewportInstances,
+  createVitestConfig,
+} from "./index.js"
 
 const originalCi = process.env.CI
 
@@ -24,8 +28,81 @@ describe("createVitestConfig", () => {
     expect(config.test.browser).toMatchObject({
       enabled: true,
       headless: true,
-      instances: [{ browser: "chromium" }],
     })
+    expect(
+      config.test.browser.instances.every(
+        ({ browser }) => browser === "chromium",
+      ),
+    ).toBe(true)
+  })
+
+  test("runs every browser test in all four named windows", () => {
+    const { instances } = createVitestConfig().test.browser
+
+    expect(instances).toEqual([
+      {
+        browser: "chromium",
+        name: "chromium-narrow",
+        provide: { viewport: "narrow" },
+        viewport: { height: 824, width: 384 },
+      },
+      {
+        browser: "chromium",
+        name: "chromium-tall",
+        provide: { viewport: "tall" },
+        viewport: { height: 1920, width: 1080 },
+      },
+      {
+        browser: "chromium",
+        name: "chromium-wide",
+        provide: { viewport: "wide" },
+        viewport: { height: 1080, width: 1920 },
+      },
+      {
+        browser: "chromium",
+        name: "chromium-ultrawide",
+        provide: { viewport: "ultrawide" },
+        viewport: { height: 1440, width: 3440 },
+      },
+    ])
+  })
+
+  /*
+   * `mergeConfig` concatenates arrays, so without the replacement an
+   * app naming one window would silently run five.
+   */
+  test("lets an app's own instances REPLACE the four, not add to them", () => {
+    const config = createVitestConfig({
+      test: {
+        browser: {
+          instances: createViewportInstances({
+            names: ["wide"],
+          }),
+        },
+      },
+    })
+
+    expect(
+      config.test.browser.instances.map(({ name }) => name),
+    ).toEqual(["chromium-wide"])
+  })
+
+  /*
+   * Vitest refuses to start when two projects in one run define the
+   * same instance name, which is what three browser projects that all
+   * said `chromium-narrow` did in Charcuterie's own CI.
+   */
+  test("leads each instance name with the project's name", () => {
+    const { instances } = createVitestConfig({
+      test: { name: "ui-dom" },
+    }).test.browser
+
+    expect(instances.map(({ name }) => name)).toEqual([
+      "ui-dom-narrow",
+      "ui-dom-tall",
+      "ui-dom-wide",
+      "ui-dom-ultrawide",
+    ])
   })
 
   test("gives a test 30s on CI, where the runner is shared", () => {
@@ -57,6 +134,18 @@ describe("createVitestConfig", () => {
     expect(nodeConfig.hookTimeout).toBeUndefined()
     expect(browserConfig.testTimeout).toBeUndefined()
     expect(browserConfig.hookTimeout).toBeUndefined()
+  })
+  test("hands the same budget to a hand-rolled config", () => {
+    process.env.CI = "true"
+
+    expect(createCiTimeouts()).toEqual({
+      hookTimeout: 30_000,
+      testTimeout: 30_000,
+    })
+
+    delete process.env.CI
+
+    expect(createCiTimeouts()).toEqual({})
   })
 
   /*
