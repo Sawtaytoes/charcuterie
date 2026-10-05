@@ -14,7 +14,9 @@ every instance name unique across the whole run, and a root config that lists se
 browser projects would otherwise define `chromium-narrow` once per project and refuse to
 start. A test reads its window with `inject("viewport")`; `vitest --project '*-narrow'`
 runs one window. New exports: `viewports`, `viewportNames`,
-`createViewportInstances({ names?, project? })`, and the
+`createViewportInstances({ names?, project? })`, `createCiTimeouts()` (the factory's 30s CI
+budget, for a hand-rolled config that cannot adopt the whole factory — four windows is four
+times the runner's load), and the
 `@charcuterie/vitest-config/viewports.js` subpath. An app's own `test.browser.instances`
 now **replaces** the default rather than being concatenated onto it.
 

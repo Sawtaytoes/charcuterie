@@ -1,5 +1,8 @@
 import { join } from "node:path"
-import { createViewportInstances } from "@charcuterie/vitest-config"
+import {
+  createCiTimeouts,
+  createViewportInstances,
+} from "@charcuterie/vitest-config"
 
 import { storybookTest } from "@storybook/addon-vitest/vitest-plugin"
 import { playwright } from "@vitest/browser-playwright"
@@ -19,6 +22,9 @@ export default defineConfig({
     include: ["@floating-ui/react"],
   },
   test: {
+    // Four windows on a shared runner is four times the load; the
+    // factory's CI budget, which a hand-rolled config does not get.
+    ...createCiTimeouts(),
     name: "storybook",
     browser: {
       enabled: true,

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, test } from "vitest"
 
 import {
+  createCiTimeouts,
   createViewportInstances,
   createVitestConfig,
 } from "./index.js"
@@ -133,6 +134,18 @@ describe("createVitestConfig", () => {
     expect(nodeConfig.hookTimeout).toBeUndefined()
     expect(browserConfig.testTimeout).toBeUndefined()
     expect(browserConfig.hookTimeout).toBeUndefined()
+  })
+  test("hands the same budget to a hand-rolled config", () => {
+    process.env.CI = "true"
+
+    expect(createCiTimeouts()).toEqual({
+      hookTimeout: 30_000,
+      testTimeout: 30_000,
+    })
+
+    delete process.env.CI
+
+    expect(createCiTimeouts()).toEqual({})
   })
 
   /*

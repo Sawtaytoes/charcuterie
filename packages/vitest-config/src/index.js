@@ -47,10 +47,26 @@ const CI_TIMEOUT = 30_000
  * Vitest evaluates this config once per run, so the answer is the
  * same either way.
  */
-const createBaseConfig = () => {
-  const isCi = Boolean(process.env.CI)
+/**
+ * The CI budget on its own, for a config that cannot adopt the whole
+ * factory — Charcuterie's Storybook and DOM projects are hand-rolled
+ * and sat on Vitest's 15s browser default until four test windows
+ * multiplied the runner's load and a 4s story took 17s (CI,
+ * 2026-10-05). Spread it into `test`. Off CI it is empty, for the
+ * reason below.
+ *
+ * @returns {{ hookTimeout?: number, testTimeout?: number }}
+ */
+export const createCiTimeouts = () =>
+  process.env.CI
+    ? {
+        hookTimeout: CI_TIMEOUT,
+        testTimeout: CI_TIMEOUT,
+      }
+    : {}
 
-  return defineConfig({
+const createBaseConfig = () =>
+  defineConfig({
     test: {
       globals: true,
       /*
@@ -68,12 +84,7 @@ const createBaseConfig = () => {
        * default and failed the moment their project adopted this
        * factory.
        */
-      ...(isCi
-        ? {
-            testTimeout: CI_TIMEOUT,
-            hookTimeout: CI_TIMEOUT,
-          }
-        : {}),
+      ...createCiTimeouts(),
       exclude: [
         "**/dist/**",
         "**/node_modules/**",
@@ -104,11 +115,11 @@ const createBaseConfig = () => {
      * a literal.
      */
     define: {
-      "import.meta.env.CHARCUTERIE_CI":
-        JSON.stringify(isCi),
+      "import.meta.env.CHARCUTERIE_CI": JSON.stringify(
+        Boolean(process.env.CI),
+      ),
     },
   })
-}
 
 /**
  * Chromium through Playwright — the default, and the only

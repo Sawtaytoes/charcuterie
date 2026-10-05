@@ -33,3 +33,14 @@ export {
   viewportNames,
   viewports,
 } from "./viewports.js"
+
+/**
+ * The CI timeout budget alone — 30s for a test and a hook on CI, and
+ * nothing off CI so Vitest's mode-aware defaults stand. For a
+ * hand-rolled config that cannot adopt `createVitestConfig()`; spread
+ * it into `test`.
+ */
+export declare const createCiTimeouts: () => {
+  hookTimeout?: number
+  testTimeout?: number
+}
