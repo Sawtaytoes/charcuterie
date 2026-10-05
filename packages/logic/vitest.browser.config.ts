@@ -23,7 +23,9 @@ export default defineConfig({
       enabled: true,
       provider: playwright(),
       headless: true,
-      instances: createViewportInstances(),
+      instances: createViewportInstances({
+        project: "logic-dom",
+      }),
     },
   },
   // Pre-declared so Vite optimises every test dependency at

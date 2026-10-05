@@ -24,7 +24,9 @@ export default defineConfig({
       enabled: true,
       provider: playwright(),
       headless: true,
-      instances: createViewportInstances(),
+      instances: createViewportInstances({
+        project: "storybook",
+      }),
     },
   },
 })

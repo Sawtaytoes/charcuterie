@@ -124,7 +124,8 @@ const createBaseConfig = () => {
  * own config without installing a browser provider it never runs.
  * Four repos hit that on one afternoon.
  */
-const createBrowserConfig = () =>
+/** @param {string} [project] the Vitest project name, when there is one */
+const createBrowserConfig = (project) =>
   defineConfig({
     test: {
       browser: {
@@ -133,7 +134,7 @@ const createBrowserConfig = () =>
           "@vitest/browser-playwright",
         ).playwright(),
         headless: true,
-        instances: createViewportInstances(),
+        instances: createViewportInstances({ project }),
       },
     },
   })
@@ -144,14 +145,25 @@ const createBrowserConfig = () =>
  * reads with `inject("viewport")` when an assertion only makes sense
  * in some of them.
  *
- * @param {readonly import("./viewports.js").ViewportName[]} [names]
+ * ⚠️ Vitest wants every instance name unique across the WHOLE run, not
+ * just within one project. A repo whose root config lists three
+ * browser projects would otherwise define `chromium-narrow` three times
+ * and refuse to start, so the name leads with the project's own name
+ * when it has one: `ui-dom-narrow`, `storybook-narrow`. One window
+ * across every project is `vitest --project '*-narrow'`.
+ *
+ * @param {{
+ *   names?: readonly import("./viewports.js").ViewportName[],
+ *   project?: string,
+ * }} [options]
  */
-export const createViewportInstances = (
+export const createViewportInstances = ({
   names = viewportNames,
-) =>
+  project = "chromium",
+} = {}) =>
   names.map((name) => ({
     browser: "chromium",
-    name: `chromium-${name}`,
+    name: `${project}-${name}`,
     provide: { viewport: name },
     viewport: {
       height: viewports[name].height,
@@ -174,7 +186,10 @@ export const createVitestConfig = (overrides = {}) => {
   const baseConfig = createBaseConfig()
 
   const base = isBrowserEnabled
-    ? mergeConfig(baseConfig, createBrowserConfig())
+    ? mergeConfig(
+        baseConfig,
+        createBrowserConfig(overrides?.test?.name),
+      )
     : baseConfig
 
   /*

@@ -74,7 +74,9 @@ describe("createVitestConfig", () => {
     const config = createVitestConfig({
       test: {
         browser: {
-          instances: createViewportInstances(["wide"]),
+          instances: createViewportInstances({
+            names: ["wide"],
+          }),
         },
       },
     })
@@ -82,6 +84,24 @@ describe("createVitestConfig", () => {
     expect(
       config.test.browser.instances.map(({ name }) => name),
     ).toEqual(["chromium-wide"])
+  })
+
+  /*
+   * Vitest refuses to start when two projects in one run define the
+   * same instance name, which is what three browser projects that all
+   * said `chromium-narrow` did in Charcuterie's own CI.
+   */
+  test("leads each instance name with the project's name", () => {
+    const { instances } = createVitestConfig({
+      test: { name: "ui-dom" },
+    }).test.browser
+
+    expect(instances.map(({ name }) => name)).toEqual([
+      "ui-dom-narrow",
+      "ui-dom-tall",
+      "ui-dom-wide",
+      "ui-dom-ultrawide",
+    ])
   })
 
   test("gives a test 30s on CI, where the runner is shared", () => {

@@ -18,11 +18,15 @@ one file, `packages/vitest-config/src/viewports.js`:
 | `wide` | 1920x1080 | 16:9 |
 | `ultrawide` | 3440x1440 | 21:9 |
 
-`createVitestConfig()` builds one Chromium instance per window (`chromium-narrow` …), and
-each provides its name to `inject("viewport")`. `createPlaywrightConfig()` builds one
+`createVitestConfig()` builds one Chromium instance per window, named
+`<project>-<window>` (`ui-dom-narrow`; `chromium-narrow` when the project has no
+`test.name`), and each provides its window's name to `inject("viewport")`. The project
+leads the name because Vitest wants every instance name unique across the whole run — this
+repo's root config lists three browser projects, and three `chromium-narrow`s refused to
+start. One window across every project is `vitest --project '*-narrow'`. `createPlaywrightConfig()` builds one
 project per window; `narrow` adds `isMobile`, `hasTouch` and the phone's 3.75 pixel ratio,
 and a test reads `testInfo.project.metadata.viewport`. A hand-rolled config uses
-`createViewportInstances()` or `createViewportProjects()`. A package whose tests call
+`createViewportInstances({ project: "<its test.name>" })` or `createViewportProjects()`. A package whose tests call
 `inject("viewport")` brings the type in with one ambient file that imports
 `@charcuterie/vitest-config/viewports.js` (see `packages/ui/src/vitestProvidedContext.d.ts`).
 

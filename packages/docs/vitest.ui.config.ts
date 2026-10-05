@@ -65,7 +65,9 @@ export default defineConfig({
       enabled: true,
       provider: playwright(),
       headless: true,
-      instances: createViewportInstances(),
+      instances: createViewportInstances({
+        project: "ui-dom",
+      }),
       screenshotFailures: false,
     },
   },

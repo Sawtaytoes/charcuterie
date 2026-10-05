@@ -7,10 +7,14 @@ Every browser test now runs in four named windows: `narrow` (384x824, a Galaxy S
 `tall` (1080x1920, a portrait monitor), `wide` (1920x1080) and `ultrawide` (3440x1440).
 
 **`@charcuterie/vitest-config` — breaking.** `createVitestConfig()` builds one Chromium
-instance per window (`chromium-narrow`, `chromium-tall`, `chromium-wide`,
-`chromium-ultrawide`) instead of a single unnamed one at Vitest's 414x896 default, so a
-browser suite runs four times. A test reads its window with `inject("viewport")`. New
-exports: `viewports`, `viewportNames`, `createViewportInstances(names?)`, and the
+instance per window, named `<project>-<window>` (`ui-dom-narrow`, or `chromium-narrow`
+when the project has no `test.name`), instead of a single unnamed one at Vitest's 414x896
+default, so a browser suite runs four times. The project's name leads because Vitest wants
+every instance name unique across the whole run, and a root config that lists several
+browser projects would otherwise define `chromium-narrow` once per project and refuse to
+start. A test reads its window with `inject("viewport")`; `vitest --project '*-narrow'`
+runs one window. New exports: `viewports`, `viewportNames`,
+`createViewportInstances({ names?, project? })`, and the
 `@charcuterie/vitest-config/viewports.js` subpath. An app's own `test.browser.instances`
 now **replaces** the default rather than being concatenated onto it.
 

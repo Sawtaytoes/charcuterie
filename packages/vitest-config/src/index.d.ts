@@ -10,12 +10,15 @@ export declare const createVitestConfig: (
 
 /**
  * One Chromium browser instance per named viewport — all four by
- * default. Pass a subset when a suite genuinely needs fewer windows
- * (a visual-regression suite whose baselines cost storage, say).
+ * default, named `<project>-<viewport>` (`chromium-narrow` when the
+ * project has no name). Pass `names` when a suite genuinely needs
+ * fewer windows, and `project` in a hand-rolled config whose project
+ * has a name, or two browser projects in one run collide.
  */
-export declare const createViewportInstances: (
-  names?: readonly import("./viewports.js").ViewportName[],
-) => {
+export declare const createViewportInstances: (options?: {
+  names?: readonly import("./viewports.js").ViewportName[]
+  project?: string
+}) => {
   browser: "chromium"
   name: string
   provide: {
