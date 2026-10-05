@@ -70,3 +70,5 @@ export const ChartPlot = (
     },
   )
 }
+
+export { ComparisonPlot } from "./comparisonReact.ts"

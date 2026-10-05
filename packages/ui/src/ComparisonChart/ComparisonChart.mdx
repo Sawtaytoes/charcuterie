@@ -1,0 +1,14 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks"
+import * as stories from "./ComparisonChart.stories.tsx"
+
+<Meta of={stories} />
+
+# ComparisonChart
+
+Horizontal TanStack comparisons with one legend and a common zero baseline. Unequal values nest by thickness. Equal or tightly spaced values use separate lanes, retaining proportional lengths. Values appear inside when they fit and beside short bars otherwise. Null is missing, zero is a value. Apps supply data and a formatter; this component never fetches or aggregates.
+
+<Canvas of={stories.Playground} />
+<Canvas of={stories.AllVariants} />
+<Canvas of={stories.AllStates} />
+<Canvas of={stories.Responsive} />
+<Canvas of={stories.Interactive} />

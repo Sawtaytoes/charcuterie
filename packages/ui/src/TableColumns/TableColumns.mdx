@@ -1,0 +1,14 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks"
+import * as stories from "./TableColumns.stories.tsx"
+
+<Meta of={stories} />
+
+# TableColumns
+
+A reusable column visibility and ordering popover. The app supplies the ordered column choices and persists them if needed. Required columns cannot be hidden. Earlier and Later buttons make ordering keyboard accessible.
+
+<Canvas of={stories.Playground} />
+<Canvas of={stories.AllVariants} />
+<Canvas of={stories.AllStates} />
+<Canvas of={stories.Responsive} />
+<Canvas of={stories.Interactive} />
