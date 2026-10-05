@@ -166,9 +166,9 @@ export const LaneTimelineBar = ({
        *
        * ⚠️ It does NOT reach a CAPITALIZED word. Chromium and
        * Firefox both skip a word whose first letter is upper case,
-       * as a proper-noun heuristic, and a 60px probe box confirmed
-       * it in both: `taekwondo` broke as `tae-` / `kwondo` and
-       * `Taekwondo` as `Taekwond` / `o`. Most calendar titles start
+       * as a proper-noun heuristic. A 60px probe box confirmed
+       * that the lower-case variant used dictionary hyphenation,
+       * while the capitalized variant broke at the edge. Titles start
        * with a capital, so this helps the second word of a title
        * more than the first. A capitalized word needs a soft
        * hyphen (U+00AD) placed in the DATA by the app; `auto`
