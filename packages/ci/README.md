@@ -205,7 +205,7 @@ vrt:
 | Input | Default | Is |
 | --- | --- | --- |
 | `runsOn` | `'["self-hosted","vrt"]'` | JSON list of runner labels. Forgejo: `'["vrt"]'`. |
-| `setupCommand` | `auto` | Detects pnpm, Yarn or npm from the repo manifest/lockfile and installs frozen dependencies. A caller may override the command. the repo's dependencies. |
+| `setupCommand` | `auto` | Detects pnpm, Yarn or npm from the repo manifest/lockfile and installs frozen dependencies. A caller may override the command. |
 | `buildCommand` | — | Builds what the capture needs, e.g. the Storybook(s). |
 | `storybookStaticDirs` | — | Built Storybooks, one per line, `prefix=path`. The prefix is a subfolder of the shots. One Storybook may be a bare `path`, which writes at the top level. |
 | `storybookSchemeGlobal` | — | The Storybook global selecting a color scheme (Charcuterie: `scheme`). Empty shoots one pass with no suffix. |
@@ -243,7 +243,7 @@ stable, since a renamed file is a deleted shot plus a new one.
 From the consumer repo, with a checkout of Charcuterie at `$CHARCUTERIE`:
 
 ```sh
-pnpm --dir "$CHARCUTERIE/packages/ci/src/vrt" install --frozen-lockfile
+pnpm --dir "$CHARCUTERIE/packages/ci/src/vrt" install --frozen-lockfile --store-dir "$HOME/.cache/pnpm/store"
 pnpm build-storybook
 node "$CHARCUTERIE/packages/ci/src/vrt/storybookCapture.js" storybook-static --clean
 ls .vrt-actual

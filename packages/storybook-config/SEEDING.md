@@ -31,7 +31,7 @@ Notes:
   this package's `dependencies` at publish time — `npm publish` leaves
   `workspace:*` verbatim, `pnpm pack` rewrites it to a real range. The deploy
   workflow already does this (unpacks a `pnpm pack` tarball and publishes the
-  directory); for the manual seed, run `pnpm pack -o /tmp/sbc.tgz`, `tar -xzf`
+  directory); for the manual seed, run `pnpm pack --out /tmp/sbc.tgz`, `tar -xzf`
   it, and `npm publish` the extracted `package/` directory.
 
 ## After the seed

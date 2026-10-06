@@ -1,5 +1,9 @@
 # Seeding @charcuterie/server to npm
 
+This is the historical Yarn publishing transcript. Current releases use the
+pnpm packing and OIDC publishing procedure in
+[the deploy workflow](../../.github/workflows/npm-package-deploy.yml).
+
 This package's **first** publish is manual, for the same reason
 [`@charcuterie/storybook-config`](../storybook-config/SEEDING.md)'s was: every
 other `@charcuterie/*` package is published by
@@ -40,22 +44,22 @@ into a clean skip.
 From a checkout at the version you are seeding:
 
 ```bash
-pnpm install
+yarn install
 
 # `publishConfig.provenance` WINS over the CLI flag — remove it first.
 # Do this in a throwaway/detached checkout and never commit it.
 #   packages/<pkg>/package.json → delete `"provenance": true`
 
 YARN_NPM_AUTH_TOKEN=<npm automation token> \
-  pnpm --filter @charcuterie/<pkg> npm publish --access public
+  yarn workspace @charcuterie/<pkg> npm publish --access public
 ```
 
-- **`pnpm npm publish`, not `npm publish`.** pnpm packs and publishes in one
-  step, and only pnpm rewrites `workspace:*` deps into real ranges.
+- **`yarn npm publish`, not `npm publish`.** yarn packs and publishes in one
+  step, and only yarn rewrites `workspace:*` deps into real ranges.
 - **The provenance field is the trap.** `publishConfig.provenance: true` is what
   the automated OIDC releases need, and it takes precedence over both
   `--no-provenance` and `YARN_NPM_CONFIG_PROVENANCE` (the latter is not even a
-  recognised setting in pnpm 4.14 — it errors). pnpm fails with
+  recognised setting in Yarn 4.14 — it errors). yarn fails with
   `YN0091: Provenance generation is only supported in GitHub Actions and
   GitLab CI` until the field is gone. Temporarily deleting it from the manifest
   is the only thing that works, and it must go straight back afterwards or every
