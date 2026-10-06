@@ -267,7 +267,13 @@ capturing Storybook; it needs no second standalone tools install. The pinned Git
 plugin still selects the Git base and actual key. When a clone containing only
 default-branch refs gives the plugin no branch intersection, the selector uses the
 reviewed PR base, default-branch push predecessor, or default-branch parent. A
-nonnull original base is always preserved, including an older release base.
+nonnull original base on the default branch’s first-parent history is preserved,
+including an older release base. After a normal merge, the plugin can instead
+select the merged feature parent. That original key must first be an ancestor of
+both the default branch and the actual commit; otherwise preflight fails. For
+that merged side-branch key only, selection derives a reviewed predecessor from
+the event or Git history and revalidates its first-parent membership and ancestry.
+The feature snapshot itself is never eligible.
 If that base has no complete published snapshot (for example,
 after a documentation-only merge), the selector walks its first-parent ancestors
 and uses the nearest complete one. Every candidate must lie on the default

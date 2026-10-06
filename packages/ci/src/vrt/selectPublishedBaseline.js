@@ -184,7 +184,7 @@ export const deriveReviewedBase = (
   return git(cwd, "merge-base", actualKey, defaultRef)
 }
 
-/** Walk only the first parents of the original selected, reviewed Git base. */
+/** Walk only first parents after validating the plugin base and reviewed predecessor. */
 export const selectPublishedBaseline = async ({
   cwd,
   defaultBranch,
@@ -205,43 +205,37 @@ export const selectPublishedBaseline = async ({
     "--verify",
     `${defaultRef}^{commit}`,
   )
-  // Preserve every original non-null plugin base, including older release bases.
-  // Only its no-intersection case needs a reviewed default-branch predecessor.
-  baseKey ??= deriveReviewedBase(
-    cwd,
-    defaultBranch,
-    actualKey,
-    event,
+  const defaultHistory = new Set(
+    git(
+      cwd,
+      "rev-list",
+      "--first-parent",
+      defaultRef,
+    ).split("\n"),
   )
-  if (baseKey != null) {
-    if (baseKey === actualKey)
+  const validateBase = (key) => {
+    if (key === actualKey)
       throw new Error(
         "Selected baseline cannot equal actual snapshot key",
       )
-    if (!/^[0-9a-f]{40}$/.test(baseKey))
+    if (!/^[0-9a-f]{40}$/.test(key))
       throw new Error("Invalid selected Git baseline key")
-    git(
+    git(cwd, "merge-base", "--is-ancestor", key, defaultRef)
+    git(cwd, "merge-base", "--is-ancestor", key, actualKey)
+  }
+  // Preserve a reviewed first-parent plugin base, including older release bases.
+  // A normal merge may instead intersect its feature second parent. Validate that
+  // original candidate before deriving a default predecessor; never inspect its store.
+  if (baseKey != null) validateBase(baseKey)
+  if (baseKey == null || !defaultHistory.has(baseKey))
+    baseKey = deriveReviewedBase(
       cwd,
-      "merge-base",
-      "--is-ancestor",
-      baseKey,
-      defaultRef,
-    )
-    git(
-      cwd,
-      "merge-base",
-      "--is-ancestor",
-      baseKey,
+      defaultBranch,
       actualKey,
+      event,
     )
-    const defaultHistory = new Set(
-      git(
-        cwd,
-        "rev-list",
-        "--first-parent",
-        defaultRef,
-      ).split("\n"),
-    )
+  if (baseKey != null) {
+    validateBase(baseKey)
     if (!defaultHistory.has(baseKey))
       throw new Error(
         "Selected baseline is outside default-branch first-parent history",
