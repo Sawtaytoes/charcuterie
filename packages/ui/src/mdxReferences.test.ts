@@ -6,7 +6,7 @@
  * and does not fail `vitest` — MDX resolves `of` at *runtime*, so a
  * renamed story turns into `of={undefined}` and the docs page
  * renders Storybook's "component failed to render" panel instead of
- * the page. `yarn smoke:storybook` catches it, which is good, but
+ * the page. `pnpm smoke:storybook` catches it, which is good, but
  * only after a full Storybook build; this catches it in under a
  * second, which is the difference between noticing during the edit
  * and noticing in CI.

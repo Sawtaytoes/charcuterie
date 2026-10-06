@@ -40,7 +40,7 @@ never parses it. In dev that is `@vitejs/plugin-react`'s react-refresh preamble 
 
 **Production builds are unaffected, which is exactly why this needs a mechanism.**
 `typecheck`, `lint`, `unit-tests`, `e2e`, `build-budget` and `storybook-build` all stay
-green while `yarn dev` serves nothing. It shipped twice, six days apart — image-viewer on
+green while `pnpm dev` serves nothing. It shipped twice, six days apart — image-viewer on
 2026-08-05 (whose **Locked** decision record reached nobody else) and mux-magic on
 2026-08-11 ([#200](https://github.com/Sawtaytoes/mux-magic/issues/200)) — which is what
 moved it into the shared build seam instead of a twelfth copy of the same paragraph.
@@ -68,7 +68,7 @@ Three things about its scope are deliberate:
   serve-only check would leave CI exactly as blind as it was both times this shipped.
 
 It fires in two hooks: `configResolved` reads `index.html` (and any HTML rollup input)
-off disk so `yarn dev` dies at **startup** with the reason printed, and
+off disk so `pnpm dev` dies at **startup** with the reason printed, and
 `transformIndexHtml` (`order: "pre"`) catches the served document. A check that only ran
 on the first request would let the server come up looking healthy — which is the exact
 experience being fixed.

@@ -25,6 +25,8 @@ import { defineConfig } from "vitest/config"
  * *files* still sit beside their components.
  */
 export default defineConfig({
+  // Linked pnpm workspaces must share the renderer's React instance.
+  resolve: { dedupe: ["react", "react-dom"] },
   // The one thing `storybookTest()` sets that has no other way in.
   //
   // `@storybook/addon-a11y`'s `afterEach` always *runs* axe and

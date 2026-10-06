@@ -29,7 +29,8 @@ RUN apt-get update \
     tini \
   && rm --recursive --force /var/lib/apt/lists/* \
   && npm install --global corepack@latest \
-  && corepack enable \
+  && corepack enable yarn \
+  && npm install --global --force pnpm@12.9.1 \
   && mkdir --parents /app \
   && chown node:node /app
 

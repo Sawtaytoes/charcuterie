@@ -6,26 +6,23 @@
   "author": "Kevin Ghadyani",
   "license": "MIT",
   "type": "module",
-  "packageManager": "yarn@4.14.1",
-  "workspaces": [
-    "packages/*"
-  ],
+  "packageManager": "pnpm@12.9.1",
   "scripts": {
-    "build": "yarn workspaces foreach --all --parallel --topological run build",
-    "build:storybook": "yarn build && yarn workspace @charcuterie/docs build:storybook",
-    "check:contrast": "yarn workspace @charcuterie/tokens check:contrast",
-    "lint": "yarn lint:biome-format && yarn lint:eslint-format",
+    "build": "node scripts/build.mjs",
+    "build:storybook": "pnpm build && pnpm --filter @charcuterie/docs build:storybook",
+    "check:contrast": "pnpm --filter @charcuterie/tokens check:contrast",
+    "lint": "pnpm lint:biome-format && pnpm lint:eslint-format",
     "lint:biome": "biome check",
     "lint:biome-format": "biome check --write --unsafe",
     "lint:eslint": "eslint .",
     "lint:eslint-format": "eslint . --fix",
-    "preview:epaper": "yarn workspace @charcuterie/tokens preview:epaper",
-    "preview:themes": "yarn workspace @charcuterie/tokens preview:themes",
-    "smoke:storybook": "yarn workspace @charcuterie/docs smoke:storybook",
-    "storybook": "yarn build && yarn workspace @charcuterie/docs storybook",
+    "preview:epaper": "pnpm --filter @charcuterie/tokens preview:epaper",
+    "preview:themes": "pnpm --filter @charcuterie/tokens preview:themes",
+    "smoke:storybook": "pnpm --filter @charcuterie/docs smoke:storybook",
+    "storybook": "pnpm build && pnpm --filter @charcuterie/docs storybook",
     "test": "vitest",
     "version-packages": "changeset version",
-    "typecheck": "tsc --noEmit && yarn workspaces foreach --all --parallel run typecheck",
+    "typecheck": "tsc --noEmit && pnpm -r --parallel --if-present typecheck",
     "test:security": "node --test scripts/dependencySecurity.test.mjs"
   },
   "devDependencies": {
@@ -36,21 +33,21 @@
     "@types/node": "^25.6.2",
     "@vitest/eslint-plugin": "^1.6.20",
     "@vitest/ui": "^4.1.8",
-    "@yarnpkg/sdks": "^3.2.3",
     "eslint": "^10.3.0",
     "eslint-plugin-react": "^7.37.5",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.59.2",
-    "vitest": "^4.1.8"
+    "vitest": "^4.1.8",
+    "turbo": "2.11.7",
+    "braces": "3.0.3",
+    "http-cache-semantics": "4.3.0",
+    "external-editor": "3.1.0",
+    "reg-publish-s3-plugin": "0.14.4",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Sawtaytoes/charcuterie.git"
-  },
-  "resolutions": {
-    "external-editor/tmp": "0.2.7",
-    "reg-publish-s3-plugin/uuid": "11.1.1",
-    "braces@npm:^3.0.3": "patch:braces@npm%3A3.0.3#~/.yarn/patches/braces-npm-3.0.3-582c14023c.patch",
-    "http-cache-semantics@npm:^4.0.0": "patch:http-cache-semantics@npm%3A4.3.0#~/.yarn/patches/http-cache-semantics-npm-4.3.0-ee45f76976.patch"
   }
 }

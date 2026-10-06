@@ -8,8 +8,8 @@
  * metadata as it discovers, so before a run there is nothing to compare
  * and mid-run the picture is incomplete:
  *
- *   - run: yarn vitest run
- *   - run: yarn charcuterie-check-optimize-deps ./optimizeDeps.js
+ *   - run: pnpm vitest run
+ *   - run: pnpm charcuterie-check-optimize-deps ./optimizeDeps.js
  *
  * The argument is a module that exports the SAME array the Vitest config
  * spreads into `optimizeDeps.include`. Exporting the list from its own

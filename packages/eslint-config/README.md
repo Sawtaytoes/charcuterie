@@ -10,7 +10,7 @@ in this repo, so apps consume one import instead of six copy-pasted config files
 ## Installing
 
 ```sh
-yarn add --dev @charcuterie/eslint-config eslint
+pnpm add --dev @charcuterie/eslint-config eslint
 ```
 
 Two packages, and `eslint` is one of them only because the CLI belongs to the

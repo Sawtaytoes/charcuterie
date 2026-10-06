@@ -9,6 +9,8 @@ import { playwright } from "@vitest/browser-playwright"
 import { defineConfig } from "vitest/config"
 
 export default defineConfig({
+  // Linked pnpm workspaces must share the renderer's React instance.
+  resolve: { dedupe: ["react", "react-dom"] },
   plugins: [
     storybookTest({
       configDir: join(import.meta.dirname, ".storybook"),

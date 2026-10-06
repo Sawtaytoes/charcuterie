@@ -1,8 +1,7 @@
-# Canonical .dockerignore for a fleet Yarn-workspace app. Copy to the
+# Canonical .dockerignore for a fleet pnpm-workspace app. Copy to the
 # repo root as `.dockerignore`. Keeps the build context small and the
-# install layer cache-stable; crucially, KEEPS `.yarn/releases` +
-# `.yarn/plugins` (the vendored Yarn the builder needs) while dropping
-# the churny cache/state.
+# install layer cache-stable. pnpm downloads use a BuildKit cache mount;
+# lockfiles, workspace configuration and patches stay in the context.
 .git
 .github
 .forgejo
@@ -14,10 +13,10 @@
 **/coverage
 **/__screenshots__
 **/__snapshots__
-.yarn/cache
-.yarn/install-state.gz
-.yarn/unplugged
 *.log
 .env
 .env.*
 !.env.example
+
+.pnpm-store
+.turbo

@@ -60,10 +60,8 @@ const config: StorybookConfig = {
   // `@charcuterie/storybook-config`'s `buildPreviewHead` and
   // `docs/decisions/2026-08-03-the-theme-axes-are-written-at-preview-bootstrap.md`.
   previewHead: buildPreviewHead(),
-  // Tailwind v4 in `viteFinal`, shared. No React dedupe: the docs
-  // host renders with the monorepo's single hoisted React, unlike a
-  // standalone app repo.
-  viteFinal: charcuterieViteFinal(),
+  // pnpm links workspace packages; use the host renderer's React instance.
+  viteFinal: charcuterieViteFinal({ isReactDeduped: true }),
 }
 
 export default config

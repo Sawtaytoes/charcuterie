@@ -35,7 +35,7 @@
  *
  * Run it against a build:
  *
- *     yarn build:storybook && yarn smoke:storybook
+ *     pnpm build:storybook && pnpm smoke:storybook
  *
  * or against a dev server with `--base http://localhost:6006`.
  */
