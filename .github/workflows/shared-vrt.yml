@@ -269,8 +269,15 @@ jobs:
           mkdir -p "$HOME/.local/bin"
           corepack enable --install-directory "$HOME/.local/bin" yarn
           # pnpm 12 ships native entrypoints older Corepack cannot launch.
-          npm install --global --force --prefix "$HOME/.local" pnpm@12.9.1
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          # npm now requires an explicit grant for global lifecycle scripts.
+          # Authorize only pnpm's native-binary setup, then prefer its prefix
+          # over any older Corepack pnpm shim in this and subsequent steps.
+          npm install --global --force --allow-scripts=pnpm --prefix "$HOME/.local" pnpm@12.9.1
+          pnpm_bin="$(npm prefix --global --prefix "$HOME/.local")/bin"
+          export PATH="$pnpm_bin:$PATH"
+          echo "$pnpm_bin" >> "$GITHUB_PATH"
+          hash -r
+          test "$(pnpm --version)" = 12.9.1
 
           # The image bakes browsers into a root-owned PLAYWRIGHT_BROWSERS_PATH.
           # The repo's own commands may need to install into it, so point

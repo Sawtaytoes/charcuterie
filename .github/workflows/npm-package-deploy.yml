@@ -24,7 +24,14 @@ jobs:
           node-version: 26
           registry-url: "https://registry.npmjs.org"
           package-manager-cache: false # never cache in release builds
-      - run: npm install --global --force pnpm@12.9.1
+      - name: Install the pinned native pnpm CLI
+        run: |
+          npm install --global --force --allow-scripts=pnpm pnpm@12.9.1
+          pnpm_bin="$(npm prefix --global)/bin"
+          export PATH="$pnpm_bin:$PATH"
+          echo "$pnpm_bin" >> "$GITHUB_PATH"
+          hash -r
+          test "$(pnpm --version)" = 12.9.1
       - run: pnpm install --frozen-lockfile --store-dir "$HOME/.cache/pnpm/store"
       # dist is generated, not committed — build the whole graph topologically
       # so every package's dist and its siblings' dist exist before publish.
