@@ -30,7 +30,9 @@ RUN apt-get update \
   && rm --recursive --force /var/lib/apt/lists/* \
   && npm install --global corepack@latest \
   && corepack enable yarn \
-  && npm install --global --force pnpm@12.9.1 \
+  && npm install --global --force --allow-scripts=pnpm pnpm@12.9.1 \
+  && pnpm_bin="$(npm prefix --global)/bin" \
+  && test "$("$pnpm_bin/pnpm" --version)" = 12.9.1 \
   && mkdir --parents /app \
   && chown node:node /app
 

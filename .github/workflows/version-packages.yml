@@ -21,7 +21,14 @@ jobs:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with: { node-version: 26 }
-      - run: npm install --global --force pnpm@12.9.1
+      - name: Install the pinned native pnpm CLI
+        run: |
+          npm install --global --force --allow-scripts=pnpm pnpm@12.9.1
+          pnpm_bin="$(npm prefix --global)/bin"
+          export PATH="$pnpm_bin:$PATH"
+          echo "$pnpm_bin" >> "$GITHUB_PATH"
+          hash -r
+          test "$(pnpm --version)" = 12.9.1
       - run: pnpm install --frozen-lockfile --store-dir "$HOME/.cache/pnpm/store"
       - uses: changesets/action@v1
         with:

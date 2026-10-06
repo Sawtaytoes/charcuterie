@@ -39,10 +39,10 @@ pnpm add @charcuterie/ui
 
 ## Develop Charcuterie
 
-The repository needs Node.js 24 or later and uses pnpm 12.9.1 (installed with `npm install --global --force pnpm@12.9.1`).
+The repository needs Node.js 24 or later and uses pnpm 12.9.1 (installed with `npm install --global --force --allow-scripts=pnpm pnpm@12.9.1`).
 
 ```sh
-npm install --global --force pnpm@12.9.1
+npm install --global --force --allow-scripts=pnpm pnpm@12.9.1
 pnpm install --frozen-lockfile --store-dir "$HOME/.cache/pnpm/store"
 pnpm build
 pnpm test
