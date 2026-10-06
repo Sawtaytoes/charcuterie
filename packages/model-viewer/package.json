@@ -19,7 +19,7 @@
   ],
   "scripts": {
     "build": "node build.js",
-    "prepack": "yarn build",
+    "prepack": "pnpm build",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

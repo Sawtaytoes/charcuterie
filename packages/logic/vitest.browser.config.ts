@@ -19,6 +19,7 @@ import { defineConfig } from "vitest/config"
  * quietly testing React's binding.
  */
 export default defineConfig({
+  resolve: { dedupe: ["react", "react-dom"] },
   test: {
     // Four windows on a shared runner is four times the load; the
     // factory's CI budget, which a hand-rolled config does not get.

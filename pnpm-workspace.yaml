@@ -1,0 +1,21 @@
+packages:
+  - packages/*
+# Preserve Yarn's existing peer and dependency-script policy.
+autoInstallPeers: false
+strictPeerDependencies: false
+strictDepBuilds: true
+allowBuilds:
+  esbuild: false
+  unrs-resolver: false
+  core-js: false
+  core-js-pure: false
+# Local stores remain reusable without copying a machine-wide virtual store.
+enableGlobalVirtualStore: false
+verifyDepsBeforeRun: false
+overrides:
+  http-cache-semantics@^4.0.0: 4.3.0
+  external-editor>tmp: 0.2.7
+  reg-publish-s3-plugin>uuid: 11.1.1
+patchedDependencies:
+  braces@3.0.3: patches/braces-npm-3.0.3-582c14023c.patch
+  http-cache-semantics@4.3.0: patches/http-cache-semantics-npm-4.3.0-ee45f76976.patch

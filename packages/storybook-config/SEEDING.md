@@ -14,7 +14,7 @@ From a checkout with the built `dist` present:
 
 ```bash
 cd packages/storybook-config
-yarn build                     # dist/ must exist in the tarball
+pnpm build                     # dist/ must exist in the tarball
 
 # Ephemeral, gitignored auth — never commit this.
 export NPM_TOKEN=<npm automation token with publish rights on @charcuterie>
@@ -27,11 +27,11 @@ Notes:
 - `--provenance=false` for the **manual** seed: provenance requires the OIDC
   exchange, which only the GitHub Actions runner has. The automated releases
   that follow publish `--provenance` like the rest of the fleet.
-- Use `yarn pack` semantics if `@charcuterie/tokens` is still `workspace:*` in
+- Use `pnpm pack` semantics if `@charcuterie/tokens` is still `workspace:*` in
   this package's `dependencies` at publish time — `npm publish` leaves
-  `workspace:*` verbatim, `yarn pack` rewrites it to a real range. The deploy
-  workflow already does this (unpacks a `yarn pack` tarball and publishes the
-  directory); for the manual seed, run `yarn pack -o /tmp/sbc.tgz`, `tar -xzf`
+  `workspace:*` verbatim, `pnpm pack` rewrites it to a real range. The deploy
+  workflow already does this (unpacks a `pnpm pack` tarball and publishes the
+  directory); for the manual seed, run `pnpm pack --out /tmp/sbc.tgz`, `tar -xzf`
   it, and `npm publish` the extracted `package/` directory.
 
 ## After the seed

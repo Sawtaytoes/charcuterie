@@ -1,5 +1,9 @@
 # Seeding @charcuterie/server to npm
 
+This is the historical Yarn publishing transcript. Current releases use the
+pnpm packing and OIDC publishing procedure in
+[the deploy workflow](../../.github/workflows/npm-package-deploy.yml).
+
 This package's **first** publish is manual, for the same reason
 [`@charcuterie/storybook-config`](../storybook-config/SEEDING.md)'s was: every
 other `@charcuterie/*` package is published by

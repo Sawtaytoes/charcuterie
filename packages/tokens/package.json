@@ -40,7 +40,7 @@
     "build:tokens": "node scripts/buildTokens.ts",
     "check:contrast": "node scripts/checkContrast.ts",
     "fetch:fonts": "node scripts/fetchFonts.ts",
-    "prepack": "yarn build",
+    "prepack": "pnpm build",
     "preview:epaper": "node scripts/buildEpaperPreview.ts",
     "preview:themes": "node scripts/buildPreview.ts",
     "test": "vitest",

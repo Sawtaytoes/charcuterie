@@ -8,7 +8,7 @@
  * which is the width the whole change is for.
  *
  * Same static-serve + Playwright idiom as `captureToolbar.mjs`.
- * Run against the built Storybook: `yarn build:storybook` first.
+ * Run against the built Storybook: `pnpm build:storybook` first.
  */
 
 import { mkdir, readFile } from "node:fs/promises"

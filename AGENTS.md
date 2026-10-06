@@ -52,7 +52,7 @@ component checklist, `packages/eslint-config/README.md` the rule table,
 `@charcuterie/tokens` is zero-dependency and React-free because castkit renders it through
 Satori with no React tree, and `@charcuterie/logic/preact` must never reach `react`.
 `sourceRules.test.ts` asserts the whole graph, including that every specifier reached is a
-declared dependency — so a wrong import fails `yarn test`, not review.
+declared dependency — so a wrong import fails `pnpm test`, not review.
 
 `packages/ui/src/index.ts` is the **one sanctioned barrel**. Components import each other by
 relative path (`../Spinner/Spinner.tsx`); a barrel the package's own internals go through
@@ -61,14 +61,14 @@ makes every component a dependency of every other one. A test enforces it.
 ## Commands, and which gates are load-bearing
 
 ```bash
-yarn install
-yarn build          # every package, topological
-yarn test           # vitest: node + ui-dom (chromium) + storybook (chromium)
-yarn typecheck
-yarn lint           # biome --write --unsafe, then eslint --fix
-yarn check:contrast # WCAG 2.2 AA, with numbers
+pnpm install
+pnpm build          # every package, topological
+pnpm test           # vitest: node + ui-dom (chromium) + storybook (chromium)
+pnpm typecheck
+pnpm lint           # biome --write --unsafe, then eslint --fix
+pnpm check:contrast # WCAG 2.2 AA, with numbers
 
-yarn build:storybook && yarn smoke:storybook
+pnpm build:storybook && pnpm smoke:storybook
 ```
 
 `check:contrast` audits **interactive** states, not just resting ones — every gated pair has
@@ -78,7 +78,7 @@ button in the fleet failed AA **while hovered**
 ([decision](docs/decisions/2026-08-10-interactive-states-are-audited-not-just-resting-states.md)).
 A gate that cannot see a state reports its absence as a pass.
 
-**`yarn storybook` and `yarn build:storybook` run `yarn build` first, and that is not
+**`pnpm storybook` and `pnpm build:storybook` run `pnpm build` first, and that is not
 ceremony — do not strip it.** `packages/docs` resolves `@charcuterie/*` through `exports` to
 `dist`, exactly as a consumer does, so a stale `dist` renders a token that silently does not
 exist and a `logic` fix that has no effect. M4 lost an afternoon to a three-commit-old
@@ -86,7 +86,7 @@ exist and a `logic` fix that has no effect. M4 lost an afternoon to a three-comm
 ([decision](docs/decisions/2026-07-30-storybook-reads-the-built-dist.md)).
 
 **`smoke:storybook` is the only gate that navigates**, and it is the one that catches what
-the others structurally cannot. `yarn test` mounts each story in isolation, so it is blind to
+the others structurally cannot. `pnpm test` mounts each story in isolation, so it is blind to
 **order** — which is how M3 shipped with all twelve docs pages broken and every gate green.
 Anything touching MDX, sidebar ordering, or preview bootstrap is unverified until this passes.
 It also does a second **cold** pass on a story-less docs page, because a missing
