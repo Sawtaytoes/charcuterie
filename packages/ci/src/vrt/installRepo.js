@@ -1,5 +1,7 @@
 import { spawnSync } from "node:child_process"
 import { existsSync, readFileSync } from "node:fs"
+import { homedir } from "node:os"
+import { join } from "node:path"
 
 export function repoInstallCommand(directory) {
   const manifest = `${directory}/package.json`
@@ -12,7 +14,13 @@ export function repoInstallCommand(directory) {
     manager === "pnpm" ||
     (!manager && existsSync(`${directory}/pnpm-lock.yaml`))
   ) {
-    return ["pnpm", "install", "--frozen-lockfile"]
+    return [
+      "pnpm",
+      "install",
+      "--frozen-lockfile",
+      "--store-dir",
+      join(homedir(), ".cache", "pnpm", "store"),
+    ]
   }
   if (
     manager === "yarn" ||

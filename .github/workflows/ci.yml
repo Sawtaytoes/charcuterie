@@ -47,7 +47,9 @@ jobs:
       - run: npm install --global --force pnpm@12.9.1
       - name: Locate the pnpm store
         id: pnpm-store
-        run: echo "path=$(pnpm store path)" >> "$GITHUB_OUTPUT"
+        run: |
+          store_path="$(pnpm store path --store-dir "$HOME/.cache/pnpm/store")"
+          echo "path=$store_path" >> "$GITHUB_OUTPUT"
       - uses: actions/cache@v5
         with:
           path: ${{ steps.pnpm-store.outputs.path }}
@@ -58,7 +60,7 @@ jobs:
           path: .turbo
           key: ${{ runner.os }}-node26-turbo2-${{ github.sha }}
           restore-keys: ${{ runner.os }}-node26-turbo2-
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile --store-dir "$HOME/.cache/pnpm/store"
       - run: pnpm lint:biome
       - run: pnpm lint:eslint
 
@@ -74,7 +76,9 @@ jobs:
       - run: npm install --global --force pnpm@12.9.1
       - name: Locate the pnpm store
         id: pnpm-store
-        run: echo "path=$(pnpm store path)" >> "$GITHUB_OUTPUT"
+        run: |
+          store_path="$(pnpm store path --store-dir "$HOME/.cache/pnpm/store")"
+          echo "path=$store_path" >> "$GITHUB_OUTPUT"
       - uses: actions/cache@v5
         with:
           path: ${{ steps.pnpm-store.outputs.path }}
@@ -85,7 +89,7 @@ jobs:
           path: .turbo
           key: ${{ runner.os }}-node26-turbo2-${{ github.sha }}
           restore-keys: ${{ runner.os }}-node26-turbo2-
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile --store-dir "$HOME/.cache/pnpm/store"
       # Storybook and the docs typecheck read the built dist, so build first.
       - run: pnpm build
       - run: pnpm typecheck
@@ -102,7 +106,9 @@ jobs:
       - run: npm install --global --force pnpm@12.9.1
       - name: Locate the pnpm store
         id: pnpm-store
-        run: echo "path=$(pnpm store path)" >> "$GITHUB_OUTPUT"
+        run: |
+          store_path="$(pnpm store path --store-dir "$HOME/.cache/pnpm/store")"
+          echo "path=$store_path" >> "$GITHUB_OUTPUT"
       - uses: actions/cache@v5
         with:
           path: ${{ steps.pnpm-store.outputs.path }}
@@ -113,7 +119,7 @@ jobs:
           path: .turbo
           key: ${{ runner.os }}-node26-turbo2-${{ github.sha }}
           restore-keys: ${{ runner.os }}-node26-turbo2-
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile --store-dir "$HOME/.cache/pnpm/store"
       # playwright lives in the docs/logic workspaces, not the root — run its
       # installer from a workspace that has it; browsers land in the shared cache.
       - run: pnpm --filter @charcuterie/docs exec playwright install chromium --with-deps
@@ -127,7 +133,7 @@ jobs:
       # `pnpm test` is bare `vitest` for local watch mode; CI needs run-once.
       - run: pnpm vitest run
       # Prove the same security patch works in the standalone pnpm-installed tools.
-      - run: pnpm --dir packages/ci/src/vrt install --frozen-lockfile
+      - run: pnpm --dir packages/ci/src/vrt install --frozen-lockfile --store-dir "$HOME/.cache/pnpm/store"
       - run: pnpm test:security
 
   # **Its own job, and on every PR — not appended to `test`, not path-gated.**
@@ -167,7 +173,9 @@ jobs:
       - run: npm install --global --force pnpm@12.9.1
       - name: Locate the pnpm store
         id: pnpm-store
-        run: echo "path=$(pnpm store path)" >> "$GITHUB_OUTPUT"
+        run: |
+          store_path="$(pnpm store path --store-dir "$HOME/.cache/pnpm/store")"
+          echo "path=$store_path" >> "$GITHUB_OUTPUT"
       - uses: actions/cache@v5
         with:
           path: ${{ steps.pnpm-store.outputs.path }}
@@ -178,7 +186,7 @@ jobs:
           path: .turbo
           key: ${{ runner.os }}-node26-turbo2-${{ github.sha }}
           restore-keys: ${{ runner.os }}-node26-turbo2-
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile --store-dir "$HOME/.cache/pnpm/store"
       # The smoke run drives the built site with playwright, which lives in the
       # docs workspace rather than the root — same install as the `test` job.
       - run: pnpm --filter @charcuterie/docs exec playwright install chromium --with-deps
@@ -271,7 +279,9 @@ jobs:
           echo "PLAYWRIGHT_BROWSERS_PATH=$HOME/.cache/ms-playwright" >> "$GITHUB_ENV"
       - name: Locate the pnpm store
         id: pnpm-store
-        run: echo "path=$(pnpm store path)" >> "$GITHUB_OUTPUT"
+        run: |
+          store_path="$(pnpm store path --store-dir "$HOME/.cache/pnpm/store")"
+          echo "path=$store_path" >> "$GITHUB_OUTPUT"
       - uses: actions/cache@v5
         with:
           path: ${{ steps.pnpm-store.outputs.path }}
@@ -282,7 +292,7 @@ jobs:
           path: .turbo
           key: ${{ runner.os }}-node26-turbo2-${{ github.sha }}
           restore-keys: ${{ runner.os }}-node26-turbo2-
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile --store-dir "$HOME/.cache/pnpm/store"
       - run: pnpm --filter @charcuterie/docs exec playwright install chromium
       - run: pnpm build:storybook
       - run: pnpm --filter @charcuterie/docs vrt:capture

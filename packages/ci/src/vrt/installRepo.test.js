@@ -1,5 +1,5 @@
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs"
-import { tmpdir } from "node:os"
+import { homedir, tmpdir } from "node:os"
 import { join } from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
 import { repoInstallCommand } from "./installRepo.js"
@@ -30,7 +30,13 @@ describe("shared workflow package-manager setup", () => {
       repoInstallCommand(
         fixture("pnpm@12.9.1", "yarn.lock"),
       ),
-    ).toEqual(["pnpm", "install", "--frozen-lockfile"])
+    ).toEqual([
+      "pnpm",
+      "install",
+      "--frozen-lockfile",
+      "--store-dir",
+      join(homedir(), ".cache", "pnpm", "store"),
+    ])
     expect(
       repoInstallCommand(
         fixture("yarn@4.14.1", "pnpm-lock.yaml"),

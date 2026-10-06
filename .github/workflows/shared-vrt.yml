@@ -12,7 +12,7 @@
 #     permissions: { contents: read, statuses: write, pull-requests: write }
 #     uses: Sawtaytoes/charcuterie/.github/workflows/shared-vrt.yml@workflows-v1
 #     with:
-#       buildCommand: yarn build-storybook
+#       buildCommand: pnpm build-storybook
 #       storybookStaticDirs: storybook-static
 #     secrets: inherit
 #
@@ -25,7 +25,7 @@
 #     with:
 #       charcuterieRepository: sawtaytoes/charcuterie
 #       runsOn: '["vrt"]'
-#       buildCommand: yarn build-storybook
+#       buildCommand: pnpm build-storybook
 #       storybookStaticDirs: storybook-static
 #     secrets: inherit
 #
@@ -276,7 +276,7 @@ jobs:
       - name: Install the capture and compare tools
         run: |
           set -euo pipefail
-          pnpm --dir "$VRT_TOOLS" install --frozen-lockfile
+          pnpm --dir "$VRT_TOOLS" install --frozen-lockfile --store-dir "$HOME/.cache/pnpm/store"
 
           # Reuse the image's baked browser when it is the revision the pinned
           # Playwright wants — the job container on Forgejo starts empty every

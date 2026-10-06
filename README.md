@@ -43,7 +43,7 @@ The repository needs Node.js 24 or later and uses pnpm 12.9.1 (installed with `n
 
 ```sh
 npm install --global --force pnpm@12.9.1
-pnpm install --frozen-lockfile
+pnpm install --frozen-lockfile --store-dir "$HOME/.cache/pnpm/store"
 pnpm build
 pnpm test
 pnpm typecheck
