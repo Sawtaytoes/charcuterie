@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 #
-# Reference builder + runtime skeleton for a fleet Yarn-workspace app.
+# Reference builder + runtime skeleton for a fleet pnpm-workspace app.
 # Copy this into the app's own Dockerfile, keep the `base`/`builder`
 # stages ~as-is, and add ONLY the app's runtime layer (OS/native deps,
 # ports, entrypoint) to the `runtime` stage. The scaffolding CLI
@@ -15,12 +15,13 @@ FROM ghcr.io/sawtaytoes/charcuterie-node-base:${NODE_MAJOR} AS base
 # Manifests first so the install layer caches across source-only edits.
 # List every workspace's package.json explicitly for the same reason.
 FROM base AS builder
-COPY --chown=node:node .yarnrc.yml package.json yarn.lock ./
-COPY --chown=node:node .yarn/ .yarn/
+COPY --chown=node:node package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+# COPY --chown=node:node patches/ patches/
 # COPY --chown=node:node packages/<name>/package.json packages/<name>/package.json
-RUN yarn install --immutable
+RUN --mount=type=cache,id=pnpm-store,target=/home/node/.cache/pnpm/store,uid=1000,gid=1000,sharing=locked \
+  pnpm install --frozen-lockfile --store-dir /home/node/.cache/pnpm/store
 COPY --chown=node:node . .
-RUN yarn build
+RUN pnpm build
 
 # ---------- runtime ----------
 # Production deps + built output only. Add the app's native deps here:

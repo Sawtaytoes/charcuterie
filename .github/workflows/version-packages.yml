@@ -21,10 +21,11 @@ jobs:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with: { node-version: 26 }
-      - run: corepack enable && yarn install --immutable
+      - run: npm install --global --force pnpm@12.9.1
+      - run: pnpm install --frozen-lockfile
       - uses: changesets/action@v1
         with:
-          version: yarn version-packages
+          version: pnpm version-packages
           commit: "chore(release): version packages"
           title: "chore(release): version packages"
         env:

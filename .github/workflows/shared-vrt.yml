@@ -42,7 +42,7 @@
 # reasons as the docs lint: `@charcuterie/ci` is deliberately unpublished,
 # and the tag in `uses:` and the capture it runs are then the same commit.
 # Only the tools' own pinned dependencies are installed
-# (`packages/ci/src/vrt/package-lock.json`) — no workspace install, no build.
+# (`packages/ci/src/vrt/pnpm-lock.yaml`) — no workspace install, no build.
 #
 # ⚠️ The inner job is `visualRegression`, not `vrt` or `lint`. Forgejo posts
 # a status context for the INNER job name as well as the caller's, and a
@@ -69,10 +69,10 @@ on:
         required: false
         default: '["self-hosted","vrt"]'
       setupCommand:
-        description: "Install the repo's dependencies."
+        description: "Install dependencies. auto selects the repo package manager and its frozen lockfile."
         type: string
         required: false
-        default: yarn install --immutable
+        default: auto
       buildCommand:
         description: "Build what the capture needs, e.g. the Storybook(s). Optional."
         type: string
@@ -251,16 +251,16 @@ jobs:
           echo "VRT_ACTUAL_DIR=$GITHUB_WORKSPACE/$VRT_ACTUAL_DIR_RELATIVE" >> "$GITHUB_ENV"
           echo "VRT_WORKING_DIR=$GITHUB_WORKSPACE/.reg" >> "$GITHUB_ENV"
 
-      # No setup-node: the runner image (agent-sandbox-base) IS the pinned
-      # toolchain, and its fonts and node keep the pixels deterministic.
-      # Its yarn is a login-shell corepack shim the non-login Actions shell
-      # cannot see, and the image's /usr/bin is root-owned, so the shim goes
-      # into a directory the job owns.
+      # The runner image pins Node and fonts for deterministic screenshots.
+      # Retain Yarn through Corepack for callers awaiting migration, and install
+      # pnpm's pinned native CLI explicitly into a writable prefix.
       - name: Prepare the toolchain
         run: |
           set -euo pipefail
           mkdir -p "$HOME/.local/bin"
-          corepack enable --install-directory "$HOME/.local/bin"
+          corepack enable --install-directory "$HOME/.local/bin" yarn
+          # pnpm 12 ships native entrypoints older Corepack cannot launch.
+          npm install --global --force --prefix "$HOME/.local" pnpm@12.9.1
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
           # The image bakes browsers into a root-owned PLAYWRIGHT_BROWSERS_PATH.
@@ -276,13 +276,13 @@ jobs:
       - name: Install the capture and compare tools
         run: |
           set -euo pipefail
-          npm ci --prefix "$VRT_TOOLS" --no-audit --no-fund
+          pnpm --dir "$VRT_TOOLS" install --frozen-lockfile
 
           # Reuse the image's baked browser when it is the revision the pinned
           # Playwright wants — the job container on Forgejo starts empty every
           # run, so this saves a download each time. Otherwise install it
           # where the job can write.
-          revision="$(node -p "require('$VRT_TOOLS/node_modules/playwright-core/browsers.json').browsers.find((b) => b.name === 'chromium-headless-shell').revision")"
+          revision="$(node "$VRT_TOOLS/browserRevision.js")"
           if [ -n "${VRT_IMAGE_BROWSERS_PATH:-}" ] && [ -d "$VRT_IMAGE_BROWSERS_PATH/chromium_headless_shell-$revision" ]; then
             echo "Using the image's chromium_headless_shell-$revision."
             echo "VRT_BROWSERS_PATH=$VRT_IMAGE_BROWSERS_PATH" >> "$GITHUB_ENV"
@@ -298,8 +298,12 @@ jobs:
           rm -rf "$VRT_ACTUAL_DIR"
           mkdir -p "$VRT_ACTUAL_DIR"
 
-      - name: Set up
-        if: ${{ inputs.setupCommand != '' }}
+      - name: Set up with the repo's package manager
+        if: ${{ inputs.setupCommand == 'auto' }}
+        run: node "$VRT_TOOLS/installRepo.js"
+
+      - name: Set up with the caller's command
+        if: ${{ inputs.setupCommand != '' && inputs.setupCommand != 'auto' }}
         run: ${{ inputs.setupCommand }}
 
       - name: Build

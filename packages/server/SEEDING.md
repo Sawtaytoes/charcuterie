@@ -40,22 +40,22 @@ into a clean skip.
 From a checkout at the version you are seeding:
 
 ```bash
-yarn install
+pnpm install
 
 # `publishConfig.provenance` WINS over the CLI flag — remove it first.
 # Do this in a throwaway/detached checkout and never commit it.
 #   packages/<pkg>/package.json → delete `"provenance": true`
 
 YARN_NPM_AUTH_TOKEN=<npm automation token> \
-  yarn workspace @charcuterie/<pkg> npm publish --access public
+  pnpm --filter @charcuterie/<pkg> npm publish --access public
 ```
 
-- **`yarn npm publish`, not `npm publish`.** yarn packs and publishes in one
-  step, and only yarn rewrites `workspace:*` deps into real ranges.
+- **`pnpm npm publish`, not `npm publish`.** pnpm packs and publishes in one
+  step, and only pnpm rewrites `workspace:*` deps into real ranges.
 - **The provenance field is the trap.** `publishConfig.provenance: true` is what
   the automated OIDC releases need, and it takes precedence over both
   `--no-provenance` and `YARN_NPM_CONFIG_PROVENANCE` (the latter is not even a
-  recognised setting in Yarn 4.14 — it errors). yarn fails with
+  recognised setting in pnpm 4.14 — it errors). pnpm fails with
   `YN0091: Provenance generation is only supported in GitHub Actions and
   GitLab CI` until the field is gone. Temporarily deleting it from the manifest
   is the only thing that works, and it must go straight back afterwards or every

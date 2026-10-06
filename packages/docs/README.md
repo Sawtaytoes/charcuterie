@@ -3,11 +3,11 @@
 The Storybook host. **Private** — the fleet reads it, nobody installs it.
 
 ```bash
-yarn storybook          # dev server on :6006
-yarn build:storybook    # → storybook-static/
-yarn vitest run --project storybook   # from the repo root: every story renders, axe
-yarn vitest run --project ui-dom      # from the repo root: @charcuterie/ui's DOM tests
-yarn smoke:storybook    # clicks through the built site — see below
+pnpm storybook          # dev server on :6006
+pnpm build:storybook    # → storybook-static/
+pnpm vitest run --project storybook   # from the repo root: every story renders, axe
+pnpm vitest run --project ui-dom      # from the repo root: @charcuterie/ui's DOM tests
+pnpm smoke:storybook    # clicks through the built site — see below
 ```
 
 Two browser projects, because stories and tests were split apart
@@ -76,7 +76,7 @@ so the specimen now shows it on a genuinely `disabled` button.
 
 Opting a story out requires `a11y: { test: "todo" }` with a comment linking an issue.
 
-## `yarn smoke:storybook` — the gate that clicks
+## `pnpm smoke:storybook` — the gate that clicks
 
 `scripts/smokeStorybook.ts` serves `storybook-static/`, loads the manager **once**, and
 walks every entry in `index.json` over the addons channel — the same
@@ -142,8 +142,8 @@ The story tests run in `@vitest/browser` + chromium, and **need no environment o
 which is what this workspace's Playwright wants:
 
 ```bash
-yarn vitest run --project storybook
-yarn vitest run --project ui-dom
+pnpm vitest run --project storybook
+pnpm vitest run --project ui-dom
 ```
 
 Corrected 2026-07-29 (M3). M1 and M2 both documented a

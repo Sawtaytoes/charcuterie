@@ -8,7 +8,10 @@ app's Dockerfile is `FROM` this plus only its own runtime layer.
 
 - **Node** via `node:${NODE_MAJOR}-slim` — one `ARG NODE_MAJOR` (default 26); the tag IS
   the major (`:24`, `:26`).
-- **The Node-26 corepack fix** — `npm install -g corepack@latest && corepack enable`
+- **Pinned pnpm 12.9.1** — installed through npm, since older Corepack releases expect
+  a JavaScript entrypoint that pnpm 12 no longer ships. Yarn remains available through Corepack
+  during the fleet migration.
+- **The Node-26 corepack fix** — `npm install -g corepack@latest && corepack enable yarn`
   (a bare `corepack enable` is exit-127 on Node 26) + `COREPACK_ENABLE_DOWNLOAD_PROMPT=0`.
 - `ca-certificates`, **`tini` as PID 1**, `WORKDIR /app`, and a non-root **`USER node`**.
 

@@ -24,11 +24,11 @@ jobs:
           node-version: 26
           registry-url: "https://registry.npmjs.org"
           package-manager-cache: false # never cache in release builds
-      - run: corepack enable
-      - run: yarn install --immutable
+      - run: npm install --global --force pnpm@12.9.1
+      - run: pnpm install --frozen-lockfile
       # dist is generated, not committed — build the whole graph topologically
       # so every package's dist and its siblings' dist exist before publish.
-      - run: yarn build
+      - run: pnpm build
 
       # Publish each public package only when its version was bumped this push —
       # i.e. when no `<pkg>-v<version>` tag exists yet. Bumping is done by merging
@@ -36,11 +36,11 @@ jobs:
       # push the lightweight tag so later runs skip cleanly (idempotent). Order is
       # topological: tokens and logic before ui, which depends on both.
       #
-      # `yarn pack` (not `npm pack`) builds the tarball because only yarn rewrites
+      # `pnpm pack` (not `npm pack`) builds the tarball because only pnpm rewrites
       # the `workspace:*` deps — @charcuterie/ui's dependency on logic + tokens —
       # into real version ranges. npm publishes that tarball, which is what carries
       # OIDC trusted publishing + provenance. Verified: npm pack leaves
-      # `workspace:*` verbatim; yarn pack rewrites it to the sibling's version.
+      # `workspace:*` verbatim; pnpm pack rewrites it to the sibling's version.
       - name: Publish bumped packages
         run: |
           set -euo pipefail
@@ -74,9 +74,9 @@ jobs:
 
             echo "→ publishing ${name}@${version}"
             tarball="$(mktemp -d)/${pkg}.tgz"
-            yarn workspace "$name" pack -o "$tarball"
+            pnpm --filter "$name" pack --out "$tarball"
 
-            # Unpack yarn's tarball and publish the resulting DIRECTORY.
+            # Unpack pnpm's tarball and publish the resulting DIRECTORY.
             #
             # Handed a `.tgz` path, npm does not run its OIDC trusted-publishing
             # exchange — it goes straight to the configured credentials, which in
@@ -86,12 +86,12 @@ jobs:
             # directory is what mux-magic does, and it is the only difference
             # between its working OIDC publish and this one.
             #
-            # yarn's pack is still what rewrites @charcuterie/ui's `workspace:*`
+            # pnpm's pack is still what rewrites @charcuterie/ui's `workspace:*`
             # deps into real ranges (npm pack leaves them verbatim), so the
             # tarball stays — only the thing handed to `npm publish` changes.
             # An npm tarball always has a single top-level `package/`.
-            # `--ignore-scripts` because every package has `prepack: yarn build`,
-            # which yarn already ran while packing — the built `dist` is in the
+            # `--ignore-scripts` because every package has `prepack: pnpm build`,
+            # which pnpm already ran while packing — the built `dist` is in the
             # tarball. Re-running it here fails anyway (`tsconfig.build.json` is
             # a repo file, not a published one), and re-building a tarball that
             # was already assembled is exactly what we do not want at publish.

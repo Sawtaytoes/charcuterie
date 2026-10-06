@@ -8,7 +8,7 @@
  * bar relocates out of the header.
  *
  * Same static-serve + Playwright idiom as `captureAppShell.mjs`.
- * Run against the built Storybook: `yarn build:storybook` first.
+ * Run against the built Storybook: `pnpm build:storybook` first.
  */
 
 import { mkdir, readFile } from "node:fs/promises"
