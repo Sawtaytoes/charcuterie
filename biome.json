@@ -7,7 +7,7 @@
       "!**/dist",
       "!**/node_modules",
       "!**/storybook-static",
-      "!.yarn",
+      "!.turbo",
       "!docs/previews",
       "!packages/tokens/preview",
       "!packages/biome-config/**/__fixtures__",
@@ -15,7 +15,7 @@
       "!**/*.gen.ts",
       "!**/*.gen.tsx",
       "!**/__generated__",
-      "!packages/ci/src/vrt/package-lock.json"
+      "!**/pnpm-lock.yaml"
     ]
   }
 }

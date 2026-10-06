@@ -13,7 +13,7 @@
  * "no component existed", but "here is what an app ships today and what
  * it looks like beside the component that replaces it".
  *
- *     yarn build:storybook && node scripts/linkScreenshots.mjs
+ *     pnpm build:storybook && node scripts/linkScreenshots.mjs
  *
  * They land in the gitignored `__screenshots__/` scratch. The ones
  * worth keeping are copied into `docs/previews/` under a dated name,

@@ -13,7 +13,7 @@
  * black that satisfies a loose assertion.
  *
  * So freshness is a red test rather than a thing to remember.
- * `yarn build` fixes it, and the message says so.
+ * `pnpm build` fixes it, and the message says so.
  */
 
 import { readFile } from "node:fs/promises"
@@ -51,7 +51,7 @@ test.each([
   ["theme.css", buildThemeCss()],
   // A stale one of these is worse than a stale stylesheet: it is
   // meant to be COPIED into a consumer's HTML, so an out-of-date
-  // hex here does not fix itself on the next `yarn build` in the
+  // hex here does not fix itself on the next `pnpm build` in the
   // app — it is already pasted somewhere else.
   ["first-paint.css", buildFirstPaintCss(daylight)],
   // Copied into a consumer's <head>, so a stale hex or key here is
@@ -81,12 +81,12 @@ test.each([
     // files anyway.
     expect(
       built,
-      `packages/tokens/dist/${name} is missing. Run \`yarn build\`.`,
+      `packages/tokens/dist/${name} is missing. Run \`pnpm build\`.`,
     ).not.toBeNull()
 
     expect(
       built,
-      `packages/tokens/dist/${name} is stale — it does not match what the generator produces from src. Run \`yarn build\`.`,
+      `packages/tokens/dist/${name} is stale — it does not match what the generator produces from src. Run \`pnpm build\`.`,
     ).toBe(expected)
   },
 )

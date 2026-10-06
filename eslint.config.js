@@ -15,7 +15,7 @@ export default defineConfig(
       "**/dist/**",
       "**/node_modules/**",
       "**/storybook-static/**",
-      ".yarn/**",
+      ".turbo/**",
       // Hand-written declaration files (e.g. the *-config factory
       // types) carry no runtime logic to lint, and a `.d.ts` that
       // isn't in a tsconfig `include` trips the type-aware project

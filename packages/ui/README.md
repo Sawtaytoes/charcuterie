@@ -210,7 +210,7 @@ M5 spent an hour on the second and third of these, so M5b and M6 do not have to:
 // the PROJECT ROOT — `ui` declares its siblings as `workspace:*`, and that
 // descriptor cannot resolve outside charcuterie's own workspace. Bare keys, not
 // `@charcuterie/ui/@charcuterie/tokens`: the scoped form yields a different
-// locator string from the app's own dependency on the same directory, and Yarn
+// locator string from the app's own dependency on the same directory, and pnpm
 // rejects the pair as conflicting.
 "resolutions": {
   "@charcuterie/logic": "portal:../charcuterie/packages/logic",
@@ -233,7 +233,7 @@ TypeError: Cannot read properties of null (reading 'useRef')
 ```
 
 which mentions neither symlinks nor React identity. Keep the line after publish: it costs
-nothing with one copy, and it is the difference between a working `yarn link` session and
+nothing with one copy, and it is the difference between a working `pnpm link` session and
 an hour of confusion.
 
 ## How a component is put together
@@ -256,9 +256,9 @@ and fails on any candidate Tailwind cannot generate.
 ## Tests
 
 ```bash
-yarn vitest run --project ui         # Node: class maps, status switches, clamping, boundaries
-yarn vitest run --project ui-dom     # chromium: Component.test.tsx — behaviour, keyboard, ARIA
-yarn vitest run --project storybook  # chromium: every story renders, axe at test: "error"
+pnpm vitest run --project ui         # Node: class maps, status switches, clamping, boundaries
+pnpm vitest run --project ui-dom     # chromium: Component.test.tsx — behaviour, keyboard, ARIA
+pnpm vitest run --project storybook  # chromium: every story renders, axe at test: "error"
 ```
 
 **Stories are demos and carry no assertions**
@@ -319,7 +319,7 @@ rename breaks only the rendered page).
    from effects, so before those run a `RovingFocus` has no active value and a
    `SinglePicker` / `VisibilityGroup` has no selected key — only a pending one. Two of M4's
    four bugs were exactly that, and the isolated story runner saw neither —
-   `yarn smoke:storybook` did.
+   `pnpm smoke:storybook` did.
 7. **If it declares `@container`, every `StoryCell` holding it needs `align="stretch"`.**
    `container-type: inline-size` forbids the element from being sized by its own
    contents, so a default (shrink-to-fit) cell collapses it to min-content and every

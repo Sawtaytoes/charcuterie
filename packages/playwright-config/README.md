@@ -15,7 +15,7 @@ export default createPlaywrightConfig({
   testDir: "./web/tests",
   use: { baseURL: "http://localhost:3000" },
   webServer: {
-    command: "yarn dev",
+    command: "pnpm dev",
     url: "http://localhost:3000",
     reuseExistingServer: !process.env.CI,
   },

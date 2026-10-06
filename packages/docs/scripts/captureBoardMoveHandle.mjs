@@ -13,7 +13,7 @@
  * shut menu is a screenshot of nothing.
  *
  * Same static-serve + Playwright idiom as `captureNavBar.mjs`. Run
- * against the built Storybook: `yarn build:storybook` first.
+ * against the built Storybook: `pnpm build:storybook` first.
  */
 
 import { mkdir, readFile } from "node:fs/promises"

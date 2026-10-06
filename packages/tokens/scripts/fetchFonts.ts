@@ -22,7 +22,7 @@
  * Cyrillic/Greek/Vietnamese slices are dead bytes on an ePaper
  * display.
  *
- * Run: `yarn workspace @charcuterie/tokens fetch:fonts`. Idempotent.
+ * Run: `pnpm --filter @charcuterie/tokens fetch:fonts`. Idempotent.
  */
 
 import {

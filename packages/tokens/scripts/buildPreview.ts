@@ -731,7 +731,7 @@ const renderContrast = () => `
   <p class="ch-lede">
     Gated on <strong>WCAG 2.2 AA</strong>; <strong>APCA Lc</strong> reported alongside because it
     models perceived contrast far better on dark UI but is still unofficial, so gating on it would
-    mean gating on a moving target. This is the same audit <code>yarn check:contrast</code> fails CI
+    mean gating on a moving target. This is the same audit <code>pnpm check:contrast</code> fails CI
     on &mdash; a board printing numbers nothing enforces would be decoration.
   </p>
   ${variants
@@ -861,7 +861,7 @@ ${previewStyles}
     <p class="ch-lede">
       Four candidate visual directions, each one a ~250-line token file in
       <code>packages/tokens/src/variants/</code>. This page was generated from those files by
-      <code>yarn preview:themes</code>; nothing on it was drawn by hand. Whichever direction wins is
+      <code>pnpm preview:themes</code>; nothing on it was drawn by hand. Whichever direction wins is
       therefore not a mockup to reimplement &mdash; it is already the default theme, and the other
       three stay available as alternate <code>data-variant</code> values at no extra cost.
     </p>

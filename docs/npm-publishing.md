@@ -44,13 +44,13 @@ while the work lived on `v2`, and why it could move back once `v2` merged down.)
 There is **no auto-bump of the source**. Bumping happens by **merging the Version Packages
 PR**; CI never edits `package.json`. It only pushes the lightweight `<pkg>-v<version>` tags.
 
-### The `workspace:*` rewrite — why `yarn pack`, not `npm publish` from the dir
+### The `workspace:*` rewrite — why `pnpm pack`, not `npm publish` from the dir
 
 `@charcuterie/ui` depends on `logic` + `tokens` as `workspace:*`. **`npm pack`/`npm publish`
 from the package directory leaves `workspace:*` verbatim** — a broken, uninstallable
-manifest. **`yarn pack` rewrites it** to the sibling's concrete version. So the deploy job
-builds each tarball with `yarn workspace <name> pack` and then hands that tarball to
-`npm publish --provenance` — yarn for the correct manifest, npm for OIDC + provenance.
+manifest. **`pnpm pack` rewrites it** to the sibling's concrete version. So the deploy job
+builds each tarball with `pnpm --filter <name> pack` and then hands that tarball to
+`npm publish --provenance` — pnpm for the correct manifest, npm for OIDC + provenance.
 (mux-magic never hit this because it ships a single package.)
 
 ### Authentication — OIDC trusted publishing
@@ -77,7 +77,7 @@ OIDC. The bootstrap:
 
 ## Releasing a new version
 
-1. Make your change and add a changeset: `yarn changeset` (pick the packages + bump level).
+1. Make your change and add a changeset: `pnpm changeset` (pick the packages + bump level).
    Commit the generated `.changeset/*.md` with your change.
 2. Merge to `master`. The **Version Packages** PR appears.
 3. Merge the Version Packages PR. CI runs, then **NPM Package Deploy** publishes each bumped
@@ -195,7 +195,7 @@ exited 0; what a consumer installs is what the registry says.
 
 - The registry itself, which needs no npm cache and no auth:
   `curl -s https://registry.npmjs.org/@charcuterie%2Fui | jq -r '."dist-tags".latest'`
-  (`yarn info @charcuterie/ui` does the same when the local npm cache is healthy).
+  (`pnpm info @charcuterie/ui` does the same when the local npm cache is healthy).
 - Provenance, per version:
   `curl -s https://registry.npmjs.org/@charcuterie%2Fui/0.2.0 | jq '.dist.attestations'` —
   a `provenance.predicateType` of `https://slsa.dev/provenance/v1` means the attestation is

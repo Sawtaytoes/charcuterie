@@ -2,7 +2,7 @@
   "name": "@charcuterie/ci-vrt-tools",
   "version": "0.0.0",
   "private": true,
-  "description": "The browser and reg-suit that shared-vrt.yml installs into a bare checkout of Charcuterie. Not a workspace; installed with `npm ci` from this directory.",
+  "description": "The pinned browser and reg-suit installed into the shared workflow checkout. Separate pnpm workspace; no library build required.",
   "license": "MIT",
   "type": "module",
   "dependencies": {
@@ -11,11 +11,5 @@
     "reg-publish-s3-plugin": "0.14.4",
     "reg-suit": "0.14.5"
   },
-  "overrides": {
-    "tmp": "0.2.7",
-    "uuid": "11.1.1"
-  },
-  "scripts": {
-    "postinstall": "cd ../../../.. && git apply --directory=packages/ci/src/vrt/node_modules/braces .yarn/patches/braces-npm-3.0.3-582c14023c.patch"
-  }
+  "packageManager": "pnpm@12.9.1"
 }

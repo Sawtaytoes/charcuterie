@@ -44,7 +44,7 @@ Storybook theme object, because a theme object is resolved colour strings and
 
 ### 4. Storybook reads the built `dist`
 
-`build:storybook` runs `yarn build` first, and a stale `dist` is a red test
+`build:storybook` runs `pnpm build` first, and a stale `dist` is a red test
 (`distFreshness.test.ts`). Storybook resolves `@charcuterie/*` through `exports`
 to `dist` exactly as a real consumer does, so it exercises `exports`, `main`, and
 the generator rather than quietly reading `src`. See
@@ -64,7 +64,7 @@ Add the dep, then two thin config files. Pick the axes the app actually themes â
 `gallery-downloader` and the design system want all three.
 
 ```bash
-yarn add -D @charcuterie/storybook-config
+pnpm add -D @charcuterie/storybook-config
 ```
 
 `.storybook/main.ts`:

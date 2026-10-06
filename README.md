@@ -31,28 +31,29 @@ exports and setup instructions.
 Read [Building an app with Charcuterie](packages/docs/src/BuildingAnApp.mdx) for package
 setup, component selection, app layout, and lint configuration.
 
-Install a package with Yarn. For example:
+Install a package with pnpm. For example:
 
 ```sh
-yarn add @charcuterie/ui
+pnpm add @charcuterie/ui
 ```
 
 ## Develop Charcuterie
 
-The repository needs Node.js 24 or later and uses the committed Yarn release.
+The repository needs Node.js 24 or later and uses pnpm 12.9.1 (installed with `npm install --global --force pnpm@12.9.1`).
 
 ```sh
-yarn install --immutable
-yarn build
-yarn test
-yarn typecheck
-yarn lint
+npm install --global --force pnpm@12.9.1
+pnpm install --frozen-lockfile --store-dir "$HOME/.cache/pnpm/store"
+pnpm build
+pnpm test
+pnpm typecheck
+pnpm lint
 ```
 
 Start the local component documentation with:
 
 ```sh
-yarn storybook
+pnpm storybook
 ```
 
 ## Documentation
@@ -61,3 +62,14 @@ yarn storybook
 - [Storybook maintenance](docs/how-we-do-storybook.md)
 - [Package publishing](docs/npm-publishing.md)
 - [Decision records](docs/decisions/README.md)
+
+## Local build caching
+
+`pnpm build` uses Turbo's local cache for the six package builds. Dependency builds run
+first; hits restore `dist` and incremental compiler state. Source files, package manifests,
+the lockfile, patches, the shared TypeScript configuration and Node version/OS/architecture
+all participate in the key. CI persists downloaded packages and `.turbo` separately.
+Storybook still builds these packages first. Browser tests, screenshots and external-state
+gates always run; their results are not task-cached.
+
+Use `pnpm build --force` to rebuild every package. Remote caching is disabled.

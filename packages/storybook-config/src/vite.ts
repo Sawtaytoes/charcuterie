@@ -13,9 +13,8 @@ import { mergeConfig } from "vite"
  * lives in `@charcuterie/tokens/theme.css`. Without this plugin the
  * stories render unstyled and the toolbars appear to do nothing.
  *
- * `isReactDeduped` is off by the design-system docs (it renders
- * with the monorepo's single hoisted React) and **on** for every
- * standalone app repo: a symlinked (`portal:` / `yarn link`) React
+ * `isReactDeduped` is on for the pnpm-linked design-system docs
+ * and every standalone app repo: a symlinked (`portal:` / `pnpm link`) React
  * library resolves from its real path, so it renders with its own
  * React while the app renders with the app's, and the first shared
  * hook throws `Cannot read properties of null (reading 'useRef')`

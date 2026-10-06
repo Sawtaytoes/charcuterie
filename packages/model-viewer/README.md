@@ -191,7 +191,7 @@ The first release is a versioned container artifact, not an npm registry publica
 The archive contains `model-viewer/` with the runtime, CLI, package metadata and licenses;
 extract it under `/opt`, then link `/usr/local/bin/model-viewer` to
 `/opt/model-viewer/src/cli.js`. Container builds must pin and verify the archive SHA-256.
-The npm-compatible package/API can also be consumed from a Yarn-packed tarball. npm first
+The npm-compatible package/API can also be consumed from a pnpm-packed tarball. npm first
 publication and trusted-publisher setup are independent of using this release.
 
 ## Commanded toolpaths

@@ -48,11 +48,11 @@ the snippet. In this fleet the licensed Dank Mono woff2 must not enter any repo;
 reaches an app by a read-only bind mount off the NAS —
 [how](../../docs/decisions/2026-08-05-dank-mono-reaches-the-fleet-by-bind-mount.md).
 
-Through Yarn, from anywhere in the repo:
+Through pnpm, from anywhere in the repo:
 
 ```bash
-yarn workspace @charcuterie/tokens build   # tsc → dist/*.js + .d.ts, then the CSS
-yarn workspace @charcuterie/tokens test    # Vitest, including the contrast gate
+pnpm --filter @charcuterie/tokens build   # tsc → dist/*.js + .d.ts, then the CSS
+pnpm --filter @charcuterie/tokens test    # Vitest, including the contrast gate
 ```
 
 `build` runs on `prepack`, so `dist/` is generated rather than committed.

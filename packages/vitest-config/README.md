@@ -76,8 +76,8 @@ metadata as it discovers, so before a run there is nothing to compare and mid-ru
 picture is incomplete:
 
 ```yaml
-- run: yarn vitest run
-- run: yarn charcuterie-check-optimize-deps ./packages/web/optimizeDeps.js --cache-dir packages/web/node_modules/.vite
+- run: pnpm vitest run
+- run: pnpm charcuterie-check-optimize-deps ./packages/web/optimizeDeps.js --cache-dir packages/web/node_modules/.vite
 ```
 
 `--cache-dir` defaults to `node_modules/.vite`. Point it at the **package's** cache:

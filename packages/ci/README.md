@@ -21,7 +21,7 @@ works because the consumer is a Node project with a `package.json`.
 
 **Python and C++ have no such path.** `castkit`'s `device-client/` is plain Python on a
 Raspberry Pi with no `package.json` anywhere near it, and its ESPHome components are C++
-compiled by `esphome`. Neither can `yarn add` anything. A config for them has to arrive by
+compiled by `esphome`. Neither can `pnpm add` anything. A config for them has to arrive by
 **checkout**, which is exactly how `docsLint.js` already arrives — so `ci` is the package
 that already solves this problem, and a second unpublished package would only add a name.
 
@@ -183,7 +183,7 @@ vrt:
   permissions: { contents: read, statuses: write, pull-requests: write }
   uses: Sawtaytoes/charcuterie/.github/workflows/shared-vrt.yml@workflows-v1
   with:
-    buildCommand: yarn build-storybook
+    buildCommand: pnpm build-storybook
     storybookStaticDirs: storybook-static
   secrets: inherit
 
@@ -195,7 +195,7 @@ vrt:
   with:
     charcuterieRepository: sawtaytoes/charcuterie
     runsOn: '["vrt"]'
-    buildCommand: yarn build-storybook
+    buildCommand: pnpm build-storybook
     storybookStaticDirs: storybook-static
   secrets: inherit
 ```
@@ -205,7 +205,7 @@ vrt:
 | Input | Default | Is |
 | --- | --- | --- |
 | `runsOn` | `'["self-hosted","vrt"]'` | JSON list of runner labels. Forgejo: `'["vrt"]'`. |
-| `setupCommand` | `yarn install --immutable` | Installs the repo's dependencies. |
+| `setupCommand` | `auto` | Detects pnpm, Yarn or npm from the repo manifest/lockfile and installs frozen dependencies. A caller may override the command. |
 | `buildCommand` | — | Builds what the capture needs, e.g. the Storybook(s). |
 | `storybookStaticDirs` | — | Built Storybooks, one per line, `prefix=path`. The prefix is a subfolder of the shots. One Storybook may be a bare `path`, which writes at the top level. |
 | `storybookSchemeGlobal` | — | The Storybook global selecting a color scheme (Charcuterie: `scheme`). Empty shoots one pass with no suffix. |
@@ -240,11 +240,16 @@ stable, since a renamed file is a deleted shot plus a new one.
 
 ### Running it locally
 
+Newer revisions of a pull request cancel superseded shared VRT runs. Main and
+manual runs remain independent; keep each caller's main-baseline serialization
+policy. Caller concurrency groups must use a different prefix from
+`charcuterie-shared-vrt-` so the called workflow cannot cancel its parent.
+
 From the consumer repo, with a checkout of Charcuterie at `$CHARCUTERIE`:
 
 ```sh
-npm ci --prefix "$CHARCUTERIE/packages/ci/src/vrt"
-yarn build-storybook
+pnpm --dir "$CHARCUTERIE/packages/ci/src/vrt" install --frozen-lockfile --store-dir "$HOME/.cache/pnpm/store"
+pnpm build-storybook
 node "$CHARCUTERIE/packages/ci/src/vrt/storybookCapture.js" storybook-static --clean
 ls .vrt-actual
 ```

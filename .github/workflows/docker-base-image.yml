@@ -15,6 +15,10 @@ on:
       - ".github/workflows/docker-base-image.yml"
   workflow_dispatch:
 
+concurrency:
+  group: charcuterie-docker-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event.pull_request.number != '' }}
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -25,6 +29,12 @@ jobs:
       fail-fast: false
       matrix:
         node_major: [24, 26]
+    # Retain every main/manual publication, serialized per Node-major tag.
+    # PR verification is canceled by the workflow's separate PR group.
+    concurrency:
+      group: charcuterie-image-${{ matrix.node_major }}-${{ github.event.pull_request.number && github.run_id || 'publish' }}
+      cancel-in-progress: false
+      queue: max
     steps:
       - uses: actions/checkout@v6
 

@@ -1,0 +1,11 @@
+# Deliberately independent of the library workspace.
+packages: []
+autoInstallPeers: false
+strictPeerDependencies: false
+enableGlobalVirtualStore: false
+verifyDepsBeforeRun: false
+overrides:
+  tmp: 0.2.7
+  uuid: 11.1.1
+patchedDependencies:
+  braces@3.0.3: ../../../../patches/braces-npm-3.0.3-582c14023c.patch

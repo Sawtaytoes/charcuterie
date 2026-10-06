@@ -171,8 +171,8 @@ The seam has exactly three members — `get`, `set`, `subscribe` — and the def
 ## Testing
 
 ```bash
-yarn vitest run --project logic       # cores, node
-yarn vitest run --project logic-dom   # React + Preact bindings, chromium
+pnpm vitest run --project logic       # cores, node
+pnpm vitest run --project logic-dom   # React + Preact bindings, chromium
 ```
 
 `src/conformance/` holds **one** model-based suite that runs against five adapters: the
@@ -202,8 +202,8 @@ Mutation-checked, because a green suite that cannot fail proves nothing:
 > repo's build somewhere writable rather than changing the repo:
 >
 > ```bash
-> PLAYWRIGHT_BROWSERS_PATH=/tmp/pw-browsers yarn playwright install chromium-headless-shell
-> PLAYWRIGHT_BROWSERS_PATH=/tmp/pw-browsers yarn vitest run --project logic-dom
+> PLAYWRIGHT_BROWSERS_PATH=/tmp/pw-browsers pnpm playwright install chromium-headless-shell
+> PLAYWRIGHT_BROWSERS_PATH=/tmp/pw-browsers pnpm vitest run --project logic-dom
 > ```
 >
 > `/tmp`, not `$HOME/.cache/ms-playwright` — M2 recommended that path and it was wrong even
