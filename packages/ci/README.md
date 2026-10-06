@@ -240,6 +240,11 @@ stable, since a renamed file is a deleted shot plus a new one.
 
 ### Running it locally
 
+Newer revisions of a pull request cancel superseded shared VRT runs. Main and
+manual runs remain independent; keep each caller's main-baseline serialization
+policy. Caller concurrency groups must use a different prefix from
+`charcuterie-shared-vrt-` so the called workflow cannot cancel its parent.
+
 From the consumer repo, with a checkout of Charcuterie at `$CHARCUTERIE`:
 
 ```sh

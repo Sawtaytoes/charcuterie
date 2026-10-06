@@ -5,6 +5,12 @@ on:
     branches: [master]
   pull_request:
 
+# Only newer revisions of the same PR supersede an active verification run.
+# Main/manual runs have unique groups; no release-triggering CI is discarded.
+concurrency:
+  group: charcuterie-ci-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event.pull_request.number != '' }}
+
 jobs:
   # The docs-only detector is SHARED: the body lives in Charcuterie and is
   # imported by every repo in the fleet. Fix it here, then move the tag.
@@ -237,6 +243,13 @@ jobs:
   # fork code. Same-repo `agent/*` branches — the actual workflow here — run.
   vrt:
     needs: [changes]
+    # Main baselines publish sequentially, retaining every pending run. PR
+    # jobs are unique here and canceled by the PR-scoped workflow policy.
+    # queue:max is supported by GitHub; this is not the Forgejo-shared job.
+    concurrency:
+      group: charcuterie-baseline-${{ github.event.pull_request.number && github.run_id || github.ref }}
+      cancel-in-progress: false
+      queue: max
     runs-on: [self-hosted, vrt]
     # A fork's pull request cannot reach the self-hosted runner, and a
     # documentation-only diff has nothing to render.

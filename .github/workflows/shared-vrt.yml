@@ -196,6 +196,15 @@ on:
           token posts both on GitHub and on Forgejo 16.
         required: false
 
+# github.workflow belongs to the caller. The literal prefix deliberately
+# differs from caller CI groups so this workflow cannot cancel its parent.
+# Read the PR payload: Forgejo reports workflow_call as the event name.
+# Unique main/manual groups preserve every baseline publication and retain
+# the caller's existing main serialization policy on both hosts.
+concurrency:
+  group: charcuterie-shared-vrt-${{ github.workflow }}-${{ inputs.actualDir }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event.pull_request.number != '' }}
+
 jobs:
   visualRegression:
     runs-on: ${{ fromJSON(inputs.runsOn) }}
