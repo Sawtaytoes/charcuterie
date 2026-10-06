@@ -26,7 +26,12 @@ import {
 } from "./selectPublishedBaseline.js"
 import { buildRegConfig } from "./writeRegConfig.js"
 
-const require = createRequire(import.meta.url)
+const docsDependencyRoot = fileURLToPath(
+  new URL("../../../docs/", import.meta.url),
+)
+const require = createRequire(
+  join(docsDependencyRoot, "package.json"),
+)
 const directories = []
 const environment = {
   VRT_REPORT_BASE_URL: "https://reports.example.test",
@@ -461,6 +466,7 @@ describe("authenticated pinned publisher", () => {
       const fixture = createPublishedStore(
         config,
         scratch(),
+        docsDependencyRoot,
       )
       expect(
         await isCompleteSnapshot(
@@ -632,12 +638,7 @@ describe("pinned CLI and original actual key", () => {
     })
     delete config.plugins["reg-publish-s3-plugin"]
     const bridgePath = Object.keys(config.plugins)[0]
-    const cli = fileURLToPath(
-      new URL(
-        "./node_modules/reg-suit/lib/cli.js",
-        import.meta.url,
-      ),
-    )
+    const cli = require.resolve("reg-suit/lib/cli.js")
     const run = () => {
       writeFileSync(
         join(repo.cwd, "config.json"),
@@ -742,12 +743,7 @@ describe("pinned CLI and original actual key", () => {
       join(repo.cwd, "config.json"),
       JSON.stringify(config),
     )
-    const cli = fileURLToPath(
-      new URL(
-        "./node_modules/reg-suit/lib/cli.js",
-        import.meta.url,
-      ),
-    )
+    const cli = require.resolve("reg-suit/lib/cli.js")
     const output = execFileSync(
       process.execPath,
       [cli, "--config", "config.json", "run"],
