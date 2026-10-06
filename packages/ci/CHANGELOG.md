@@ -1,5 +1,11 @@
 # @charcuterie/ci
 
+## 0.1.4
+
+### Patch Changes
+
+- 4630c1e: Compare visual snapshots against the nearest complete published ancestor of the reviewed Git baseline, including across documentation-only merges. Stop before capture on storage or metadata errors instead of silently losing comparison coverage.
+
 ## 0.1.3
 
 ### Patch Changes
