@@ -259,6 +259,7 @@ jobs:
           # writes to the right place. reg-suit accepts an absolute path too.
           echo "VRT_ACTUAL_DIR=$GITHUB_WORKSPACE/$VRT_ACTUAL_DIR_RELATIVE" >> "$GITHUB_ENV"
           echo "VRT_WORKING_DIR=$GITHUB_WORKSPACE/.reg" >> "$GITHUB_ENV"
+          echo "VRT_BASELINE_FILE=$RUNNER_TEMP/vrt-baseline-selection.json" >> "$GITHUB_ENV"
 
       # The runner image pins Node and fonts for deterministic screenshots.
       # Retain Yarn through Corepack for callers awaiting migration, and install
@@ -313,6 +314,15 @@ jobs:
           set -euo pipefail
           rm -rf "$VRT_ACTUAL_DIR"
           mkdir -p "$VRT_ACTUAL_DIR"
+
+      # Missing documentation-only snapshots must not turn a comparison into all NEW.
+      # Check the authenticated store before installing/building/capturing the app.
+      - name: Select a complete published baseline
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.GARAGE_S3_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.GARAGE_S3_SECRET_KEY }}
+          AWS_REGION: ${{ secrets.VRT_S3_REGION }}
+        run: node "$VRT_TOOLS/selectPublishedBaseline.js"
 
       - name: Set up with the repo's package manager
         if: ${{ inputs.setupCommand == 'auto' }}
