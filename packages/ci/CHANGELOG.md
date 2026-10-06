@@ -1,5 +1,11 @@
 # @charcuterie/ci
 
+## 0.1.3
+
+### Patch Changes
+
+- 1028c86: Resolve reusable-workflow diffs from the original pull-request or push event so documentation changes avoid duplicate full-suite work and lint the complete changed decision range.
+
 ## 0.1.2
 
 ### Patch Changes
