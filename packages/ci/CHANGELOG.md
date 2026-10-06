@@ -1,5 +1,11 @@
 # @charcuterie/ci
 
+## 0.1.2
+
+### Patch Changes
+
+- 060ab4e: Allow only pnpm's global bootstrap scripts and prefer its native executable over legacy Corepack shims in CI and fleet Docker base images.
+
 ## 0.1.1
 
 ### Patch Changes
