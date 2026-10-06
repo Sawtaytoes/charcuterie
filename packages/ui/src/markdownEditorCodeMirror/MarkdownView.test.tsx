@@ -349,11 +349,16 @@ test("inline markup in link text does not drop the document to raw source", asyn
   // No raw source anywhere in the document.
   const article = canvas.getByRole("article")
 
-  await expect(article.textContent).not.toContain("](")
+  // The heading can paint before lower link decorations finish parsing.
+  // Retry the complete contract rather than treating that partial paint
+  // as the final document; all three source-marker assertions still apply.
+  await waitFor(async () => {
+    await expect(article.textContent).not.toContain("](")
 
-  await expect(article.textContent).not.toContain("**")
+    await expect(article.textContent).not.toContain("**")
 
-  await expect(article.textContent).not.toContain("~~")
+    await expect(article.textContent).not.toContain("~~")
+  })
 })
 
 /**
