@@ -5,10 +5,11 @@
  *
  * The same settings `packages/docs/scripts/writeRegConfig.mjs` has used
  * since the first VRT run: a 2% threshold by default with antialiasing
- * tolerated, the
- * git-hash key generator (the baseline is the snapshot of the merge base's
- * nearest keyed ancestor), and the S3 publisher over path-style addressing,
- * which is what Garage speaks.
+ * tolerated, and the S3 publisher over path-style addressing, which is what
+ * Garage speaks. The shared workflow's preflight retains the pinned Git base
+ * and actual key, selecting the nearest complete published default-branch
+ * ancestor when that base's snapshot is absent. A local key-generator bridge
+ * supplies those validated keys to the unchanged reg-suit CLI.
  *
  *   VRT_S3_BUCKET        the repo's own bucket
  *   VRT_S3_ENDPOINT      S3 API endpoint (LAN only)
@@ -23,11 +24,12 @@
  *                        counts as changed, 0 to 1 (default 0.02). A
  *                        byte-identical capture passes 0.
  *   VRT_WORKING_DIR      reg-suit scratch (default .reg)
+ *   VRT_BASELINE_FILE    validated preflight selection in the shared workflow
  *
  *   node writeRegConfig.js [--out .regconfig.json]
  */
 
-import { writeFile } from "node:fs/promises"
+import { readFile, writeFile } from "node:fs/promises"
 import { resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 
@@ -82,7 +84,21 @@ export const toCustomDomain = (value) =>
 /**
  * @param {Record<string, string | undefined>} env
  */
-export const buildRegConfig = (env) => {
+export const buildRegConfig = (env, selection) => {
+  if (
+    selection !== undefined &&
+    (!selection ||
+      selection.expectedKey === selection.actualKey ||
+      !/^[0-9a-f]{40}$/.test(selection.actualKey) ||
+      !(
+        selection.expectedKey === null ||
+        /^[0-9a-f]{40}$/.test(selection.expectedKey)
+      ) ||
+      (selection.expectedKey === null) !==
+        (selection.isInitialBaseline === true))
+  ) {
+    throw new Error("Invalid preflight baseline selection")
+  }
   const missing = REQUIRED_ENVIRONMENT.filter(
     (name) => !env[name],
   )
@@ -107,7 +123,16 @@ export const buildRegConfig = (env) => {
       ximgdiff: { invocationType: "client" },
     },
     plugins: {
-      "reg-keygen-git-hash-plugin": {},
+      ...(selection !== undefined
+        ? {
+            [fileURLToPath(
+              new URL(
+                "./selectedKeygen.cjs",
+                import.meta.url,
+              ),
+            )]: selection,
+          }
+        : { "reg-keygen-git-hash-plugin": {} }),
       "reg-publish-s3-plugin": {
         bucketName: env.VRT_S3_BUCKET,
         customDomain: toCustomDomain(
@@ -136,9 +161,17 @@ if (isMain) {
       : process.argv[outIndex + 1]
 
   try {
+    const selection = process.env.VRT_BASELINE_FILE
+      ? JSON.parse(
+          await readFile(
+            process.env.VRT_BASELINE_FILE,
+            "utf8",
+          ),
+        )
+      : undefined
     await writeFile(
       outPath ?? ".regconfig.json",
-      `${JSON.stringify(buildRegConfig(process.env), null, 2)}\n`,
+      `${JSON.stringify(buildRegConfig(process.env, selection), null, 2)}\n`,
     )
     console.log(`[vrt] wrote ${outPath}`)
   } catch (error) {

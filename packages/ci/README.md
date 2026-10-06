@@ -258,6 +258,37 @@ The capture needs the Chromium revision of its pinned Playwright. When
 `PLAYWRIGHT_BROWSERS_PATH` does not hold it, install it somewhere you own:
 `PLAYWRIGHT_BROWSERS_PATH=/tmp/pw-browsers-<repo> node "$CHARCUTERIE/packages/ci/src/vrt/node_modules/playwright/cli.js" install chromium`.
 
+### Published baseline selection
+
+Before installing, building or capturing the caller, the shared workflow checks
+the authenticated snapshot store. Charcuterie's native VRT job uses the same
+selector after installing its existing docs dependencies and before building or
+capturing Storybook; it needs no second standalone tools install. The pinned Git
+plugin still selects the Git base and actual key. When a clone containing only
+default-branch refs gives the plugin no branch intersection, the selector uses the
+reviewed PR base, default-branch push predecessor, or default-branch parent. A
+nonnull original base is always preserved, including an older release base.
+If that base has no complete published snapshot (for example,
+after a documentation-only merge), the selector walks its first-parent ancestors
+and uses the nearest complete one. Every candidate must lie on the default
+branch's first-parent history; snapshots from other feature branches are never
+eligible. The current snapshot key is unchanged, including PR merge checkouts.
+
+A snapshot needs `index.html`, valid `out.json`, and the exact set of actual PNGs
+named by the report. A paginated prefix listing checks the inventory without a
+request per image. HTML alone is insufficient because the publisher uploads in
+parallel chunks. Missing objects or incomplete inventories allow trying an older
+eligible ancestor; invalid metadata, authentication errors and network failures
+stop the job before capture. The preflight supplies a local key-generator bridge
+to the unchanged reg-suit CLI; errors cannot be converted into an empty baseline.
+
+A genuinely empty per-repository bucket explicitly enters initial-baseline mode,
+matching the existing first-run policy. A nonempty bucket with no complete reviewed
+ancestor fails with bootstrap guidance, even if it contains a first PR's snapshot.
+For a new repository, publish its initial default-branch baseline into an empty
+dedicated bucket before opening the first visual PR. Feature snapshots do not
+become accepted baselines automatically. Existing repositories need no new inputs.
+
 ### Traps
 
 - ⚠️ **The fork guard reads the event payload.** Inside a called workflow Forgejo reports

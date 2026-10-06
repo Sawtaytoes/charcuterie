@@ -338,6 +338,17 @@ jobs:
           key: ${{ runner.os }}-node26-turbo2-${{ github.sha }}
           restore-keys: ${{ runner.os }}-node26-turbo2-
       - run: pnpm install --frozen-lockfile --store-dir "$HOME/.cache/pnpm/store"
+      - name: Select a complete published baseline
+        working-directory: packages/docs
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.GARAGE_S3_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.GARAGE_S3_SECRET_KEY }}
+          AWS_REGION: ${{ secrets.VRT_S3_REGION }}
+        run: |
+          set -euo pipefail
+          export VRT_BASELINE_FILE="$RUNNER_TEMP/vrt-baseline-selection.json"
+          echo "VRT_BASELINE_FILE=$VRT_BASELINE_FILE" >> "$GITHUB_ENV"
+          VRT_DEPENDENCY_ROOT="$PWD" node ../ci/src/vrt/selectPublishedBaseline.js
       - run: pnpm --filter @charcuterie/docs exec playwright install chromium
       - run: pnpm build:storybook
       - run: pnpm --filter @charcuterie/docs vrt:capture
