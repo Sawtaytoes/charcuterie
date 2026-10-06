@@ -50,7 +50,14 @@ jobs:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with: { node-version: 26 }
-      - run: npm install --global --force pnpm@12.9.1
+      - name: Install the pinned native pnpm CLI
+        run: |
+          npm install --global --force --allow-scripts=pnpm pnpm@12.9.1
+          pnpm_bin="$(npm prefix --global)/bin"
+          export PATH="$pnpm_bin:$PATH"
+          echo "$pnpm_bin" >> "$GITHUB_PATH"
+          hash -r
+          test "$(pnpm --version)" = 12.9.1
       - name: Locate the pnpm store
         id: pnpm-store
         run: |
@@ -79,7 +86,14 @@ jobs:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with: { node-version: 26 }
-      - run: npm install --global --force pnpm@12.9.1
+      - name: Install the pinned native pnpm CLI
+        run: |
+          npm install --global --force --allow-scripts=pnpm pnpm@12.9.1
+          pnpm_bin="$(npm prefix --global)/bin"
+          export PATH="$pnpm_bin:$PATH"
+          echo "$pnpm_bin" >> "$GITHUB_PATH"
+          hash -r
+          test "$(pnpm --version)" = 12.9.1
       - name: Locate the pnpm store
         id: pnpm-store
         run: |
@@ -109,7 +123,14 @@ jobs:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with: { node-version: 26 }
-      - run: npm install --global --force pnpm@12.9.1
+      - name: Install the pinned native pnpm CLI
+        run: |
+          npm install --global --force --allow-scripts=pnpm pnpm@12.9.1
+          pnpm_bin="$(npm prefix --global)/bin"
+          export PATH="$pnpm_bin:$PATH"
+          echo "$pnpm_bin" >> "$GITHUB_PATH"
+          hash -r
+          test "$(pnpm --version)" = 12.9.1
       - name: Locate the pnpm store
         id: pnpm-store
         run: |
@@ -176,7 +197,14 @@ jobs:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with: { node-version: 26 }
-      - run: npm install --global --force pnpm@12.9.1
+      - name: Install the pinned native pnpm CLI
+        run: |
+          npm install --global --force --allow-scripts=pnpm pnpm@12.9.1
+          pnpm_bin="$(npm prefix --global)/bin"
+          export PATH="$pnpm_bin:$PATH"
+          echo "$pnpm_bin" >> "$GITHUB_PATH"
+          hash -r
+          test "$(pnpm --version)" = 12.9.1
       - name: Locate the pnpm store
         id: pnpm-store
         run: |
@@ -283,8 +311,12 @@ jobs:
       - name: Prepare toolchain (pinned pnpm + Playwright browsers path)
         run: |
           mkdir -p "$HOME/.local/bin"
-          npm install --global --force --prefix "$HOME/.local" pnpm@12.9.1
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          npm install --global --force --allow-scripts=pnpm --prefix "$HOME/.local" pnpm@12.9.1
+          pnpm_bin="$(npm prefix --global --prefix "$HOME/.local")/bin"
+          export PATH="$pnpm_bin:$PATH"
+          echo "$pnpm_bin" >> "$GITHUB_PATH"
+          hash -r
+          test "$(pnpm --version)" = 12.9.1
           # The base image pins PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers, which
           # is root-owned — the non-root runner can't write there. Install the
           # browser under HOME instead (persists on the runner-home volume, so
