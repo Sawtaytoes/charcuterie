@@ -3,6 +3,7 @@ module.exports = () => ({
   keyGenerator: {
     init({ options }) {
       if (
+        options.expectedKey === options.actualKey ||
         !/^[0-9a-f]{40}$/.test(options.actualKey) ||
         !(
           options.expectedKey === null ||

@@ -264,8 +264,11 @@ Before installing, building or capturing the caller, the shared workflow checks
 the authenticated snapshot store. Charcuterie's native VRT job uses the same
 selector after installing its existing docs dependencies and before building or
 capturing Storybook; it needs no second standalone tools install. The pinned Git
-plugin still selects the Git
-base and actual key. If that base has no complete published snapshot (for example,
+plugin still selects the Git base and actual key. When a clone containing only
+default-branch refs gives the plugin no branch intersection, the selector uses the
+reviewed PR base, default-branch push predecessor, or default-branch parent. A
+nonnull original base is always preserved, including an older release base.
+If that base has no complete published snapshot (for example,
 after a documentation-only merge), the selector walks its first-parent ancestors
 and uses the nearest complete one. Every candidate must lie on the default
 branch's first-parent history; snapshots from other feature branches are never

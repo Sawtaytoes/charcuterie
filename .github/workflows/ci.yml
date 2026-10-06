@@ -338,7 +338,6 @@ jobs:
           key: ${{ runner.os }}-node26-turbo2-${{ github.sha }}
           restore-keys: ${{ runner.os }}-node26-turbo2-
       - run: pnpm install --frozen-lockfile --store-dir "$HOME/.cache/pnpm/store"
-      - run: pnpm --filter @charcuterie/docs exec playwright install chromium
       - name: Select a complete published baseline
         working-directory: packages/docs
         env:
@@ -350,6 +349,7 @@ jobs:
           export VRT_BASELINE_FILE="$RUNNER_TEMP/vrt-baseline-selection.json"
           echo "VRT_BASELINE_FILE=$VRT_BASELINE_FILE" >> "$GITHUB_ENV"
           VRT_DEPENDENCY_ROOT="$PWD" node ../ci/src/vrt/selectPublishedBaseline.js
+      - run: pnpm --filter @charcuterie/docs exec playwright install chromium
       - run: pnpm build:storybook
       - run: pnpm --filter @charcuterie/docs vrt:capture
       - run: pnpm --filter @charcuterie/docs vrt:configure

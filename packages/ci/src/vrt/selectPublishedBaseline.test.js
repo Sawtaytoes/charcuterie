@@ -153,6 +153,86 @@ describe("published baseline ancestry", () => {
       ).expectedKey,
     ).toBe(repo.baseKey)
   })
+  it("uses the reviewed predecessor when the pinned plugin has no intersection in a default-only main clone", async () => {
+    const repo = repository()
+    repo.git("checkout", "main")
+    repo.git("branch", "-D", "feature")
+    const actualKey = repo.commit("next main publication")
+    repo.git(
+      "update-ref",
+      "refs/remotes/origin/main",
+      actualKey,
+    )
+    const previousCwd = process.cwd()
+    let baseKey
+    try {
+      process.chdir(repo.cwd)
+      const {
+        CommitExplorer,
+      } = require("reg-keygen-git-hash-plugin/lib/commit-explorer.js")
+      baseKey = new CommitExplorer().getBaseCommitHash()
+    } finally {
+      process.chdir(previousCwd)
+    }
+    expect(baseKey).toBeNull()
+    for (const event of [
+      { ref: "refs/heads/main", before: repo.baseKey },
+      {},
+    ]) {
+      const result = await selectPublishedBaseline({
+        ...repo,
+        baseKey,
+        actualKey,
+        event,
+        ...store({
+          [repo.baseKey]: complete(),
+          [actualKey]: complete(),
+        }),
+      })
+      expect(result.expectedKey).toBe(repo.baseKey)
+      expect(result.actualKey).toBe(actualKey)
+    }
+  })
+  it("preserves an original older release base even when a newer reviewed predecessor exists", async () => {
+    const repo = repository()
+    const result = await selectPublishedBaseline({
+      ...repo,
+      baseKey: repo.published,
+      event: {
+        pull_request: {
+          base: { ref: "main", sha: repo.baseKey },
+        },
+      },
+      ...store({
+        [repo.published]: complete(),
+        [repo.baseKey]: complete(),
+      }),
+    })
+    expect(result.expectedKey).toBe(repo.published)
+  })
+  it("rejects malformed raw PR/push bases that point to the actual reviewed main commit itself", async () => {
+    const repo = repository()
+    repo.git("checkout", "main")
+    const actualKey = repo.git("rev-parse", "HEAD")
+    for (const event of [
+      { ref: "refs/heads/main", before: actualKey },
+      {
+        pull_request: {
+          base: { ref: "main", sha: actualKey },
+        },
+      },
+    ]) {
+      await expect(
+        selectPublishedBaseline({
+          ...repo,
+          baseKey: null,
+          actualKey,
+          event,
+          ...store({ [actualKey]: complete() }),
+        }),
+      ).rejects.toThrow("cannot equal actual")
+    }
+  })
   it("never picks an unrelated or current feature snapshot", async () => {
     const repo = repository()
     await expect(
@@ -198,9 +278,17 @@ describe("published baseline ancestry", () => {
   })
   it("explicitly initializes a truly empty bucket, including a first commit with no Git base", async () => {
     const repo = repository()
+    repo.git("checkout", "main")
+    repo.git("reset", "--hard", repo.published)
+    repo.git(
+      "update-ref",
+      "refs/remotes/origin/main",
+      repo.published,
+    )
     expect(
       await selectPublishedBaseline({
         ...repo,
+        actualKey: repo.published,
         baseKey: null,
         ...store({}),
       }),
@@ -319,6 +407,12 @@ describe("authenticated pinned publisher", () => {
         )
       }
       if (url.searchParams.has("list-type")) {
+        if (responseMode === "malformed-list") {
+          response.writeHead(200, {
+            "content-type": "application/xml",
+          })
+          return response.end("<ListBucketResult />")
+        }
         const prefix = url.searchParams.get("prefix")
         const names = url.searchParams.has(
           "continuation-token",
@@ -408,11 +502,31 @@ describe("authenticated pinned publisher", () => {
           fixture.readReport,
         ),
       ).rejects.toMatchObject({ name: "AccessDenied" })
+      responseMode = "malformed-list"
+      await expect(
+        isCompleteSnapshot(
+          fixture.publisher,
+          "abc",
+          fixture.readReport,
+        ),
+      ).rejects.toThrow("Invalid S3 listing metadata")
     } finally {
       await new Promise((resolve) => server.close(resolve))
     }
   })
   it("rejects broken or repeated pagination tokens", async () => {
+    for (const page of [
+      { contents: [] },
+      { contents: [], isTruncated: "false" },
+      { contents: [], isTruncated: true, nextMarker: {} },
+    ]) {
+      await expect(
+        listPublishedObjects(
+          { listItems: async () => page },
+          "",
+        ),
+      ).rejects.toThrow("metadata")
+    }
     await expect(
       listPublishedObjects(
         {
@@ -489,6 +603,11 @@ describe("pinned CLI and original actual key", () => {
     expect(nativeJob).toContain(
       'VRT_DEPENDENCY_ROOT="$PWD"',
     )
+    expect(
+      nativeJob.indexOf("selectPublishedBaseline.js"),
+    ).toBeLessThan(
+      nativeJob.indexOf("exec playwright install chromium"),
+    )
     const shared = readFileSync(
       new URL(
         "../../../../.github/workflows/shared-vrt.yml",
@@ -540,6 +659,14 @@ describe("pinned CLI and original actual key", () => {
       "Comparison Complete",
     )
     config.plugins[bridgePath].actualKey = repo.actualKey
+    config.plugins[bridgePath].expectedKey = repo.actualKey
+    const self = run()
+    expect(self.status).toBe(1)
+    expect(self.stderr).toContain(
+      "Invalid preflight snapshot keys",
+    )
+    expect(self.stdout).not.toContain("Comparison Complete")
+    config.plugins[bridgePath].expectedKey = repo.published
     repo.commit("HEAD changed after preflight")
     const changed = run()
     expect(changed.status).toBe(1)

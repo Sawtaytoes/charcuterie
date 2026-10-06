@@ -35,7 +35,10 @@ export const listPublishedObjects = async (
   let marker
   do {
     const page = await publisher.listItems(marker, prefix)
-    if (!Array.isArray(page.contents))
+    if (
+      !Array.isArray(page.contents) ||
+      typeof page.isTruncated !== "boolean"
+    )
       throw new Error("Invalid S3 listing metadata")
     for (const item of page.contents) {
       if (
@@ -48,7 +51,11 @@ export const listPublishedObjects = async (
     }
     if (!page.isTruncated) break
     marker = page.nextMarker
-    if (!marker || markers.has(marker))
+    if (
+      typeof marker !== "string" ||
+      !marker ||
+      markers.has(marker)
+    )
       throw new Error("Invalid S3 pagination metadata")
     markers.add(marker)
   } while (marker !== undefined)
@@ -133,6 +140,50 @@ export const isCompleteSnapshot = async (
   )
 }
 
+/** A default-only clone has no branch intersection; use its reviewed predecessor. */
+export const deriveReviewedBase = (
+  cwd,
+  defaultBranch,
+  actualKey,
+  event = {},
+) => {
+  if (
+    event.pull_request?.base?.ref === defaultBranch &&
+    event.pull_request.base.sha
+  ) {
+    return event.pull_request.base.sha
+  }
+  if (
+    event.ref === `refs/heads/${defaultBranch}` &&
+    event.before &&
+    !/^0+$/.test(event.before)
+  ) {
+    return event.before
+  }
+  const defaultRef = `refs/remotes/origin/${defaultBranch}`
+  const defaultHistory = new Set(
+    git(
+      cwd,
+      "rev-list",
+      "--first-parent",
+      defaultRef,
+    ).split("\n"),
+  )
+  if (defaultHistory.has(actualKey)) {
+    return (
+      git(
+        cwd,
+        "rev-list",
+        "--parents",
+        "-n",
+        "1",
+        actualKey,
+      ).split(" ")[1] ?? null
+    )
+  }
+  return git(cwd, "merge-base", actualKey, defaultRef)
+}
+
 /** Walk only the first parents of the original selected, reviewed Git base. */
 export const selectPublishedBaseline = async ({
   cwd,
@@ -141,6 +192,7 @@ export const selectPublishedBaseline = async ({
   actualKey,
   publisher,
   readReport,
+  event,
 }) => {
   const defaultRef = `refs/remotes/origin/${defaultBranch}`
   if (!defaultBranch || !/^[0-9a-f]{40}$/.test(actualKey))
@@ -153,7 +205,19 @@ export const selectPublishedBaseline = async ({
     "--verify",
     `${defaultRef}^{commit}`,
   )
+  // Preserve every original non-null plugin base, including older release bases.
+  // Only its no-intersection case needs a reviewed default-branch predecessor.
+  baseKey ??= deriveReviewedBase(
+    cwd,
+    defaultBranch,
+    actualKey,
+    event,
+  )
   if (baseKey != null) {
+    if (baseKey === actualKey)
+      throw new Error(
+        "Selected baseline cannot equal actual snapshot key",
+      )
     if (!/^[0-9a-f]{40}$/.test(baseKey))
       throw new Error("Invalid selected Git baseline key")
     git(
@@ -302,6 +366,7 @@ if (isMain) {
       baseKey,
       actualKey,
       ...store,
+      event,
     })
     if (!process.env.VRT_BASELINE_FILE)
       throw new Error("VRT_BASELINE_FILE is required")

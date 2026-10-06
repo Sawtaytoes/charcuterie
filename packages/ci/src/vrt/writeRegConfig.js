@@ -88,6 +88,7 @@ export const buildRegConfig = (env, selection) => {
   if (
     selection !== undefined &&
     (!selection ||
+      selection.expectedKey === selection.actualKey ||
       !/^[0-9a-f]{40}$/.test(selection.actualKey) ||
       !(
         selection.expectedKey === null ||
