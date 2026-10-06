@@ -420,6 +420,14 @@ test("a code span is smaller than the prose it sits in", async () => {
 
   const article = canvas.getByRole("article")
 
+  // CodeMirror can finish its syntax decorations after the story mounts.
+  // Wait for the measured span itself rather than capturing a stale null.
+  await waitFor(() => {
+    expect(
+      article.querySelector(".cm-md-code"),
+    ).not.toBeNull()
+  })
+
   const code = article.querySelector(".cm-md-code")
 
   await expect(code).not.toBeNull()
