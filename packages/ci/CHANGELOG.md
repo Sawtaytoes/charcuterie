@@ -1,5 +1,11 @@
 # @charcuterie/ci
 
+## 0.1.5
+
+### Patch Changes
+
+- 9a916ba: Select a reviewed default-branch predecessor when the Git plugin chooses a merged feature parent, while preserving older default-branch bases and rejecting feature snapshots as baselines.
+
 ## 0.1.4
 
 ### Patch Changes
