@@ -257,7 +257,76 @@ describe("published baseline ancestry", () => {
       }),
     ).rejects.toThrow()
   })
-  it("rejects a side-branch key even when reachable through a merge into main", async () => {
+  it("uses the reviewed default predecessor when the pinned plugin selects a normal merge's feature parent", async () => {
+    const repo = repository()
+    repo.git("checkout", "main")
+    repo.git(
+      "merge",
+      "--no-ff",
+      "feature",
+      "-m",
+      "reviewed merge",
+    )
+    const actualKey = repo.git("rev-parse", "HEAD")
+    repo.git(
+      "update-ref",
+      "refs/remotes/origin/main",
+      actualKey,
+    )
+    const previousCwd = process.cwd()
+    let baseKey
+    let pluginActual
+    try {
+      process.chdir(repo.cwd)
+      const {
+        CommitExplorer,
+      } = require("reg-keygen-git-hash-plugin/lib/commit-explorer.js")
+      const explorer = new CommitExplorer()
+      baseKey = explorer.getBaseCommitHash()
+      pluginActual = explorer.getCurrentCommitHash()
+    } finally {
+      process.chdir(previousCwd)
+    }
+    expect(baseKey).toBe(repo.actualKey)
+    expect(pluginActual).toBe(actualKey)
+    for (const event of [
+      { ref: "refs/heads/main", before: repo.baseKey },
+      {
+        pull_request: {
+          base: { ref: "main", sha: repo.baseKey },
+        },
+      },
+      {},
+    ]) {
+      const fixture = store({
+        [repo.baseKey]: complete(),
+        [baseKey]: complete(),
+        [actualKey]: complete(),
+      })
+      const requested = []
+      const listItems = fixture.publisher.listItems
+      fixture.publisher.listItems = (marker, prefix) => {
+        requested.push(prefix)
+        return listItems(marker, prefix)
+      }
+      expect(
+        await selectPublishedBaseline({
+          ...repo,
+          baseKey,
+          actualKey,
+          event,
+          ...fixture,
+        }),
+      ).toEqual({
+        actualKey,
+        expectedKey: repo.baseKey,
+        baseKey: repo.baseKey,
+        isInitialBaseline: false,
+      })
+      expect(requested).toEqual([`${repo.baseKey}/`])
+    }
+  })
+  it("still refuses a merged feature snapshot when no default ancestor was published", async () => {
     const repo = repository()
     repo.git("checkout", "main")
     repo.git(
@@ -279,7 +348,70 @@ describe("published baseline ancestry", () => {
         baseKey: repo.actualKey,
         ...store({ [repo.actualKey]: complete() }),
       }),
-    ).rejects.toThrow("first-parent history")
+    ).rejects.toThrow("feature snapshot cannot bootstrap")
+  })
+  it("rejects an event predecessor that points to the merged feature parent", async () => {
+    const repo = repository()
+    repo.git("checkout", "main")
+    repo.git(
+      "merge",
+      "--no-ff",
+      "feature",
+      "-m",
+      "reviewed merge",
+    )
+    repo.git(
+      "update-ref",
+      "refs/remotes/origin/main",
+      "HEAD",
+    )
+    const actualKey = repo.git("rev-parse", "HEAD")
+    for (const event of [
+      { ref: "refs/heads/main", before: repo.actualKey },
+      {
+        pull_request: {
+          base: { ref: "main", sha: repo.actualKey },
+        },
+      },
+    ]) {
+      await expect(
+        selectPublishedBaseline({
+          ...repo,
+          actualKey,
+          baseKey: repo.actualKey,
+          event,
+          ...store({
+            [repo.baseKey]: complete(),
+            [repo.actualKey]: complete(),
+          }),
+        }),
+      ).rejects.toThrow("first-parent history")
+    }
+  })
+  it("does not replace a nonancestor plugin base with an otherwise valid event predecessor", async () => {
+    const repo = repository()
+    repo.git(
+      "checkout",
+      "-qb",
+      "unreviewed",
+      repo.published,
+    )
+    const unrelated = repo.commit("unreviewed UI")
+    await expect(
+      selectPublishedBaseline({
+        ...repo,
+        baseKey: unrelated,
+        event: {
+          pull_request: {
+            base: { ref: "main", sha: repo.baseKey },
+          },
+        },
+        ...store({
+          [repo.baseKey]: complete(),
+          [unrelated]: complete(),
+        }),
+      }),
+    ).rejects.toThrow()
   })
   it("explicitly initializes a truly empty bucket, including a first commit with no Git base", async () => {
     const repo = repository()
