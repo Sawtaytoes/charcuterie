@@ -19,9 +19,11 @@ import { afterEach, describe, expect, it } from "vitest"
 import {
   actualPathsFromReport,
   createPublishedStore,
+  GIT_MAX_BUFFER,
   isCompleteSnapshot,
   listPublishedObjects,
   MISSING_REPORT,
+  resolveReviewedBranch,
   selectPublishedBaseline,
 } from "./selectPublishedBaseline.js"
 import { buildRegConfig } from "./writeRegConfig.js"
@@ -515,6 +517,169 @@ describe("published baseline ancestry", () => {
       ).rejects.toThrow(message)
     }
   })
+  it("keeps baselines on a long-lived pull request base branch that is not the default branch", async () => {
+    // An engine fork: pull requests target a long-lived integration branch,
+    // and the default branch is a stale ancestor of it. Every integration
+    // commit is off the default history, so a default-only check failed
+    // every pull request.
+    const repo = repository()
+    repo.git("checkout", "-q", "main")
+    repo.git("checkout", "-qb", "integration")
+    const integration = repo.commit("integration published")
+    const integrationDocs = repo.commit(
+      "integration documentation only",
+    )
+    repo.git(
+      "update-ref",
+      "refs/remotes/origin/integration",
+      integrationDocs,
+    )
+    repo.git("checkout", "-qb", "port")
+    const ported = repo.commit("port UI")
+    const snapshots = {
+      [repo.baseKey]: complete(),
+      [integration]: complete(),
+      [ported]: complete(),
+    }
+    const pullRequest = {
+      repository: { default_branch: "main" },
+      pull_request: {
+        base: { ref: "integration", sha: integrationDocs },
+      },
+    }
+    for (const baseKey of [integrationDocs, null]) {
+      expect(
+        await selectPublishedBaseline({
+          ...repo,
+          baseKey,
+          actualKey: ported,
+          event: pullRequest,
+          ...store(snapshots),
+        }),
+      ).toEqual({
+        actualKey: ported,
+        expectedKey: integration,
+        baseKey: integrationDocs,
+        isInitialBaseline: false,
+      })
+    }
+    // The push that lands it compares against the branch's own predecessor.
+    repo.git("checkout", "-q", "integration")
+    repo.git("merge", "-q", "--ff-only", "port")
+    repo.git(
+      "update-ref",
+      "refs/remotes/origin/integration",
+      ported,
+    )
+    expect(
+      await selectPublishedBaseline({
+        ...repo,
+        baseKey: null,
+        actualKey: ported,
+        event: {
+          repository: { default_branch: "main" },
+          ref: "refs/heads/integration",
+          before: integrationDocs,
+        },
+        ...store(snapshots),
+      }),
+    ).toMatchObject({
+      expectedKey: integration,
+      baseKey: integrationDocs,
+    })
+    // A plugin base from another branch (a feature commit that is not on
+    // the integration branch) is still refused.
+    await expect(
+      selectPublishedBaseline({
+        ...repo,
+        baseKey: repo.actualKey,
+        actualKey: ported,
+        event: pullRequest,
+        ...store(snapshots),
+      }),
+    ).rejects.toThrow()
+  })
+  it("resolves the reviewed branch from the pull request base, then the pushed branch, then the default", () => {
+    expect(
+      resolveReviewedBranch(
+        {
+          ref: "refs/heads/feature",
+          pull_request: { base: { ref: "release/2.0" } },
+        },
+        "master",
+      ),
+    ).toBe("release/2.0")
+    expect(
+      resolveReviewedBranch(
+        { ref: "refs/heads/integration/5_1" },
+        "master",
+      ),
+    ).toBe("integration/5_1")
+    for (const event of [
+      {},
+      { ref: "refs/tags/v1" },
+      { ref: "refs/heads/" },
+      undefined,
+    ])
+      expect(resolveReviewedBranch(event, "master")).toBe(
+        "master",
+      )
+  })
+  it("reads a first-parent history larger than Node's default 1 MiB buffer", async () => {
+    // 41 bytes a commit: the default buffer ends near 25,600 commits, and
+    // a long-lived engine fork has over 31,000 (spawnSync git ENOBUFS).
+    const count = 30_000
+    expect(count * 41).toBeGreaterThan(1024 * 1024)
+    expect(GIT_MAX_BUFFER).toBeGreaterThan(count * 41)
+    const cwd = scratch()
+    const git = (...args) =>
+      execFileSync("git", args, {
+        cwd,
+        encoding: "utf8",
+        stdio: "pipe",
+      }).trim()
+    git("init", "-q", "-b", "main")
+    const lines = []
+    for (let index = 1; index <= count; index++) {
+      lines.push(
+        "commit refs/heads/main",
+        `mark :${index}`,
+        `committer Fixture <fixture@example.invalid> ${1_700_000_000 + index} +0000`,
+        "data 0",
+      )
+      if (index > 1) lines.push(`from :${index - 1}`)
+      lines.push("")
+    }
+    execFileSync("git", ["fast-import", "--quiet"], {
+      cwd,
+      input: `${lines.join("\n")}\n`,
+      stdio: ["pipe", "pipe", "pipe"],
+    })
+    const actualKey = git("rev-parse", "main")
+    const baseKey = git("rev-parse", "main~1")
+    const published = git("rev-parse", "main~2")
+    git("update-ref", "refs/remotes/origin/main", actualKey)
+    expect(
+      Number(
+        git(
+          "rev-list",
+          "--count",
+          "--first-parent",
+          "main",
+        ),
+      ),
+    ).toBe(count)
+    expect(
+      await selectPublishedBaseline({
+        cwd,
+        defaultBranch: "main",
+        baseKey,
+        actualKey,
+        event: { ref: "refs/heads/main", before: baseKey },
+        ...store({ [published]: complete() }),
+      }),
+    ).toMatchObject({ expectedKey: published, baseKey })
+  }, 60_000)
   it("rejects stale extra PNGs and invalid or duplicate report paths", async () => {
     expect(actualPathsFromReport(report())).toEqual(
       new Set(["nested/shot.png"]),

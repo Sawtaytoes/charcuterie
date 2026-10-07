@@ -1,5 +1,13 @@
 #!/usr/bin/env node
-/** Select a complete published baseline only from reviewed default-branch history. */
+/**
+ * Select a complete published baseline only from reviewed branch history.
+ *
+ * The reviewed branch is the branch the change lands on: a pull request's
+ * BASE branch, the branch a push updated, and otherwise the repository's
+ * default branch. A caller whose pull requests target a long-lived branch
+ * other than the default (an engine fork whose default branch is a stale
+ * ancestor of its integration branches) keeps its baselines on that branch.
+ */
 import { execFileSync } from "node:child_process"
 import {
   mkdtemp,
@@ -18,12 +26,33 @@ const require = createRequire(import.meta.url)
 export const MISSING_REPORT = Symbol(
   "missing published report",
 )
+// `rev-list --first-parent` prints 41 bytes per commit, so Node's default
+// 1 MiB buffer ends at about 25,000 commits and the call dies with ENOBUFS.
+// A long-lived engine fork with 31,000+ first-parent commits passes that.
+export const GIT_MAX_BUFFER = 1024 * 1024 * 1024
 const git = (cwd, ...args) =>
   execFileSync("git", args, {
     cwd,
     encoding: "utf8",
+    maxBuffer: GIT_MAX_BUFFER,
     stdio: ["ignore", "pipe", "pipe"],
   }).trim()
+
+/** The branch whose first-parent history holds reviewed baselines. */
+export const resolveReviewedBranch = (
+  event = {},
+  defaultBranch,
+) => {
+  const baseRef = event?.pull_request?.base?.ref
+  if (typeof baseRef === "string" && baseRef) return baseRef
+  if (
+    typeof event?.ref === "string" &&
+    event.ref.startsWith("refs/heads/") &&
+    event.ref.length > "refs/heads/".length
+  )
+    return event.ref.slice("refs/heads/".length)
+  return defaultBranch
+}
 
 /** List the entire authenticated prefix; a listing failure never means missing. */
 export const listPublishedObjects = async (
@@ -140,36 +169,36 @@ export const isCompleteSnapshot = async (
   )
 }
 
-/** A default-only clone has no branch intersection; use its reviewed predecessor. */
+/** A reviewed-branch-only clone has no branch intersection; use its reviewed predecessor. */
 export const deriveReviewedBase = (
   cwd,
-  defaultBranch,
+  reviewedBranch,
   actualKey,
   event = {},
 ) => {
   if (
-    event.pull_request?.base?.ref === defaultBranch &&
+    event.pull_request?.base?.ref === reviewedBranch &&
     event.pull_request.base.sha
   ) {
     return event.pull_request.base.sha
   }
   if (
-    event.ref === `refs/heads/${defaultBranch}` &&
+    event.ref === `refs/heads/${reviewedBranch}` &&
     event.before &&
     !/^0+$/.test(event.before)
   ) {
     return event.before
   }
-  const defaultRef = `refs/remotes/origin/${defaultBranch}`
-  const defaultHistory = new Set(
+  const reviewedRef = `refs/remotes/origin/${reviewedBranch}`
+  const reviewedHistory = new Set(
     git(
       cwd,
       "rev-list",
       "--first-parent",
-      defaultRef,
+      reviewedRef,
     ).split("\n"),
   )
-  if (defaultHistory.has(actualKey)) {
+  if (reviewedHistory.has(actualKey)) {
     return (
       git(
         cwd,
@@ -181,7 +210,7 @@ export const deriveReviewedBase = (
       ).split(" ")[1] ?? null
     )
   }
-  return git(cwd, "merge-base", actualKey, defaultRef)
+  return git(cwd, "merge-base", actualKey, reviewedRef)
 }
 
 /** Walk only first parents after validating the plugin base and reviewed predecessor. */
@@ -194,23 +223,27 @@ export const selectPublishedBaseline = async ({
   readReport,
   event,
 }) => {
-  const defaultRef = `refs/remotes/origin/${defaultBranch}`
-  if (!defaultBranch || !/^[0-9a-f]{40}$/.test(actualKey))
+  const reviewedBranch = resolveReviewedBranch(
+    event,
+    defaultBranch,
+  )
+  const reviewedRef = `refs/remotes/origin/${reviewedBranch}`
+  if (!reviewedBranch || !/^[0-9a-f]{40}$/.test(actualKey))
     throw new Error(
-      "Missing valid default branch or actual snapshot key",
+      "Missing valid reviewed branch or actual snapshot key",
     )
   git(
     cwd,
     "rev-parse",
     "--verify",
-    `${defaultRef}^{commit}`,
+    `${reviewedRef}^{commit}`,
   )
-  const defaultHistory = new Set(
+  const reviewedHistory = new Set(
     git(
       cwd,
       "rev-list",
       "--first-parent",
-      defaultRef,
+      reviewedRef,
     ).split("\n"),
   )
   const validateBase = (key) => {
@@ -220,25 +253,31 @@ export const selectPublishedBaseline = async ({
       )
     if (!/^[0-9a-f]{40}$/.test(key))
       throw new Error("Invalid selected Git baseline key")
-    git(cwd, "merge-base", "--is-ancestor", key, defaultRef)
+    git(
+      cwd,
+      "merge-base",
+      "--is-ancestor",
+      key,
+      reviewedRef,
+    )
     git(cwd, "merge-base", "--is-ancestor", key, actualKey)
   }
   // Preserve a reviewed first-parent plugin base, including older release bases.
   // A normal merge may instead intersect its feature second parent. Validate that
   // original candidate before deriving a default predecessor; never inspect its store.
   if (baseKey != null) validateBase(baseKey)
-  if (baseKey == null || !defaultHistory.has(baseKey))
+  if (baseKey == null || !reviewedHistory.has(baseKey))
     baseKey = deriveReviewedBase(
       cwd,
-      defaultBranch,
+      reviewedBranch,
       actualKey,
       event,
     )
   if (baseKey != null) {
     validateBase(baseKey)
-    if (!defaultHistory.has(baseKey))
+    if (!reviewedHistory.has(baseKey))
       throw new Error(
-        "Selected baseline is outside default-branch first-parent history",
+        `Selected baseline is outside ${reviewedBranch}'s first-parent history`,
       )
     for (const key of git(
       cwd,
@@ -262,15 +301,15 @@ export const selectPublishedBaseline = async ({
   // it when published, but otherwise search the reviewed current predecessor.
   const reviewedBase = deriveReviewedBase(
     cwd,
-    defaultBranch,
+    reviewedBranch,
     actualKey,
     event,
   )
   if (reviewedBase != null && reviewedBase !== baseKey) {
     validateBase(reviewedBase)
-    if (!defaultHistory.has(reviewedBase))
+    if (!reviewedHistory.has(reviewedBase))
       throw new Error(
-        "Reviewed predecessor is outside default-branch first-parent history",
+        `Reviewed predecessor is outside ${reviewedBranch}'s first-parent history`,
       )
     for (const key of git(
       cwd,
@@ -303,7 +342,7 @@ export const selectPublishedBaseline = async ({
     }
   }
   throw new Error(
-    "No complete published default-branch ancestor. The bucket is not empty; a feature snapshot cannot bootstrap a reviewed baseline. Publish the initial baseline from the default branch in an empty per-repository bucket before opening visual PRs.",
+    `No complete published ancestor on ${reviewedBranch}. The bucket is not empty; a feature snapshot cannot bootstrap a reviewed baseline. Publish the initial baseline from the reviewed branch in an empty per-repository bucket before opening visual PRs.`,
   )
 }
 
