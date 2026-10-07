@@ -258,6 +258,38 @@ export const selectPublishedBaseline = async ({
       }
     }
   }
+  // An old release intersection can predate every stored snapshot. Preserve
+  // it when published, but otherwise search the reviewed current predecessor.
+  const reviewedBase = deriveReviewedBase(
+    cwd,
+    defaultBranch,
+    actualKey,
+    event,
+  )
+  if (reviewedBase != null && reviewedBase !== baseKey) {
+    validateBase(reviewedBase)
+    if (!defaultHistory.has(reviewedBase))
+      throw new Error(
+        "Reviewed predecessor is outside default-branch first-parent history",
+      )
+    for (const key of git(
+      cwd,
+      "rev-list",
+      "--first-parent",
+      reviewedBase,
+    ).split("\n")) {
+      if (
+        await isCompleteSnapshot(publisher, key, readReport)
+      ) {
+        return {
+          actualKey,
+          expectedKey: key,
+          baseKey: reviewedBase,
+          isInitialBaseline: false,
+        }
+      }
+    }
+  }
   const bucketObjects = await listPublishedObjects(
     publisher,
     "",
