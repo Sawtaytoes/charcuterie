@@ -215,6 +215,29 @@ describe("published baseline ancestry", () => {
     })
     expect(result.expectedKey).toBe(repo.published)
   })
+  it("falls back from an unpublished old release intersection to a complete reviewed predecessor", async () => {
+    const repo = repository()
+    for (const event of [
+      {
+        pull_request: {
+          base: { ref: "main", sha: repo.baseKey },
+        },
+      },
+      { ref: "refs/heads/main", before: repo.baseKey },
+    ]) {
+      const result = await selectPublishedBaseline({
+        ...repo,
+        baseKey: repo.published,
+        event,
+        ...store({
+          [repo.baseKey]: complete(),
+          [repo.actualKey]: complete(),
+        }),
+      })
+      expect(result.expectedKey).toBe(repo.baseKey)
+      expect(result.baseKey).toBe(repo.baseKey)
+    }
+  })
   it("rejects malformed raw PR/push bases that point to the actual reviewed main commit itself", async () => {
     const repo = repository()
     repo.git("checkout", "main")
