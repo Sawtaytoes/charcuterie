@@ -280,6 +280,20 @@ and uses the nearest complete one. Every candidate must lie on the default
 branch's first-parent history; snapshots from other feature branches are never
 eligible. The current snapshot key is unchanged, including PR merge checkouts.
 
+"Default branch" above means the **reviewed branch**: the branch the change
+lands on. That is the pull request's base branch, then the branch a push
+updated, and only otherwise the repository's default branch. A repository whose
+pull requests target a long-lived branch other than its default keeps its
+baselines on that branch: an engine fork that opens every pull request against
+one of two integration branches, with a default branch that is a stale ancestor
+of both, had every one of its bases rejected by a default-only check. A caller that
+runs on pushes to every branch (image-viewer) gets that branch's own first-parent
+history on a push; its pull request checks still use the base branch.
+
+⚠️ The selector reads the whole first-parent history, 41 bytes a commit. Its
+`git` calls carry a 1 GiB output buffer, because Node's 1 MiB default ends near
+25,600 commits and a long-lived engine fork has over 31,000 (`spawnSync git ENOBUFS`).
+
 A snapshot needs `index.html`, valid `out.json`, and the exact set of actual PNGs
 named by the report. A paginated prefix listing checks the inventory without a
 request per image. HTML alone is insufficient because the publisher uploads in

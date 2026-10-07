@@ -7,8 +7,9 @@
  * since the first VRT run: a 2% threshold by default with antialiasing
  * tolerated, and the S3 publisher over path-style addressing, which is what
  * Garage speaks. The shared workflow's preflight retains the pinned Git base
- * and actual key, selecting the nearest complete published default-branch
- * ancestor when that base's snapshot is absent. A local key-generator bridge
+ * and actual key, selecting the nearest complete published ancestor on the
+ * reviewed branch (the pull request's base, else the pushed branch, else the
+ * default branch) when that base's snapshot is absent. A local key-generator bridge
  * supplies those validated keys to the unchanged reg-suit CLI.
  *
  *   VRT_S3_BUCKET        the repo's own bucket
