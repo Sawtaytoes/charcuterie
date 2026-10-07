@@ -106,22 +106,6 @@ const press = async (
   })
 }
 
-const movePointer = async (
-  element: HTMLElement,
-  { clientX, clientY }: LongPressPoint,
-) => {
-  await act(async () => {
-    element.dispatchEvent(
-      new PointerEvent("pointermove", {
-        bubbles: true,
-        clientX,
-        clientY,
-        pointerType: "touch",
-      }),
-    )
-  })
-}
-
 const waitForHold = async () => {
   await act(async () => {
     await new Promise((resolve) => {
@@ -159,16 +143,23 @@ test("a press that travels is a scroll, not a hold", async () => {
 
   const view = await renderPressable({ onLongPress })
 
-  await press(view.surface, { clientX: 100, clientY: 100 })
-
-  await movePointer(view.surface, {
-    clientX: 103,
-    clientY: 100,
-  })
-
-  await movePointer(view.surface, {
-    clientX: 140,
-    clientY: 100,
+  // Keep movement before the hold deadline: async act boundaries can yield
+  // long enough for the 20 ms timer to fire on a busy four-window runner.
+  await act(() => {
+    for (const [type, clientX] of [
+      ["pointerdown", 100],
+      ["pointermove", 103],
+      ["pointermove", 140],
+    ] as const) {
+      view.surface.dispatchEvent(
+        new PointerEvent(type, {
+          bubbles: true,
+          clientX,
+          clientY: 100,
+          pointerType: "touch",
+        }),
+      )
+    }
   })
 
   await waitForHold()
