@@ -16,6 +16,16 @@ across an ultrawide and nothing below the fold.
 
 <Canvas of={AdaptiveGridStories.Playground} />
 
+## Fill a media workspace
+
+Opt in with `layout="fill"` when a gallery or printer fleet should spend the
+available width even if its cards would fit in a taller stack. Set `maxColumns`
+and `minColumnInlineSize` for the content. The shared 16px gap counts toward the
+column floor. Multiple columns use the whole container; a lone column retains
+its reading measure. The default remains height-first.
+
+<Canvas of={AdaptiveGridStories.Fill} />
+
 ## Props
 
 <Controls />

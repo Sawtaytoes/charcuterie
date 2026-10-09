@@ -2,6 +2,7 @@ import type { ReactNode } from "react"
 import { Children } from "react"
 
 import { toClassName } from "../toClassName.ts"
+import type { GridLayout } from "./chooseColumns.ts"
 import { getContentMaxInlineSize } from "./chooseColumns.ts"
 import type { BlockSizeResolver } from "./useAdaptiveColumns.ts"
 import { useAdaptiveColumns } from "./useAdaptiveColumns.ts"
@@ -41,6 +42,8 @@ export type AdaptiveGridProps = {
    * would be worse than one that is an item out.
    */
   itemCount?: number
+  /** Fill the container with readable columns instead of spending height first. */
+  layout?: GridLayout
   /** The most columns the automatic answer will take. */
   maxColumns?: number
   /** The narrowest a column may be, in CSS px. */
@@ -105,6 +108,7 @@ export const AdaptiveGrid = ({
   columns,
   itemBlockSize,
   itemCount,
+  layout: gridLayout = "height-first",
   maxColumns,
   minColumnInlineSize,
   storageKey,
@@ -114,6 +118,7 @@ export const AdaptiveGrid = ({
     chromeBlockSize,
     itemBlockSize,
     itemCount: itemCount ?? Children.count(children),
+    layout: gridLayout,
     maxAutoColumns: maxColumns,
     minColumnInlineSize,
     storageKey,
@@ -126,6 +131,7 @@ export const AdaptiveGrid = ({
   // a one-column cap is the same bug as no cap at all, upside down.
   const contentMaxInlineSize = getContentMaxInlineSize({
     columns: drawnColumns,
+    layout: gridLayout,
   })
 
   return (

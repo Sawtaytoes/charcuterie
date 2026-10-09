@@ -7,7 +7,10 @@ import {
   useSyncExternalStore,
 } from "react"
 
-import type { ColumnChoice } from "./chooseColumns.ts"
+import type {
+  ColumnChoice,
+  GridLayout,
+} from "./chooseColumns.ts"
 import {
   chooseColumns,
   DEFAULT_MAX_AUTO_COLUMNS,
@@ -180,8 +183,10 @@ export const useAdaptiveColumns = <
   chromeBlockSize,
   columnInlineSize,
   gutterInlineSize,
+  gap,
   itemBlockSize,
   itemCount,
+  layout = "height-first",
   maxAutoColumns = DEFAULT_MAX_AUTO_COLUMNS,
   maxManualColumns = DEFAULT_MAX_MANUAL_COLUMNS,
   minColumnInlineSize = DEFAULT_MIN_COLUMN_INLINE_SIZE_PX,
@@ -197,10 +202,14 @@ export const useAdaptiveColumns = <
   columnInlineSize?: string
   /** Override `contentInlineSize.gutter`. */
   gutterInlineSize?: string
+  /** Space between tracks for the fill layout. */
+  gap?: number
   /** One item's block size in CSS px. Measure it; err high. */
   itemBlockSize: number
   /** How many items the grid is being asked to fit. */
   itemCount: number
+  /** Opt in to width-first media layout. */
+  layout?: GridLayout
   /** The most columns the automatic answer will take. */
   maxAutoColumns?: number
   /** The most a person may ask for. One above the auto cap. */
@@ -349,6 +358,8 @@ export const useAdaptiveColumns = <
     chromeBlockSize,
     itemBlockSize,
     itemCount,
+    gap,
+    layout,
     maxColumns: maxAutoColumns,
     minColumnInlineSize,
   })
@@ -364,6 +375,7 @@ export const useAdaptiveColumns = <
       columnInlineSize,
       columns,
       gutterInlineSize,
+      layout,
       singleInlineSize,
     }),
     isLaidOut: availableInlineSize > 0,

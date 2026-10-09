@@ -36,8 +36,13 @@ import * as stories from "./AdaptiveGrid.stories.tsx"
  * all.
  */
 
-const { AllStates, AllVariants, Playground, Responsive } =
-  composeStories(stories)
+const {
+  AllStates,
+  AllVariants,
+  Fill,
+  Playground,
+  Responsive,
+} = composeStories(stories)
 
 /**
  * The grids this component drew.
@@ -240,4 +245,33 @@ test("the inline size is read from the container, not the window", async () => {
       getGrids(canvasElement).map(getTrackCount),
     ).toEqual([1, 2, 3])
   })
+})
+
+test("fill uses the available container width and keeps its column floor", async () => {
+  const { canvasElement } = await mountAtInlineSize(
+    Fill,
+    1900,
+  )
+  await waitFor(async () => {
+    const grid = getGrid(canvasElement)
+    await expect(getTrackCount(grid)).toBe(6)
+    await expect(grid.style.maxInlineSize).toBe("none")
+    await expect(grid.getBoundingClientRect().width).toBe(
+      1900,
+    )
+  })
+  canvasElement.style.inlineSize = "700px"
+  await waitFor(
+    async () =>
+      await expect(
+        getTrackCount(getGrid(canvasElement)),
+      ).toBe(2),
+  )
+  canvasElement.style.inlineSize = "384px"
+  await waitFor(
+    async () =>
+      await expect(
+        getTrackCount(getGrid(canvasElement)),
+      ).toBe(1),
+  )
 })

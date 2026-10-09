@@ -240,3 +240,20 @@ export const Interactive: Story = {
     )
   },
 }
+
+/** A small fleet and a gallery opt in to spending width first. */
+export const Fill: Story = {
+  args: {
+    layout: "fill",
+    minColumnInlineSize: 300,
+    maxColumns: 6,
+    blockSizeResolver: fixedBlockSize(1920),
+  },
+  render: (gridProps) => (
+    <AdaptiveGrid {...gridProps}>
+      {NINE_ITEMS.slice(0, 6).map((label) => (
+        <Item key={label} label={label} />
+      ))}
+    </AdaptiveGrid>
+  ),
+}
