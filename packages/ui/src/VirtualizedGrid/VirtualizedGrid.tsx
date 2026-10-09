@@ -1,6 +1,7 @@
 import type { ReactNode } from "react"
 import { useLayoutEffect, useState } from "react"
 
+import type { GridLayout } from "../AdaptiveGrid/chooseColumns.ts"
 import type { BlockSizeResolver } from "../AdaptiveGrid/useAdaptiveColumns.ts"
 import { useAdaptiveColumns } from "../AdaptiveGrid/useAdaptiveColumns.ts"
 import { toClassName } from "../toClassName.ts"
@@ -62,6 +63,8 @@ export type VirtualizedGridProps<Item> = {
    * is one whose length a reader cannot count for itself.
    */
   label?: string
+  /** Opt in to width-first media layout. */
+  layout?: GridLayout
   /** The most columns the automatic answer will take. */
   maxColumns?: number
   /** The narrowest a column may be, in CSS px. */
@@ -203,6 +206,7 @@ export const VirtualizedGrid = <Item,>({
   itemBlockSize,
   items,
   label,
+  layout: gridLayout,
   maxColumns,
   minColumnInlineSize,
   overscanRows = 4,
@@ -214,6 +218,8 @@ export const VirtualizedGrid = <Item,>({
     chromeBlockSize,
     itemBlockSize,
     itemCount: items.length,
+    gap,
+    layout: gridLayout,
     maxAutoColumns: maxColumns,
     minColumnInlineSize,
     storageKey,
