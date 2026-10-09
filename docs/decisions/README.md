@@ -8,6 +8,7 @@ decision overrides an instinct.
 
 | Date | Decision | Summary |
 | --- | --- | --- |
+| 2026-10-09 | [Media workspaces can opt in to fill layout](2026-10-09-media-workspaces-can-opt-in-to-fill-layout.md) | An explicit width-first fill mode for regular and virtualized grids; default height-first behavior stays unchanged. |
 | 2026-10-06 | [pnpm and local Turbo build caching](2026-10-06-pnpm-and-local-turbo-build-caching.md) | Pinned pnpm replaces Yarn while retaining dependency versions and security patches; Turbo caches package builds locally, never test or visual verdicts. |
 | 2026-10-04 | [Every browser test runs in four named windows](2026-10-04-every-browser-test-runs-in-four-named-windows.md) | narrow 384x824, tall 1080x1920, wide 1920x1080, ultrawide 3440x1440 from one list in `vitest-config`; a failure in a new window is triaged, never pinned back; fixed-size boxes are `shrink-0`. |
 | 2026-10-04 | [HTML notes preserve untouched source](2026-10-04-html-notes-use-distinct-opt-in-surfaces-and-preserve-untouched-source.md) | Distinct optional HtmlView/HtmlEditor share safe document policy; original HTML survives until a real edit. |

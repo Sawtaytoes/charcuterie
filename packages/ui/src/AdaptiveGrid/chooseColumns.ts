@@ -109,6 +109,9 @@ export const DEFAULT_MIN_COLUMN_INLINE_SIZE_PX =
  */
 export type ColumnChoice = "auto" | number
 
+/** Fill is an explicit width-first layout for media galleries and fleets. */
+export type GridLayout = "height-first" | "fill"
+
 /**
  * The column count the automatic rule wants, for one measured space
  * and one set of items.
@@ -119,6 +122,8 @@ export const chooseColumns = ({
   chromeBlockSize = 0,
   itemBlockSize,
   itemCount,
+  gap = 16,
+  layout = "height-first",
   maxColumns = DEFAULT_MAX_AUTO_COLUMNS,
   minColumnInlineSize = DEFAULT_MIN_COLUMN_INLINE_SIZE_PX,
 }: {
@@ -172,6 +177,10 @@ export const chooseColumns = ({
    * finished loading would be worse than one that is an item out.
    */
   itemCount: number
+  /** Height-first by default; fill spends the available container width. */
+  layout?: GridLayout
+  /** Space between tracks, in CSS px, used by fill. */
+  gap?: number
   /** @see DEFAULT_MAX_AUTO_COLUMNS */
   maxColumns?: number
   /** @see DEFAULT_MIN_COLUMN_INLINE_SIZE_PX */
@@ -189,6 +198,20 @@ export const chooseColumns = ({
 
   if (itemCount <= 1) {
     return 1
+  }
+
+  if (layout === "fill") {
+    const columnsThatFit = Math.max(
+      1,
+      Math.floor(
+        (availableInlineSize + gap) /
+          (minColumnInlineSize + gap),
+      ),
+    )
+    return Math.max(
+      1,
+      Math.min(maxColumns, itemCount, columnsThatFit),
+    )
   }
 
   // Block size is the reason. How many items stack in the space,
@@ -235,6 +258,7 @@ export const getContentMaxInlineSize = ({
   columnInlineSize = contentInlineSize.column,
   columns,
   gutterInlineSize = contentInlineSize.gutter,
+  layout = "height-first",
   singleInlineSize = contentInlineSize.single,
 }: {
   /** What one column is worth, once there are several. */
@@ -242,12 +266,16 @@ export const getContentMaxInlineSize = ({
   columns: number
   /** Slack added on top of a multi-column cap, for the gaps. */
   gutterInlineSize?: string
+  /** Fill uses all available width once there are multiple columns. */
+  layout?: GridLayout
   /** The cap when there is only one column. */
   singleInlineSize?: string
 }): string =>
   columns <= 1
     ? singleInlineSize
-    : `${Number.parseFloat(columnInlineSize) * columns + Number.parseFloat(gutterInlineSize)}rem`
+    : layout === "fill"
+      ? "none"
+      : `${Number.parseFloat(columnInlineSize) * columns + Number.parseFloat(gutterInlineSize)}rem`
 
 /**
  * The choices a manual picker offers: `"auto"`, then every count up
