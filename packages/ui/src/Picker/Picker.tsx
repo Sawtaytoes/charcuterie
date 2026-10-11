@@ -131,8 +131,8 @@ export type PickerProps = Omit<
  * or under `w-full`, the trigger used to become a bar with the value
  * floating in the middle and the chevron beside it. The value now sits
  * at the inline start, in a span that grows into the spare width and
- * truncates when there is too little, and the chevron sits at the
- * inline end. `justify-between` is passed through `className`, which
+ * ends in an ellipsis when there is too little, and the chevron sits at
+ * the inline end. `justify-between` is passed through `className`, which
  * `toClassName` merges over `Button`'s `justify-center` rather than
  * leaving the two to stylesheet order — and the growing span makes the
  * result correct even if a caller's `className` overrides it. A trigger
@@ -214,7 +214,13 @@ export const Picker = ({
           type="button"
         >
           {hasTriggerContent ? (
-            <span className="min-w-0 grow truncate text-start">
+            // Not `truncate`. Its `overflow: hidden` clips the
+            // anti-aliased edge pixels of glyphs and a rich label's
+            // badge, so a content-width trigger stopped rendering
+            // pixel-identically to the unwrapped one. `overflow-x-clip`
+            // leaves the block axis alone, and `-mx-1 px-1` moves the
+            // inline clip edge 4px outward without moving the text.
+            <span className="-mx-1 min-w-0 grow overflow-x-clip px-1 text-start text-ellipsis whitespace-nowrap">
               {triggerContent}
             </span>
           ) : null}
