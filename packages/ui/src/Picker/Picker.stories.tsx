@@ -10,6 +10,7 @@ import {
 } from "../argTypes.storyHelpers.ts"
 import { Badge } from "../Badge/Badge.tsx"
 import {
+  ContainerBoard,
   StoryRow,
   StorySection,
 } from "../board.storyHelpers.tsx"
@@ -256,5 +257,50 @@ export const NextToText: Story = {
         </StoryRow>
       </StorySection>
     </div>
+  ),
+}
+
+/**
+ * One value long enough to outgrow the narrowest container, so the
+ * board shows the truncation as well as the stretch.
+ */
+const SUBTITLES: PickerOption[] = [
+  { label: "Off", value: "off" },
+  {
+    label: "English (SDH, signs and songs, full dialogue)",
+    value: "eng-sdh",
+  },
+]
+
+/**
+ * Inside a `Field` the trigger stretches to the container, the way a
+ * select does: the value sits at the inline start, the chevron at the
+ * inline end, and a value wider than the container truncates rather
+ * than pushing the chevron out.
+ */
+export const Responsive: Story = {
+  render: () => (
+    <ContainerBoard>
+      {(width) => (
+        <div className="flex flex-col gap-4">
+          <Field label={`Language at ${width}`}>
+            <Picker
+              label={`Language at ${width}`}
+              onChange={() => undefined}
+              options={LANGUAGES}
+              value="eng"
+            />
+          </Field>
+          <Field label={`Subtitles at ${width}`}>
+            <Picker
+              label={`Subtitles at ${width}`}
+              onChange={() => undefined}
+              options={SUBTITLES}
+              value="eng-sdh"
+            />
+          </Field>
+        </div>
+      )}
+    </ContainerBoard>
   ),
 }

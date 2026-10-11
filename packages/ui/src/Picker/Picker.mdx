@@ -77,6 +77,20 @@ all flush; they are all the same trap.
 
 <Canvas of={PickerStories.NextToText} />
 
+## A stretched trigger reads like a select
+
+`Picker` is a `Button`, and a `Button` centers its content. Inside a `Field` — a `flex-col`,
+so the trigger stretches to the column — or under `w-full`, that used to give a full-width bar
+with the value floating in the middle. The trigger now lays its value out at the **inline
+start** and the chevron at the **inline end**, and a value wider than the trigger truncates
+with an ellipsis rather than pushing the chevron out. The full value stays in the accessible
+name and in the open list.
+
+The width still comes from the container: a trigger the parent does not stretch keeps its
+content width and renders exactly as before.
+
+<Canvas of={PickerStories.Responsive} />
+
 ## `id` does not survive; `data-testid` does
 
 `useAnchoredOverlay` overwrites the trigger's `id` with a generated one so the portalled
