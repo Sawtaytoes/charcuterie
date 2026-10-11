@@ -13,6 +13,7 @@ import { Button } from "../Button/Button.tsx"
 import type { IntentAppearance } from "../intentStyles.ts"
 import type { ListboxItem } from "../Listbox/Listbox.tsx"
 import { Listbox } from "../Listbox/Listbox.tsx"
+import { toClassName } from "../toClassName.ts"
 
 export type PickerOption = ListboxItem
 
@@ -122,6 +123,21 @@ export type PickerProps = Omit<
  * mux-magic both moved to it while `id` was still being replaced — but
  * `id` is no longer a trap. Everything else on the button (`data-*`,
  * `onClick`, `form`, …) passes straight through.
+ *
+ * ### A stretched trigger reads like a select, not a button
+ *
+ * `Button` centers its content, which is right for an action and wrong
+ * for a value. Inside a `Field` (a `flex-col`, so the child stretches)
+ * or under `w-full`, the trigger used to become a bar with the value
+ * floating in the middle and the chevron beside it. The value now sits
+ * at the inline start, in a span that grows into the spare width and
+ * ends in an ellipsis when there is too little, and the chevron sits at
+ * the inline end. `justify-between` is passed through `className`, which
+ * `toClassName` merges over `Button`'s `justify-center` rather than
+ * leaving the two to stylesheet order — and the growing span makes the
+ * result correct even if a caller's `className` overrides it. A trigger
+ * at its content width has no spare width to distribute, so it renders
+ * exactly as it did before.
  */
 export const Picker = ({
   appearance = "outline",
@@ -154,6 +170,18 @@ export const Picker = ({
 
   const triggerText = currentText ?? placeholder ?? ""
 
+  const triggerContent =
+    currentOption === undefined
+      ? placeholder
+      : currentOption.label
+
+  // No content, no span: an empty flex item would still earn a `gap`
+  // before the chevron and widen a content-width trigger.
+  const hasTriggerContent =
+    triggerContent !== undefined &&
+    triggerContent !== null &&
+    triggerContent !== ""
+
   return (
     <Listbox
       // A disabled control must not open, and hiding the panel is a
@@ -170,7 +198,10 @@ export const Picker = ({
           {...buttonProps}
           appearance={appearance}
           aria-label={`${label}: ${triggerText}`}
-          className={className}
+          className={toClassName(
+            "justify-between",
+            className,
+          )}
           iconEnd={iconEnd}
           intent={intent}
           isDisabled={isDisabled}
@@ -182,9 +213,17 @@ export const Picker = ({
           size={size}
           type="button"
         >
-          {currentOption === undefined
-            ? placeholder
-            : currentOption.label}
+          {hasTriggerContent ? (
+            // Not `truncate`. Its `overflow: hidden` clips the
+            // anti-aliased edge pixels of glyphs and a rich label's
+            // badge, so a content-width trigger stopped rendering
+            // pixel-identically to the unwrapped one. `overflow-x-clip`
+            // leaves the block axis alone, and `-mx-1 px-1` moves the
+            // inline clip edge 4px outward without moving the text.
+            <span className="-mx-1 min-w-0 grow overflow-x-clip px-1 text-start text-ellipsis whitespace-nowrap">
+              {triggerContent}
+            </span>
+          ) : null}
         </Button>
       }
     />
