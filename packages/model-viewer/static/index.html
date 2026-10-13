@@ -17,14 +17,17 @@
   canvas{display:block;touch-action:none}
   .bar{position:fixed;left:0;right:0;top:0;padding:9px 13px;background:rgba(16,19,24,.88);
     backdrop-filter:blur(8px);border-bottom:1px solid var(--line);
-    display:flex;gap:16px;align-items:center;flex-wrap:wrap;z-index:5}
-  .bar h1{font-size:13.5px;margin:0;font-weight:650;letter-spacing:.2px;white-space:nowrap}
-  .grp{display:flex;gap:5px;align-items:center;flex-wrap:wrap}
+    display:flex;gap:16px;align-items:center;flex-wrap:wrap;z-index:5;
+    max-height:45dvh;overflow:auto}
+  .bar h1{font-size:13.5px;margin:0;font-weight:650;letter-spacing:.2px;
+    min-width:0;max-width:100%;overflow-wrap:anywhere}
+  .grp{display:flex;gap:5px;align-items:center;flex-wrap:wrap;min-width:0;max-width:100%}
+  .bar details{min-width:0;max-width:100%;overflow-wrap:anywhere}
   .lbl{color:var(--muted);font-size:10.5px;text-transform:uppercase;
     letter-spacing:.7px;margin-right:1px}
   button{background:var(--panel);color:var(--ink);border:1px solid var(--line);
     border-radius:7px;padding:5px 10px;font:inherit;font-size:12.5px;cursor:pointer;
-    display:inline-flex;align-items:center;gap:6px}
+    display:inline-flex;align-items:center;gap:6px;max-width:100%;overflow-wrap:anywhere}
   button:hover{border-color:#3a4350}
   button[aria-pressed="true"]{background:#20304d;border-color:var(--accent);color:#cfe0ff}
   .dot{width:9px;height:9px;border-radius:2px;flex:0 0 auto}
@@ -39,8 +42,8 @@
   #parts-menu[open]{flex-basis:100%}
   #parts-menu #parts{max-height:24vh;overflow:auto;margin-top:6px}
   #info{max-width:94vw;max-height:28vh;overflow:auto}
-  #hint{position:fixed;left:50%;top:52px;transform:translateX(-50%);color:var(--muted);
-    font-size:11.5px;z-index:5;pointer-events:none;transition:opacity .5s}
+  #hint{flex-basis:100%;margin:0;text-align:center;color:var(--muted);
+    font-size:11.5px;pointer-events:none;transition:opacity .5s}
   @media(max-width:600px){#hint{display:none}}
   #err{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:9;
     max-width:640px;background:#2b1416;border:1px solid #7f2f36;color:#ffd7da;
@@ -64,8 +67,8 @@
     <button type="button" id="b-spin" aria-pressed="false">Spin</button>
   </div>
 <details id="extras"><summary>Assembly and artwork</summary><label>Separate <input aria-label="Separate parts" id="separate" type="range" min="0" max="1" step="0.01" value="0"></label> <button type="button" id="plain" aria-pressed="false">Plain relief</button><span id="caption"></span></details>
+<p id="hint">drag to orbit &middot; scroll to zoom &middot; right-drag to pan</p>
 </div>
-<div id="hint">drag to orbit &middot; scroll to zoom &middot; right-drag to pan</div>
 <details id="info" class="panel"><summary>Dimensions and review notes</summary><div id="info-body"></div></details>
 <div id="err" role="alert"></div>
 
