@@ -4,7 +4,7 @@
 **Date:** 2026-07-30
 **Type:** Testing
 **Supersedes:** [2026-07-29-stories-are-the-dom-test-surface.md](2026-07-29-stories-are-the-dom-test-surface.md)
-**Superseded by:** —
+**Superseded by:** [Button behavior tests are Gherkin scenarios](2026-10-14-button-behavior-tests-are-gherkin-scenarios.md) (Button test location and format only)
 
 ## Decision
 

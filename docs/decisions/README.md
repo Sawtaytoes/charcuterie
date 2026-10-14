@@ -8,6 +8,7 @@ decision overrides an instinct.
 
 | Date | Decision | Summary |
 | --- | --- | --- |
+| 2026-10-14 | [Button behavior tests are Gherkin scenarios](2026-10-14-button-behavior-tests-are-gherkin-scenarios.md) | Convert all five direct tests with their full assertions, add an enabled mouse-click case, and run six scenarios through QuickPickle in all four windows. |
 | 2026-10-09 | [Media workspaces can opt in to fill layout](2026-10-09-media-workspaces-can-opt-in-to-fill-layout.md) | An explicit width-first fill mode for regular and virtualized grids; default height-first behavior stays unchanged. |
 | 2026-10-06 | [pnpm and local Turbo build caching](2026-10-06-pnpm-and-local-turbo-build-caching.md) | Pinned pnpm replaces Yarn while retaining dependency versions and security patches; Turbo caches package builds locally, never test or visual verdicts. |
 | 2026-10-04 | [Every browser test runs in four named windows](2026-10-04-every-browser-test-runs-in-four-named-windows.md) | narrow 384x824, tall 1080x1920, wide 1920x1080, ultrawide 3440x1440 from one list in `vitest-config`; a failure in a new window is triaged, never pinned back; fixed-size boxes are `shrink-0`. |
