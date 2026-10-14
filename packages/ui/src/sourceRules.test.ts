@@ -253,6 +253,7 @@ test("a container-query component is never storied in a shrink-to-fit cell", () 
     "PortraitTiles",
     // Metrics query the space remaining beside the media, not the entire card.
     "ProgressCard",
+    "ScheduleBoard",
     // `Stepper`'s container is the one that decides whether a
     // `horizontal` sequence is actually horizontal. Below `--cq-md`
     // it falls back to the vertical column, because four steps side
@@ -615,7 +616,14 @@ test("the barrel is the only place components are re-exported", async () => {
   // question the same way the bars are placed, or the two answers
   // drift by a day and nothing says so.
   // ProgressCard composes Card and ProgressBar for progress-first dashboards.
-  expect(componentNames.length).toBe(67)
+  // Breadcrumbs composes TextLink for the path back up a hierarchy.
+  // ActionMenu composes IconButton and Menu for the overflow control.
+  // ValuePairs owns compact label-over-value summaries.
+  // Chart shares portable SVG geometry with Preact and image consumers.
+  // TableViewport owns readable comparisons and full-window expansion.
+  // MetricCard shares prominent values and category-coloured icons through Card.
+  // ComparisonChart and TableColumns share compact comparisons and column controls.
+  expect(componentNames.length).toBe(77)
 
   for (const name of componentNames) {
     expect(barrel).toContain(`export { ${name} }`)
@@ -695,6 +703,33 @@ const ENTRY_POINT_RUNTIMES: Record<
     // into `core` — which is why `ColorSchemeApplier` lives in the
     // core rather than beside the hook, so this entry never pulls
     // `react`.
+    "./charts": [
+      "@tanstack/charts",
+      "@tanstack/charts/scales/band",
+      "@tanstack/charts/scales/linear",
+      "@tanstack/charts/svg",
+    ],
+    "./charts/preact": [
+      "@tanstack/charts",
+      "@tanstack/charts/adapter/renderer",
+      "@tanstack/charts/motion",
+      "@tanstack/charts/scales/band",
+      "@tanstack/charts/scales/linear",
+      "@tanstack/charts/svg/renderer",
+      "@tanstack/charts/tooltip",
+      "preact",
+      "preact/hooks",
+    ],
+    "./charts/react": [
+      "@tanstack/charts",
+      "@tanstack/charts/motion",
+      "@tanstack/charts/react/core",
+      "@tanstack/charts/scales/band",
+      "@tanstack/charts/scales/linear",
+      "@tanstack/charts/svg/renderer",
+      "@tanstack/charts/tooltip",
+      "react",
+    ],
     "./browser": [],
     "./core": [],
     "./jotai": ["jotai"],
@@ -728,6 +763,8 @@ const ENTRY_POINT_RUNTIMES: Record<
       // browser, and it does so through this subpath so the coupling
       // is named rather than smuggled in through the main entry.
       "@charcuterie/logic/browser",
+      "@charcuterie/logic/charts/react",
+      "@charcuterie/logic/core",
       "@charcuterie/tokens",
       "@floating-ui/react",
       // `Combobox`'s virtualization — the second runtime dependency
@@ -744,6 +781,28 @@ const ENTRY_POINT_RUNTIMES: Record<
       // display utilities at equal specificity, so the winner came
       // from stylesheet source order and the caller could not win —
       // silently, which is how it shipped broken in three repos.
+      "tailwind-merge",
+    ],
+    // Retained HTML has its own format family and optional rich editor
+    // peers. The main entry never reaches this parser or editor core.
+    "./html-view": [
+      "@charcuterie/tokens",
+      "parse5",
+      "react",
+      "tailwind-merge",
+    ],
+    "./html-editor": [
+      "@charcuterie/logic",
+      "@charcuterie/logic/browser",
+      "@charcuterie/tokens",
+      "@floating-ui/react",
+      "@tiptap/extension-image",
+      "@tiptap/extension-text-align",
+      "@tiptap/extension-text-style",
+      "@tiptap/react",
+      "@tiptap/starter-kit",
+      "parse5",
+      "react",
       "tailwind-merge",
     ],
     // The opt-in live-preview editor. Every `@codemirror/*` and

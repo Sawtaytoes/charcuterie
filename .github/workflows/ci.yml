@@ -5,6 +5,12 @@ on:
     branches: [master]
   pull_request:
 
+# Only newer revisions of the same PR supersede an active verification run.
+# Main/manual runs have unique groups; no release-triggering CI is discarded.
+concurrency:
+  group: charcuterie-ci-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event.pull_request.number != '' }}
+
 jobs:
   # The docs-only detector is SHARED: the body lives in Charcuterie and is
   # imported by every repo in the fleet. Fix it here, then move the tag.
@@ -44,9 +50,32 @@ jobs:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with: { node-version: 26 }
-      - run: corepack enable && yarn install --immutable
-      - run: yarn lint:biome
-      - run: yarn lint:eslint
+      - name: Install the pinned native pnpm CLI
+        run: |
+          npm install --global --force --allow-scripts=pnpm pnpm@12.9.1
+          pnpm_bin="$(npm prefix --global)/bin"
+          export PATH="$pnpm_bin:$PATH"
+          echo "$pnpm_bin" >> "$GITHUB_PATH"
+          hash -r
+          test "$(pnpm --version)" = 12.9.1
+      - name: Locate the pnpm store
+        id: pnpm-store
+        run: |
+          store_path="$(pnpm store path --store-dir "$HOME/.cache/pnpm/store")"
+          echo "path=$store_path" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v5
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: ${{ runner.os }}-node26-pnpm12-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: ${{ runner.os }}-node26-pnpm12-
+      - uses: actions/cache@v5
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-node26-turbo2-${{ github.sha }}
+          restore-keys: ${{ runner.os }}-node26-turbo2-
+      - run: pnpm install --frozen-lockfile --store-dir "$HOME/.cache/pnpm/store"
+      - run: pnpm lint:biome
+      - run: pnpm lint:eslint
 
   typecheck:
     needs: [changes]
@@ -57,10 +86,33 @@ jobs:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with: { node-version: 26 }
-      - run: corepack enable && yarn install --immutable
+      - name: Install the pinned native pnpm CLI
+        run: |
+          npm install --global --force --allow-scripts=pnpm pnpm@12.9.1
+          pnpm_bin="$(npm prefix --global)/bin"
+          export PATH="$pnpm_bin:$PATH"
+          echo "$pnpm_bin" >> "$GITHUB_PATH"
+          hash -r
+          test "$(pnpm --version)" = 12.9.1
+      - name: Locate the pnpm store
+        id: pnpm-store
+        run: |
+          store_path="$(pnpm store path --store-dir "$HOME/.cache/pnpm/store")"
+          echo "path=$store_path" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v5
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: ${{ runner.os }}-node26-pnpm12-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: ${{ runner.os }}-node26-pnpm12-
+      - uses: actions/cache@v5
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-node26-turbo2-${{ github.sha }}
+          restore-keys: ${{ runner.os }}-node26-turbo2-
+      - run: pnpm install --frozen-lockfile --store-dir "$HOME/.cache/pnpm/store"
       # Storybook and the docs typecheck read the built dist, so build first.
-      - run: yarn build
-      - run: yarn typecheck
+      - run: pnpm build
+      - run: pnpm typecheck
 
   test:
     needs: [changes]
@@ -71,14 +123,45 @@ jobs:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with: { node-version: 26 }
-      - run: corepack enable && yarn install --immutable
+      - name: Install the pinned native pnpm CLI
+        run: |
+          npm install --global --force --allow-scripts=pnpm pnpm@12.9.1
+          pnpm_bin="$(npm prefix --global)/bin"
+          export PATH="$pnpm_bin:$PATH"
+          echo "$pnpm_bin" >> "$GITHUB_PATH"
+          hash -r
+          test "$(pnpm --version)" = 12.9.1
+      - name: Locate the pnpm store
+        id: pnpm-store
+        run: |
+          store_path="$(pnpm store path --store-dir "$HOME/.cache/pnpm/store")"
+          echo "path=$store_path" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v5
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: ${{ runner.os }}-node26-pnpm12-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: ${{ runner.os }}-node26-pnpm12-
+      - uses: actions/cache@v5
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-node26-turbo2-${{ github.sha }}
+          restore-keys: ${{ runner.os }}-node26-turbo2-
+      - run: pnpm install --frozen-lockfile --store-dir "$HOME/.cache/pnpm/store"
       # playwright lives in the docs/logic workspaces, not the root — run its
       # installer from a workspace that has it; browsers land in the shared cache.
-      - run: yarn workspace @charcuterie/docs exec playwright install chromium --with-deps
+      - run: pnpm --filter @charcuterie/docs exec playwright install chromium --with-deps
+      # A second install, because the lockfile resolves two Playwright
+      # versions and each wants its own Chromium revision. The
+      # playwright-config tests drive a real page with the package's
+      # own `@playwright/test`, which is not the docs workspace's.
+      - run: pnpm --filter @charcuterie/playwright-config exec playwright install chromium
       # Browser-mode projects (logic, docs) resolve components from dist.
-      - run: yarn build
-      # `yarn test` is bare `vitest` for local watch mode; CI needs run-once.
-      - run: yarn vitest run
+      - run: pnpm build
+      # `pnpm test` is bare `vitest` for local watch mode; CI needs run-once.
+      - run: pnpm vitest run
+      # Prove the same security patch works in the standalone pnpm-installed tools.
+      - run: pnpm --dir packages/ci/src/vrt install --frozen-lockfile --store-dir "$HOME/.cache/pnpm/store"
+      - run: pnpm test:security
 
   # **Its own job, and on every PR — not appended to `test`, not path-gated.**
   #
@@ -114,12 +197,35 @@ jobs:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with: { node-version: 26 }
-      - run: corepack enable && yarn install --immutable
+      - name: Install the pinned native pnpm CLI
+        run: |
+          npm install --global --force --allow-scripts=pnpm pnpm@12.9.1
+          pnpm_bin="$(npm prefix --global)/bin"
+          export PATH="$pnpm_bin:$PATH"
+          echo "$pnpm_bin" >> "$GITHUB_PATH"
+          hash -r
+          test "$(pnpm --version)" = 12.9.1
+      - name: Locate the pnpm store
+        id: pnpm-store
+        run: |
+          store_path="$(pnpm store path --store-dir "$HOME/.cache/pnpm/store")"
+          echo "path=$store_path" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v5
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: ${{ runner.os }}-node26-pnpm12-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: ${{ runner.os }}-node26-pnpm12-
+      - uses: actions/cache@v5
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-node26-turbo2-${{ github.sha }}
+          restore-keys: ${{ runner.os }}-node26-turbo2-
+      - run: pnpm install --frozen-lockfile --store-dir "$HOME/.cache/pnpm/store"
       # The smoke run drives the built site with playwright, which lives in the
       # docs workspace rather than the root — same install as the `test` job.
-      - run: yarn workspace @charcuterie/docs exec playwright install chromium --with-deps
-      # `build:storybook` runs `yarn build` first: Storybook reads the built dist.
-      - run: yarn build:storybook
+      - run: pnpm --filter @charcuterie/docs exec playwright install chromium --with-deps
+      # `build:storybook` runs `pnpm build` first: Storybook reads the built dist.
+      - run: pnpm build:storybook
 
       # The sibling false-green to a partial build is a build that SUCCEEDS with
       # an empty index — a `stories:` glob in `.storybook/main.ts` that stopped
@@ -140,7 +246,7 @@ jobs:
 
       # Clicks through every entry over the addons channel in ONE page load, so
       # the module-ordering defects a per-story mount cannot see still fail here.
-      - run: yarn smoke:storybook
+      - run: pnpm smoke:storybook
 
   # **Visual regression — its own job, on a SELF-HOSTED LAN runner.**
   #
@@ -165,6 +271,13 @@ jobs:
   # fork code. Same-repo `agent/*` branches — the actual workflow here — run.
   vrt:
     needs: [changes]
+    # Main baselines publish sequentially, retaining every pending run. PR
+    # jobs are unique here and canceled by the PR-scoped workflow policy.
+    # queue:max is supported by GitHub; this is not the Forgejo-shared job.
+    concurrency:
+      group: charcuterie-baseline-${{ github.event.pull_request.number && github.run_id || github.ref }}
+      cancel-in-progress: false
+      queue: max
     runs-on: [self-hosted, vrt]
     # A fork's pull request cannot reach the self-hosted runner, and a
     # documentation-only diff has nothing to render.
@@ -192,28 +305,54 @@ jobs:
       # re-attach to the source branch (PR) or the pushed branch (master).
       - name: Attach HEAD to its branch
         run: git checkout -B "${{ github.head_ref || github.ref_name }}"
-      # No setup-node, unlike the ubuntu-latest jobs: the runner image
-      # (agent-sandbox-base) IS the pinned toolchain — its node keeps the pixels
-      # deterministic, and fetching a different node would undo that. But its
-      # yarn is a login-shell corepack shim the non-login Actions shell can't
-      # see, so enable one into a writable dir on PATH. A plain `corepack enable`
-      # can't symlink into the image's root-owned /usr/bin as the non-root
-      # runner; `--install-directory` writes the shim somewhere we own instead.
-      - name: Prepare toolchain (yarn shim + Playwright browsers path)
+      # The runner image pins Node/fonts for deterministic screenshots.
+      # Install pnpm's native CLI into a writable prefix; older Corepack
+      # releases cannot launch pnpm 12. Keep browsers in the runner-home cache.
+      - name: Prepare toolchain (pinned pnpm + Playwright browsers path)
         run: |
           mkdir -p "$HOME/.local/bin"
-          corepack enable --install-directory "$HOME/.local/bin" yarn
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          npm install --global --force --allow-scripts=pnpm --prefix "$HOME/.local" pnpm@12.9.1
+          pnpm_bin="$(npm prefix --global --prefix "$HOME/.local")/bin"
+          export PATH="$pnpm_bin:$PATH"
+          echo "$pnpm_bin" >> "$GITHUB_PATH"
+          hash -r
+          test "$(pnpm --version)" = 12.9.1
           # The base image pins PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers, which
           # is root-owned — the non-root runner can't write there. Install the
           # browser under HOME instead (persists on the runner-home volume, so
           # it's downloaded once and reused across runs).
           echo "PLAYWRIGHT_BROWSERS_PATH=$HOME/.cache/ms-playwright" >> "$GITHUB_ENV"
-      - run: yarn install --immutable
-      - run: yarn workspace @charcuterie/docs exec playwright install chromium
-      - run: yarn build:storybook
-      - run: yarn workspace @charcuterie/docs vrt:capture
-      - run: yarn workspace @charcuterie/docs vrt:configure
+      - name: Locate the pnpm store
+        id: pnpm-store
+        run: |
+          store_path="$(pnpm store path --store-dir "$HOME/.cache/pnpm/store")"
+          echo "path=$store_path" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v5
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: ${{ runner.os }}-node26-pnpm12-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: ${{ runner.os }}-node26-pnpm12-
+      - uses: actions/cache@v5
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-node26-turbo2-${{ github.sha }}
+          restore-keys: ${{ runner.os }}-node26-turbo2-
+      - run: pnpm install --frozen-lockfile --store-dir "$HOME/.cache/pnpm/store"
+      - name: Select a complete published baseline
+        working-directory: packages/docs
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.GARAGE_S3_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.GARAGE_S3_SECRET_KEY }}
+          AWS_REGION: ${{ secrets.VRT_S3_REGION }}
+        run: |
+          set -euo pipefail
+          export VRT_BASELINE_FILE="$RUNNER_TEMP/vrt-baseline-selection.json"
+          echo "VRT_BASELINE_FILE=$VRT_BASELINE_FILE" >> "$GITHUB_ENV"
+          VRT_DEPENDENCY_ROOT="$PWD" node ../ci/src/vrt/selectPublishedBaseline.js
+      - run: pnpm --filter @charcuterie/docs exec playwright install chromium
+      - run: pnpm build:storybook
+      - run: pnpm --filter @charcuterie/docs vrt:capture
+      - run: pnpm --filter @charcuterie/docs vrt:configure
 
       - name: Compare against baseline and publish to S3
         id: regsuit
@@ -224,7 +363,7 @@ jobs:
           AWS_REGION: ${{ secrets.VRT_S3_REGION }}
         run: |
           set -o pipefail
-          yarn vrt:compare | tee reg-out.txt
+          pnpm vrt:compare | tee reg-out.txt
           echo "key=$(grep -oP "current snapshot key: '\K[0-9a-f]+" reg-out.txt | tail -1)" >> "$GITHUB_OUTPUT"
           echo "url=$(grep -oP 'Report URL: \K\S+' reg-out.txt | tail -1)" >> "$GITHUB_OUTPUT"
 

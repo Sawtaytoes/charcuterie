@@ -957,6 +957,50 @@ const toSafeDecorations = (
   }
 }
 
+/**
+ * Whether the inline decorations are stale after `update`.
+ *
+ * Exported for its test: the tree clause was missing here for months
+ * while `livePreviewTableField` had it. Without it, a document whose
+ * background parse finished after mount painted its last lines raw —
+ * a fence and a link as plain text — until the reader clicked, and a
+ * busy VRT runner photographed exactly that.
+ */
+export const isInlineDecorationStale = (
+  update: Pick<
+    ViewUpdate,
+    | "docChanged"
+    | "selectionSet"
+    | "viewportChanged"
+    | "focusChanged"
+    | "transactions"
+    | "startState"
+    | "state"
+  >,
+) =>
+  // Selection is in the list because concealment depends on the
+  // caret: moving it with an arrow key changes what is painted
+  // even though the document did not change.
+  update.docChanged ||
+  update.selectionSet ||
+  update.viewportChanged ||
+  // Focus is a decoration input now — see `toDecorations`.
+  update.focusChanged ||
+  update.transactions.some((transaction) =>
+    transaction.effects.some((effect) =>
+      effect.is(setLivePreviewRawMode),
+    ),
+  ) ||
+  // The same `Compartment` reconfigure the block pass watches
+  // for: a checkbox that just became operable is a widget
+  // that has to be rebuilt.
+  update.startState.facet(livePreviewOptions) !==
+    update.state.facet(livePreviewOptions) ||
+  // Parsing is incremental and time-sliced — the same reason the
+  // table field compares the tree. A parse step arrives as a
+  // transaction that changes nothing else.
+  syntaxTree(update.state) !== syntaxTree(update.startState)
+
 const livePreviewPlugin = ViewPlugin.fromClass(
   class {
     decorations: DecorationSet
@@ -966,26 +1010,7 @@ const livePreviewPlugin = ViewPlugin.fromClass(
     }
 
     update(update: ViewUpdate) {
-      // Selection is in the list because concealment depends on the
-      // caret: moving it with an arrow key changes what is painted
-      // even though the document did not change.
-      if (
-        update.docChanged ||
-        update.selectionSet ||
-        update.viewportChanged ||
-        // Focus is a decoration input now — see `toDecorations`.
-        update.focusChanged ||
-        update.transactions.some((transaction) =>
-          transaction.effects.some((effect) =>
-            effect.is(setLivePreviewRawMode),
-          ),
-        ) ||
-        // The same `Compartment` reconfigure the block pass watches
-        // for: a checkbox that just became operable is a widget
-        // that has to be rebuilt.
-        update.startState.facet(livePreviewOptions) !==
-          update.state.facet(livePreviewOptions)
-      ) {
+      if (isInlineDecorationStale(update)) {
         this.decorations = toSafeDecorations(update.view)
       }
     }

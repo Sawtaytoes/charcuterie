@@ -1,6 +1,6 @@
 {
   "name": "@charcuterie/playwright-config",
-  "version": "1.1.0",
+  "version": "2.2.0",
   "description": "A shared Playwright config factory for the Charcuterie fleet's web-UI apps — call createPlaywrightConfig(overrides).",
   "license": "MIT",
   "type": "module",
@@ -35,5 +35,8 @@
     "type": "git",
     "url": "git+https://github.com/Sawtaytoes/charcuterie.git",
     "directory": "packages/playwright-config"
+  },
+  "dependencies": {
+    "@charcuterie/vitest-config": "workspace:^"
   }
 }

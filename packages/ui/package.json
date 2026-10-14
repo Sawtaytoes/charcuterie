@@ -1,6 +1,6 @@
 {
   "name": "@charcuterie/ui",
-  "version": "4.9.0",
+  "version": "4.22.1",
   "description": "The Charcuterie components. Tokens for look, @charcuterie/logic for state, ARIA that agents can actually drive.",
   "license": "MIT",
   "type": "module",
@@ -40,7 +40,17 @@
       "types": "./dist/tokens.d.ts",
       "default": "./dist/tokens.js"
     },
-    "./src/*": "./src/*"
+    "./src/*": "./src/*",
+    "./html-editor": {
+      "source": "./src/htmlEditor/index.ts",
+      "types": "./dist/htmlEditor/index.d.ts",
+      "default": "./dist/htmlEditor/index.js"
+    },
+    "./html-view": {
+      "source": "./src/htmlEditor/view.ts",
+      "types": "./dist/htmlEditor/view.d.ts",
+      "default": "./dist/htmlEditor/view.js"
+    }
   },
   "files": [
     "dist",
@@ -48,7 +58,7 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json && node scripts/copyStyles.ts",
-    "prepack": "yarn build",
+    "prepack": "pnpm build",
     "test": "vitest",
     "typecheck": "tsc --noEmit"
   },
@@ -66,6 +76,14 @@
     "@codemirror/state": "^6",
     "@codemirror/view": "^6",
     "@lezer/common": "^1",
+    "@tiptap/core": "^3.31.4",
+    "@tiptap/extension-image": "^3.31.4",
+    "@tiptap/extension-text-align": "^3.31.4",
+    "@tiptap/extension-text-style": "^3.31.4",
+    "@tiptap/pm": "^3.31.4",
+    "@tiptap/react": "^3.31.4",
+    "@tiptap/starter-kit": "^3.31.4",
+    "parse5": "^8.0.1",
     "react": ">=19",
     "react-dom": ">=19",
     "react-router": ">=7"
@@ -89,12 +107,37 @@
     "@lezer/common": {
       "optional": true
     },
+    "@tiptap/core": {
+      "optional": true
+    },
+    "@tiptap/extension-image": {
+      "optional": true
+    },
+    "@tiptap/extension-text-align": {
+      "optional": true
+    },
+    "@tiptap/extension-text-style": {
+      "optional": true
+    },
+    "@tiptap/pm": {
+      "optional": true
+    },
+    "@tiptap/react": {
+      "optional": true
+    },
+    "@tiptap/starter-kit": {
+      "optional": true
+    },
+    "parse5": {
+      "optional": true
+    },
     "react-router": {
       "optional": true
     }
   },
   "devDependencies": {
     "@charcuterie/storybook-config": "workspace:*",
+    "@charcuterie/vitest-config": "workspace:^",
     "@codemirror/commands": "^6",
     "@codemirror/lang-markdown": "^6",
     "@codemirror/language": "^6",
@@ -102,15 +145,26 @@
     "@codemirror/view": "^6",
     "@lezer/common": "^1",
     "@storybook/react": "^10.3.6",
+    "@tiptap/core": "^3.31.4",
+    "@tiptap/extension-image": "^3.31.4",
+    "@tiptap/extension-text-align": "^3.31.4",
+    "@tiptap/extension-text-style": "^3.31.4",
+    "@tiptap/pm": "^3.31.4",
+    "@tiptap/react": "^3.31.4",
+    "@tiptap/starter-kit": "^3.31.4",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
+    "parse5": "^8.0.1",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-router": "^8.3.0",
     "storybook": "^10.3.6",
     "tailwindcss": "^4.3.0",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.8"
+    "vitest": "^4.1.8",
+    "axe-core": "4.12.1",
+    "@vitest/browser": "^4.1.8",
+    "@storybook/addon-docs": "^10.3.6"
   },
   "repository": {
     "type": "git",

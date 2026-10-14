@@ -1,4 +1,8 @@
 import { join } from "node:path"
+import {
+  createCiTimeouts,
+  createViewportInstances,
+} from "@charcuterie/vitest-config"
 
 import tailwindcss from "@tailwindcss/vite"
 import react from "@vitejs/plugin-react"
@@ -8,6 +12,7 @@ import { defineConfig } from "vitest/config"
 
 /** Gherkin requirements use the same Playwright-backed browser as ui-dom. */
 export default defineConfig({
+  resolve: { dedupe: ["react", "react-dom"] },
   define: {
     "import.meta.env.VITEST_STORYBOOK": '"false"',
   },
@@ -29,10 +34,8 @@ export default defineConfig({
     ],
   },
   test: {
+    ...createCiTimeouts(),
     name: "requirements",
-    ...(process.env.CI
-      ? { testTimeout: 30_000, hookTimeout: 30_000 }
-      : {}),
     include: [
       join(import.meta.dirname, "requirements/*.feature"),
     ],
@@ -44,7 +47,9 @@ export default defineConfig({
       enabled: true,
       provider: playwright(),
       headless: true,
-      instances: [{ browser: "chromium" }],
+      instances: createViewportInstances({
+        project: "requirements",
+      }),
       screenshotFailures: false,
     },
   },

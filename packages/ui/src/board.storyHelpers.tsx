@@ -133,7 +133,13 @@ export const ContainerBoard = ({
       },
     ].map((panel) => (
       <div
-        className="flex flex-col gap-2"
+        // `shrink-0`, or the promise above is false: a flex item
+        // shrinks to its line, so in a window narrower than 34rem the
+        // widest panel quietly became the window's width and every
+        // "container, not window" test measured the window after all.
+        // A board wider than the window scrolls, which is the honest
+        // picture of three fixed containers on a phone.
+        className="flex shrink-0 flex-col gap-2"
         key={panel.label}
         style={{ inlineSize: panel.inlineSize }}
       >

@@ -252,6 +252,8 @@ const meta = {
     columns: COLUMNS,
     getRowKey: (task: Task) => task.id,
     isLabelVisible: false,
+    layout: "auto",
+    reflowAt: "md",
     label: "Tasks",
     rows: TASKS,
   },
@@ -410,4 +412,82 @@ export const Interactive: Story = {
       isSelectable
     />
   ),
+}
+
+/** Long labels must remain complete in a narrow container, even on a wide screen. */
+export const LongColumnLabels: Story = {
+  render: () => (
+    <div className="max-w-xs">
+      <DataTable<Task>
+        label="Tasks with complete column labels"
+        rows={TASKS.slice(0, 2)}
+        getRowKey={(task) => task.id}
+        columns={[
+          {
+            key: "title",
+            header: "Requested task description",
+            renderCell: (task) => task.title,
+          },
+          {
+            key: "assignee",
+            header: "Responsible maintainer",
+            renderCell: (task) => task.assignee,
+          },
+          {
+            key: "updatedAt",
+            header: "Most recent update date",
+            renderCell: (task) => task.updatedAt,
+          },
+        ]}
+      />
+    </div>
+  ),
+}
+
+/** The same eight-column comparison follows its own box, including at desktop widths. */
+export const DenseComparison: Story = {
+  render: () => (
+    <StoryGrid columns={1}>
+      {["60rem", "75rem"].map((width) => (
+        <StoryCell
+          align="stretch"
+          label={width}
+          key={width}
+        >
+          <div
+            className="wrap-anywhere"
+            style={{ maxInlineSize: width }}
+          >
+            <DataTable<Task>
+              label={`Dense comparison at ${width}`}
+              reflowAt="xl"
+              rows={TASKS.slice(0, 2)}
+              getRowKey={(task) => task.id}
+              columns={[
+                ...COLUMNS,
+                {
+                  key: "duration",
+                  header: "Duration",
+                  renderCell: () => "2 h 38 min",
+                },
+                {
+                  key: "cost",
+                  header: "Recorded cost",
+                  renderCell: () => "$12.34",
+                },
+                {
+                  key: "energy",
+                  header: "Energy",
+                  renderCell: () => "0.35 kWh",
+                },
+              ]}
+            />
+          </div>
+        </StoryCell>
+      ))}
+    </StoryGrid>
+  ),
+}
+export const StackedList: Story = {
+  args: { layout: "stacked", label: "Tasks as a list" },
 }

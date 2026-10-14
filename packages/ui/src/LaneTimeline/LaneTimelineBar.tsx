@@ -9,7 +9,10 @@ import { FOCUS_RING_CLASS } from "../intentStyles.ts"
 import { UnstyledLink } from "../RouterLink/UnstyledLink.tsx"
 import { toClassName } from "../toClassName.ts"
 import { VisuallyHidden } from "../VisuallyHidden/VisuallyHidden.tsx"
-import type { TimelineSpan } from "./laneTimelineGeometry.ts"
+import type {
+  TimelineSpan,
+  TimelineTitleLayout,
+} from "./laneTimelineGeometry.ts"
 
 /**
  * Who owns the item's activation — nobody, a router, or a handler.
@@ -73,6 +76,13 @@ export type LaneTimelineBarProps = {
    * text and no position to carry meaning.
    */
   shape: "bar" | "row"
+  /**
+   * For the `bar` shape only: `clip` prints the title on one line
+   * with an ellipsis, `wrap` lets it run onto up to three. The
+   * timeline chooses from the measured column width, so a bar
+   * never decides this for itself. Default `clip`.
+   */
+  titleLayout?: TimelineTitleLayout
 }
 
 /**
@@ -115,6 +125,7 @@ export const LaneTimelineBar = ({
   item,
   laneCategorical,
   shape,
+  titleLayout = "clip",
 }: LaneTimelineBarProps): ReactNode => {
   const categorical = item.categorical ?? laneCategorical
 
@@ -123,19 +134,54 @@ export const LaneTimelineBar = ({
   const content = (
     <>
       {/*
-       * `truncate` and a `min-w-0`, per the flex-overflow rule: the
-       * title is the flex row's text child and a single unbreakable
-       * word would otherwise become the bar's floor and push the
-       * bar past its own grid column. The whole string is in the
-       * `title` attribute and in the hidden sentence, so nothing is
-       * lost to the ellipsis.
+       * A `min-w-0`, per the flex-overflow rule: the title is the
+       * flex row's text child and a single unbreakable word would
+       * otherwise become the bar's floor and push the bar past its
+       * own grid column.
+       *
+       * Then one of three treatments. A bar in a narrow column
+       * clips to one line with an ellipsis, because three lines
+       * of two letters each is neither the word nor a shape. A
+       * bar in a column the timeline measured as wide enough
+       * WRAPS, onto up to three lines — one line is one line
+       * however wide the box gets, and a week across a desktop
+       * was still printing `Regional Rob…` at 7em a column. The
+       * Narrow View's row wraps freely. The whole string is in the
+       * `title` attribute and in the hidden sentence either way,
+       * so nothing is lost to a clamp.
+       *
+       * `wrap-anywhere` on the wrapped shapes rather than
+       * `break-word`, for the reason `Main` gives: only `anywhere`
+       * also shrinks the min-content size, so a long word cannot
+       * push the bar out of its column.
+       *
+       * `hyphens-auto` in front of it, because a column just past
+       * the wrap threshold is narrower than one long word: at 5em a
+       * column, an eleven-letter word broke as `Optometris` / `t`
+       * on the first live fortnight. A browser with a hyphenation
+       * dictionary breaks `optometrist` as `op-` / `tometrist`
+       * instead; one without falls through to `anywhere`, which
+       * still keeps the bar in its column. It needs a `lang` on an
+       * ancestor, which every app's `<html>` carries.
+       *
+       * ⚠️ It does NOT reach a CAPITALIZED word. Chromium and
+       * Firefox both skip a word whose first letter is upper case,
+       * as a proper-noun heuristic. A 60px probe box confirmed
+       * that the lower-case variant used dictionary hyphenation,
+       * while the capitalized variant broke at the edge. Titles start
+       * with a capital, so this helps the second word of a title
+       * more than the first. A capitalized word needs a soft
+       * hyphen (U+00AD) placed in the DATA by the app; `auto`
+       * honors one wherever it is.
        */}
       <span
         className={toClassName(
-          "min-w-0 flex-1",
-          shape === "bar"
-            ? "truncate"
-            : "wrap-anywhere text-sm",
+          "min-w-0 flex-1 text-sm",
+          shape === "row"
+            ? "wrap-anywhere hyphens-auto"
+            : titleLayout === "wrap"
+              ? "line-clamp-3 wrap-anywhere hyphens-auto"
+              : "truncate",
         )}
       >
         {item.title}
@@ -183,9 +229,14 @@ export const LaneTimelineBar = ({
 
   const shellClassName = toClassName(
     "w-full min-w-0 border px-1.5 text-xs leading-tight",
+    // `h-full` so every bar in one packed row is the height of the
+    // tallest: a wrapped three-line title beside a one-line one
+    // would otherwise leave the shorter bar floating above the
+    // row's baseline.
     shape === "bar"
-      ? "flex min-h-5 items-center rounded-sm"
+      ? "flex h-full min-h-5 items-center rounded-sm"
       : "flex flex-col gap-0.5 rounded-md py-1",
+    shape === "bar" && titleLayout === "wrap" && "py-0.5",
     CATEGORICAL_APPEARANCE_CLASS[categorical].soft,
     // A square edge where the item leaves the range. `rounded-*-none`
     // rather than a different component, so a clipped bar and a whole

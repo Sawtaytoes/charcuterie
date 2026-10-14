@@ -1,6 +1,6 @@
 {
   "name": "@charcuterie/tokens",
-  "version": "1.10.1",
+  "version": "1.10.2",
   "description": "Design tokens for the Charcuterie component library. Zero dependencies, no React.",
   "license": "MIT",
   "type": "module",
@@ -40,7 +40,7 @@
     "build:tokens": "node scripts/buildTokens.ts",
     "check:contrast": "node scripts/checkContrast.ts",
     "fetch:fonts": "node scripts/fetchFonts.ts",
-    "prepack": "yarn build",
+    "prepack": "pnpm build",
     "preview:epaper": "node scripts/buildEpaperPreview.ts",
     "preview:themes": "node scripts/buildPreview.ts",
     "test": "vitest",

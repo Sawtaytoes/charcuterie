@@ -14,6 +14,8 @@
  */
 
 export { areArraysEqual } from "./arrays.ts"
+export type { ChartOptions, ChartSeries } from "./chart.ts"
+export { renderChartSvg } from "./chart.ts"
 export type {
   ColorScheme,
   ColorSchemeApplier,
@@ -141,6 +143,11 @@ export type {
 } from "./rangeSelection.ts"
 export { applySelectionClick } from "./rangeSelection.ts"
 export type {
+  LayoutCandidate,
+  LayoutSection,
+} from "./selectPriorityLayout.ts"
+export { selectPriorityLayout } from "./selectPriorityLayout.ts"
+export type {
   AsyncStatus,
   ConnectionStatus,
 } from "./statusMachines.ts"
@@ -156,3 +163,5 @@ export type {
   StoreOptions,
   Unsubscribe,
 } from "./types.ts"
+export type { WizardStep } from "./wizardSteps.ts"
+export { getWizardSteps } from "./wizardSteps.ts"

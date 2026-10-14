@@ -61,3 +61,12 @@ that the contract `Dialog` guarantees is not quietly dropped by the wrapper — 
 `onClose`, and focus back to the thumbnail.
 
 <Canvas of={LightboxStories.Interactive} />
+
+## An ordered gallery
+
+Pass `images` and `initialIndex` to open a collection at the selected thumbnail.
+Previous/Next controls and Left/Right arrow keys wrap through the collection. Escape
+closes it and restores focus to the trigger. `heading` stays stable while the image,
+caption, and announced position change. Omit `images` for the existing single-image view.
+
+<Canvas of={LightboxStories.Gallery} />

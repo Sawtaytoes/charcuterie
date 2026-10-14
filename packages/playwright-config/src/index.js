@@ -10,6 +10,10 @@
  * web surface but no Playwright, or wire it differently.
  */
 
+import {
+  viewportNames,
+  viewports,
+} from "@charcuterie/vitest-config/viewports.js"
 import { defineConfig, devices } from "@playwright/test"
 
 /**
@@ -74,12 +78,40 @@ export const createPlaywrightConfig = (overrides = {}) => {
       trace: "on-first-retry",
       ...use,
     },
-    projects: projects ?? [
-      {
-        name: "chromium",
-        use: { ...devices["Desktop Chrome"] },
-      },
-    ],
+    projects: projects ?? createViewportProjects(),
     ...rest,
   })
 }
+
+/**
+ * One Chromium project per named viewport — the same four windows the
+ * Vitest browser instances use, so an end-to-end suite and a component
+ * suite disagree about a width only when the app does.
+ *
+ * `narrow` is the Galaxy S23 Ultra, so it also turns on `isMobile` and
+ * `hasTouch` and renders at the phone's 3.75 pixel ratio: a page that
+ * reads `pointer: coarse` or the meta viewport behaves as it does in
+ * the hand. A test reads the name back from
+ * `testInfo.project.metadata.viewport`.
+ *
+ * @param {readonly import("@charcuterie/vitest-config/viewports.js").ViewportName[]} [names]
+ */
+export const createViewportProjects = (
+  names = viewportNames,
+) =>
+  names.map((name) => {
+    const { deviceScaleFactor, height, isMobile, width } =
+      viewports[name]
+
+    return {
+      metadata: { viewport: name },
+      name: `chromium-${name}`,
+      use: {
+        ...devices["Desktop Chrome"],
+        deviceScaleFactor,
+        hasTouch: isMobile,
+        isMobile,
+        viewport: { height, width },
+      },
+    }
+  })

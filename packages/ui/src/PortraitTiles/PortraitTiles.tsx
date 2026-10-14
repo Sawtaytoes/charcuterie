@@ -6,7 +6,13 @@ import {
   CATEGORICAL_INDEX_COUNT,
   CATEGORICAL_SEQUENCE,
 } from "@charcuterie/tokens"
-import type { CSSProperties, ReactNode } from "react"
+import {
+  type CSSProperties,
+  type ReactNode,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react"
 
 import {
   CATEGORICAL_APPEARANCE_CLASS,
@@ -114,6 +120,8 @@ export type PortraitTilesProps = {
   layout?: PortraitTilesLayout
   /** The narrowest a portrait track may be, in CSS px. */
   minTileInlineSize?: number
+  /** Fill available rows and center an incomplete final row without widening its tiles. */
+  isFillingRow?: boolean
   /** What `isExternal` announces. Not shown. */
   newTabLabel?: string
   /** Fired by a portrait that carries no `href`. */
@@ -367,11 +375,50 @@ export const PortraitTiles = ({
   label,
   layout = "auto",
   minTileInlineSize = 200,
+  isFillingRow = false,
   newTabLabel = "(opens in a new tab)",
   onChoose,
   size = "md",
 }: PortraitTilesProps): ReactNode => {
   const RouterLink = useRouterLink()
+  const gridRef = useRef<HTMLDivElement>(null)
+  const [lastRow, setLastRow] = useState({
+    start: 0,
+    offset: 0,
+  })
+  const itemCount = items.length
+
+  useLayoutEffect(() => {
+    const grid = gridRef.current
+    if (!isFillingRow || !grid) return
+    // CSS still chooses the tracks. Read its result so spacing, density,
+    // container resizing, and caller-supplied minimums stay in agreement.
+    const measure = () => {
+      const style = getComputedStyle(grid)
+      const tracks = style.gridTemplateColumns
+        .split(" ")
+        .map(Number.parseFloat)
+        .filter((width) => width > 0)
+      const remainder = itemCount % tracks.length
+      const gap = Number.parseFloat(style.columnGap) || 0
+      const offset = remainder
+        ? ((tracks.length - remainder) *
+            ((tracks[0] ?? 0) + gap)) /
+          2
+        : 0
+      const start = itemCount - (remainder || 0)
+      setLastRow((previous) =>
+        previous.start === start &&
+        previous.offset === offset
+          ? previous
+          : { start, offset },
+      )
+    }
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(grid)
+    return () => observer.disconnect()
+  })
 
   return (
     // The container and the thing querying it cannot be the same
@@ -383,9 +430,12 @@ export const PortraitTiles = ({
       {/* biome-ignore lint/a11y/useSemanticElements: the semantic element for `group` is `<fieldset>`, which is a form-control grouping — it drags `<legend>` semantics, a border and form-reset behaviour onto a set of links that is not a form. Same call `ActionTiles` and `Menu`'s group already made. */}
       <div
         aria-label={label}
+        ref={gridRef}
         className={toClassName(
           "grid",
-          TILE_COLUMNS_CLASS,
+          isFillingRow
+            ? "grid-cols-[repeat(auto-fit,minmax(min(var(--charcuterie-tile-min-inline-size),100%),1fr))]"
+            : TILE_COLUMNS_CLASS,
           GAP_CLASS[size],
         )}
         role="group"
@@ -431,7 +481,7 @@ export const PortraitTiles = ({
                   // for anyone who has asked the OS for less. The
                   // shadow and the border stay, so the hover is
                   // still legible without it.
-                  "motion-reduce:hover:translate-y-0",
+                  "active:bg-intent-neutral-surface motion-safe:active:translate-y-0 motion-safe:active:scale-[0.985] motion-reduce:hover:translate-y-0 motion-reduce:transition-none",
                   categorical === null
                     ? COLOUR_TILE_HOVER_CLASS
                     : CATEGORICAL_HOVER_BORDER_CLASS[
@@ -458,12 +508,19 @@ export const PortraitTiles = ({
           // and the same one `Swatch` uses: a colour out of a
           // database cannot be a class, because Tailwind generates
           // its CSS at build time from source text.
-          const tileStyle =
-            color === undefined
-              ? undefined
-              : (getPortraitColourProperties(
-                  color,
-                ) as CSSProperties)
+          const tileStyle: CSSProperties = {
+            ...(color === undefined
+              ? {}
+              : getPortraitColourProperties(color)),
+            ...(isFillingRow &&
+            position >= lastRow.start &&
+            lastRow.offset > 0
+              ? {
+                  position: "relative",
+                  insetInlineStart: lastRow.offset,
+                }
+              : {}),
+          }
 
           const content = (
             <>

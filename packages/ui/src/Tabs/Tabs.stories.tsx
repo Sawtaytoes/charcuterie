@@ -1,13 +1,16 @@
 import { playgroundParameters } from "@charcuterie/storybook-config/story-parameters"
 import type { Meta, StoryObj } from "@storybook/react"
 
+import { useState } from "react"
 import { toStoryChoice } from "../argTypes.storyHelpers.ts"
 import { Badge } from "../Badge/Badge.tsx"
+import { Button } from "../Button/Button.tsx"
 import {
   ContainerBoard,
   StoryCell,
   StoryGrid,
 } from "../board.storyHelpers.tsx"
+import { Field } from "../Field/Field.tsx"
 import { ProgressBar } from "../ProgressBar/ProgressBar.tsx"
 import { Tabs } from "./Tabs.tsx"
 import type { TabItem, TabLinkItem } from "./tabItems.ts"
@@ -318,4 +321,74 @@ export const RoutedAllStates: Story = {
       tabs={ROUTED_STATE_TABS}
     />
   ),
+}
+
+const OVERFLOW_ROUTES: TabLinkItem[] = [
+  { href: "/sections/activity", label: "Recent activity" },
+  { href: "/sections/files", label: "Saved files" },
+  { href: "/sections/builds", label: "Prepared builds" },
+  { href: "/sections/reports", label: "Reports" },
+]
+export const CurrentTabVisible: Story = {
+  args: { label: "Sections", tabs: BAY_TABS },
+  render: () => {
+    const [href, setHref] = useState("/sections/reports")
+    const [inlineSize, setInlineSize] = useState(240)
+    return (
+      <div className="flex flex-col gap-4">
+        <Field label="Available width">
+          <input
+            type="number"
+            min={100}
+            max={500}
+            value={inlineSize}
+            onChange={(event) =>
+              setInlineSize(
+                Number(event.currentTarget.value),
+              )
+            }
+          />
+        </Field>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            onClick={() => setHref("/sections/activity")}
+          >
+            Show activity
+          </Button>
+          <Button
+            onClick={() => setHref("/sections/reports")}
+          >
+            Show reports
+          </Button>
+        </div>
+        <div style={{ inlineSize, maxInlineSize: "100%" }}>
+          <Tabs
+            label="Current routed section"
+            activeHref={href}
+            tabs={OVERFLOW_ROUTES}
+          />
+        </div>
+        <div
+          dir="rtl"
+          style={{ inlineSize: 240, maxInlineSize: "100%" }}
+        >
+          <Tabs
+            label="Current RTL section"
+            activeHref="/sections/reports"
+            tabs={OVERFLOW_ROUTES}
+          />
+        </div>
+        <div
+          style={{ inlineSize: 150, maxInlineSize: "100%" }}
+        >
+          <Tabs
+            label="Current manual panel"
+            activation="manual"
+            activeKey="disc"
+            tabs={BAY_TABS}
+          />
+        </div>
+      </div>
+    )
+  },
 }

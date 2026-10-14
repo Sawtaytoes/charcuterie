@@ -4,7 +4,7 @@
 **Date:** 2026-07-29
 **Type:** Repository structure
 **Supersedes:** —
-**Superseded by:** —
+**Superseded by:** [pnpm and local Turbo build caching](2026-10-06-pnpm-and-local-turbo-build-caching.md) (package-manager choice only)
 
 ## Decision
 

@@ -29,15 +29,16 @@ Storybook. Existing component tests remain useful for narrower cases.
    as pending, and remove the tag when its behavior works.
 
 ```sh
-yarn build
-yarn vitest run --project requirements
-yarn vitest run
-yarn typecheck
-yarn lint:biome && yarn lint:eslint
+pnpm build
+pnpm exec vitest run --project 'requirements-*'
+pnpm exec vitest run
+pnpm typecheck
+pnpm lint:biome && pnpm lint:eslint
 ```
 
-`yarn workspace @charcuterie/docs test:requirements` runs the pilot alone. The root
-`vitest.config.ts` includes the project, so CI's `yarn vitest run` also runs it. The
+`pnpm --filter @charcuterie/docs test:requirements` runs the pilot alone at all four
+standard window sizes. The root `vitest.config.ts` includes the project, so CI's
+`pnpm exec vitest run` also runs it. The
 project config is `packages/docs/vitest.requirements.config.ts`. The world uses role and
 accessible name queries. It has helpers for clicking, filling, keyboard input, visibility,
 disabled and busy states, text, and status announcements. Add an app-specific helper only

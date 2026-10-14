@@ -252,3 +252,27 @@ export const Interactive: Story = {
     )
   },
 }
+
+/** A wizard permits returning to completed stages without skipping answers. */
+export const WizardNavigation: Story = {
+  render: (stepperProps) => {
+    const [currentKey, setCurrentKey] = useState("tag")
+    return (
+      <Stepper
+        {...stepperProps}
+        label="Assignment wizard"
+        orientation="horizontal"
+        onStepSelect={setCurrentKey}
+        steps={RIP.map((step) => ({
+          ...step,
+          status:
+            step.key === currentKey
+              ? "current"
+              : step.key === "rip"
+                ? "done"
+                : "upcoming",
+        }))}
+      />
+    )
+  },
+}

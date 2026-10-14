@@ -403,3 +403,38 @@ export const Interactive: Story = {
     label: "Who's shopping?",
   },
 }
+
+export const BoundedSet: Story = {
+  args: {
+    label: "People",
+    items: PINNED_ITEMS,
+    minTileInlineSize: 220,
+    isFillingRow: true,
+  },
+  render: (props) => (
+    <div style={{ width: 780 }}>
+      <PortraitTiles {...props} />
+    </div>
+  ),
+}
+
+/** An incomplete row keeps the full row's tile widths and centers as a group. */
+export const CenteredLastRow: Story = {
+  args: {
+    ...BoundedSet.args,
+    items: [
+      ...PINNED_ITEMS,
+      {
+        value: "admin",
+        label: "Admin",
+        initials: "A",
+        hint: "Manage",
+      },
+    ],
+  },
+  render: (props) => (
+    <div style={{ width: 780 }}>
+      <PortraitTiles {...props} />
+    </div>
+  ),
+}

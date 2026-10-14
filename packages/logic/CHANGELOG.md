@@ -1,5 +1,50 @@
 # @charcuterie/logic
 
+## 2.10.0
+
+### Minor Changes
+
+- 751e20c: Add horizontal nested comparisons with separate lanes for equal values and reusable table column visibility and ordering controls.
+
+## 2.9.0
+
+### Minor Changes
+
+- 5f0be1c: Use pinned TanStack Charts for interactive React charts, with shared day tooltips,
+  keyboard and touch navigation, transitions, reduced-motion support, grouped and
+  signed stacked bars. Add native Preact and standalone SVG subpaths. Preserve the
+  portable renderer as an explicit fallback without adding runtime imports to core.
+
+## 2.8.0
+
+### Minor Changes
+
+- 2f5dfae: Add framework-independent wizard stage descriptors and accessible navigation to completed Stepper stages.
+
+## 2.7.0
+
+### Minor Changes
+
+- 965f512: Separate optional-content visibility from focus priority in measured layouts.
+
+## 2.6.1
+
+### Patch Changes
+
+- 2b366a1: Preserve configured chart series colors while rejecting external references and unsafe SVG attributes.
+
+## 2.6.0
+
+### Minor Changes
+
+- 3174d58: Add accessible bar and line charts with a shared framework-free SVG renderer, missing-data gaps, negative values, and an optional values table.
+
+## 2.5.0
+
+### Minor Changes
+
+- 395e35e: Choose measured layouts by section priority, contained media area, and required content fit.
+
 ## 2.4.0
 
 ### Minor Changes

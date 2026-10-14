@@ -7,7 +7,7 @@
  * the only honest way to photograph a bug in a component that
  * never shipped with it.
  *
- * Run against the built Storybook: `yarn build:storybook` first.
+ * Run against the built Storybook: `pnpm build:storybook` first.
  */
 
 import { mkdir, rm } from "node:fs/promises"

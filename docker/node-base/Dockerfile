@@ -29,7 +29,10 @@ RUN apt-get update \
     tini \
   && rm --recursive --force /var/lib/apt/lists/* \
   && npm install --global corepack@latest \
-  && corepack enable \
+  && corepack enable yarn \
+  && npm install --global --force --allow-scripts=pnpm pnpm@12.9.1 \
+  && pnpm_bin="$(npm prefix --global)/bin" \
+  && test "$("$pnpm_bin/pnpm" --version)" = 12.9.1 \
   && mkdir --parents /app \
   && chown node:node /app
 

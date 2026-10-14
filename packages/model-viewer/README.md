@@ -68,7 +68,65 @@ legacy query pairs such as `"inside=1": "inside"` to named views.
 A part's optional `texture` is projected in its source XY plane. Plain relief removes the
 texture. That texture represents artwork, not a calibrated prediction of printed filament.
 Procedural geometry and more specialized material/colour rules use the core API below.
-The package does not parse 3MF or G-code and does not generate or validate printable CAD.
+The package does not generate or validate printable CAD. It reads sliced G-code only for the
+replay below.
+
+## G-code replay
+
+A manifest with a `replay` section (and no `models`) stages a different page: the parts of a
+sliced plate growing move by move, with the print head drawn at every moment.
+
+```json
+{
+  "schemaVersion": 1,
+  "title": "Two cups, split colors",
+  "replay": {
+    "printer": {"bed": [256, 256], "envelopeRadius": 68, "gantryHeight": 34},
+    "plates": [{
+      "key": "a",
+      "title": "Plate A",
+      "gcode": "plate-a.gcode.3mf",
+      "plate": 1,
+      "topTool": 4,
+      "splitZ": 12.2,
+      "toolNames": ["Red", "Blue", "Orange", "Purple", "Charcoal"],
+      "phases": [{"line": 1, "label": "Bottoms, one part at a time"}, {"line": 452369, "label": "Shared top"}],
+      "objects": {
+        "8": {"name": "Left cup", "bottomTool": 0,
+              "parts": [{"file": "left-lower.stl", "color": "#D04040"}, {"file": "left-upper.stl", "color": "#303030"}]}
+      }
+    }]
+  }
+}
+```
+
+`gcode` is a plain `.gcode` or a sliced `.gcode.3mf` (`plate` picks `Metadata/plate_N.gcode`,
+default 1). Object keys are the slicer's label ids (`; start printing object, unique label id:
+N`). Staging refuses an id the G-code never prints. Every part of one object shares one
+coordinate frame and must be in print orientation. The page centres their union on the
+object's printed centre and cuts each part at the object's printed height at that moment, so
+a plate split by height replays exactly and any other plate is a straight-cut approximation.
+Rotation is not read from the G-code. `printer` defaults to the Bambu X1 series:
+`envelopeRadius` is the slicer's `extruder_clearance_max_radius` and `gantryHeight` its
+`extruder_clearance_height_to_rod`.
+
+Staging analyses the whole file once in Node (`analyzeGcode`, a few seconds for a 25 MB
+plate) and the page loads only the sampled timeline. Every move is replayed, arcs as chords:
+
+- **Colour**, only when `topTool` and `splitZ` are both set: every extrusion inside an object
+  uses its `bottomTool` below `splitZ` and `topTool` from it upward.
+- **Tip collisions**: the nozzle tip goes below the top of another object already printed.
+  Travel exactly at the height of a layer just printed is normal and is not counted.
+- **Envelope intrusions**: an object taller than the tip is inside `envelopeRadius`. This is
+  the slicer's collision model, not toolhead CAD. Footprints are circles around each
+  object's own extrusions, which is exact for round parts and generous for square ones.
+- **Totals**: minutes from `M73 P0 R`, grams from **net** extrusion with the header's
+  `filament_density` (the start G-code's `G0 … E` prime line counts), and purge as the
+  extrusion between `M620 S` and `M621 S`.
+
+`?plate=a` opens a plate, `?at=0.4` a moment (a fraction of the print), and `?clean` renders
+only the finished parts for a `.3mf` thumbnail. `window.__replay` exposes `isReady`,
+`plate`, `index`, `objects`, `envelope`, `setSample(index)` and `show(plate)`.
 
 ## Browser API
 
@@ -85,14 +143,29 @@ fitBounds(viewer.camera, viewer.controls, new THREE.Box3().setFromObject(viewer.
 viewer.dispose()
 ```
 
-Exports: `createViewer`, `loadSTL`, `parseSTL`, `addEdges`, `fitBounds`, `disposeObject`,
-`THREE`, `VERSION`. `src/index.d.ts` declares the API. `createViewer` owns renderer,
+Exports: `createViewer`, `loadSTL`, `parseSTL`, `load3MF`, `parse3MF`, `addEdges`, `fitBounds`, `disposeObject`,
+`analyzeGcode`, `objectFootprints`, `readHeader`, `THREE`, `VERSION`. `src/index.d.ts` declares the API. `createViewer` owns renderer,
 scene, camera, orbit controls, animation and resize/disposal. Existing adapters can set
 `isAutoResize: false` and `isAnimating: false` while preserving their own lighting,
 arrangement-specific framing and render loops. Mounting a viewer has no global stylesheet
 or document-wide handler. The standalone page exposes `window.__viewer` after all requested
 meshes load; `isReady`, `version`, `parts`, `view`, and `fit` support browser verification.
 A failed asset or empty STL is an error, not a successful partial review.
+
+## 3MF
+
+`parse3MF(buffer)` / `load3MF(url)` return a `THREE.Group` with one mesh per printed object
+instance, named after its object, in millimeters and in the file's own Z-up frame (rotate it
+upright as for STL). They follow the production extension's `p:path` components, which is how
+Bambu Studio and OrcaSlicer store every project (`3D/Objects/*.model`); Three's own
+`ThreeMFLoader` at 0.160 throws on those. Instances of one object share one geometry. When the package carries Bambu Studio/OrcaSlicer
+`Metadata/model_settings.config`, meshes take the names a person gave the objects and
+volumes there, and modifier, negative and support-blocker volumes are skipped: they are
+meshes in the file but are never printed.
+Materials, color groups and textures are not read. A sliced `.gcode.3mf` usually carries no
+mesh at all and is an error, not an empty group — show its `Metadata/plate_N.png` instead.
+Measured against 40 random files from a real library: 39 opened, the 40th was G-code only; a
+30 MB, 4 million triangle project parsed in about 5 s in Chromium.
 
 ## Local service and installation
 
@@ -118,5 +191,40 @@ The first release is a versioned container artifact, not an npm registry publica
 The archive contains `model-viewer/` with the runtime, CLI, package metadata and licenses;
 extract it under `/opt`, then link `/usr/local/bin/model-viewer` to
 `/opt/model-viewer/src/cli.js`. Container builds must pin and verify the archive SHA-256.
-The npm-compatible package/API can also be consumed from a Yarn-packed tarball. npm first
+The npm-compatible package/API can also be consumed from a pnpm-packed tarball. npm first
 publication and trusted-publisher setup are independent of using this release.
+
+## Commanded toolpaths
+
+`parseToolpaths(text, options)` reconstructs bounded commanded FDM center lines.
+`createToolpathObject(paths, options)` turns a selected layer range into disposable
+Three.js line segments, grouped by tool, with optional travel lines. Geometry uses
+millimeters and Z-up coordinates; rotate the returned group as for STL. Callers own
+colour choices, controls, camera fitting and `disposeObject(group)` on replacement.
+
+The packed `Float32Array` uses `TOOLPATH_STRIDE = 12`:
+`[x0,y0,z0,x1,y1,z1,layer,tool,object,extrusion,line,feature]`.
+Layer, tool, object, feature and original line identities survive filtering. Unknown
+tool/object IDs are `-1`. Bounds include extrusion only. Travel visibility does not
+change parsing or bounds. Without layer comments, paths use layer zero.
+
+Supported interpretation includes G0/G1, XY G2/G3 arcs (I/J or signed R, including
+full circles, helical Z and explicit single-turn P1), explicit M82/M83 extrusion modes, G90/G91 XYZ modes,
+G20/G21 units, and G92 resets. Homing invalidates position until a subsequent move
+establishes all three axes. Arc chords use a declared maximum XY sagitta, default
+0.02 mm. Line/layer/object comments from common slicers and M486 object IDs are
+preserved. Firmware-specific non-motion commands are ignored.
+
+This is a view of commanded paths, not firmware simulation, physical qualification,
+collision approval, deposited-width geometry, print duration, or filament estimates.
+The XYZ and extrusion modes are interpreted independently; provider adapters must
+hold unsupported firmware dialects. Machine/work coordinate switching, other arc
+planes, spline/probe movements, additional movement axes, ambiguous compound
+commands, malformed coordinates, unpositioned extrusion, and exhausted limits
+throw instead of returning misleading partial geometry. An extrusion-only startup move
+can precede M82/M83 because it contributes no XYZ geometry; an unknown absolute
+extrusion baseline still holds until reset. Conditional firmware branches are not
+executed or selected: the preview includes their literal commanded paths. Default limits are 64 MiB
+of text, two million lines, one million rendered segments, and 4,096 chords per arc.
+Callers should parse large files in a worker and display any hold as a hold, never
+as a successful empty preview. `src/index.d.ts` declares options and return types.

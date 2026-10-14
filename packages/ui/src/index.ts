@@ -37,6 +37,8 @@ export type {
   AccordionProps,
 } from "./Accordion/Accordion.tsx"
 export { Accordion } from "./Accordion/Accordion.tsx"
+export type { ActionMenuProps } from "./ActionMenu/ActionMenu.tsx"
+export { ActionMenu } from "./ActionMenu/ActionMenu.tsx"
 export type {
   ActionTileItem,
   ActionTilesAccent,
@@ -99,6 +101,11 @@ export {
   getIsMoveMeaningful,
   toSettledIndex,
 } from "./Board/boardMove.ts"
+export type {
+  BreadcrumbItem,
+  BreadcrumbsProps,
+} from "./Breadcrumbs/Breadcrumbs.tsx"
+export { Breadcrumbs } from "./Breadcrumbs/Breadcrumbs.tsx"
 export type { ButtonProps } from "./Button/Button.tsx"
 export { Button } from "./Button/Button.tsx"
 export type { ButtonLinkProps } from "./ButtonLink/ButtonLink.tsx"
@@ -110,6 +117,8 @@ export type {
 } from "./Card/Card.tsx"
 export { Card } from "./Card/Card.tsx"
 export type { CardAccentEdge } from "./Card/cardAccentEdge.ts"
+export type { ChartProps } from "./Chart/Chart.tsx"
+export { Chart } from "./Chart/Chart.tsx"
 export type { CheckboxProps } from "./Checkbox/Checkbox.tsx"
 export { Checkbox } from "./Checkbox/Checkbox.tsx"
 export type { ColorSchemeSwitcherProps } from "./ColorSchemeSwitcher/ColorSchemeSwitcher.tsx"
@@ -121,6 +130,8 @@ export type {
 export { ColorSchemeToggle } from "./ColorSchemeToggle/ColorSchemeToggle.tsx"
 export type { ComboboxProps } from "./Combobox/Combobox.tsx"
 export { Combobox } from "./Combobox/Combobox.tsx"
+export type { ComparisonChartProps } from "./ComparisonChart/ComparisonChart.tsx"
+export { ComparisonChart } from "./ComparisonChart/ComparisonChart.tsx"
 export type {
   CopyButtonProps,
   CopyStatus,
@@ -149,6 +160,7 @@ export {
 export type {
   DataTableColumn,
   DataTableProps,
+  DataTableReflowAt,
   DataTableSelection,
   DataTableSort,
 } from "./DataTable/DataTable.tsx"
@@ -250,7 +262,10 @@ export {
   toBarPlacement,
   toTimelineAxis,
 } from "./LaneTimeline/laneTimelineGeometry.ts"
-export type { LightboxProps } from "./Lightbox/Lightbox.tsx"
+export type {
+  LightboxImage,
+  LightboxProps,
+} from "./Lightbox/Lightbox.tsx"
 export { Lightbox } from "./Lightbox/Lightbox.tsx"
 export type {
   ListboxItem,
@@ -307,6 +322,8 @@ export type {
   MenuProps,
 } from "./Menu/Menu.tsx"
 export { Menu } from "./Menu/Menu.tsx"
+export type { MetricCardProps } from "./MetricCard/MetricCard.tsx"
+export { MetricCard } from "./MetricCard/MetricCard.tsx"
 export type { ModalProps } from "./Modal/Modal.tsx"
 export { Modal } from "./Modal/Modal.tsx"
 export type {
@@ -410,6 +427,14 @@ export type {
 export { getIsRoutedHref } from "./RouterLink/routerLink.ts"
 export type { UnstyledLinkProps } from "./RouterLink/UnstyledLink.tsx"
 export { UnstyledLink } from "./RouterLink/UnstyledLink.tsx"
+export type {
+  ScheduleBand,
+  ScheduleBoardProps,
+  ScheduleDay,
+  ScheduleLayout,
+} from "./ScheduleBoard/ScheduleBoard.tsx"
+export { ScheduleBoard } from "./ScheduleBoard/ScheduleBoard.tsx"
+export type { ScheduleEntry } from "./ScheduleBoard/ScheduleItem.tsx"
 export type { SearchInputProps } from "./SearchInput/SearchInput.tsx"
 export { SearchInput } from "./SearchInput/SearchInput.tsx"
 export type {
@@ -477,6 +502,13 @@ export {
   getIsConnectionBusy,
 } from "./statusIntent.ts"
 export type {
+  TableColumnChoice,
+  TableColumnsProps,
+} from "./TableColumns/TableColumns.tsx"
+export { TableColumns } from "./TableColumns/TableColumns.tsx"
+export type { TableViewportProps } from "./TableViewport/TableViewport.tsx"
+export { TableViewport } from "./TableViewport/TableViewport.tsx"
+export type {
   TabsLinkProps,
   TabsPanelProps,
   TabsProps,
@@ -525,8 +557,15 @@ export { Toolbar } from "./Toolbar/Toolbar.tsx"
 export type { TooltipProps } from "./Tooltip/Tooltip.tsx"
 export { Tooltip } from "./Tooltip/Tooltip.tsx"
 export { toClassName } from "./toClassName.ts"
+export type {
+  ValuePair,
+  ValuePairsProps,
+} from "./ValuePairs/ValuePairs.tsx"
+export { ValuePairs } from "./ValuePairs/ValuePairs.tsx"
 export { DEFAULT_GRID_GAP_PX } from "./VirtualizedGrid/gridGap.ts"
 export type { VirtualizedGridProps } from "./VirtualizedGrid/VirtualizedGrid.tsx"
 export { VirtualizedGrid } from "./VirtualizedGrid/VirtualizedGrid.tsx"
 export type { VisuallyHiddenProps } from "./VisuallyHidden/VisuallyHidden.tsx"
 export { VisuallyHidden } from "./VisuallyHidden/VisuallyHidden.tsx"
+export type { WeekdayIndicatorProps } from "./WeekdayIndicator/WeekdayIndicator.tsx"
+export { WeekdayIndicator } from "./WeekdayIndicator/WeekdayIndicator.tsx"

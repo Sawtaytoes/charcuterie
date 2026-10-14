@@ -1,0 +1,15 @@
+{
+  "name": "@charcuterie/ci-vrt-tools",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The pinned browser and reg-suit installed into the shared workflow checkout. Separate pnpm workspace; no library build required.",
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "playwright": "1.63.0",
+    "reg-keygen-git-hash-plugin": "0.14.5",
+    "reg-publish-s3-plugin": "0.14.4",
+    "reg-suit": "0.14.5"
+  },
+  "packageManager": "pnpm@12.9.1"
+}

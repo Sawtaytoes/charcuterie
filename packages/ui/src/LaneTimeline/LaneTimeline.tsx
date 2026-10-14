@@ -8,6 +8,7 @@ import { LaneTimelineLane } from "./LaneTimelineLane.tsx"
 import type { TimelineSpan } from "./laneTimelineGeometry.ts"
 import {
   chooseAxisTickStep,
+  chooseTitleLayout,
   formatAxisDate,
   getIsAxisReadable,
   toTimelineAxis,
@@ -51,6 +52,24 @@ const DEFAULT_MIN_COLUMN_SIZE = 1.75
  * than drawn. Six is roughly a screen's worth of one lane.
  */
 const DEFAULT_MAX_ROW_COUNT = 6
+
+/**
+ * The narrowest a day column may be before a bar's title WRAPS
+ * rather than clips, in em.
+ *
+ * A one-line title with an ellipsis is right for a narrow column
+ * and wrong for a wide one, and the fold threshold above cannot
+ * tell the two apart: `minColumnSize` is where the axis stops
+ * being worth drawing, not where a title becomes readable. A
+ * seven-day week across a 64rem page gives every column 7em, and
+ * a single-day bar in it still printed `Regional Rob…` — the
+ * owner's verdict on that picture was *"I can't really read this
+ * text"*. Six em is about eight characters of the bar's own type,
+ * which is the narrowest box in which a wrapped word is a word and
+ * not a column of letters. A four-week range on the same page is
+ * under it and keeps the ellipsis.
+ */
+const DEFAULT_WRAP_COLUMN_SIZE = 6
 
 export type LaneTimelineProps = {
   className?: string
@@ -99,6 +118,13 @@ export type LaneTimelineProps = {
    * `2026-04-06` to `2026-04-12`, which is seven columns, not eight.
    */
   range: TimelineSpan
+  /**
+   * The narrowest a day column may be before a bar's title wraps
+   * onto up to three lines instead of clipping to one, as a
+   * multiple of the timeline's **own font size**. Default 6. In em
+   * for the reason `minColumnSize` is.
+   */
+  wrapColumnSize?: number
 }
 
 /**
@@ -190,6 +216,7 @@ export const LaneTimeline = ({
   maxRowCount = DEFAULT_MAX_ROW_COUNT,
   minColumnSize = DEFAULT_MIN_COLUMN_SIZE,
   range,
+  wrapColumnSize = DEFAULT_WRAP_COLUMN_SIZE,
 }: LaneTimelineProps): ReactNode => {
   const { fontSize, inlineSize, isMeasured, trackRef } =
     useTrackMeasurements()
@@ -209,6 +236,13 @@ export const LaneTimeline = ({
     columnCount,
     inlineSize,
     minTickInlineSize: TICK_LABEL_SIZE * fontSize,
+  })
+
+  const titleLayout = chooseTitleLayout({
+    columnCount,
+    inlineSize,
+    isMeasured,
+    wrapColumnInlineSize: wrapColumnSize * fontSize,
   })
 
   /*
@@ -345,6 +379,7 @@ export const LaneTimeline = ({
               position={position}
               shape="axis"
               tickStep={tickStep}
+              titleLayout={titleLayout}
             />
           ))}
         </>

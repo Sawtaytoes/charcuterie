@@ -39,3 +39,7 @@ __screenshots__
 # Ad-hoc screenshots and served mock-ups. Scratch, not deliverables —
 # the fleet keeps these at a repo root and never commits them.
 __screenshots__
+
+# Local build outputs and package-store cache.
+.turbo
+.pnpm-store

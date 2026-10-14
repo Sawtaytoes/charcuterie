@@ -1,5 +1,29 @@
 # @charcuterie/model-viewer
 
+## 0.5.1
+
+### Patch Changes
+
+- 8463398: Keep the orbit hint clear of wrapped controls, wrap long preview titles and labels, and allow tall toolbars to scroll while leaving room to orbit the model.
+
+## 0.5.0
+
+### Minor Changes
+
+- d08f3ed: Add bounded commanded G-code path parsing and Three.js center-line rendering, with layer, tool, object, feature and source-line identities. Unsupported movement interpretation and exhausted limits hold the preview instead of returning partial geometry.
+
+## 0.4.0
+
+### Minor Changes
+
+- e747722: Read 3MF files: `parse3MF` and `load3MF` return one mesh per printed object instance, in millimeters, following the `p:path` components that Bambu Studio and OrcaSlicer projects use for every object. Three's own `ThreeMFLoader` throws on those files.
+
+## 0.3.0
+
+### Minor Changes
+
+- 703d2af: Replay sliced G-code with the print head. A manifest with a `replay` section names one or more plates (a `.gcode` or `.gcode.3mf`, the slicer label id of each object and its STL parts); staging analyses every move and the page plays the parts growing layer by layer, with the nozzle, the slicer's clearance cylinder and the X gantry. Each plate reports wrong-colour extrusions below and above a split height, the nozzle going below a printed top, and taller parts inside the clearance radius, plus print time, net filament and purge. `analyzeGcode` is exported for callers that want the analysis without the page.
+
 ## 0.2.0
 
 ### Minor Changes

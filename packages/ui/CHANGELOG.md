@@ -1,5 +1,196 @@
 # @charcuterie/ui
 
+## 4.22.1
+
+### Patch Changes
+
+- 0b64fb8: `Picker`: a trigger stretched wider than its content — inside a `Field`, or under `w-full` — now reads like a select. The value sits at the inline start, the chevron at the inline end, and a value too long for the trigger truncates with an ellipsis instead of overflowing. A trigger at its content width renders exactly as before.
+
+## 4.22.0
+
+### Minor Changes
+
+- b540c11: Add an explicit fill layout to AdaptiveGrid and VirtualizedGrid for media galleries and printer fleets that need to spend available container width. Preserve the default height-first layout and the single-column reading measure.
+
+## 4.21.0
+
+### Minor Changes
+
+- 751e20c: Add horizontal nested comparisons with separate lanes for equal values and reusable table column visibility and ordering controls.
+- 67a1026: Lightbox can open an ordered image gallery at a selected thumbnail, with Previous/Next controls, arrow-key navigation, and an announced image position.
+
+### Patch Changes
+
+- Updated dependencies [751e20c]
+  - @charcuterie/logic@2.10.0
+
+## 4.20.1
+
+### Patch Changes
+
+- 00fd151: Keep portalled HTML formatting dialogs from submitting an enclosing record form. Applying or rejecting a link, image or text colour edits the draft; saving the record remains an explicit action.
+
+## 4.20.0
+
+### Minor Changes
+
+- 7290b37: Add opt-in HtmlView and HtmlEditor for retained HTML notes, with shared document sanitization, rich authoring, accessible formatting controls and exact preservation of untouched source.
+
+## 4.19.0
+
+### Minor Changes
+
+- 3870074: Allow dense DataTable comparisons to reflow at wider container breakpoints and offer an explicit stacked list layout without dropping columns or sorting.
+
+  Add MetricCard for a prominent formatted measure with an optional categorical icon and accent edge, shared Card actions and responsive supporting content.
+
+## 4.18.3
+
+### Patch Changes
+
+- dae3021: Show complete column labels in stacked table rows by giving labels more room and wrapping long names instead of truncating them.
+
+## 4.18.2
+
+### Patch Changes
+
+- bc971d7: Dismiss the top anchored picker, menu, or popover before its enclosing modal.
+  Escape and outside presses keep the dialog and its unsaved draft open until the
+  anchored child closes. Selecting an option still leaves the dialog open.
+
+## 4.18.1
+
+### Patch Changes
+
+- 4398530: Keep current tabs visible when a routed or panel tab bar overflows. Reveal within
+  the bar after route, content, font, or size changes without moving keyboard focus
+  or scrolling the surrounding page. Preserve manual-mode focus priority and RTL.
+
+## 4.18.0
+
+### Minor Changes
+
+- 6fe75ac: Add TableViewport for readable comparison columns and full-window expansion, with page-height inline tables and fixed headers in the expanded view.
+
+## 4.17.0
+
+### Minor Changes
+
+- 5f0be1c: Use pinned TanStack Charts for interactive React charts, with shared day tooltips,
+  keyboard and touch navigation, transitions, reduced-motion support, grouped and
+  signed stacked bars. Add native Preact and standalone SVG subpaths. Preserve the
+  portable renderer as an explicit fallback without adding runtime imports to core.
+
+### Patch Changes
+
+- Updated dependencies [5f0be1c]
+  - @charcuterie/logic@2.9.0
+
+## 4.16.0
+
+### Minor Changes
+
+- 2f5dfae: Add framework-independent wizard stage descriptors and accessible navigation to completed Stepper stages.
+
+### Patch Changes
+
+- Updated dependencies [2f5dfae]
+  - @charcuterie/logic@2.8.0
+
+## 4.15.2
+
+### Patch Changes
+
+- Updated dependencies [965f512]
+  - @charcuterie/logic@2.7.0
+
+## 4.15.1
+
+### Patch Changes
+
+- Updated dependencies [2b366a1]
+  - @charcuterie/logic@2.6.1
+
+## 4.15.0
+
+### Minor Changes
+
+- 3174d58: Add accessible bar and line charts with a shared framework-free SVG renderer, missing-data gaps, negative values, and an optional values table.
+
+### Patch Changes
+
+- Updated dependencies [3174d58]
+  - @charcuterie/logic@2.6.0
+
+## 4.14.0
+
+### Minor Changes
+
+- f2692ac: Add ScheduleBoard with aligned time bands, an hour axis with overlap packing, and a measured day-card fallback. Add WeekdayIndicator for compact Monday-first recurrence patterns with an accessible text description.
+
+## 4.13.1
+
+### Patch Changes
+
+- Updated dependencies [395e35e]
+  - @charcuterie/logic@2.5.0
+
+## 4.13.0
+
+### Minor Changes
+
+- 07e3bcf: Add compact horizontal media tiles, uncropped image fitting, wrapping titles, and a details slot. Show an honest fallback when no image is supplied and preserve router navigation for linked tiles.
+
+## 4.12.1
+
+### Patch Changes
+
+- 2a6587c: Center incomplete final rows in bounded PortraitTiles while preserving the full row tile width and responsive wrapping.
+
+## 4.12.0
+
+### Minor Changes
+
+- 01f2e51: Add ValuePairs for consistent label-over-value summaries, and an opt-in bounded row layout for PortraitTiles. Portrait tiles also provide pressed feedback and respect reduced motion.
+
+## 4.11.1
+
+### Patch Changes
+
+- dd22d13: `LaneTimeline` hyphenates a wrapped title. A column just past the wrap threshold is narrower than one long word, so it broke mid-word; with `hyphens: auto` a browser with a dictionary breaks it at a syllable, and the `overflow-wrap: anywhere` fallback stays for one without.
+
+## 4.11.0
+
+### Minor Changes
+
+- 28ddb90: `LaneTimeline` wraps a bar's title onto up to three lines once a day column is at least `wrapColumnSize` wide (default 6em of the timeline's own type), and clips to one line with an ellipsis below that. The title is `text-sm` in every shape, and every bar in a packed row is the height of the tallest. A week across a desktop page printed `Regional Rob…` at 7em a column.
+
+## 4.10.2
+
+### Patch Changes
+
+- 8fa538b: `ProgressBar` renders its overlay grid wrapper only when `overlay` is set. From 4.9.0 the wrapper was always present, so the `role="progressbar"` track was no longer a direct child of the root, and an app that sized the track against its parent (`block-size: 100%`) lost its fill.
+
+## 4.10.1
+
+### Patch Changes
+
+- Updated dependencies [e5af779]
+  - @charcuterie/tokens@1.10.2
+
+## 4.10.0
+
+### Minor Changes
+
+- 4acb488: Add ActionMenu, the overflow control: a ghost neutral `IconButton` that opens a `Menu` at `bottom-end`, with its own open state. Props are `items`, `label` (the trigger's accessible name, which also names the menu), an optional `size`, and an optional `icon`. The default icon is three dots drawn in CSS, not a glyph or an SVG.
+- bb4f12f: Add Breadcrumbs: a named `<nav>` around an `<ol>` for the path back up a hierarchy. A rung with an `href` is a routed `TextLink`, a rung with only `onSelect` is a button painted as the same link (for trails over state with no URL), and a last rung with neither is the current page with `aria-current="page"`. A trail of links only has no current rung, for a trail above a heading that already names the page. The trail wraps and never truncates, and the default separator is a CSS chevron, not a glyph.
+
+## 4.9.1
+
+### Patch Changes
+
+- 782a774: The markdown live preview restyles when the background parse catches up. Its inline decorations rebuilt only on edits, selection, viewport, focus and option changes, so a document whose parse finished after mount showed its last lines raw — a fenced block and a link as plain text — until the reader clicked. The table pass already compared the syntax tree; the inline pass now does too.
+
 ## 4.9.0
 
 ### Minor Changes

@@ -1,0 +1,29 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+import * as Stories from "./ScheduleBoard.stories";
+
+<Meta of={Stories} />
+
+# ScheduleBoard
+
+A schedule with aligned time bands, an exact hour axis, and day cards. The app supplies day labels, minute offsets, sources, and formatted times. Bands group by start time; their height never claims duration. The hour layout shows duration and packs overlapping entries side by side. Short items keep a minimum visible height. Full labels remain available through the accessible name and the selection callback. Multi-day entries must be split into day segments by the app. A measured minimum column width switches to day cards, without horizontal scrolling.
+
+<Canvas of={Stories.Playground} />
+
+## Props
+
+<Controls />
+
+## Layouts and states
+
+<Canvas of={Stories.AllVariants} />
+<Canvas of={Stories.AllStates} />
+
+## Narrow containers
+
+<Canvas of={Stories.Responsive} />
+
+## Keyboard interaction
+
+Tab reaches each action. Enter or Space activates it. The display itself adds no tab stops.
+
+<Canvas of={Stories.Interactive} />

@@ -1,6 +1,6 @@
 {
   "name": "@charcuterie/logic",
-  "version": "2.4.0",
+  "version": "2.10.0",
   "description": "The five Charcuterie state kinds — Visibility, VisibilityGroup, SinglePicker, MultiplePicker, RovingFocus, and Status — as framework-free cores with React and Preact bindings.",
   "license": "MIT",
   "type": "module",
@@ -52,7 +52,22 @@
       "types": "./dist/openapi/index.d.ts",
       "default": "./dist/openapi/index.js"
     },
-    "./src/*": "./src/*"
+    "./src/*": "./src/*",
+    "./charts": {
+      "source": "./src/charts/index.ts",
+      "types": "./dist/charts/index.d.ts",
+      "default": "./dist/charts/index.js"
+    },
+    "./charts/react": {
+      "source": "./src/charts/react.ts",
+      "types": "./dist/charts/react.d.ts",
+      "default": "./dist/charts/react.js"
+    },
+    "./charts/preact": {
+      "source": "./src/charts/preact.ts",
+      "types": "./dist/charts/preact.d.ts",
+      "default": "./dist/charts/preact.js"
+    }
   },
   "files": [
     "dist",
@@ -60,7 +75,7 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "prepack": "yarn build",
+    "prepack": "pnpm build",
     "test": "vitest",
     "typecheck": "tsc --noEmit"
   },
@@ -97,6 +112,7 @@
     }
   },
   "devDependencies": {
+    "@charcuterie/vitest-config": "workspace:^",
     "@preact/signals-core": "^1.8.0",
     "@tanstack/react-query": "^5.100.9",
     "@types/react": "^19.2.14",
@@ -118,5 +134,8 @@
     "type": "git",
     "url": "git+https://github.com/Sawtaytoes/charcuterie.git",
     "directory": "packages/logic"
+  },
+  "dependencies": {
+    "@tanstack/charts": "0.18.0"
   }
 }

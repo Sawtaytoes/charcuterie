@@ -56,9 +56,21 @@ jobs:
 
       - id: detect
         env:
-          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: |
           set -euo pipefail
+
+          # Forgejo's reusable-workflow context can hide the caller event type.
+          # Read the original event payload so a PR uses its full base range.
+          # Dispatches and unreadable events retain the conservative fallback.
+          if [ -n "${GITHUB_EVENT_PATH:-}" ] && [ -f "$GITHUB_EVENT_PATH" ]; then
+            BASE_SHA="$(node -e '
+              const fs = require("node:fs");
+              const event = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+              const base = event.pull_request ? event.pull_request.base?.sha : event.before;
+              process.stdout.write(typeof base === "string" ? base : "");
+            ' "$GITHUB_EVENT_PATH")" || BASE_SHA=""
+          fi
 
           # Fail SAFE. Anything we cannot diff — a workflow_dispatch, a tag, a
           # new branch whose `before` is all zeros, a base commit the fetch
@@ -76,17 +88,19 @@ jobs:
           changedFiles="$(git diff --name-only "${mergeBase}" HEAD)"
           printf 'Changed files:\n%s\n\n' "${changedFiles}"
 
+          # Consume the full input: grep -q exits early and gives printf SIGPIPE
+          # under pipefail on large diffs, making a code diff look docs-only.
           isDocsOnly=true
 
           if [ -z "${changedFiles}" ]
           then
             isDocsOnly=false
-          elif printf '%s\n' "${changedFiles}" | grep -q '^\.changeset/'
+          elif printf '%s\n' "${changedFiles}" | grep '^\.changeset/' >/dev/null
           then
             # A changeset file is markdown, but it is a RELEASE input rather
             # than documentation. Treat it as code.
             isDocsOnly=false
-          elif printf '%s\n' "${changedFiles}" | grep -qvE '^(.+\.md|LICENSE)$'
+          elif printf '%s\n' "${changedFiles}" | grep -vE '^(.+\.md|LICENSE)$' >/dev/null
           then
             # `.mdx` deliberately does NOT match `.md$` — it is Storybook
             # source in several repos here, and it compiles.

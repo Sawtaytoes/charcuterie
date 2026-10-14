@@ -59,14 +59,17 @@ test("it is an article whose headings are headings", async () => {
     "false",
   )
 
+  // `findBy`, not `getBy`: CodeMirror draws its decorations after the
+  // first paint, and with four browser windows sharing the runner the
+  // second heading was not drawn yet when a synchronous query looked.
   await expect(
-    canvas.getByRole("heading", {
+    await canvas.findByRole("heading", {
       name: "Rack move, phase two",
     }),
   ).toHaveAttribute("aria-level", "1")
 
   await expect(
-    canvas.getByRole("heading", {
+    await canvas.findByRole("heading", {
       name: "Before the window",
     }),
   ).toHaveAttribute("aria-level", "2")
@@ -157,6 +160,10 @@ test("it renders what the editor renders", async () => {
 test("a link is a real anchor in the tab order", async () => {
   const { canvas } = await mountStory(Interactive)
 
+  // Markdown decorations arrive after the editor's asynchronous parse.
+  // Wait for the link before checking its accessibility and keyboard behavior.
+  await canvas.findByRole("link", { name: "the runbook" })
+
   const link = expectAgentDrivable(canvas, {
     name: "the runbook",
     role: "link",
@@ -198,7 +205,7 @@ test("a link is a real anchor in the tab order", async () => {
 test("a checkbox is inert until a consumer says where the tick goes", async () => {
   const { canvas } = await mountStory(AllStates)
 
-  const inert = canvas.getByRole("checkbox", {
+  const inert = await canvas.findByRole("checkbox", {
     name: "Photograph the current cabling",
   })
 
@@ -235,9 +242,11 @@ test("hostile markdown renders as characters, not as behaviour", async () => {
   const { canvas, canvasElement } =
     await mountStory(HostileMarkdown)
 
-  const hrefs = canvas
-    .getAllByRole("link")
-    .map((link: HTMLElement) => link.getAttribute("href"))
+  // `findAllBy`: the links are CodeMirror decorations, drawn after the
+  // first paint — the same race as the headings test above.
+  const hrefs = (await canvas.findAllByRole("link")).map(
+    (link: HTMLElement) => link.getAttribute("href"),
+  )
 
   await expect(hrefs).toEqual([
     "https://example.invalid/runbook",
@@ -332,7 +341,7 @@ test("inline markup in link text does not drop the document to raw source", asyn
   // The canary. This heading has nothing to do with links, and it
   // is what stopped rendering when the plugin died.
   await expect(
-    canvas.getByRole("heading", {
+    await canvas.findByRole("heading", {
       name: "Where the fix landed",
     }),
   ).toHaveAttribute("aria-level", "2")
@@ -340,11 +349,16 @@ test("inline markup in link text does not drop the document to raw source", asyn
   // No raw source anywhere in the document.
   const article = canvas.getByRole("article")
 
-  await expect(article.textContent).not.toContain("](")
+  // The heading can paint before lower link decorations finish parsing.
+  // Retry the complete contract rather than treating that partial paint
+  // as the final document; all three source-marker assertions still apply.
+  await waitFor(async () => {
+    await expect(article.textContent).not.toContain("](")
 
-  await expect(article.textContent).not.toContain("**")
+    await expect(article.textContent).not.toContain("**")
 
-  await expect(article.textContent).not.toContain("~~")
+    await expect(article.textContent).not.toContain("~~")
+  })
 })
 
 /**
@@ -363,10 +377,14 @@ test.each([
   async (_case, name) => {
     const { canvas } = await mountStory(NestedLinkText)
 
-    const link = expectAgentDrivable(canvas, {
-      name,
-      role: "link",
-    })
+    // CodeMirror finishes its viewport decorations on a scheduled frame.
+    // Wait for the accessible anchor rather than assuming mount means paint.
+    const link = await waitFor(() =>
+      expectAgentDrivable(canvas, {
+        name,
+        role: "link",
+      }),
+    )
 
     await expect(link.tagName).toBe("A")
   },
@@ -406,6 +424,14 @@ test("a code span is smaller than the prose it sits in", async () => {
   const { canvas } = await mountStory(Playground)
 
   const article = canvas.getByRole("article")
+
+  // CodeMirror can finish its syntax decorations after the story mounts.
+  // Wait for the measured span itself rather than capturing a stale null.
+  await waitFor(() => {
+    expect(
+      article.querySelector(".cm-md-code"),
+    ).not.toBeNull()
+  })
 
   const code = article.querySelector(".cm-md-code")
 

@@ -104,17 +104,23 @@ test("a picture that fails to load falls back to the initials", async () => {
     role: "group",
   })
 
-  await waitFor(async () => {
-    const broken = Array.from(
-      group.querySelectorAll<HTMLImageElement>("img"),
-    ).find((one) =>
-      one.src.includes("charcuterie-missing-portrait"),
-    )
+  // A real 404 over the network, not a mocked error event, so it gets
+  // longer than `waitFor`'s 1 s default: with four browser windows
+  // sharing a CI runner the failure arrived after it.
+  await waitFor(
+    async () => {
+      const broken = Array.from(
+        group.querySelectorAll<HTMLImageElement>("img"),
+      ).find((one) =>
+        one.src.includes("charcuterie-missing-portrait"),
+      )
 
-    // Gone from the DOM entirely, replaced by the letter — not left
-    // in place with a broken-image glyph in it.
-    await expect(broken).toBeUndefined()
-  })
+      // Gone from the DOM entirely, replaced by the letter — not left
+      // in place with a broken-image glyph in it.
+      await expect(broken).toBeUndefined()
+    },
+    { timeout: 5000 },
+  )
 
   const bailey = expectAgentDrivable(canvas, {
     name: "Bailey 860 points",
@@ -396,4 +402,62 @@ test("a portrait is the same box as an action tile", async () => {
   await expect(
     Number.parseFloat(style.paddingTop),
   ).toBeGreaterThan(0)
+})
+
+test("a bounded set keeps three portraits beside each other without an empty fourth track", async () => {
+  const { BoundedSet } = composeStories(stories)
+  const { canvasElement } = await mountStory(BoundedSet)
+  const buttons = [
+    ...canvasElement.querySelectorAll("button"),
+  ]
+  await waitFor(() => expect(buttons).toHaveLength(3))
+  const rectangles = buttons.map((button) =>
+    button.getBoundingClientRect(),
+  )
+  await expect(rectangles[0]?.top).toBe(rectangles[2]?.top)
+  await expect(rectangles[0]?.width).toBeGreaterThan(240)
+})
+
+test("a wrapping bounded set centers its final row and responds to container resizing", async () => {
+  const { CenteredLastRow } = composeStories(stories)
+  const { canvas, canvasElement } =
+    await mountStory(CenteredLastRow)
+  const group = expectAgentDrivable(canvas, {
+    name: "People",
+    role: "group",
+  })
+  const tiles = Array.from(group.querySelectorAll("button"))
+  const wrapper = group.parentElement?.parentElement
+  if (!wrapper) throw new Error("Missing story wrapper")
+  for (const width of [780, 540, 1100, 200, 780]) {
+    wrapper.style.width = `${width}px`
+    await waitFor(() => {
+      const bounds = group.getBoundingClientRect()
+      const rects = tiles.map((tile) =>
+        tile.getBoundingClientRect(),
+      )
+      const lastTop = rects.at(-1)?.top
+      const last = rects.filter(
+        (rect) => rect.top === lastTop,
+      )
+      expect(
+        Math.abs(
+          ((last[0]?.left ?? 0) +
+            (last.at(-1)?.right ?? 0)) /
+            2 -
+            (bounds.left + bounds.right) / 2,
+        ),
+      ).toBeLessThan(1)
+      expect(
+        Math.abs(
+          (rects[0]?.width ?? 0) -
+            (rects.at(-1)?.width ?? 0),
+        ),
+      ).toBeLessThan(1)
+      expect(group.scrollWidth).toBeLessThanOrEqual(
+        group.clientWidth,
+      )
+    })
+  }
+  await expectNoAxeViolations(canvasElement)
 })

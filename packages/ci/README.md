@@ -9,6 +9,9 @@ Two things live here:
    same template in every repo.
 2. `configs/ruff.toml` and `configs/clang-format.yml` — the fleet's shared Python and C++
    configuration, read by `shared-native-lint.yml`.
+3. `src/vrt/` — the visual-regression tools `shared-vrt.yml` runs: a Storybook capture, the
+   reg-suit config writer, and the status reporter. See
+   [Visual regression](#visual-regression--shared-vrtyml) below.
 
 ## Why the Python and C++ configs are HERE and not in their own packages
 
@@ -18,7 +21,7 @@ works because the consumer is a Node project with a `package.json`.
 
 **Python and C++ have no such path.** `castkit`'s `device-client/` is plain Python on a
 Raspberry Pi with no `package.json` anywhere near it, and its ESPHome components are C++
-compiled by `esphome`. Neither can `yarn add` anything. A config for them has to arrive by
+compiled by `esphome`. Neither can `pnpm add` anything. A config for them has to arrive by
 **checkout**, which is exactly how `docsLint.js` already arrives — so `ci` is the package
 that already solves this problem, and a second unpublished package would only add a name.
 
@@ -163,3 +166,159 @@ exists so that the next component lands formatted instead of being reformatted l
 Neither tool enforces the `is`/`has` boolean prefix. ESLint does it on the JavaScript side
 through `@typescript-eslint/naming-convention`; ruff has no equivalent rule and clang-format
 only formats. The rule still binds — it is just not machine-checked in these two languages.
+
+## Visual regression — `shared-vrt.yml`
+
+Every owned app's visual regression runs through one reusable workflow
+([decision](../../docs/decisions/2026-09-25-shared-visual-regression-lives-in-charcuterie-and-is-imported-by-tag.md)).
+The repo produces PNG shots into ONE directory, `$VRT_ACTUAL_DIR` (default `.vrt-actual`);
+reg-suit compares it against the baseline in the repo's own bucket, publishes the report,
+and the verdict comes back as a commit status plus one pull-request comment.
+
+```yaml
+# GitHub
+vrt:
+  needs: [changes]
+  if: needs.changes.outputs.isDocsOnly != 'true'
+  permissions: { contents: read, statuses: write, pull-requests: write }
+  uses: Sawtaytoes/charcuterie/.github/workflows/shared-vrt.yml@workflows-v1
+  with:
+    buildCommand: pnpm build-storybook
+    storybookStaticDirs: storybook-static
+  secrets: inherit
+
+# Forgejo — the mirror twice, and the runner label is plain `vrt`
+vrt:
+  needs: [changes]
+  if: needs.changes.outputs.isDocsOnly != 'true'
+  uses: sawtaytoes/charcuterie/.github/workflows/shared-vrt.yml@workflows-v1
+  with:
+    charcuterieRepository: sawtaytoes/charcuterie
+    runsOn: '["vrt"]'
+    buildCommand: pnpm build-storybook
+    storybookStaticDirs: storybook-static
+  secrets: inherit
+```
+
+### Inputs
+
+| Input | Default | Is |
+| --- | --- | --- |
+| `runsOn` | `'["self-hosted","vrt"]'` | JSON list of runner labels. Forgejo: `'["vrt"]'`. |
+| `setupCommand` | `auto` | Detects pnpm, Yarn or npm from the repo manifest/lockfile and installs frozen dependencies. A caller may override the command. |
+| `buildCommand` | — | Builds what the capture needs, e.g. the Storybook(s). |
+| `storybookStaticDirs` | — | Built Storybooks, one per line, `prefix=path`. The prefix is a subfolder of the shots. One Storybook may be a bare `path`, which writes at the top level. |
+| `storybookSchemeGlobal` | — | The Storybook global selecting a color scheme (Charcuterie: `scheme`). Empty shoots one pass with no suffix. |
+| `storybookSchemes` | — | Values of that global, e.g. `dark,light`. |
+| `storybookSchemeAttribute` | — | An `<html>` attribute the preview sets once the scheme lands (Charcuterie: `data-scheme`); waited for. |
+| `storybookViewport` | `1280x800` | Page size. |
+| `storybookConcurrency` | `4` | Parallel pages. |
+| `storybookInclude` / `storybookExclude` | — | Story-id substrings or `*` globs. |
+| `captureCommand` | — | The repo's own capture. Gets `VRT_ACTUAL_DIR` (absolute) and writes PNGs there. |
+| `actualDir` | `.vrt-actual` | Where the shots go, relative to the repo root. |
+| `thresholdRate` | `0.02` | Share of a shot's pixels, 0 to 1, that may differ before it counts as changed. The default absorbs browser rendering jitter. A capture that is byte-identical from run to run should pass `0`: one theme color changed in a game menu moved 0.1% and 0.4% of the pixels of two shots, and both passed at `0.02`. |
+| `statusContext` | `vrt` | Commit-status context of the verdict. |
+| `timeoutMinutes` | `60` | Job timeout. |
+| `charcuterieRepository` | `Sawtaytoes/charcuterie` | Where the tools come from. **A Forgejo caller sets `sawtaytoes/charcuterie`.** |
+| `charcuterieRef` | `workflows-v1` | Keep it equal to the ref in `uses:`. |
+
+Secrets, passed with `secrets: inherit`: `GARAGE_S3_ACCESS_KEY`, `GARAGE_S3_SECRET_KEY`,
+`VRT_S3_BUCKET`, `VRT_S3_ENDPOINT`, `VRT_S3_REGION`, `VRT_S3_PUBLIC_URL`,
+`VRT_REPORT_BASE_URL`, and the optional `VRT_STATUS_TOKEN`. The automatic job token already
+posts the status and the comment on GitHub and on Forgejo 16, so `VRT_STATUS_TOKEN` is only
+an override.
+
+A repo commits **no** `.regconfig.json` and installs **none** of the VRT tools. It should
+ignore `.vrt-actual`, `.reg` and `.regconfig.json`.
+
+### Shot names
+
+`<story id>__<scheme>.png`, or `<story id>.png` with no scheme global, inside `<prefix>/`
+when the Storybook has one. With no prefix this is byte-for-byte the naming of
+`packages/docs/scripts/vrtCapture.mjs`. A `captureCommand` chooses its own names; keep them
+stable, since a renamed file is a deleted shot plus a new one.
+
+### Running it locally
+
+Newer revisions of a pull request cancel superseded shared VRT runs. Main and
+manual runs remain independent; keep each caller's main-baseline serialization
+policy. Caller concurrency groups must use a different prefix from
+`charcuterie-shared-vrt-` so the called workflow cannot cancel its parent.
+
+From the consumer repo, with a checkout of Charcuterie at `$CHARCUTERIE`:
+
+```sh
+pnpm --dir "$CHARCUTERIE/packages/ci/src/vrt" install --frozen-lockfile --store-dir "$HOME/.cache/pnpm/store"
+pnpm build-storybook
+node "$CHARCUTERIE/packages/ci/src/vrt/storybookCapture.js" storybook-static --clean
+ls .vrt-actual
+```
+
+The capture needs the Chromium revision of its pinned Playwright. When
+`PLAYWRIGHT_BROWSERS_PATH` does not hold it, install it somewhere you own:
+`PLAYWRIGHT_BROWSERS_PATH=/tmp/pw-browsers-<repo> node "$CHARCUTERIE/packages/ci/src/vrt/node_modules/playwright/cli.js" install chromium`.
+
+### Published baseline selection
+
+Before installing, building or capturing the caller, the shared workflow checks
+the authenticated snapshot store. Charcuterie's native VRT job uses the same
+selector after installing its existing docs dependencies and before building or
+capturing Storybook; it needs no second standalone tools install. The pinned Git
+plugin still selects the Git base and actual key. When a clone containing only
+default-branch refs gives the plugin no branch intersection, the selector uses the
+reviewed PR base, default-branch push predecessor, or default-branch parent. A
+nonnull original base on the default branch’s first-parent history is preserved,
+including an older release base. After a normal merge, the plugin can instead
+select the merged feature parent. That original key must first be an ancestor of
+both the default branch and the actual commit; otherwise preflight fails. For
+that merged side-branch key only, selection derives a reviewed predecessor from
+the event or Git history and revalidates its first-parent membership and ancestry.
+The feature snapshot itself is never eligible.
+If that base has no complete published snapshot (for example,
+after a documentation-only merge), the selector walks its first-parent ancestors
+and uses the nearest complete one. Every candidate must lie on the default
+branch's first-parent history; snapshots from other feature branches are never
+eligible. The current snapshot key is unchanged, including PR merge checkouts.
+
+"Default branch" above means the **reviewed branch**: the branch the change
+lands on. That is the pull request's base branch, then the branch a push
+updated, and only otherwise the repository's default branch. A repository whose
+pull requests target a long-lived branch other than its default keeps its
+baselines on that branch: an engine fork that opens every pull request against
+one of two integration branches, with a default branch that is a stale ancestor
+of both, had every one of its bases rejected by a default-only check. A caller that
+runs on pushes to every branch (image-viewer) gets that branch's own first-parent
+history on a push; its pull request checks still use the base branch.
+
+⚠️ The selector reads the whole first-parent history, 41 bytes a commit. Its
+`git` calls carry a 1 GiB output buffer, because Node's 1 MiB default ends near
+25,600 commits and a long-lived engine fork has over 31,000 (`spawnSync git ENOBUFS`).
+
+A snapshot needs `index.html`, valid `out.json`, and the exact set of actual PNGs
+named by the report. A paginated prefix listing checks the inventory without a
+request per image. HTML alone is insufficient because the publisher uploads in
+parallel chunks. Missing objects or incomplete inventories allow trying an older
+eligible ancestor; invalid metadata, authentication errors and network failures
+stop the job before capture. The preflight supplies a local key-generator bridge
+to the unchanged reg-suit CLI; errors cannot be converted into an empty baseline.
+
+A genuinely empty per-repository bucket explicitly enters initial-baseline mode,
+matching the existing first-run policy. A nonempty bucket with no complete reviewed
+ancestor fails with bootstrap guidance, even if it contains a first PR's snapshot.
+For a new repository, publish its initial default-branch baseline into an empty
+dedicated bucket before opening the first visual PR. Feature snapshots do not
+become accepted baselines automatically. Existing repositories need no new inputs.
+
+### Traps
+
+- ⚠️ **The fork guard reads the event payload.** Inside a called workflow Forgejo reports
+  `github.event_name` as `workflow_call`, so a guard on `pull_request` never fires there.
+  Every GitHub repo in the fleet is public and this runner is on the LAN.
+- ⚠️ **The inner job is `visualRegression`**, never `vrt` or `lint`: Forgejo posts the inner
+  job name as a context too.
+- ⚠️ **An empty shots directory fails the job.** reg-suit would report every baseline as
+  deleted and stay green.
+- The tools are moved to `$RUNNER_TEMP` before the repo's own commands run, so a test
+  runner's default glob never finds Charcuterie's tests.
+- reg-suit resolves its plugins from the repo root; the compare step points `NODE_PATH` at
+  the tools' `node_modules` so it finds them there.

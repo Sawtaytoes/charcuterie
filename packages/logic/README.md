@@ -171,8 +171,8 @@ The seam has exactly three members — `get`, `set`, `subscribe` — and the def
 ## Testing
 
 ```bash
-yarn vitest run --project logic       # cores, node
-yarn vitest run --project logic-dom   # React + Preact bindings, chromium
+pnpm vitest run --project logic       # cores, node
+pnpm vitest run --project logic-dom   # React + Preact bindings, chromium
 ```
 
 `src/conformance/` holds **one** model-based suite that runs against five adapters: the
@@ -202,8 +202,8 @@ Mutation-checked, because a green suite that cannot fail proves nothing:
 > repo's build somewhere writable rather than changing the repo:
 >
 > ```bash
-> PLAYWRIGHT_BROWSERS_PATH=/tmp/pw-browsers yarn playwright install chromium-headless-shell
-> PLAYWRIGHT_BROWSERS_PATH=/tmp/pw-browsers yarn vitest run --project logic-dom
+> PLAYWRIGHT_BROWSERS_PATH=/tmp/pw-browsers pnpm playwright install chromium-headless-shell
+> PLAYWRIGHT_BROWSERS_PATH=/tmp/pw-browsers pnpm vitest run --project logic-dom
 > ```
 >
 > `/tmp`, not `$HOME/.cache/ms-playwright` — M2 recommended that path and it was wrong even
@@ -222,3 +222,27 @@ logic. Those arrive in M4 on `@floating-ui/react`, which is *controlled by const
 you pass state in, it never stores it — so `VisibilityGroup` stays the sole owner. Radix,
 Base UI, and Ark UI all own `open` themselves, which is the conflict this package exists to
 avoid.
+
+## Priority layouts
+
+`selectPriorityLayout` from `@charcuterie/logic/core` compares measured layout
+candidates. Each section declares a numeric `priority`, allocated `width` and
+`height`, optional minimum dimensions, and an optional media `aspectRatio`.
+Required content fits first; useful area is then maximized in descending
+priority order. `idealArea` caps a section once it has enough space. Candidate
+order breaks ties. The function is framework independent; apps own their
+measurements, content, and rendering.
+
+Optional sections declare a separate numeric `visibilityPriority` and a candidate
+may mark them `isHidden`. Visible content must fit its minimum dimensions first.
+Among fitting candidates, higher visibility priorities survive before lower ones;
+focus `priority` then spends the remaining space. Hidden optional sections consume
+no minimum dimensions and contribute no useful area. Omit `visibilityPriority`
+for required sections such as controls. Apps enumerate measured visibility states;
+the selector never changes the candidate or silently clips content.
+
+## Charts
+
+`@charcuterie/logic/charts` exposes the shared TanStack chart definition and standalone SVG renderer. `/charts/react` and `/charts/preact` expose `ChartPlot` for native framework surfaces, with common `ChartOptions`, hover/touch/keyboard interaction, and optional reduced-motion-aware transitions. TanStack is pinned to 0.18.0 while alpha. Importing the core or existing bindings does not load this engine.
+
+The existing `renderChartSvg` in `/core` remains the portable fallback for constrained clients. Both engines accept grouped bars, signed stacks (`barLayout: "stacked"`), lines, and null samples. Null is unavailable, never zero. Apps supply series and labels; no engine performs requests or calculates report data.

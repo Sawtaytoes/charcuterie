@@ -1,0 +1,25 @@
+{
+  "$schema": "https://turborepo.dev/schema.json",
+  "globalDependencies": [
+    "tsconfig.base.json",
+    "pnpm-workspace.yaml",
+    "patches/**",
+    "scripts/build.mjs"
+  ],
+  "globalEnv": [
+    "CHARCUTERIE_BUILD_RUNTIME",
+    "NODE_ENV",
+    "CI"
+  ],
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", "*.tsbuildinfo"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "!dist/**",
+        "!*.tsbuildinfo"
+      ]
+    }
+  }
+}

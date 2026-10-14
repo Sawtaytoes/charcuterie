@@ -1,6 +1,6 @@
 import { composeStories } from "@storybook/react"
 import { expect, userEvent, waitFor } from "storybook/test"
-import { test } from "vitest"
+import { inject, test } from "vitest"
 
 import { expectNoAxeViolations } from "../expectNoAxeViolations.testHelpers.ts"
 import { mountStory } from "../mountStory.testHelpers.ts"
@@ -11,6 +11,7 @@ import {
 import * as stories from "./Dialog.stories.tsx"
 
 const {
+  PickerDraft,
   AllStates,
   AllVariants,
   Playground,
@@ -68,7 +69,9 @@ test("the dialog is reachable from a body-scoped query", async () => {
   await expectNoAxeViolations(dialog)
 })
 
-test("size is a real width, not a class that happens to be there", async () => {
+const isNarrow = inject("viewport") === "narrow"
+
+const openLargeDialog = async () => {
   const { body, canvas } = await mountStory(AllVariants)
 
   await userEvent.click(
@@ -78,15 +81,43 @@ test("size is a real width, not a class that happens to be there", async () => {
     }),
   )
 
-  const dialog = expectAgentDrivable(body, {
+  return expectAgentDrivable(body, {
     name: "Read error — lg",
     role: "dialog",
   })
+}
 
-  await expect(
-    dialog.getBoundingClientRect().width,
-  ).toBeGreaterThan(400)
-})
+test.skipIf(isNarrow)(
+  "size is a real width, not a class that happens to be there",
+  async () => {
+    const dialog = await openLargeDialog()
+
+    await expect(
+      dialog.getBoundingClientRect().width,
+    ).toBeGreaterThan(400)
+  },
+)
+
+/*
+ * On the phone every size is `w-full` against a 384px window, so `lg`
+ * is no wider than `sm` and the test above has nothing to measure.
+ * What the Narrow View owes instead is that the largest dialog still
+ * fits: a dialog wider than the window is one whose close button is
+ * off the screen.
+ */
+test.runIf(isNarrow)(
+  "a large dialog still fits inside a phone's window",
+  async () => {
+    const { left, right } = (
+      await openLargeDialog()
+    ).getBoundingClientRect()
+
+    await expect(left).toBeGreaterThanOrEqual(0)
+    await expect(right).toBeLessThanOrEqual(
+      window.innerWidth,
+    )
+  },
+)
 
 test("a non-dismissable dialog ignores Escape rather than closing", async () => {
   const { body, canvas } = await mountStory(AllStates)
@@ -367,4 +398,62 @@ test("initialFocus puts the caret in the field, not on Close", async () => {
   await userEvent.keyboard("Sharpen the chisels")
 
   await expect(field).toHaveValue("Sharpen the chisels")
+})
+
+test("a picker cancels its selection without closing the enclosing draft", async () => {
+  const { body } = await mountStory(PickerDraft)
+  const input = expectAgentDrivable(body, {
+    role: "textbox",
+    name: "Draft name",
+  })
+  await userEvent.clear(input)
+  await userEvent.type(input, "An unsaved change")
+  const trigger = body.getByRole("button", {
+    name: "Draft parent: No parent",
+  })
+  await userEvent.click(trigger)
+  const option = body.getByRole("option", {
+    name: "No parent",
+  })
+  await expect(option).toHaveFocus()
+  await userEvent.keyboard("{Escape}")
+  await expect(
+    body.getByRole("dialog", { name: "Edit a draft" }),
+  ).toBeVisible()
+  await expect(input).toHaveValue("An unsaved change")
+  await expect(trigger).toHaveFocus()
+  await expect(
+    body.queryByRole("listbox"),
+  ).not.toBeInTheDocument()
+  // A press elsewhere in the draft also dismisses only the picker.
+  await userEvent.click(trigger)
+  await expect(
+    body.getByRole("option", { name: "No parent" }),
+  ).toHaveFocus()
+  await userEvent.click(input)
+  await expect(
+    body.queryByRole("listbox"),
+  ).not.toBeInTheDocument()
+  await expect(
+    body.getByRole("dialog", { name: "Edit a draft" }),
+  ).toBeVisible()
+  await expect(input).toHaveValue("An unsaved change")
+  await userEvent.click(trigger)
+  await userEvent.click(
+    body.getByRole("option", { name: "Another draft" }),
+  )
+  await expect(
+    body.getByRole("dialog", { name: "Edit a draft" }),
+  ).toBeVisible()
+  await expect(
+    body.getByRole("button", {
+      name: "Draft parent: Another draft",
+    }),
+  ).toHaveFocus()
+  await userEvent.keyboard("{Escape}")
+  await waitFor(() =>
+    expect(
+      body.queryByRole("dialog", { name: "Edit a draft" }),
+    ).not.toBeInTheDocument(),
+  )
 })

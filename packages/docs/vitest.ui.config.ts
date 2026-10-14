@@ -1,4 +1,8 @@
 import { join } from "node:path"
+import {
+  createCiTimeouts,
+  createViewportInstances,
+} from "@charcuterie/vitest-config"
 
 import tailwindcss from "@tailwindcss/vite"
 import react from "@vitejs/plugin-react"
@@ -21,6 +25,8 @@ import { defineConfig } from "vitest/config"
  * *files* still sit beside their components.
  */
 export default defineConfig({
+  // Linked pnpm workspaces must share the renderer's React instance.
+  resolve: { dedupe: ["react", "react-dom"] },
   // The one thing `storybookTest()` sets that has no other way in.
   //
   // `@storybook/addon-a11y`'s `afterEach` always *runs* axe and
@@ -53,6 +59,9 @@ export default defineConfig({
     ],
   },
   test: {
+    // Four windows on a shared runner is four times the load; the
+    // factory's CI budget, which a hand-rolled config does not get.
+    ...createCiTimeouts(),
     name: "ui-dom",
     include: [
       join(import.meta.dirname, "../ui/src/**/*.test.tsx"),
@@ -64,7 +73,9 @@ export default defineConfig({
       enabled: true,
       provider: playwright(),
       headless: true,
-      instances: [{ browser: "chromium" }],
+      instances: createViewportInstances({
+        project: "ui-dom",
+      }),
       screenshotFailures: false,
     },
   },
