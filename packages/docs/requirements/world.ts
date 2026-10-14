@@ -6,9 +6,13 @@ import {
 } from "storybook/test"
 
 import { mountStory } from "../../ui/src/mountStory.testHelpers.ts"
+import {
+  type AgentTarget,
+  expectAgentDrivable,
+} from "../../ui/src/testing/index.ts"
 
 type Canvas = ReturnType<typeof within>
-type Role = Parameters<Canvas["getByRole"]>[0]
+type Role = AgentTarget["role"]
 type Story = Parameters<typeof mountStory>[0]
 
 /** One fresh World per scenario. App-specific fixtures belong in step files. */
@@ -53,14 +57,28 @@ export class RequirementsWorld extends QuickPickleWorld {
   }
 
   async tabTo(role: Role, name: string) {
-    await userEvent.tab()
+    await this.press("Tab")
     await expect(this.byRole(role, name)).toHaveFocus()
   }
 
   async press(key: string) {
+    if (key === "Tab") {
+      await userEvent.tab()
+
+      return
+    }
+
     await userEvent.keyboard(
       key === "Space" ? " " : `{${key}}`,
     )
+  }
+
+  expectAccessible(role: Role, name: string | RegExp) {
+    return expectAgentDrivable(this.scope(), { role, name })
+  }
+
+  async expectUnfocused(role: Role, name: string) {
+    await expect(this.byRole(role, name)).not.toHaveFocus()
   }
 
   async expectVisible(

@@ -7,7 +7,9 @@ import {
 } from "quickpickle"
 
 import buttonMeta, {
+  AllStates,
   Loading,
+  Playground,
 } from "../../ui/src/Button/Button.stories.tsx"
 import { RequirementsWorld } from "./world.ts"
 
@@ -22,8 +24,9 @@ Given("the Button playground is open", async (state) => {
   await world.open(
     composeStory(
       {
+        ...Playground,
         args: {
-          children: "Start rip",
+          ...Playground.args,
           onClick: () => {
             world.actionCount += 1
           },
@@ -40,8 +43,9 @@ Given("a disabled Button is open", async (state) => {
   await world.open(
     composeStory(
       {
+        ...Playground,
         args: {
-          children: "Start rip",
+          ...Playground.args,
           isDisabled: true,
           onClick: () => {
             world.actionCount += 1
@@ -56,6 +60,12 @@ Given("a disabled Button is open", async (state) => {
 Given("the loading Button is open", async (state) => {
   await asWorld(state).open(
     composeStory(Loading, buttonMeta),
+  )
+})
+
+Given("the Button states board is open", async (state) => {
+  await asWorld(state).open(
+    composeStory(AllStates, buttonMeta),
   )
 })
 
@@ -80,6 +90,24 @@ When("I press Enter", async (state) => {
 When("I press Space", async (state) => {
   await asWorld(state).press("Space")
 })
+
+When("I press Tab", async (state) => {
+  await asWorld(state).press("Tab")
+})
+
+Then(
+  "the button named {string} is accessible by role and name",
+  (state, name: string) => {
+    asWorld(state).expectAccessible("button", name)
+  },
+)
+
+Then(
+  "the button named {string} does not have focus",
+  async (state, name: string) => {
+    await asWorld(state).expectUnfocused("button", name)
+  },
+)
 
 Then(
   "the button named {string} has been activated {int} time(s)",

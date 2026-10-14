@@ -5,10 +5,32 @@ file states the behavior a person needs. QuickPickle turns each scenario into a 
 Vitest runs it in Chromium through the same Playwright provider as the component DOM suite.
 The feature file is the review surface; the step code and world connect its words to the UI.
 
-The pilot is [`button.feature`](../packages/docs/requirements/button.feature). It covers
-keyboard activation, the disabled state, and the busy announcement. It mounts composed
-Storybook stories, so the requirement checks the component a reader can inspect in
-Storybook. Existing component tests remain useful for narrower cases.
+The first complete conversion is
+[`button.feature`](../packages/docs/requirements/button.feature). It replaces all five
+tests from `packages/ui/src/Button/Button.test.tsx` and adds an enabled mouse-click case.
+All six scenarios mount composed Storybook stories, so each requirement checks the
+component a reader can inspect in Storybook. Each scenario runs at all four standard
+window sizes: 24 browser cases in total.
+
+## Button coverage
+
+| Requirement | Scenario | Assertions retained or added |
+| --- | --- | --- |
+| `@REQ-UI-004` | A button can be identified by its role and name | The full `expectAgentDrivable` check: unique role/name match, accessible subtree, no descendant test IDs, and keyboard reachability. |
+| `@REQ-UI-001` | A keyboard user activates a button | The same accessibility check; Tab focuses it; focus alone starts no action; Enter calls the action once and Space calls it again. |
+| `@REQ-UI-002` | A disabled button ignores clicks and is skipped by Tab | A click starts no action; the control is natively disabled; Tab does not focus it. |
+| `@REQ-UI-003` | A busy button announces its state | The same accessibility check; the control is disabled and has `aria-busy="true"`; the status region is present and visible. |
+| `@REQ-UI-005` | The states board includes a busy button | The `AllStates` story's loading button has `aria-busy="true"`. |
+| `@REQ-UI-006` | A mouse user activates a button | An enabled button starts its action exactly once after a click. New coverage. |
+
+The first pilot's three scenarios omitted the full accessibility helper, disabled Tab
+behavior, and the states board assertion. Conversion restores those assertions before
+removing the old test file. Steps and the World still use TypeScript; QuickPickle supplies
+the Vitest test cases from Gherkin instead of a duplicate `test(...)` suite.
+
+Shared source/style rules, contrast checks, Storybook accessibility audits, and visual
+regression tests continue to cover Button through their existing suites. This conversion
+changes the direct Button behavior suite. Other components migrate separately.
 
 ## Change a requirement
 
