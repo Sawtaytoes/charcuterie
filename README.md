@@ -60,6 +60,7 @@ pnpm storybook
 
 - [Component and package guide](packages/docs/src/BuildingAnApp.mdx)
 - [Storybook maintenance](docs/how-we-do-storybook.md)
+- [Gherkin requirements](docs/gherkin-requirements.md)
 - [Package publishing](docs/npm-publishing.md)
 - [Decision records](docs/decisions/README.md)
 
