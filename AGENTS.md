@@ -165,6 +165,14 @@ pull request is what ships the library**; a merged feature pull request publishe
 
 ## Where a component's files live
 
+**Button's behavior suite is Gherkin.** Its six scenarios live in
+`packages/docs/requirements/button.feature`, with bindings in `steps.ts` and shared
+helpers in `world.ts`. Do not recreate `Button.test.tsx`: all five former tests were
+converted, with their complete assertions, plus a mouse-click case. The `requirements-*`
+Vitest projects run these scenarios in all four standard windows. This is the scoped
+exception to the `.test.tsx` convention below
+([decision](docs/decisions/2026-10-14-button-behavior-tests-are-gherkin-scenarios.md)).
+
 `packages/ui/src/<Name>/` holds `<Name>.tsx`, `<Name>.stories.tsx`, `<Name>.mdx`,
 `<Name>.test.tsx` as siblings — matching mux-magic. Shared helpers sit at `src/` root with a
 `.storyHelpers.tsx` / `.testHelpers.ts` suffix so they are never mistaken for a component.

@@ -284,6 +284,11 @@ rename breaks only the rendered page).
 
 ## Adding a component
 
+Button is the first complete Gherkin conversion. Its behavior suite is
+[`button.feature`](../docs/requirements/button.feature), with the original assertions
+mapped in the [requirements guide](../../docs/gherkin-requirements.md#button-coverage).
+The sibling `.test.tsx` convention below still applies to components that have not migrated.
+
 1. `src/<Name>/<Name>.tsx`, `.stories.tsx`, `.mdx`, `.test.tsx` — siblings, matching
    mux-magic. The story shows it; the test drives it. Neither does the other's job.
    **The story's `title` is `Components/<Group>/<Name>`**, and the group is one of
