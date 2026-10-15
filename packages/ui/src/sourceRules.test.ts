@@ -623,7 +623,10 @@ test("the barrel is the only place components are re-exported", async () => {
   // TableViewport owns readable comparisons and full-window expansion.
   // MetricCard shares prominent values and category-coloured icons through Card.
   // ComparisonChart and TableColumns share compact comparisons and column controls.
-  expect(componentNames.length).toBe(77)
+  // GroupedList owns rows under group headings; castkit, tally-marks
+  // and whereabouts each drew it by hand. `GroupedListRow.tsx` is its
+  // member and stays out of this count by the `<Name>/<Name>.tsx` rule.
+  expect(componentNames.length).toBe(78)
 
   for (const name of componentNames) {
     expect(barrel).toContain(`export { ${name} }`)
