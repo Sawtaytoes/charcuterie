@@ -85,6 +85,14 @@ the drag is the enhancement, per WCAG 2.5.7 — a host that draws no handle is s
 renders no row, no handle and no buttons: `renderItem` receives `moveBy` and `gripProps`,
 which is what lets one component serve three CSS grids that have nothing in common.
 
+**`GroupedList` is rows under group headings, always open.** castkit's page picker, tally-marks'
+card list and whereabouts' nested holdings each drew it by hand: a heading, then rows of a
+label, a muted line, some badges and a button. Data-driven — `groups` of `items` with `label`,
+`description`, `badges`, `content` and `actions` — and the app keeps the grouping, the search
+and the filters. The heading labels the `<ul>`, not a `<section>`, because one named section
+per group is a dozen landmarks on one screen. An empty group is skipped, and `emptyState`
+draws when every group is empty. A group you can close is `Accordion`.
+
 **`BadgeButton` is a `Badge` you can press**, and it came from a consumer rather than from a
 plan: QueuePilot has six pill-shaped controls — per-entry setting tags, an Edit chip, two
 start-point chips, a group chip, a pool's Exclude chip — that were hand-rolled

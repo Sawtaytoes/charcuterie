@@ -235,6 +235,14 @@ export type { FieldGroupProps } from "./Field/FieldGroup.tsx"
 export { FieldGroup } from "./Field/FieldGroup.tsx"
 export type { FileDropZoneProps } from "./FileDropZone/FileDropZone.tsx"
 export { FileDropZone } from "./FileDropZone/FileDropZone.tsx"
+export type {
+  GroupedListGroup,
+  GroupedListHeadingLevel,
+  GroupedListItem,
+  GroupedListProps,
+  GroupedListSize,
+} from "./GroupedList/GroupedList.tsx"
+export { GroupedList } from "./GroupedList/GroupedList.tsx"
 export type { HeaderProps } from "./Header/Header.tsx"
 export { Header } from "./Header/Header.tsx"
 export type { IconButtonProps } from "./IconButton/IconButton.tsx"

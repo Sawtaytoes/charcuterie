@@ -1,0 +1,67 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as GroupedListStories from "./GroupedList.stories";
+
+<Meta of={GroupedListStories} />
+
+# GroupedList
+
+An always-open list whose rows sit under group headings. Each row is a label, an optional
+muted description, optional badges, optional richer content, and optional trailing actions.
+
+Three apps drew this shape by hand: castkit's page picker (pages under the screen that shows
+them), tally-marks' cards (cards under the team that earns them) and whereabouts' nested
+holdings (things under the place that holds them). The library owns the **shape**. The app
+owns the **data**: the grouping, the search and the filters stay in the app, and a
+`SearchInput` above the list is still the way to narrow it.
+
+<Canvas of={GroupedListStories.Playground} />
+
+## Props
+
+<Controls />
+
+## A group is a named list, not a landmark
+
+The group heading labels the `<ul>` through `aria-labelledby`. A screen reader announces
+"Screens, list, 3 items", and `getByRole("list", { name: "Screens" })` finds the group.
+
+There is no `<section>`. A named `<section>` is a `region` landmark, and one screen of pages
+is a dozen groups — the "landmark region proliferation" the APG warns about. `Accordion`'s
+panels are a `group` for the same reason.
+
+The heading level is `headingLevel`, `3` by default. A list under a page's `<h2>` needs `3`.
+
+## An empty group is not drawn
+
+A heading over nothing reads as a bug once a search narrows the list, so the component skips
+a group with no items. When **every** group is empty it draws `emptyState` — usually an
+`EmptyState` whose wording says why.
+
+<Canvas of={GroupedListStories.AllStates} />
+
+## Long text
+
+A long label or description clips to one line. The full text becomes a `title` tooltip only
+while it is clipped, measured the same way `Badge` measures. Pass `isTextTruncated={false}`
+to wrap it instead.
+
+<Canvas of={GroupedListStories.LongText} />
+
+## Narrow View
+
+The row is a wrapping flex line. The text column asks for 12rem and grows into the rest, so
+the actions sit at the inline end in a wide list and drop under the text in a narrow one.
+There is no container query and no media query: the content decides.
+
+<Canvas of={GroupedListStories.Responsive} />
+
+## Name a repeated action after its row
+
+Ten rows of "Open" are ten buttons an agent cannot tell apart. Give each one a name that
+includes its row — `aria-label="Open Lobby"`.
+
+## Not collapsible
+
+A group you can close is `Accordion`. `GroupedList` is for a list short enough to read whole
+and long enough to want headings.
