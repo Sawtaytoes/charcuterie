@@ -83,6 +83,28 @@ export const toCustomDomain = (value) =>
   value.replace(/^[a-z]+:\/\//i, "").replace(/\/+$/, "")
 
 /**
+ * The preflight selection as reg-suit plugin options, with a `null`
+ * `expectedKey` left OUT rather than written.
+ *
+ * reg-suit expands `$VAR` placeholders by walking every option with
+ * `typeof x === "object"` and then `Object.keys(x)`, so a `null` anywhere
+ * in the config throws "Cannot convert undefined or null to object" before
+ * a single image is compared. A first run against an empty bucket is
+ * exactly the selection that carries `expectedKey: null`, so every new
+ * repository's first `vrt` job failed that way. `selectedKeygen.cjs` reads
+ * an absent key as `null`.
+ *
+ * @param {{ expectedKey: string | null } & Record<string, unknown>} selection
+ */
+export const toKeygenOptions = ({
+  expectedKey,
+  ...options
+}) =>
+  expectedKey === null
+    ? options
+    : { ...options, expectedKey }
+
+/**
  * @param {Record<string, string | undefined>} env
  */
 export const buildRegConfig = (env, selection) => {
@@ -131,7 +153,7 @@ export const buildRegConfig = (env, selection) => {
                 "./selectedKeygen.cjs",
                 import.meta.url,
               ),
-            )]: selection,
+            )]: toKeygenOptions(selection),
           }
         : { "reg-keygen-git-hash-plugin": {} }),
       "reg-publish-s3-plugin": {
