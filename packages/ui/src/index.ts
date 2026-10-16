@@ -130,6 +130,20 @@ export type {
 export { ColorSchemeToggle } from "./ColorSchemeToggle/ColorSchemeToggle.tsx"
 export type { ComboboxProps } from "./Combobox/Combobox.tsx"
 export { Combobox } from "./Combobox/Combobox.tsx"
+export type { CommandPaletteProps } from "./CommandPalette/CommandPalette.tsx"
+export { CommandPalette } from "./CommandPalette/CommandPalette.tsx"
+export type {
+  CommandPaletteGroup,
+  CommandPaletteItem,
+  CommandPalettePrefix,
+} from "./CommandPalette/commandPaletteSections.ts"
+export type {
+  UseCommandPaletteOptions,
+  UseCommandPaletteResult,
+} from "./CommandPalette/useCommandPalette.ts"
+export { useCommandPalette } from "./CommandPalette/useCommandPalette.ts"
+export type { CommandPaletteHotkeysOptions } from "./CommandPalette/useCommandPaletteHotkeys.ts"
+export { useCommandPaletteHotkeys } from "./CommandPalette/useCommandPaletteHotkeys.ts"
 export type { ComparisonChartProps } from "./ComparisonChart/ComparisonChart.tsx"
 export { ComparisonChart } from "./ComparisonChart/ComparisonChart.tsx"
 export type {
