@@ -1,5 +1,6 @@
 import { playgroundParameters } from "@charcuterie/storybook-config/story-parameters"
 import type { Meta, StoryObj } from "@storybook/react"
+import type { CSSProperties } from "react"
 
 import { Badge } from "../Badge/Badge.tsx"
 import { Button } from "../Button/Button.tsx"
@@ -11,6 +12,7 @@ import {
 import { EmptyState } from "../EmptyState/EmptyState.tsx"
 import type { GroupedListGroup } from "./GroupedList.tsx"
 import { GroupedList } from "./GroupedList.tsx"
+import { GROUPED_LIST_HEADING_SURFACE_PROPERTY } from "./groupedListStickyHeading.ts"
 
 /**
  * Fixture data only. A signage app's pages, grouped by the screen
@@ -219,6 +221,45 @@ const LONG_GROUPS: GroupedListGroup[] = [
     key: "atrium",
   },
 ]
+
+/**
+ * Fixture data only. Enough screens that the pane has to scroll, so
+ * a stuck heading has rows to sit over.
+ */
+const MANY_SCREEN_GROUPS: GroupedListGroup[] = [
+  "Lobby",
+  "Break Room",
+  "Loading Dock",
+].map((screen) => ({
+  heading: `On the ${screen} screen`,
+  items: ["Welcome", "Weather", "Schedule", "Menu"].map(
+    (view) => ({
+      actions: openButton(`${view} on ${screen}`),
+      description: `/views/${view.toLowerCase()}`,
+      key: view,
+      label: view,
+    }),
+  ),
+  key: screen,
+}))
+
+/**
+ * A fixed block size is what makes the pane scroll; the heading
+ * sticks to the pane, the nearest scrolling ancestor.
+ */
+const SCROLL_PANE_STYLE: CSSProperties = {
+  blockSize: "16rem",
+}
+
+/**
+ * The host says which surface the list sits on. The pane is raised,
+ * so the stuck heading is raised too.
+ */
+const RAISED_PANE_STYLE = {
+  ...SCROLL_PANE_STYLE,
+  [GROUPED_LIST_HEADING_SURFACE_PROPERTY]:
+    "var(--color-surface-raised)",
+} as CSSProperties
 
 /**
  * A cap rather than a width, so the long label clips in every window
@@ -434,6 +475,53 @@ export const Empty: Story = {
 export const NarrowView: Story = {
   args: { groups: CHORE_GROUPS, size: "sm" },
   globals: { viewport: { value: "mobile1" } },
+}
+
+/**
+ * `isHeadingSticky` pins each heading to the top of the scrolling
+ * pane while its rows scroll under it. On the left the pane is the
+ * page surface, which is the default heading background. On the
+ * right the pane is raised, and it sets
+ * `--charcuterie-grouped-list-heading-surface` to match.
+ */
+export const StickyHeadings: Story = {
+  render: () => (
+    <StoryGrid columns={2}>
+      <StoryCell
+        align="stretch"
+        label="default: surface-base"
+      >
+        <section
+          aria-label="Pages on a base surface"
+          className="overflow-y-auto rounded-lg border border-border-subtle bg-surface-base px-3"
+          style={SCROLL_PANE_STYLE}
+        >
+          <GroupedList
+            groups={MANY_SCREEN_GROUPS}
+            isHeadingSticky
+            size="sm"
+          />
+        </section>
+      </StoryCell>
+
+      <StoryCell
+        align="stretch"
+        label="host sets the surface: surface-raised"
+      >
+        <section
+          aria-label="Pages on a raised surface"
+          className="overflow-y-auto rounded-lg border border-border-subtle bg-surface-raised px-3"
+          style={RAISED_PANE_STYLE}
+        >
+          <GroupedList
+            groups={MANY_SCREEN_GROUPS}
+            isHeadingSticky
+            size="sm"
+          />
+        </section>
+      </StoryCell>
+    </StoryGrid>
+  ),
 }
 
 /**

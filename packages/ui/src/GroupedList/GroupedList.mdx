@@ -56,6 +56,34 @@ There is no container query and no media query: the content decides.
 
 <Canvas of={GroupedListStories.Responsive} />
 
+## Sticky headings
+
+`isHeadingSticky` pins each group's heading to the top of the nearest scrolling ancestor while
+that group's rows scroll under it, and the next group's heading pushes it away. Use it for a
+list inside a scrolling pane, where the heading is the only thing that says which screen or
+team a row belongs to once the row scrolls out of sight. It is off by default.
+
+A stuck heading needs an opaque background, or the rows show through it. The component cannot
+know which surface it sits on — a page is `surface-base`, a settings pane is
+`surface-raised` — so the host says so with a custom property:
+
+| Property | Default | Set it to |
+| --- | --- | --- |
+| `--charcuterie-grouped-list-heading-surface` | `var(--color-surface-base)` | The background of the pane the list sits on. |
+| `--charcuterie-grouped-list-heading-offset` | `0px` | The height of anything already stuck to the top of the same scroll container, such as a sticky `Header`. |
+
+Set either one on any ancestor of the list. The names are exported as
+`GROUPED_LIST_HEADING_SURFACE_PROPERTY` and `GROUPED_LIST_HEADING_OFFSET_PROPERTY` for a host
+that sets them through a `style` object.
+
+```css
+.settings-panel {
+  --charcuterie-grouped-list-heading-surface: var(--color-surface-raised);
+}
+```
+
+<Canvas of={GroupedListStories.StickyHeadings} />
+
 ## Name a repeated action after its row
 
 Ten rows of "Open" are ten buttons an agent cannot tell apart. Give each one a name that
