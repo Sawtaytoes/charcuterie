@@ -8,6 +8,8 @@ decision overrides an instinct.
 
 | Date | Decision | Summary |
 | --- | --- | --- |
+| 2026-10-16 | [A command palette matches word prefixes and initials, not subsequences](2026-10-16-a-command-palette-matches-word-prefixes.md) | Every typed word starts a word of the title, description or keywords; initials and camel-case steps count; four fixed tiers, then weight, then caller order; groups ordered by their best match. |
+| 2026-10-16 | [Command palette hotkeys are an opt-in hook, and the palette's open state is the caller's](2026-10-16-command-palette-hotkeys-are-an-opt-in-hook.md) | `isVisible`/`onClose` as on `Modal`, query controlled or uncontrolled as on `Combobox`; `useCommandPaletteHotkeys` registers the keys, and `useCommandPalette` assembles both. |
 | 2026-10-14 | [Button behavior tests are Gherkin scenarios](2026-10-14-button-behavior-tests-are-gherkin-scenarios.md) | Convert all five direct tests with their full assertions, add an enabled mouse-click case, and run six scenarios through QuickPickle in all four windows. |
 | 2026-10-09 | [Media workspaces can opt in to fill layout](2026-10-09-media-workspaces-can-opt-in-to-fill-layout.md) | An explicit width-first fill mode for regular and virtualized grids; default height-first behavior stays unchanged. |
 | 2026-10-06 | [pnpm and local Turbo build caching](2026-10-06-pnpm-and-local-turbo-build-caching.md) | Pinned pnpm replaces Yarn while retaining dependency versions and security patches; Turbo caches package builds locally, never test or visual verdicts. |
