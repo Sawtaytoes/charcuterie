@@ -3,6 +3,7 @@ import type { ReactNode } from "react"
 
 import { toClassName } from "../toClassName.ts"
 import { GroupedListRow } from "./GroupedListRow.tsx"
+import { STICKY_HEADING_CLASS } from "./groupedListStickyHeading.ts"
 
 export type GroupedListHeadingLevel = 2 | 3 | 4 | 5 | 6
 
@@ -66,6 +67,24 @@ export type GroupedListProps = {
    */
   headingLevel?: GroupedListHeadingLevel
   /**
+   * `true` pins each group's heading to the top of the nearest
+   * scrolling ancestor while that group's rows scroll under it, and
+   * the next group's heading pushes it away. For a list inside a
+   * scrolling pane, where the heading is the only thing that says
+   * which screen or team a row belongs to once it scrolls out of
+   * sight. `false` (the default) scrolls the heading with its rows.
+   *
+   * A stuck heading needs an opaque background or the rows show
+   * through it, and no one surface fits every host — a page is
+   * `surface-base`, a settings pane is `surface-raised`. So the
+   * background is read from `--charcuterie-grouped-list-heading-surface`,
+   * which falls back to `--color-surface-base`. Set it on any
+   * ancestor to match the surface the list sits on. Under a sticky
+   * page `Header`, set `--charcuterie-grouped-list-heading-offset`
+   * to the header's height so the headings stop below it.
+   */
+  isHeadingSticky?: boolean
+  /**
    * `true` (the default) clips a long label or description to one
    * line, with the full text as a tooltip while it is clipped.
    * `false` wraps it anywhere instead — for a list whose rows are
@@ -122,6 +141,13 @@ const HEADING_TAG: Record<
  * component does it, and when every group is empty it draws
  * `emptyState` instead.
  *
+ * ### A sticky heading is opt-in
+ *
+ * castkit's copy pinned its headings, and a pinned heading needs a
+ * background that matches whatever it sits on. The component cannot
+ * know that surface, so `isHeadingSticky` reads it from a custom
+ * property the host can set, falling back to `surface-base`.
+ *
  * ### Not collapsible
  *
  * A group you can close is `Accordion`. This is for a list that is
@@ -132,6 +158,7 @@ export const GroupedList = ({
   emptyState,
   groups,
   headingLevel = 3,
+  isHeadingSticky = false,
   isTextTruncated = true,
   size = "md",
 }: GroupedListProps): ReactNode => {
@@ -158,10 +185,18 @@ export const GroupedList = ({
 
             return (
               <div
-                className="flex flex-col gap-2"
+                className={toClassName(
+                  "flex flex-col",
+                  isHeadingSticky ? "gap-0" : "gap-2",
+                )}
                 key={group.key}
               >
-                <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
+                <div
+                  className={toClassName(
+                    "flex flex-wrap items-baseline gap-x-3 gap-y-0.5",
+                    isHeadingSticky && STICKY_HEADING_CLASS,
+                  )}
+                >
                   <Heading
                     className={toClassName(
                       "m-0 min-w-0 wrap-anywhere font-semibold text-content-primary",

@@ -243,6 +243,10 @@ export type {
   GroupedListSize,
 } from "./GroupedList/GroupedList.tsx"
 export { GroupedList } from "./GroupedList/GroupedList.tsx"
+export {
+  GROUPED_LIST_HEADING_OFFSET_PROPERTY,
+  GROUPED_LIST_HEADING_SURFACE_PROPERTY,
+} from "./GroupedList/groupedListStickyHeading.ts"
 export type { HeaderProps } from "./Header/Header.tsx"
 export { Header } from "./Header/Header.tsx"
 export type { IconButtonProps } from "./IconButton/IconButton.tsx"
