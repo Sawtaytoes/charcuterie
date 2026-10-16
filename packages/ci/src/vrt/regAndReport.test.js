@@ -1,4 +1,6 @@
+import { execFileSync } from "node:child_process"
 import { readFile } from "node:fs/promises"
+import { createRequire } from "node:module"
 
 import { describe, expect, it } from "vitest"
 
@@ -106,6 +108,67 @@ describe("buildRegConfig", () => {
     expect(toCustomDomain("reports.example.test")).toBe(
       "reports.example.test",
     )
+  })
+
+  it("leaves a first run's null expected key out of the config", () => {
+    // reg-suit expands `$VAR` placeholders by calling `Object.keys` on
+    // every object-typed option, and `typeof null` is "object" — so one
+    // null anywhere in the config throws before any image is compared.
+    // An empty bucket's first run is the selection that carries one.
+    const findNulls = (value, path = "config") =>
+      value === null
+        ? [path]
+        : typeof value === "object"
+          ? Object.entries(value).flatMap(([key, child]) =>
+              findNulls(child, `${path}.${key}`),
+            )
+          : []
+    const actualKey = "a".repeat(40)
+    const config = buildRegConfig(storeEnvironment, {
+      actualKey,
+      expectedKey: null,
+      isInitialBaseline: true,
+    })
+
+    expect(findNulls(config)).toEqual([])
+    expect(
+      Object.values(config.plugins).find(
+        (options) => options.actualKey === actualKey,
+      ),
+    ).toEqual({ actualKey, isInitialBaseline: true })
+  })
+
+  it("reads an absent expected key as a first run with no baseline", async () => {
+    const createKeygen = createRequire(import.meta.url)(
+      "./selectedKeygen.cjs",
+    )
+    const { keyGenerator } = createKeygen()
+    const head = execFileSync(
+      "git",
+      ["rev-parse", "HEAD"],
+      {
+        encoding: "utf8",
+      },
+    ).trim()
+
+    keyGenerator.init({
+      options: { actualKey: head, isInitialBaseline: true },
+    })
+
+    await expect(
+      keyGenerator.getExpectedKey(),
+    ).resolves.toBe(null)
+    await expect(keyGenerator.getActualKey()).resolves.toBe(
+      head,
+    )
+    expect(() =>
+      createKeygen().keyGenerator.init({
+        options: {
+          actualKey: head,
+          isInitialBaseline: false,
+        },
+      }),
+    ).toThrow("Invalid preflight snapshot keys")
   })
 
   it("names every missing secret at once", () => {
