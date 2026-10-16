@@ -1,4 +1,5 @@
 import { useUniqueId } from "@charcuterie/logic"
+import type { IntentName } from "@charcuterie/tokens"
 import type { ReactNode } from "react"
 
 import { toClassName } from "../toClassName.ts"
@@ -18,24 +19,86 @@ export type GroupedListItem = {
    * **Name a repeated action after its row.** Ten rows of "Open" are
    * ten buttons an agent cannot tell apart; `aria-label="Open Lobby"`
    * on each is one `getByRole` away.
+   *
+   * In a row with `onSelect` these stay their own targets: they sit
+   * above the whole-row button, so pressing one never selects the
+   * row.
    */
   actions?: ReactNode
+  /**
+   * A figure that belongs beside the text rather than under it — a
+   * payout, a total, a schedule. It sits between the text and the
+   * actions in a wide list and drops under the text in a narrow one,
+   * the same content-decided wrap the actions use: it asks for at
+   * least 11rem beside the text column's 12rem. Never interactive:
+   * in a row with `onSelect` the whole-row button sits over it.
+   */
+  aside?: ReactNode
   /** `Badge`s, drawn after the label and wrapping onto their own line when they run out of room. */
   badges?: ReactNode
   /**
    * Anything richer than one line of help — a payout, a rule list.
    * Drawn under the description, inside the text column, and never
-   * truncated.
+   * truncated. Never interactive in a row with `onSelect`; a control
+   * belongs in `actions`.
    */
   content?: ReactNode
   /** One muted line under the label: a path, a key, a count. Truncated like the label. */
   description?: string
+  /**
+   * The intent `isHighlighted` rings the row in. `accent` by default;
+   * an app whose highlight means "this just paid out" passes
+   * `success`.
+   */
+  highlightIntent?: IntentName
+  /**
+   * `true` rings the row and pulses the ring twice — "this one just
+   * changed", for a row a scan, a save or an arrival has touched.
+   * The ring stays while the flag does, so the app decides how long
+   * it lasts, usually by clearing it on a timer.
+   *
+   * **To pulse a row that is already highlighted again, change its
+   * `key`.** A new key is a new row, and a new row starts the pulse
+   * from the beginning; `` `${id}-${sequence}` `` is the usual shape.
+   *
+   * Under `prefers-reduced-motion` and on ePaper the ring does not
+   * pulse; it is simply there.
+   */
+  isHighlighted?: boolean
+  /**
+   * `true` draws the row receded — a sunken surface and a quieter
+   * label — for an entry that exists but is switched off. It stays
+   * fully operable and every colour on it still clears AA, which is
+   * why it is a surface and a text role rather than an opacity: a
+   * faded row is not a disabled one, and only a disabled control may
+   * drop below the contrast floor. Say WHY in a badge too ("off").
+   */
+  isMuted?: boolean
   key: string
   /**
    * Plain text, because it is what the row is called — the thing a
    * search matched and the text a clipped row's tooltip repeats.
    */
   label: string
+  /**
+   * Makes the whole row one native `<button>` — "open this one" for a
+   * row whose primary action is the row itself. Hover tints the row
+   * and rings its edge, a press sinks it (with motion only when the
+   * user has not asked for less), and keyboard focus draws the focus
+   * ring inside the row's edge. `actions` stay separate targets
+   * above it.
+   *
+   * The button is drawn UNDER the row's text and the text lets the
+   * pointer through, so nothing interactive is ever nested inside a
+   * button: keep `badges`, `content` and `aside` free of controls.
+   */
+  onSelect?: () => void
+  /**
+   * The whole-row button's accessible name. Defaults to `label`.
+   * Name the verb when there is one — `"Edit Water the ferns"` —
+   * the same rule as a repeated action.
+   */
+  selectLabel?: string
 }
 
 export type GroupedListGroup = {
@@ -147,6 +210,20 @@ const HEADING_TAG: Record<
  * background that matches whatever it sits on. The component cannot
  * know that surface, so `isHeadingSticky` reads it from a custom
  * property the host can set, falling back to `surface-base`.
+ *
+ * ### A row can be the target
+ *
+ * tally-marks' card list opens a card's editor from anywhere on the
+ * card, and the owner asked for that to feel like an app: hover,
+ * press, focus, touch. `onSelect` is that, as one real `<button>`
+ * stretched under the row's text — not a click handler on an
+ * `<li>`, which no keyboard reaches and no screen reader announces.
+ * The text lets the pointer through to it; the actions sit above it
+ * and keep their own targets, so "Delete" never opens the editor.
+ *
+ * A row can also be muted (switched off but still there) and
+ * highlighted (just touched by a scan or a save) — the two other
+ * per-row states the same list drew by hand.
  *
  * ### Not collapsible
  *
