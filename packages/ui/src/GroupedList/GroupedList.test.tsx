@@ -25,6 +25,7 @@ const {
   NarrowView,
   Playground,
   Responsive,
+  StickyHeadings,
 } = composeStories(stories)
 
 test("a group's heading names its list", async () => {
@@ -268,4 +269,122 @@ test("both schemes pass axe, contrast included", async () => {
   })
 
   await expectNoAxeViolations(canvasElement)
+})
+
+/**
+ * The element `isHeadingSticky` pins: the heading's row, which also
+ * holds the summary.
+ */
+const headingRowOf = (heading: HTMLElement) =>
+  heading.parentElement as HTMLElement
+
+test("a heading scrolls with its rows unless isHeadingSticky is set", async () => {
+  const { canvas } = await mountStory(Playground)
+
+  const heading = expectAgentDrivable(canvas, {
+    name: "Screens",
+    role: "heading",
+  })
+
+  await expect(
+    getComputedStyle(headingRowOf(heading)).position,
+  ).toBe("static")
+})
+
+test("a sticky heading stays at the top of its pane while its rows scroll under it", async () => {
+  const { canvas, canvasElement } =
+    await mountStory(StickyHeadings)
+
+  const pane = expectAgentDrivable(canvas, {
+    name: "Pages on a raised surface",
+    role: "region",
+  })
+
+  const paneCanvas = within(pane)
+
+  const heading = paneCanvas.getByRole("heading", {
+    name: "On the Lobby screen",
+  })
+
+  const list = paneCanvas.getByRole("list", {
+    name: "On the Lobby screen",
+  })
+
+  // The space under a stuck heading is its own padding, not a
+  // transparent gap the rows would show through.
+  await expect(
+    headingRowOf(heading).getBoundingClientRect().bottom,
+  ).toBeCloseTo(list.getBoundingClientRect().top, 0)
+
+  pane.scrollTop = 96
+
+  await waitFor(() => {
+    expect(pane.scrollTop).toBe(96)
+  })
+
+  const paneTop =
+    pane.getBoundingClientRect().top + pane.clientTop
+
+  await expect(
+    headingRowOf(heading).getBoundingClientRect().top,
+  ).toBeCloseTo(paneTop, 0)
+
+  // The first row has scrolled up past the heading, under it.
+  const firstRow = within(list).getAllByRole(
+    "listitem",
+  )[0] as HTMLElement
+
+  await expect(
+    firstRow.getBoundingClientRect().top,
+  ).toBeLessThan(paneTop)
+
+  await expectNoAxeViolations(canvasElement)
+})
+
+test("a stuck heading's background is the surface its host names, and surface-base by default", async () => {
+  const { canvas } = await mountStory(StickyHeadings)
+
+  for (const name of [
+    "Pages on a base surface",
+    "Pages on a raised surface",
+  ]) {
+    const pane = expectAgentDrivable(canvas, {
+      name,
+      role: "region",
+    })
+
+    const heading = within(pane).getByRole("heading", {
+      name: "On the Break Room screen",
+    })
+
+    const headingBackground = getComputedStyle(
+      headingRowOf(heading),
+    ).backgroundColor
+
+    await expect(headingBackground).toBe(
+      getComputedStyle(pane).backgroundColor,
+    )
+
+    await expect(headingBackground).not.toBe(
+      "rgba(0, 0, 0, 0)",
+    )
+  }
+
+  // And the two surfaces are different, or the assertion above
+  // could pass with the property ignored.
+  await expect(
+    getComputedStyle(
+      expectAgentDrivable(canvas, {
+        name: "Pages on a base surface",
+        role: "region",
+      }),
+    ).backgroundColor,
+  ).not.toBe(
+    getComputedStyle(
+      expectAgentDrivable(canvas, {
+        name: "Pages on a raised surface",
+        role: "region",
+      }),
+    ).backgroundColor,
+  )
 })
