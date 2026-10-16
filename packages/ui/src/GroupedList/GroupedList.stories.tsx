@@ -1,6 +1,6 @@
 import { playgroundParameters } from "@charcuterie/storybook-config/story-parameters"
 import type { Meta, StoryObj } from "@storybook/react"
-import type { CSSProperties } from "react"
+import { type CSSProperties, useState } from "react"
 
 import { Badge } from "../Badge/Badge.tsx"
 import { Button } from "../Button/Button.tsx"
@@ -10,7 +10,11 @@ import {
   StoryGrid,
 } from "../board.storyHelpers.tsx"
 import { EmptyState } from "../EmptyState/EmptyState.tsx"
-import type { GroupedListGroup } from "./GroupedList.tsx"
+import { ValuePairs } from "../ValuePairs/ValuePairs.tsx"
+import type {
+  GroupedListGroup,
+  GroupedListItem,
+} from "./GroupedList.tsx"
 import { GroupedList } from "./GroupedList.tsx"
 import { GROUPED_LIST_HEADING_SURFACE_PROPERTY } from "./groupedListStickyHeading.ts"
 
@@ -180,6 +184,142 @@ const CHORE_GROUPS: GroupedListGroup[] = [
     ],
     key: "vega",
     summary: "1 card · up to 2 pts a day",
+  },
+]
+
+/**
+ * Fixture data only. A chore card whose whole row opens its editor:
+ * the shape tally-marks' Rows view draws, with the payout beside the
+ * text and the daily cap under it.
+ */
+type ChoreCard = {
+  isActive: boolean
+  isHighlighted?: boolean
+  key: string
+  label: string
+  maxPerDay: number
+  points: number
+}
+
+const CHORE_CARDS: ChoreCard[] = [
+  {
+    isActive: true,
+    key: "water-ferns",
+    label: "Water the ferns",
+    maxPerDay: 5,
+    points: 5,
+  },
+  {
+    isActive: true,
+    isHighlighted: true,
+    key: "sort-recycling",
+    label: "Sort the recycling",
+    maxPerDay: 6,
+    points: 2,
+  },
+  {
+    isActive: false,
+    key: "feed-goldfish",
+    label: "Feed the goldfish",
+    maxPerDay: 2,
+    points: 2,
+  },
+]
+
+/**
+ * One chore card as a row. `onSelect` opens it; the action beside it
+ * is a separate target. A switched-off card is muted and says so in
+ * a badge.
+ */
+const toChoreRow = (
+  card: ChoreCard,
+  {
+    onDelete,
+    onSelect,
+  }: {
+    onDelete?: (label: string) => void
+    onSelect?: (label: string) => void
+  } = {},
+): GroupedListItem => ({
+  actions: (
+    <Button
+      appearance="ghost"
+      aria-label={`Delete ${card.label}`}
+      intent="danger"
+      onClick={() => {
+        onDelete?.(card.label)
+      }}
+      size="sm"
+    >
+      Delete
+    </Button>
+  ),
+  aside: (
+    <ValuePairs
+      items={[
+        {
+          id: "scan",
+          label: "Per scan",
+          value: `${card.points} pts`,
+        },
+      ]}
+      label="Payout"
+    />
+  ),
+  badges: card.isActive ? undefined : (
+    <Badge appearance="soft" size="sm">
+      off
+    </Badge>
+  ),
+  content: `Up to ${card.maxPerDay} pts a day`,
+  description: card.key,
+  highlightIntent: "success",
+  isHighlighted: card.isHighlighted,
+  isMuted: !card.isActive,
+  key: card.key,
+  label: card.label,
+  onSelect: () => {
+    onSelect?.(card.label)
+  },
+  selectLabel: `Edit ${card.label}`,
+})
+
+const toChoreGroups = (
+  handlers?: Parameters<typeof toChoreRow>[1],
+): GroupedListGroup[] => [
+  {
+    heading: "Team Orion",
+    items: CHORE_CARDS.map((card) =>
+      toChoreRow(card, handlers),
+    ),
+    key: "orion",
+    summary: "3 cards · up to 11 pts a day",
+  },
+]
+
+/**
+ * Fixture data only. The same plain row in each highlight intent.
+ */
+const HIGHLIGHT_INTENT_GROUPS: GroupedListGroup[] = [
+  {
+    heading: "Highlight intents",
+    items: (
+      [
+        "accent",
+        "success",
+        "info",
+        "warning",
+        "danger",
+        "neutral",
+      ] as const
+    ).map((intent) => ({
+      description: `highlightIntent="${intent}"`,
+      highlightIntent: intent,
+      isHighlighted: true,
+      key: intent,
+      label: `Highlighted ${intent}`,
+    })),
+    key: "intents",
   },
 ]
 
@@ -519,6 +659,116 @@ export const StickyHeadings: Story = {
             size="sm"
           />
         </section>
+      </StoryCell>
+    </StoryGrid>
+  ),
+}
+
+/**
+ * A row whose whole surface is its primary action. `onSelect` draws
+ * one native button under the row's text, named by `selectLabel`;
+ * the Delete action sits above it as its own target. The status
+ * line under the list says which one a click reached.
+ *
+ * The second card is highlighted (a scan just paid it), and the
+ * third is switched off, so it is muted.
+ */
+export const SelectableRows: Story = {
+  render: function SelectableRowsStory() {
+    const [lastEvent, setLastEvent] = useState(
+      "Nothing chosen yet",
+    )
+
+    return (
+      <div className="flex flex-col gap-3">
+        <GroupedList
+          groups={toChoreGroups({
+            onDelete: (label) => {
+              setLastEvent(`Deleted ${label}`)
+            },
+            onSelect: (label) => {
+              setLastEvent(`Opened ${label}`)
+            },
+          })}
+        />
+
+        <p
+          className="m-0 text-content-secondary text-sm"
+          role="status"
+        >
+          {lastEvent}
+        </p>
+      </div>
+    )
+  },
+}
+
+/**
+ * Every per-row state at once: hover, press and keyboard focus on
+ * the whole-row button (forced by the pseudo-states addon, the only
+ * way to review them in a static board), a muted row, and a
+ * highlight in each intent. The highlight's pulse is frozen here, so
+ * this is also its static, reduced-motion look.
+ */
+export const RowStates: Story = {
+  parameters: {
+    pseudo: {
+      active: ["#active-row li:first-child > button"],
+      focusVisible: ["#focus-row li:first-child > button"],
+      hover: ["#hover-row li:first-child > button"],
+    },
+  },
+  render: () => (
+    <StoryGrid columns={2}>
+      {(
+        [
+          ["resting", "resting-row"],
+          ["hover (forced)", "hover-row"],
+          ["active (forced)", "active-row"],
+          ["focus-visible (forced)", "focus-row"],
+        ] as const
+      ).map(([label, id]) => (
+        <StoryCell align="stretch" key={id} label={label}>
+          <div id={id}>
+            <GroupedList
+              groups={[
+                {
+                  heading: `Team Orion, ${label}`,
+                  items: CHORE_CARDS.slice(0, 1).map(
+                    (card) => toChoreRow(card),
+                  ),
+                  key: id,
+                },
+              ]}
+              size="sm"
+            />
+          </div>
+        </StoryCell>
+      ))}
+
+      <StoryCell align="stretch" label="isMuted">
+        <GroupedList
+          groups={[
+            {
+              heading: "Switched off",
+              items: [
+                toChoreRow(CHORE_CARDS[2] as ChoreCard),
+              ],
+              key: "muted",
+            },
+          ]}
+          size="sm"
+        />
+      </StoryCell>
+
+      <StoryCell
+        align="stretch"
+        label="isHighlighted, each highlightIntent"
+      >
+        <GroupedList
+          groups={HIGHLIGHT_INTENT_GROUPS}
+          size="sm"
+        />
       </StoryCell>
     </StoryGrid>
   ),

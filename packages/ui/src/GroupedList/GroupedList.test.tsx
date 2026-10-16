@@ -9,6 +9,7 @@ import {
   within,
 } from "storybook/test"
 import { test } from "vitest"
+import { userEvent as browserUserEvent } from "vitest/browser"
 
 import { expectNoAxeViolations } from "../expectNoAxeViolations.testHelpers.ts"
 import { mountStory } from "../mountStory.testHelpers.ts"
@@ -25,6 +26,8 @@ const {
   NarrowView,
   Playground,
   Responsive,
+  RowStates,
+  SelectableRows,
   StickyHeadings,
 } = composeStories(stories)
 
@@ -387,4 +390,392 @@ test("a stuck heading's background is the surface its host names, and surface-ba
       }),
     ).backgroundColor,
   )
+})
+
+/** The `<li>` a whole-row button stretches over. */
+const rowOf = (button: HTMLElement) =>
+  button.closest("li") as HTMLElement
+
+/** What the pointer would hit at the middle of an element's box. */
+const elementAtCentreOf = (element: HTMLElement) => {
+  const box = element.getBoundingClientRect()
+
+  return document.elementFromPoint(
+    box.left + box.width / 2,
+    box.top + box.height / 2,
+  )
+}
+
+test("a row without onSelect draws no row button", async () => {
+  const { canvas } = await mountStory(Playground)
+
+  await expect(
+    canvas.queryByRole("button", { name: "Lobby" }),
+  ).toBeNull()
+
+  await expect(
+    canvas
+      .getAllByRole("button")
+      .map((button: HTMLElement) =>
+        button.getAttribute("aria-label"),
+      ),
+  ).toEqual([
+    "Open Lobby",
+    "Open Break Room",
+    "Open Welcome",
+    "Open Weather",
+    "Open Schedule",
+    "Open Test Pattern",
+  ])
+})
+
+test("onSelect makes the whole row one native button, named by selectLabel", async () => {
+  const { canvas, canvasElement } =
+    await mountStory(SelectableRows)
+
+  const rowButton = expectAgentDrivable(canvas, {
+    name: "Edit Water the ferns",
+    role: "button",
+  })
+
+  await expect(rowButton.tagName).toBe("BUTTON")
+
+  await expect(rowButton).toHaveAttribute("type", "button")
+
+  // Nothing is nested inside it: the row's text is a sibling drawn
+  // over it, so there is no interactive content inside a button.
+  await expect(rowButton.childElementCount).toBe(0)
+
+  const row = rowOf(rowButton)
+
+  const buttonBox = rowButton.getBoundingClientRect()
+
+  // Full-area: the button covers the row's whole padding box — all
+  // of it but the 1px divider between rows.
+  await expect(buttonBox.width).toBeCloseTo(
+    row.clientWidth,
+    0,
+  )
+
+  await expect(buttonBox.height).toBeCloseTo(
+    row.clientHeight,
+    0,
+  )
+
+  // A pointer on the label, the description, the cap line or the
+  // payout lands on the row's button.
+  for (const text of [
+    "Water the ferns",
+    "water-ferns",
+    "Up to 5 pts a day",
+    "5 pts",
+  ]) {
+    await expect(
+      elementAtCentreOf(within(row).getByText(text)),
+    ).toBe(rowButton)
+  }
+
+  await userEvent.click(rowButton)
+
+  await expect(
+    canvas.getByRole("status"),
+  ).toHaveTextContent("Opened Water the ferns")
+
+  await expectNoAxeViolations(canvasElement)
+})
+
+test("a row's action stays its own target and never selects the row", async () => {
+  const { canvas } = await mountStory(SelectableRows)
+
+  const deleteButton = expectAgentDrivable(canvas, {
+    name: "Delete Water the ferns",
+    role: "button",
+  })
+
+  const hit = elementAtCentreOf(deleteButton)
+
+  await expect(
+    hit === deleteButton || deleteButton.contains(hit),
+  ).toBe(true)
+
+  // A real click at the action's centre, with real hit-testing.
+  await browserUserEvent.click(deleteButton)
+
+  await expect(
+    canvas.getByRole("status"),
+  ).toHaveTextContent("Deleted Water the ferns")
+})
+
+test("Tab reaches each row's button, then its action, in reading order, and Enter and Space open the row", async () => {
+  const { canvas } = await mountStory(SelectableRows)
+
+  const order = [
+    "Edit Water the ferns",
+    "Delete Water the ferns",
+    "Edit Sort the recycling",
+    "Delete Sort the recycling",
+    "Edit Feed the goldfish",
+    "Delete Feed the goldfish",
+  ]
+
+  for (const name of order) {
+    await userEvent.tab()
+
+    await expect(
+      expectAgentDrivable(canvas, { name, role: "button" }),
+    ).toHaveFocus()
+  }
+
+  const muted = canvas.getByRole("button", {
+    name: "Edit Feed the goldfish",
+  })
+
+  muted.focus()
+
+  await userEvent.keyboard("{Enter}")
+
+  await expect(
+    canvas.getByRole("status"),
+  ).toHaveTextContent("Opened Feed the goldfish")
+
+  canvas
+    .getByRole("button", {
+      name: "Edit Sort the recycling",
+    })
+    .focus()
+
+  await userEvent.keyboard(" ")
+
+  await expect(
+    canvas.getByRole("status"),
+  ).toHaveTextContent("Opened Sort the recycling")
+})
+
+test("keyboard focus draws the focus ring inside the row's edge", async () => {
+  const { canvas } = await mountStory(SelectableRows)
+
+  // A real Tab, because only a trusted key press makes the browser
+  // match `:focus-visible`.
+  await browserUserEvent.tab()
+
+  const rowButton = expectAgentDrivable(canvas, {
+    name: "Edit Water the ferns",
+    role: "button",
+  })
+
+  await expect(rowButton).toHaveFocus()
+
+  const style = getComputedStyle(rowButton)
+
+  await expect(style.outlineStyle).toBe("solid")
+
+  // Inside the edge: the group's list clips its corners, and an
+  // outside ring would be cut off on the first and last row. One
+  // ring-width further in again, so it never shares pixels with the
+  // highlight ring that hugs the edge.
+  const ringWidth = Number.parseFloat(style.outlineWidth)
+
+  await expect(ringWidth).toBeGreaterThan(0)
+
+  await expect(
+    Number.parseFloat(style.outlineOffset),
+  ).toBeCloseTo(-2 * ringWidth, 1)
+})
+
+test("hover tints the row and rings its edge; holding the row presses it", async () => {
+  const { canvas } = await mountStory(SelectableRows)
+
+  const rowButton = expectAgentDrivable(canvas, {
+    name: "Edit Water the ferns",
+    role: "button",
+  })
+
+  const resting = getComputedStyle(rowButton)
+
+  const restingBackground = resting.backgroundColor
+
+  const restingShadow = resting.boxShadow
+
+  await browserUserEvent.hover(rowButton)
+
+  await waitFor(() => {
+    expect(
+      getComputedStyle(rowButton).backgroundColor,
+    ).not.toBe(restingBackground)
+  })
+
+  await expect(
+    getComputedStyle(rowButton).boxShadow,
+  ).not.toBe(restingShadow)
+
+  await browserUserEvent.unhover(rowButton)
+
+  // Holding Space keeps a focused button `:active`, which is a press
+  // without a pointer — and it presses only the row whose button it
+  // is.
+  rowButton.focus()
+
+  await browserUserEvent.keyboard("{ >}")
+
+  const row = rowOf(rowButton)
+
+  // Tailwind's `scale-*` writes the individual `scale` property,
+  // not `transform`.
+  await waitFor(() => {
+    expect(getComputedStyle(row).scale).toBe("0.99")
+  })
+
+  await expect(
+    getComputedStyle(
+      rowOf(
+        canvas.getByRole("button", {
+          name: "Edit Sort the recycling",
+        }),
+      ),
+    ).scale,
+  ).toBe("none")
+
+  await browserUserEvent.keyboard("{/ }")
+
+  await expect(
+    canvas.getByRole("status"),
+  ).toHaveTextContent("Opened Water the ferns")
+})
+
+test("a muted row is a sunken surface with a quieter label, and still clears axe", async () => {
+  const { canvas, canvasElement } =
+    await mountStory(SelectableRows)
+
+  const mutedRow = rowOf(
+    canvas.getByRole("button", {
+      name: "Edit Feed the goldfish",
+    }),
+  )
+
+  const activeRow = rowOf(
+    canvas.getByRole("button", {
+      name: "Edit Water the ferns",
+    }),
+  )
+
+  await expect(
+    getComputedStyle(mutedRow).backgroundColor,
+  ).not.toBe(getComputedStyle(activeRow).backgroundColor)
+
+  await expect(
+    getComputedStyle(
+      within(mutedRow).getByText("Feed the goldfish"),
+    ).color,
+  ).not.toBe(
+    getComputedStyle(
+      within(activeRow).getByText("Water the ferns"),
+    ).color,
+  )
+
+  // Muted is not disabled: the row still opens.
+  await expect(
+    canvas.getByRole("button", {
+      name: "Edit Feed the goldfish",
+    }),
+  ).toBeEnabled()
+
+  await expectNoAxeViolations(canvasElement)
+})
+
+test("a highlighted row is ringed, and the ring lets the pointer through", async () => {
+  const { canvas } = await mountStory(SelectableRows)
+
+  const rowButton = canvas.getByRole("button", {
+    name: "Edit Sort the recycling",
+  })
+
+  const row = rowOf(rowButton)
+
+  const ring = row.querySelector(
+    ".charcuterie-highlight",
+  ) as HTMLElement
+
+  await expect(ring).not.toBeNull()
+
+  await expect(ring).toHaveAttribute("aria-hidden", "true")
+
+  await expect(getComputedStyle(ring).boxShadow).toContain(
+    "inset",
+  )
+
+  await expect(
+    elementAtCentreOf(within(row).getByText("2 pts")),
+  ).toBe(rowButton)
+
+  // Only the row that asked for it.
+  await expect(
+    rowOf(
+      canvas.getByRole("button", {
+        name: "Edit Water the ferns",
+      }),
+    ).querySelector(".charcuterie-highlight"),
+  ).toBeNull()
+})
+
+test("the aside sits beside the text in a wide list and never pushes the row past its list", async () => {
+  const { canvas } = await mountStory(SelectableRows)
+
+  const list = expectAgentDrivable(canvas, {
+    name: "Team Orion",
+    role: "list",
+  })
+
+  await expect(list.scrollWidth).toBeLessThanOrEqual(
+    list.clientWidth,
+  )
+
+  const row = rowOf(
+    canvas.getByRole("button", {
+      name: "Edit Water the ferns",
+    }),
+  )
+
+  const label = within(row).getByText("Water the ferns")
+
+  const capLine = within(row).getByText("Up to 5 pts a day")
+
+  const payout = within(row).getByText("Per scan")
+
+  // 12rem of text, the payout and the action fit on one line well
+  // inside 40rem; below that the content decides.
+  if (list.clientWidth >= 640) {
+    await expect(
+      payout.getBoundingClientRect().top,
+    ).toBeLessThan(capLine.getBoundingClientRect().bottom)
+
+    await expect(
+      payout.getBoundingClientRect().left,
+    ).toBeGreaterThan(label.getBoundingClientRect().right)
+  } else {
+    await expect(
+      payout.getBoundingClientRect().top,
+    ).toBeGreaterThanOrEqual(
+      capLine.getBoundingClientRect().bottom,
+    )
+  }
+})
+
+test("every row state passes axe in both schemes", async () => {
+  const { canvas, canvasElement } =
+    await mountStory(RowStates)
+
+  expectAgentDrivable(canvas, {
+    name: "Highlight intents",
+    role: "list",
+  })
+
+  // The canvas paints the scheme's own page surface, so the headings
+  // are measured against the background they would really sit on.
+  canvasElement.classList.add("bg-surface-base")
+
+  for (const scheme of ["light", "dark"]) {
+    canvasElement.setAttribute("data-scheme", scheme)
+
+    await expectNoAxeViolations(canvasElement)
+  }
 })

@@ -1,6 +1,7 @@
-/* `@charcuterie/ui/styles.css` — the four looping affordances and
- * the token-tinted scrollbar: the visuals a Tailwind utility cannot
- * express against our tokens, and nothing else.
+/* `@charcuterie/ui/styles.css` — the four looping affordances, the
+ * one-shot highlight pulse and the token-tinted scrollbar: the
+ * visuals a Tailwind utility cannot express against our tokens, and
+ * nothing else.
  *
  * Every other visual in this package is a Tailwind utility reading
  * a token, which is what makes a scheme/density/variant flip a
@@ -74,6 +75,36 @@
   }
 }
 
+/* The highlight pulse: "this row just changed". Two blinks, then
+ * steady. Only OPACITY moves, and the last keyframe is fully shown,
+ * so the element's own resting style IS the static fallback — under
+ * reduced motion the animation is switched off below and the ring is
+ * simply there, and on ePaper a 0ms run ends on the same frame. That
+ * is the "every moving affordance owes a static fallback" rule met
+ * by construction rather than by a second rule. */
+@keyframes charcuterie-highlight {
+  0% {
+    opacity: 0;
+  }
+
+  25% {
+    opacity: 1;
+  }
+
+  55% {
+    opacity: 0.3;
+  }
+
+  100% {
+    opacity: 1;
+  }
+}
+
+.charcuterie-highlight {
+  animation: charcuterie-highlight var(--duration-loop-slow)
+    var(--easing-standard) 2;
+}
+
 .charcuterie-spin {
   animation: charcuterie-spin var(--duration-loop-fast)
     linear infinite;
@@ -105,7 +136,8 @@
   .charcuterie-spin,
   .charcuterie-shimmer,
   .charcuterie-sweep,
-  .charcuterie-pulse {
+  .charcuterie-pulse,
+  .charcuterie-highlight {
     animation: none;
   }
 
