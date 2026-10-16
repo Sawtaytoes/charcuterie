@@ -147,6 +147,19 @@ own `aria-valuemin`/`aria-valuemax`. What is genuinely shared is the arithmetic
 same extraction `tileStyles.ts` is), compared as **computed** styles in the test
 ([decision](../../docs/decisions/2026-09-01-a-two-thumb-range-is-its-own-component-and-shares-the-bar.md)).
 
+**`CommandPalette` is the launcher** — a search field over a grouped list in a `Modal`, built
+here first because a start page, Docket and Folio all want one and nothing in the fleet had
+one. It lists the caller's `suggestions` before anything is typed, which is the defect it
+exists to fix: the third-party launcher it replaces showed nothing until you typed. Typing
+matches **word prefixes and initials, never subsequences** (`ha` finds `Home Automation`,
+not `Chat`), through `rankWordPrefixMatches` in `@charcuterie/logic`. A short prefix and a
+space (`au lego`) routes the rest of the query to a caller's target, and the caller's
+fallback row ends every other list. The library owns the shape and no site names. The global
+keys are an opt-in hook, `useCommandPaletteHotkeys`, and `useCommandPalette()` assembles them
+with the open state
+([matching](../../docs/decisions/2026-10-16-a-command-palette-matches-word-prefixes.md),
+[keys](../../docs/decisions/2026-10-16-command-palette-hotkeys-are-an-opt-in-hook.md)).
+
 **The unified app shell adds four**: `Shell`, `Header`, `Rail`, `Main` — the fleet's largest
 single duplication, where ten of twelve UI repos hand-roll the page chrome and three of them
 have a file named `AppShell.tsx` (two of those headers are a *byte-identical* class string,

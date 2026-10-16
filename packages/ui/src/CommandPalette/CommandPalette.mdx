@@ -1,0 +1,129 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as CommandPaletteStories from "./CommandPalette.stories";
+
+<Meta of={CommandPaletteStories} />
+
+# CommandPalette
+
+The launcher: a search field over a grouped list, opened over the page. Press **Search**
+below, or press `Ctrl K`, `Ctrl Space` or `/`, or start typing anywhere on the page.
+
+<Canvas of={CommandPaletteStories.Playground} />
+
+## Props
+
+<Controls />
+
+```tsx
+const palette = useCommandPalette()
+
+<Button onClick={() => palette.open()}>Search</Button>
+
+<CommandPalette
+  {...palette.paletteProps}
+  label="Search apps, bookmarks, and the web"
+  items={items}
+  suggestions={[
+    { key: "pinned", label: "Pinned", items: pinned },
+    { key: "recent", label: "Recently opened", items: recent },
+  ]}
+  prefixes={[
+    { prefix: "au", label: "Auction Site", getHref: (query) => auctionSearch(query) },
+  ]}
+  getFallbackItem={(query) => ({
+    key: "web",
+    group: "The web",
+    title: `Search the web for “${query}”`,
+    href: webSearch(query),
+  })}
+/>
+```
+
+The library owns the shape. Every name, link and search target is data the app passes in.
+
+## It lists something before anything is typed
+
+`suggestions` are groups shown the moment it opens — a start page passes "Pinned" and
+"Recently opened". A launcher that shows nothing until you type makes you remember the
+name first, which is the job it was supposed to do.
+
+<Canvas of={CommandPaletteStories.AllStates} />
+
+## How typing matches
+
+**Word prefixes.** Every typed word must start a word of the title, the `description` or a
+`keyword`, in any order: `serv` finds `Media Server`, `media serv` finds it too, and `edia`
+finds nothing. **Initials** count — `ha` finds `Home Automation` — and a camel-case step
+starts a word, so `bit` finds `qBitTracker`. Case and accents are folded.
+
+The tiers, best first: the title starts with the query; every word starts a title word; the
+title's initials; every word starts a word anywhere. Inside a tier, a higher `weight` (an
+open count, say) wins, and then the order of `items`. Matches are grouped under each item's
+`group`, and the groups are ordered by their best match, so the first row — the one Enter
+opens — is always the best match.
+
+It is deliberately **not** subsequence ("fuzzy") matching, which accepts any letters in
+order and lets `ha` match `Chat` and `Shared Files`. The logic is
+`rankWordPrefixMatches` in `@charcuterie/logic`, for a list that wants the same rule without
+a palette.
+
+**Folders.** A folder's members are ordinary items: flatten them into `items` and put the
+folder's name in `description`, so a hit inside a folder still says where it lives.
+
+## Prefix commands and the fallback
+
+A short prefix, a space, and a query — `au lego` — lists one row that sends the rest of the
+query to that prefix's target. A prefix with nothing after it is ordinary text. For any
+other query, `getFallbackItem` supplies the last row ("Search the web for …"), so a query
+nothing matches still goes somewhere.
+
+## Rows
+
+An icon, the title with its matched letters highlighted, a `description`, and a trailing
+`hint`; only the title is required. An item with an `href` is a real `<a href>`, routed
+through `RouterLinkProvider`, so middle-click and "copy link address" work. `onSelect` runs
+on choice, with or without an `href`.
+
+<Canvas of={CommandPaletteStories.AllVariants} />
+
+## Keys
+
+| Key | Does |
+| --- | --- |
+| `Ctrl K`, `Ctrl Space` (`⌘` on a Mac) | Opens it, from anywhere, a text field included |
+| `/` | Opens it, when focus is not in a field |
+| Any printable key | Opens it with that key as the query, when focus is not in a field |
+| Up, Down | Move the active row |
+| Home, End | First row, last row |
+| Enter | Opens the active row |
+| `Ctrl Enter`, `⌘ Enter` | Opens a link row in a new tab |
+| Escape | Closes, and focus goes back where it was |
+
+Focus stays in the field the whole time: the active row is its `aria-activedescendant`, the
+APG combobox pattern `Combobox` uses. The pointer moves the active row too.
+
+In this demo every row reports what it chose instead of navigating. On this page the global
+keys open the first palette above; this one opens from its button. Two palettes on one page
+do not both open: the first listener to take a key marks it handled, and the hook leaves a
+handled key alone.
+
+<Canvas of={CommandPaletteStories.Interactive} />
+
+## Open state, and the global keys
+
+`isVisible` and `onClose` work as on `Modal`. `useCommandPalette()` holds that state and
+registers the keys; `useCommandPaletteHotkeys({ onOpen })` is the keys alone, for an app
+that keeps its own state. The keys are a hook, not something the palette does on mount,
+because a document-wide listener is a page-level decision — a page with its own letter
+shortcuts passes `isOpenedByTyping: false`, or does not call the hook at all.
+
+The query is uncontrolled (`defaultQuery`, read each time it opens, which is how a typed
+letter arrives) or controlled (`query` + `onQueryChange`), as on `Combobox`.
+
+## Size
+
+Like `Dialog`, it is measured against the window, not a container. On a wide window it hangs
+from the top at up to 45rem wide, so the list grows down from a field that does not move. In
+the Narrow View it takes nearly the whole screen, and the footer drops the key hints and
+keeps the prefixes.

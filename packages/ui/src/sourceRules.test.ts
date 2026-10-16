@@ -626,7 +626,8 @@ test("the barrel is the only place components are re-exported", async () => {
   // GroupedList owns rows under group headings; castkit, tally-marks
   // and whereabouts each drew it by hand. `GroupedListRow.tsx` is its
   // member and stays out of this count by the `<Name>/<Name>.tsx` rule.
-  expect(componentNames.length).toBe(78)
+  // CommandPalette composes Modal and SearchInput into the launcher.
+  expect(componentNames.length).toBe(79)
 
   for (const name of componentNames) {
     expect(barrel).toContain(`export { ${name} }`)
