@@ -7,7 +7,9 @@ import * as GroupedListStories from "./GroupedList.stories";
 # GroupedList
 
 An always-open list whose rows sit under group headings. Each row is a label, an optional
-muted description, optional badges, optional richer content, and optional trailing actions.
+muted description, optional badges, optional richer content, an optional figure beside the
+text, and optional trailing actions. A row can also be the target itself, muted, or
+highlighted.
 
 Three apps drew this shape by hand: castkit's page picker (pages under the screen that shows
 them), tally-marks' cards (cards under the team that earns them) and whereabouts' nested
@@ -83,6 +85,45 @@ that sets them through a `style` object.
 ```
 
 <Canvas of={GroupedListStories.StickyHeadings} />
+
+## A row can be the target
+
+Give an item `onSelect` and the whole row becomes one native `<button>` — "open this card"
+for a list whose primary action is the row itself. `selectLabel` names it (it defaults to
+`label`); name the verb, as with any repeated action: `selectLabel="Edit Water the ferns"`.
+
+- **Every state is drawn.** Hover tints the row and rings its edge (only on devices that
+  hover, so a tap does not leave a row lit). A press sinks the row slightly, with motion only
+  when the user has not asked the OS for less. Keyboard focus draws the focus ring inside the
+  row's edge, where the list's rounded corners cannot clip it, and one ring-width in from it,
+  so a highlighted row that has focus shows both rings.
+- **The actions stay their own targets.** The button is drawn under the row's text and the
+  text lets the pointer through to it; `actions` sit above it. Pressing "Delete" never opens
+  the row, and Tab reaches the row, then its actions, then the next row.
+- **Nothing is nested in the button.** It is empty and named by `aria-label`, so `badges`,
+  `content` and `aside` must not hold controls — a control belongs in `actions`.
+
+`aside` is a figure that belongs **beside** the text — a payout, a total. It asks for at
+least 11rem next to the text column's 12rem, so it sits between the text and the actions in a
+wide list and drops under the text in a narrow one.
+
+<Canvas of={GroupedListStories.SelectableRows} />
+
+## Muted and highlighted rows
+
+- `isMuted` recedes a row that exists but is switched off: a sunken surface and a quieter
+  label. It stays fully operable, and it is a surface and a text role rather than an opacity,
+  because a faded row would drop below the AA contrast floor and only a disabled control may.
+  Say why in a badge as well ("off").
+- `isHighlighted` rings the row and pulses the ring twice — "this one just changed", after a
+  scan or a save. `highlightIntent` picks the colour (`accent` by default). The ring stays
+  while the flag does, so the app decides how long it lasts, usually with a timer. **To pulse
+  an already-highlighted row again, change its `key`**: a new key is a new row, and a new row
+  starts the pulse from the beginning. Under `prefers-reduced-motion` and on ePaper the ring
+  does not pulse; it is simply there. The pulse lives in `@charcuterie/ui/styles.css`, which
+  every app already imports.
+
+<Canvas of={GroupedListStories.RowStates} />
 
 ## Name a repeated action after its row
 
