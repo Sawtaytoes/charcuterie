@@ -165,3 +165,18 @@ export type {
 } from "./types.ts"
 export type { WizardStep } from "./wizardSteps.ts"
 export { getWizardSteps } from "./wizardSteps.ts"
+export type {
+  PrefixCommandMatch,
+  RankedWordPrefixMatch,
+  TextMatchRange,
+  WordPrefixMatch,
+  WordPrefixMatchFields,
+  WordPrefixTier,
+} from "./wordPrefixMatch.ts"
+export {
+  matchWordPrefixes,
+  parsePrefixCommand,
+  rankWordPrefixMatches,
+  toQueryWords,
+  WORD_PREFIX_TIERS,
+} from "./wordPrefixMatch.ts"
