@@ -1,5 +1,11 @@
 # @charcuterie/ci
 
+## 0.1.7
+
+### Patch Changes
+
+- 2d07d8e: Leave a first run's null baseline key out of the reg-suit config. reg-suit's placeholder expansion throws on a `null`, so every new repository's first `vrt` job failed with "Cannot convert undefined or null to object" before comparing anything.
+
 ## 0.1.6
 
 ### Patch Changes
