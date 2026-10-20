@@ -1,5 +1,11 @@
 # @charcuterie/ui
 
+## 4.26.2
+
+### Patch Changes
+
+- 66d902f: Preserve table expansion and dismissal timing when production CSS serializes duration tokens in seconds instead of milliseconds.
+
 ## 4.26.1
 
 ### Patch Changes
