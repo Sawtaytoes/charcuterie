@@ -8,6 +8,53 @@ import * as stories from "./TableViewport.stories.tsx"
 
 const { Interactive } = composeStories(stories)
 
+test.each([
+  ["320ms", 320],
+  ["0.32s", 320],
+  ["0ms", 0],
+  ["0s", 0],
+] as const)(
+  "uses the CSS time unit in %s",
+  async (token, duration) => {
+    const style = document.documentElement.style
+    const previous = style.getPropertyValue(
+      "--duration-slow",
+    )
+    style.setProperty("--duration-slow", token)
+    try {
+      const { body, canvas } = await mountStory(Interactive)
+      await userEvent.click(
+        canvas.getByRole("button", {
+          name: "Expand table",
+        }),
+      )
+      const dialog = body.getByRole("dialog", {
+        name: "Printer comparison",
+      })
+      const [animation] = dialog.getAnimations()
+      if (duration > 0) {
+        await expect(
+          animation.effect?.getTiming().duration,
+        ).toBe(duration)
+        animation.finish()
+      } else {
+        await expect(animation).toBeUndefined()
+      }
+      await userEvent.click(
+        body.getByRole("button", { name: "Close" }),
+      )
+      if (animation) animation.finish()
+      await waitFor(() =>
+        expect(body.queryByRole("dialog")).toBeNull(),
+      )
+    } finally {
+      if (previous)
+        style.setProperty("--duration-slow", previous)
+      else style.removeProperty("--duration-slow")
+    }
+  },
+)
+
 test("long inline comparisons grow with the page and expand without duplicate tables", async () => {
   const { body, canvas } = await mountStory(Interactive)
   const pane = expectAgentDrivable(canvas, {
