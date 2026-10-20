@@ -10,6 +10,8 @@ its rows and uses the page's vertical scroll. Expand table opens a full-window `
 The dialog body is the only scroll surface; headers and the first column stay visible.
 Escape and Close return focus to the trigger. Only one table is mounted, so links and IDs
 are never duplicated. The inline height and horizontal position survive expansion.
+Expansion fades and zooms in; dismissal reverses the animation before returning to the
+document. Reduced-motion and zero-duration profiles skip the animation.
 
 Apps provide the semantic table, its column count, and its accessible label. Sanitizing
 Markdown HTML and delegating document links remain the app's responsibilities. Use

@@ -1,5 +1,10 @@
 import type { CSSProperties, ReactNode } from "react"
-import { useRef, useState } from "react"
+import {
+  useCallback,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react"
 import { Button } from "../Button/Button.tsx"
 import { Dialog } from "../Dialog/Dialog.tsx"
 import { toClassName } from "../toClassName.ts"
@@ -23,12 +28,87 @@ export const TableViewport = ({
   const [inlineHeight, setInlineHeight] = useState(0)
   const scrollRef = useRef<HTMLElement>(null)
   const scrollPosition = useRef(0)
+  const expansion = useRef<Animation | null>(null)
+  const isClosing = useRef(false)
+  useLayoutEffect(() => {
+    // Restore after React has actually returned the table to this pane.
+    // A frame scheduled from the animation's promise can run before that commit
+    // on a busy renderer, when the empty pane clamps scrollLeft back to zero.
+    if (!isExpanded && scrollRef.current)
+      scrollRef.current.scrollLeft = scrollPosition.current
+  }, [isExpanded])
+  const animateExpansion = useCallback(
+    (node: HTMLDivElement | null) => {
+      const dialog = node?.closest<HTMLElement>(
+        '[role="dialog"]',
+      )
+      if (
+        !dialog ||
+        matchMedia("(prefers-reduced-motion: reduce)")
+          .matches
+      )
+        return
+
+      const style = getComputedStyle(dialog)
+      const duration = Number.parseFloat(
+        style.getPropertyValue("--duration-slow"),
+      )
+      // Zero-duration profiles (including ePaper) remove motion entirely.
+      if (!(duration > 0)) return
+
+      const animation = dialog.animate(
+        [
+          {
+            opacity: 0,
+            transform: "translateY(0.75rem) scale(0.98)",
+          },
+          { opacity: 1, transform: "none" },
+        ],
+        {
+          duration,
+          easing:
+            style
+              .getPropertyValue("--easing-standard")
+              .trim() || "ease-out",
+          fill: "both",
+        },
+      )
+      expansion.current = animation
+      // Unmounting a document can cancel an unfinished enter or exit.
+      void animation.finished.catch(() => {})
+      return () => {
+        animation.cancel()
+        expansion.current = null
+      }
+    },
+    [],
+  )
+  const close = () => {
+    if (isClosing.current) return
+    isClosing.current = true
+    const finish = () => {
+      setIsExpanded(false)
+      isClosing.current = false
+    }
+    const animation = expansion.current
+    if (
+      !animation ||
+      matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
+      finish()
+      return
+    }
+    // Reversing also handles Escape during the opening animation without a jump.
+    animation.reverse()
+    void animation.finished.then(finish, () => {})
+  }
   const contentStyle = {
     "--table-min-inline-size": `${Math.max(1, columnCount) * 14}rem`,
   } as CSSProperties
   const content = (
     <div
       className="charcuterie-table-content"
+      ref={isExpanded ? animateExpansion : undefined}
       style={contentStyle}
     >
       {children}
@@ -70,14 +150,7 @@ export const TableViewport = ({
         heading={label}
         isVisible={isExpanded}
         size="full"
-        onClose={() => {
-          setIsExpanded(false)
-          requestAnimationFrame(() => {
-            if (scrollRef.current)
-              scrollRef.current.scrollLeft =
-                scrollPosition.current
-          })
-        }}
+        onClose={close}
       >
         {isExpanded ? content : null}
       </Dialog>
