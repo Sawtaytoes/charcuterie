@@ -1,5 +1,10 @@
 import type { CSSProperties, ReactNode } from "react"
-import { useCallback, useRef, useState } from "react"
+import {
+  useCallback,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react"
 import { Button } from "../Button/Button.tsx"
 import { Dialog } from "../Dialog/Dialog.tsx"
 import { toClassName } from "../toClassName.ts"
@@ -25,6 +30,13 @@ export const TableViewport = ({
   const scrollPosition = useRef(0)
   const expansion = useRef<Animation | null>(null)
   const isClosing = useRef(false)
+  useLayoutEffect(() => {
+    // Restore after React has actually returned the table to this pane.
+    // A frame scheduled from the animation's promise can run before that commit
+    // on a busy renderer, when the empty pane clamps scrollLeft back to zero.
+    if (!isExpanded && scrollRef.current)
+      scrollRef.current.scrollLeft = scrollPosition.current
+  }, [isExpanded])
   const animateExpansion = useCallback(
     (node: HTMLDivElement | null) => {
       const dialog = node?.closest<HTMLElement>(
@@ -77,11 +89,6 @@ export const TableViewport = ({
     const finish = () => {
       setIsExpanded(false)
       isClosing.current = false
-      requestAnimationFrame(() => {
-        if (scrollRef.current)
-          scrollRef.current.scrollLeft =
-            scrollPosition.current
-      })
     }
     const animation = expansion.current
     if (
