@@ -50,9 +50,17 @@ export const TableViewport = ({
         return
 
       const style = getComputedStyle(dialog)
-      const duration = Number.parseFloat(
-        style.getPropertyValue("--duration-slow"),
-      )
+      const durationToken = style
+        .getPropertyValue("--duration-slow")
+        .trim()
+      // CSS minifiers can rewrite 320ms to .32s; WAAPI always takes ms.
+      const duration =
+        Number.parseFloat(durationToken) *
+        (durationToken.endsWith("ms")
+          ? 1
+          : durationToken.endsWith("s")
+            ? 1000
+            : 0)
       // Zero-duration profiles (including ePaper) remove motion entirely.
       if (!(duration > 0)) return
 
