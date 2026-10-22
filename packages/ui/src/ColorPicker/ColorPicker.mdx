@@ -1,0 +1,70 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks"
+
+import * as ColorPickerStories from "./ColorPicker.stories.tsx"
+
+<Meta of={ColorPickerStories} />
+
+# ColorPicker
+
+A named color from the app's list, or a color of the person's own. The presets are a
+searchable `Combobox`, each row a `Swatch` and its name; an optional **Custom color…** row
+opens a panel with the browser's color wheel and a hex field.
+
+<Canvas of={ColorPickerStories.Playground} />
+
+## Props
+
+<Controls />
+
+## When to use it, and when not
+
+| You have | Use |
+| --- | --- |
+| A palette the **app** owns, maybe plus colors a person makes up | `ColorPicker` |
+| A choice from the library's ten `categorical` hues | A row of `Swatch` buttons over `--color-categorical-<n>-solid`, as Docket's `CategoricalPicker` does |
+| A color that arrived from the world and is only shown | `Swatch` |
+
+The presets are data, so the result is a `Swatch`-class color, not a token: it does not
+re-theme and the library cannot contrast-check it. That is why `getColorError` exists. The
+app knows where the color is drawn and what it has to clear; the component only shows the
+app's sentence and refuses to apply.
+
+## Typing narrows the list
+
+A palette worth offering is long, and siblings may all want a different pink. Typing a name
+narrows the rows to that family; typing a hex code finds its preset. The **Custom color…**
+row is always listed, whatever the search says, and a valid code in the search opens the
+custom panel on that code.
+
+<Canvas of={ColorPickerStories.Interactive} />
+
+## The custom panel
+
+The browser's `<input type="color">` is allowed here and only here. It is the custom
+**mode**, inside a panel this component owns — never the whole picker. The wheel, the
+eyedropper, and the sliders are worth keeping, and the presets are what the native control
+alone could never offer.
+
+Nothing is applied while a person drags the wheel. The panel holds a draft: **Use color** or
+Enter applies it, and Escape or **Cancel** drops it. A custom color answers `#RRGGBB` in
+upper case, so the app stores one spelling for one color.
+
+<Canvas of={ColorPickerStories.CustomPanel} />
+
+## The trigger says the name, or the code
+
+`"Color: Hot Pink"` for a preset and `"Color: #C2185B"` for a custom color. The visible text
+is in the accessible name (WCAG 2.5.3), as with `Picker`. Query it as:
+
+```tsx
+getByRole("button", { name: /^Color: / })
+```
+
+<Canvas of={ColorPickerStories.AllStates} />
+
+## Inside a `Field`
+
+`Field` clones its `id` and `aria-describedby` onto the trigger button, and the trigger
+stretches to the container with the swatch and name at the start and the chevron at the end.
+
+<Canvas of={ColorPickerStories.Responsive} />

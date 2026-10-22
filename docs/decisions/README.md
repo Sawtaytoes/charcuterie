@@ -8,6 +8,7 @@ decision overrides an instinct.
 
 | Date | Decision | Summary |
 | --- | --- | --- |
+| 2026-10-21 | [A color picker takes the app's presets and allows the native color input only as its custom mode](2026-10-21-a-color-picker-takes-the-apps-presets-and-allows-the-native-color-input-only-as-its-custom-mode.md) | `ColorPicker`: app presets in a searchable `Combobox`, an optional custom mode with the browser's color wheel and a hex field, applied on request, and an app rule `getColorError` that blocks a custom color. |
 | 2026-10-16 | [A command palette matches word prefixes and initials, not subsequences](2026-10-16-a-command-palette-matches-word-prefixes.md) | Every typed word starts a word of the title, description or keywords; initials and camel-case steps count; four fixed tiers, then weight, then caller order; groups ordered by their best match. |
 | 2026-10-16 | [Command palette hotkeys are an opt-in hook, and the palette's open state is the caller's](2026-10-16-command-palette-hotkeys-are-an-opt-in-hook.md) | `isVisible`/`onClose` as on `Modal`, query controlled or uncontrolled as on `Combobox`; `useCommandPaletteHotkeys` registers the keys, and `useCommandPalette` assembles both. |
 | 2026-10-14 | [Button behavior tests are Gherkin scenarios](2026-10-14-button-behavior-tests-are-gherkin-scenarios.md) | Convert all five direct tests with their full assertions, add an enabled mouse-click case, and run six scenarios through QuickPickle in all four windows. |

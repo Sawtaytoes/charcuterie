@@ -121,6 +121,12 @@ export type { ChartProps } from "./Chart/Chart.tsx"
 export { Chart } from "./Chart/Chart.tsx"
 export type { CheckboxProps } from "./Checkbox/Checkbox.tsx"
 export { Checkbox } from "./Checkbox/Checkbox.tsx"
+export type {
+  ColorPickerProps,
+  ColorPreset,
+} from "./ColorPicker/ColorPicker.tsx"
+export { ColorPicker } from "./ColorPicker/ColorPicker.tsx"
+export { parseHexColor } from "./ColorPicker/parseHexColor.ts"
 export type { ColorSchemeSwitcherProps } from "./ColorSchemeSwitcher/ColorSchemeSwitcher.tsx"
 export { ColorSchemeSwitcher } from "./ColorSchemeSwitcher/ColorSchemeSwitcher.tsx"
 export type {
