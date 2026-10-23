@@ -278,7 +278,11 @@ jobs:
           export PATH="$pnpm_bin:$PATH"
           echo "$pnpm_bin" >> "$GITHUB_PATH"
           hash -r
-          test "$(pnpm --version)" = 12.9.1
+          # Ask from the tools' directory, never the caller's checkout: pnpm 12
+          # refuses to run at all in a project whose `packageManager` names
+          # another manager (ERR_PNPM_OTHER_PM_EXPECTED), so a bare
+          # `pnpm --version` here failed every Yarn caller before its install.
+          test "$(pnpm --dir "$VRT_TOOLS" --version)" = 12.9.1
 
           # The image bakes browsers into a root-owned PLAYWRIGHT_BROWSERS_PATH.
           # The repo's own commands may need to install into it, so point
