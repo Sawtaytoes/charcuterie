@@ -7,8 +7,43 @@ import { mountStory } from "../mountStory.testHelpers.ts"
 import { expectAgentDrivable } from "../testing/index.ts"
 import * as stories from "./SegmentedControl.stories.tsx"
 
-const { AllStates, Playground, FullWidth, Interactive } =
-  composeStories(stories)
+const {
+  AllStates,
+  Playground,
+  FullWidth,
+  Interactive,
+  RichLabels,
+} = composeStories(stories)
+
+test("rich label boxes are centered inside both segmented options", async () => {
+  const { canvas } = await mountStory(RichLabels)
+  const group = expectAgentDrivable(canvas, {
+    name: "Message type",
+    role: "radiogroup",
+  })
+  for (const option of getOptions(group)) {
+    const label = option.firstElementChild
+    if (!label) throw new Error("The rich label is missing")
+    const optionBox = option.getBoundingClientRect()
+    const labelBox = label.getBoundingClientRect()
+    expect(
+      Math.abs(
+        optionBox.y +
+          optionBox.height / 2 -
+          labelBox.y -
+          labelBox.height / 2,
+      ),
+    ).toBeLessThan(0.5)
+    expect(
+      Math.abs(
+        optionBox.x +
+          optionBox.width / 2 -
+          labelBox.x -
+          labelBox.width / 2,
+      ),
+    ).toBeLessThan(0.5)
+  }
+})
 
 /**
  * `querySelectorAll` rather than `getAllByRole("radio")`, and not
@@ -237,7 +272,7 @@ test("full-width mode fills its container without wrapping labels", async () => 
       )
       expect(
         Math.max(...widths) - Math.min(...widths),
-      ).toBeLessThan(1)
+      ).toBeLessThan(0.5)
     }
   }
 })
