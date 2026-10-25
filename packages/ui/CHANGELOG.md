@@ -1,5 +1,11 @@
 # @charcuterie/ui
 
+## 4.27.1
+
+### Patch Changes
+
+- 303c562: Center segmented option content with flex alignment so inline icon/text labels and mixed font sizes do not sit above the center of their hit targets.
+
 ## 4.27.0
 
 ### Minor Changes
