@@ -2,6 +2,7 @@ import { playgroundParameters } from "@charcuterie/storybook-config/story-parame
 import type { Meta, StoryObj } from "@storybook/react"
 
 import { controlSizeArgType } from "../argTypes.storyHelpers.ts"
+import { Badge } from "../Badge/Badge.tsx"
 import {
   ContainerBoard,
   StoryCell,
@@ -236,6 +237,54 @@ export const RichLabels: Story = {
               Later
             </small>
           </span>
+        ),
+      },
+    ],
+  },
+}
+
+export const NarrowRichLabels: Story = {
+  args: RichLabels.args,
+  render: (controlProps) => (
+    <ContainerBoard>
+      {(width) => (
+        <SegmentedControl
+          {...controlProps}
+          label={`Message type at ${width}`}
+        />
+      )}
+    </ContainerBoard>
+  ),
+}
+
+export const FragmentLabels: Story = {
+  args: {
+    isFullWidth: true,
+    label: "Message format",
+    items: [
+      {
+        value: "text",
+        label: (
+          <>
+            <span
+              aria-hidden="true"
+              className="size-4 shrink-0 rounded-sm bg-current"
+            />
+            <span>Type a message</span>
+          </>
+        ),
+      },
+      {
+        value: "voice",
+        label: (
+          <>
+            <span
+              aria-hidden="true"
+              className="size-4 shrink-0 rounded-full bg-current"
+            />
+            <span>Your voice</span>
+            <Badge size="sm">Later</Badge>
+          </>
         ),
       },
     ],

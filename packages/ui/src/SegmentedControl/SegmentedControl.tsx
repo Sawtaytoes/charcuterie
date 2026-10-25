@@ -26,8 +26,10 @@ export type SegmentedControlProps = {
   className?: string
   /**
    * Fill the available inline space, with every option claiming an
-   * equal share. A board's Narrow View selector needs this: its
-   * options name the only lane on screen, so a content-width strip
+   * equal share where label minimum widths allow. Options wrap
+   * onto another row before squeezing rich labels below their
+   * minimum content width. A board's Narrow View selector needs
+   * this: its options name the only lane on screen, so a content-width strip
    * leaves the rest of the board looking disconnected.
    *
    * The default stays content-width. Most segmented controls choose

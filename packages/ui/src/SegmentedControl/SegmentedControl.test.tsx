@@ -13,6 +13,8 @@ const {
   FullWidth,
   Interactive,
   RichLabels,
+  NarrowRichLabels,
+  FragmentLabels,
 } = composeStories(stories)
 
 test("rich label boxes are centered inside both segmented options", async () => {
@@ -42,6 +44,70 @@ test("rich label boxes are centered inside both segmented options", async () => 
           labelBox.width / 2,
       ),
     ).toBeLessThan(0.5)
+  }
+})
+
+test("rich labels stay inside their options in constrained containers", async () => {
+  const { canvas } = await mountStory(NarrowRichLabels)
+  for (const group of canvas.getAllByRole("radiogroup", {
+    name: /Message type at/,
+  })) {
+    const groupBox = group.getBoundingClientRect()
+    for (const option of getOptions(group)) {
+      const label = option.firstElementChild
+      if (!label)
+        throw new Error("The rich label is missing")
+      const optionBox = option.getBoundingClientRect()
+      const labelBox = label.getBoundingClientRect()
+      expect(labelBox.left).toBeGreaterThanOrEqual(
+        optionBox.left - 0.5,
+      )
+      expect(labelBox.right).toBeLessThanOrEqual(
+        optionBox.right + 0.5,
+      )
+      expect(optionBox.left).toBeGreaterThanOrEqual(
+        groupBox.left - 0.5,
+      )
+      expect(optionBox.right).toBeLessThanOrEqual(
+        groupBox.right + 0.5,
+      )
+    }
+  }
+})
+
+test("fragment label children align and have readable accessible names", async () => {
+  const { canvas } = await mountStory(FragmentLabels)
+  const group = expectAgentDrivable(canvas, {
+    name: "Message format",
+    role: "radiogroup",
+  })
+  expectAgentDrivable(canvas, {
+    name: "Type a message",
+    role: "radio",
+  })
+  expectAgentDrivable(canvas, {
+    name: "Your voice Later",
+    role: "radio",
+  })
+  for (const option of getOptions(group)) {
+    const optionBox = option.getBoundingClientRect()
+    let previousRight = optionBox.left
+    for (const child of option.children) {
+      const box = child.getBoundingClientRect()
+      expect(
+        Math.abs(
+          optionBox.y +
+            optionBox.height / 2 -
+            box.y -
+            box.height / 2,
+        ),
+      ).toBeLessThan(0.5)
+      expect(box.left).toBeGreaterThanOrEqual(previousRight)
+      expect(box.right).toBeLessThanOrEqual(
+        optionBox.right + 0.5,
+      )
+      previousRight = box.right
+    }
   }
 })
 
