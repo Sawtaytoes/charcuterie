@@ -33,7 +33,7 @@ test("rich label boxes are centered inside both segmented options", async () => 
           labelBox.y -
           labelBox.height / 2,
       ),
-    ).toBeLessThan(1)
+    ).toBeLessThan(0.5)
     expect(
       Math.abs(
         optionBox.x +
@@ -41,7 +41,7 @@ test("rich label boxes are centered inside both segmented options", async () => 
           labelBox.x -
           labelBox.width / 2,
       ),
-    ).toBeLessThan(1)
+    ).toBeLessThan(0.5)
   }
 })
 
@@ -272,7 +272,7 @@ test("full-width mode fills its container without wrapping labels", async () => 
       )
       expect(
         Math.max(...widths) - Math.min(...widths),
-      ).toBeLessThan(1)
+      ).toBeLessThan(0.5)
     }
   }
 })
