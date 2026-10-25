@@ -67,11 +67,11 @@ export const SegmentedOption = ({
       aria-checked={isChecked}
       className={toClassName(
         "inline-flex cursor-pointer items-center justify-center rounded-sm border border-transparent font-medium tabular-nums transition-colors duration-(--duration-fast) ease-standard",
-        // In a very narrow board, three full labels cannot share
-        // one row. The minimum lets two fit, then the final option
-        // takes a full second row instead of wrapping its label or
-        // leaving unused space beside it.
-        isFullWidth && "min-w-28 flex-1 basis-28",
+        // Keep the usual seven-rem wrapping basis, but let a label's
+        // minimum content width raise the floor. Rich nowrap labels
+        // then move to another row instead of spilling out of a
+        // button whose fixed minimum was smaller than its content.
+        isFullWidth && "min-w-min flex-1 basis-28",
         CONTROL_SIZE_CLASS[size],
         // Two entries rather than one interpolated string:
         // `tailwindCandidates.test.ts` rejects a template literal in
@@ -91,6 +91,10 @@ export const SegmentedOption = ({
       ref={(element) => {
         trackElement(value, element)
       }}
+      // Full-width targets are already sized by the row. Inline
+      // padding must not inflate the minimum beyond the label
+      // itself; centering still leaves equal space on both sides.
+      style={isFullWidth ? { paddingInline: 0 } : undefined}
       role="radio"
       tabIndex={tabIndex}
       type="button"
