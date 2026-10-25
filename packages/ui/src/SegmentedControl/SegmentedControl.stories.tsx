@@ -200,3 +200,44 @@ export const FullWidth: Story = {
 export const Interactive: Story = {
   args: { items: COLUMN_ITEMS, label: "Columns" },
 }
+
+/** Inline rich labels must be centered as boxes, not aligned to an anonymous text baseline. */
+export const RichLabels: Story = {
+  args: {
+    isFullWidth: true,
+    label: "Message type",
+    items: [
+      {
+        value: "text",
+        label: (
+          <span className="inline-flex items-center gap-2 whitespace-nowrap">
+            <span
+              aria-hidden="true"
+              className="size-4 rounded-sm bg-current"
+            />
+            <span className="min-w-0 truncate">
+              Type a message
+            </span>
+          </span>
+        ),
+      },
+      {
+        value: "voice",
+        label: (
+          <span className="inline-flex items-center gap-2 whitespace-nowrap">
+            <span
+              aria-hidden="true"
+              className="size-4 rounded-full bg-current"
+            />
+            <span className="min-w-0 truncate">
+              Your voice
+            </span>
+            <small className="min-w-0 truncate text-xs">
+              Later
+            </small>
+          </span>
+        ),
+      },
+    ],
+  },
+}

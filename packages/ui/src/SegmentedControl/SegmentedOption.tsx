@@ -66,7 +66,7 @@ export const SegmentedOption = ({
     <button
       aria-checked={isChecked}
       className={toClassName(
-        "cursor-pointer rounded-sm border border-transparent font-medium tabular-nums transition-colors duration-(--duration-fast) ease-standard",
+        "inline-flex cursor-pointer items-center justify-center rounded-sm border border-transparent font-medium tabular-nums transition-colors duration-(--duration-fast) ease-standard",
         // In a very narrow board, three full labels cannot share
         // one row. The minimum lets two fit, then the final option
         // takes a full second row instead of wrapping its label or
