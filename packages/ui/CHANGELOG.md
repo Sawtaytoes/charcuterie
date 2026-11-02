@@ -1,5 +1,12 @@
 # @charcuterie/ui
 
+## 4.27.3
+
+### Patch Changes
+
+- Updated dependencies [f77293a]
+  - @charcuterie/logic@2.12.0
+
 ## 4.27.2
 
 ### Patch Changes
