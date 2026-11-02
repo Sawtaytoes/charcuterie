@@ -246,3 +246,13 @@ the selector never changes the candidate or silently clips content.
 `@charcuterie/logic/charts` exposes the shared TanStack chart definition and standalone SVG renderer. `/charts/react` and `/charts/preact` expose `ChartPlot` for native framework surfaces, with common `ChartOptions`, hover/touch/keyboard interaction, and optional reduced-motion-aware transitions. TanStack is pinned to 0.18.0 while alpha. Importing the core or existing bindings does not load this engine.
 
 The existing `renderChartSvg` in `/core` remains the portable fallback for constrained clients. Both engines accept grouped bars, signed stacks (`barLayout: "stacked"`), lines, and null samples. Null is unavailable, never zero. Apps supply series and labels; no engine performs requests or calculates report data.
+
+### Compact portable chart previews
+
+`renderChartSvg` accepts `isSparkline: true` for small, always-visible trends in
+constrained displays. Pass the preview's `width` and `height`; the SVG stretches
+into its container without axis labels or dense point markers. Missing values
+still break lines, isolated observations remain visible, negative values remain
+in the domain, and the title and description remain accessible. Full charts keep
+their existing default presentation. Interactive chart facades continue to render
+full detail; `isSparkline` applies to the portable renderer.

@@ -18,6 +18,8 @@ export type ChartOptions = {
   width?: number
   height?: number
   fontSize?: number
+  /** Portable previews can show a compact trend without axes or point markers. */
+  isSparkline?: boolean
 }
 
 const escapeXml = (text: string): string =>
@@ -65,20 +67,28 @@ export const renderChartSvg = ({
   width = 640,
   height = 240,
   fontSize = 11,
+  isSparkline = false,
 }: ChartOptions): string => {
   const chartWidth = Number.isFinite(width)
-    ? Math.max(180, Math.min(4096, width))
+    ? Math.max(
+        isSparkline ? 32 : 180,
+        Math.min(4096, width),
+      )
     : 640
   const chartHeight = Number.isFinite(height)
-    ? Math.max(120, Math.min(2160, height))
+    ? Math.max(
+        isSparkline ? 16 : 120,
+        Math.min(2160, height),
+      )
     : 240
   const labelSize = Number.isFinite(fontSize)
     ? Math.max(11, Math.min(32, fontSize))
     : 11
-  const start = labelSize * 4.2
-  const end = chartWidth - 12
-  const top = 14
-  const bottom = chartHeight - labelSize * 3.2
+  const start = isSparkline ? 4 : labelSize * 4.2
+  const end = chartWidth - (isSparkline ? 4 : 12)
+  const top = isSparkline ? 4 : 14
+  const bottom =
+    chartHeight - (isSparkline ? 4 : labelSize * 3.2)
   const stackedBase = (
     seriesIndex: number,
     index: number,
@@ -127,7 +137,7 @@ export const renderChartSvg = ({
     `<title>${escapeXml(title)}</title>`,
     `<desc>${escapeXml(description)}</desc>`,
   ]
-  for (let tick = 0; tick <= 4; tick++) {
+  for (let tick = 0; !isSparkline && tick <= 4; tick++) {
     const value = minimum + (span * tick) / 4
     const at = coordinate(positionY(value))
     const label = Intl.NumberFormat("en-US", {
@@ -141,9 +151,10 @@ export const renderChartSvg = ({
       `<text x="${start - 6}" y="${at}" text-anchor="end" dominant-baseline="middle" fill="currentColor" font-size="${labelSize}">${escapeXml(label)}</text>`,
     )
   }
-  elements.push(
-    `<line x1="${start}" x2="${end}" y1="${coordinate(positionY(0))}" y2="${coordinate(positionY(0))}" stroke="currentColor" opacity="0.6"/>`,
-  )
+  if (!isSparkline)
+    elements.push(
+      `<line x1="${start}" x2="${end}" y1="${coordinate(positionY(0))}" y2="${coordinate(positionY(0))}" stroke="currentColor" opacity="0.6"/>`,
+    )
   const stride = Math.max(
     1,
     Math.ceil(
@@ -152,6 +163,7 @@ export const renderChartSvg = ({
     ),
   )
   labels.forEach((label, index) => {
+    if (isSparkline) return
     if (
       index % stride === 0 ||
       index === labels.length - 1
@@ -187,11 +199,17 @@ export const renderChartSvg = ({
           ? 1
           : Math.max(1, series.length)),
     )
-    let segment: string[] = []
+    let segment: { x: string; y: string; title: string }[] =
+      []
     const flush = () => {
       if (segment.length > 1) {
         elements.push(
-          `<polyline points="${segment.join(" ")}" fill="none" stroke="${color}" stroke-width="2.5" stroke-dasharray="${dash}"/>`,
+          `<polyline points="${segment.map((point) => `${point.x},${point.y}`).join(" ")}" fill="none" stroke="${color}" stroke-width="2.5" stroke-dasharray="${dash}"${isSparkline ? ' vector-effect="non-scaling-stroke"' : ""}/>`,
+        )
+      } else if (isSparkline && segment[0]) {
+        const point = segment[0]
+        elements.push(
+          `<circle cx="${point.x}" cy="${point.y}" r="2.5" fill="${color}"><title>${point.title}</title></circle>`,
         )
       }
       segment = []
@@ -221,15 +239,18 @@ export const renderChartSvg = ({
           `<rect x="${coordinate(atX)}" y="${coordinate(atY)}" width="${coordinate(barWidth * 0.9)}" height="${coordinate(Math.abs(positionY(base + value) - positionY(base)))}" fill="${color}" stroke="currentColor" stroke-width="0.4"><title>${markTitle}</title></rect>`,
         )
       } else {
-        segment.push(
-          `${coordinate(positionX(index))},${coordinate(positionY(value))}`,
-        )
-        elements.push(
-          `<circle cx="${coordinate(positionX(index))}" cy="${coordinate(positionY(value))}" r="2.5" fill="${color}"><title>${markTitle}</title></circle>`,
-        )
+        segment.push({
+          x: coordinate(positionX(index)),
+          y: coordinate(positionY(value)),
+          title: markTitle,
+        })
+        if (!isSparkline)
+          elements.push(
+            `<circle cx="${coordinate(positionX(index))}" cy="${coordinate(positionY(value))}" r="2.5" fill="${color}"><title>${markTitle}</title></circle>`,
+          )
       }
     })
     flush()
   })
-  return `<svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${escapeXml(title)}" viewBox="0 0 ${chartWidth} ${chartHeight}" width="100%" height="100%" style="display:block;font-family:inherit">${elements.join("")}</svg>`
+  return `<svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${escapeXml(title)}" viewBox="0 0 ${chartWidth} ${chartHeight}" width="100%" height="100%"${isSparkline ? ' preserveAspectRatio="none"' : ""} style="display:block;font-family:inherit">${elements.join("")}</svg>`
 }
