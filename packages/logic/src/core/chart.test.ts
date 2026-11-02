@@ -2,6 +2,73 @@ import { describe, expect, test } from "vitest"
 import { renderChartSvg } from "./chart.ts"
 
 describe("portable charts", () => {
+  test("compact trends omit axes and dense dots while preserving gaps and isolated observations", () => {
+    const svg = renderChartSvg({
+      title: "Power history",
+      description: "Watts",
+      isSparkline: true,
+      kind: "line",
+      width: 200,
+      height: 24,
+      labels: ["1", "2", "3", "4", "5", "6"],
+      series: [
+        {
+          id: "power",
+          label: "Power",
+          values: [10, 20, null, -5, null, 0],
+        },
+      ],
+    })
+    expect(svg).toContain('viewBox="0 0 200 24"')
+    expect(svg).toContain('preserveAspectRatio="none"')
+    expect(svg).toContain('aria-label="Power history"')
+    expect(svg).toContain("<desc>Watts</desc>")
+    expect(svg).not.toContain("<text ")
+    expect(svg).not.toContain("<line ")
+    expect(svg.match(/<polyline /g)).toHaveLength(1)
+    expect(svg.match(/<circle /g)).toHaveLength(2)
+    expect(svg).toContain("Power, 4: -5")
+    expect(svg).toContain("Power, 6: 0")
+    expect(svg).not.toMatch(/NaN|Infinity/)
+  })
+  test.each(
+    [[], [null], [0], [-10], [10, 10]].map((values) => ({
+      values,
+    })),
+  )(
+    "compact constant and empty data stay finite: $values",
+    ({ values }) => {
+      const svg = renderChartSvg({
+        title: "Trend",
+        isSparkline: true,
+        kind: "line",
+        width: 0,
+        height: -1,
+        labels: ["a", "b"],
+        series: [{ id: "a", label: "A", values }],
+      })
+      expect(svg).toContain('viewBox="0 0 32 16"')
+      expect(svg).not.toMatch(/NaN|Infinity/)
+      expect(svg).not.toContain("<text ")
+      if (values.length === 1 && values[0] !== null)
+        expect(svg).toContain("<circle ")
+    },
+  )
+  test("compact bar previews preserve positive and negative contributions", () => {
+    const svg = renderChartSvg({
+      title: "Net",
+      isSparkline: true,
+      width: 80,
+      height: 24,
+      labels: ["a", "b", "c"],
+      series: [
+        { id: "a", label: "A", values: [10, -10, null] },
+      ],
+    })
+    expect(svg.match(/<rect /g)).toHaveLength(2)
+    expect(svg).toContain("A, b: -10")
+    expect(svg).not.toMatch(/NaN|Infinity/)
+  })
   test("keeps negative bars below the zero baseline and does not invent missing samples", () => {
     const svg = renderChartSvg({
       title: "Net",
