@@ -19,7 +19,7 @@ FROM node:${NODE_MAJOR}-slim
 ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 
 # Node 26's official images unbundled corepack, so a bare
-# `corepack enable` is exit-127 on 26 (bit rip-deck + portly at deploy
+# `corepack enable` is exit-127 on 26 (bit rip-deck + sibling-app at deploy
 # time). Install it first — the fix castkit/mux-magic/gallery-downloader
 # already use. tini reaps zombies and forwards signals as PID 1;
 # ca-certificates for TLS to registries.

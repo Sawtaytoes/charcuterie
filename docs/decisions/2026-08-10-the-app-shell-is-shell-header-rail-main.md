@@ -95,7 +95,7 @@ context. Either component can still override, but that now takes a prop somebody
 purpose.
 
 **The max-width is the least standardized value in the fleet**, which is why it is a
-parameter rather than a constant: `max-w-5xl` (board-games, portly), `max-w-6xl` *and*
+parameter rather than a constant: `max-w-5xl` (board-games, sibling-app), `max-w-6xl` *and*
 `max-w-3xl` mixed within one app (mux-magic), `max-w-7xl` (gallery-downloader, spoolbuddy),
 `max-w-[90rem]` (mail-sifter), 80rem (points-market), a raw `1400px` in plain CSS
 (plex-channels), JS-computed (rip-deck), and none at all (ai-usage, bambuddy,

@@ -62,7 +62,7 @@ test("omitting data-density still yields control sizing and a type ramp", () => 
   // app that sets `data-scheme` and omits `data-density` renders
   // every control at zero height with no type ramp, on a green
   // build and with no console error — which is exactly what
-  // happened to `portly-controllers`.
+  // happened to `sibling-app`.
   expect(variablesCss).toContain(
     ':root, [data-density="comfortable"], [data-variant="daylight"][data-density="comfortable"] {',
   )

@@ -112,7 +112,7 @@ solved the frame, and every one of the twelve UI repos still writes its own dest
 has none. Surveyed with `rg -uu` across the fleet: **two repos contain a `<nav>` at all.**
 Docket hand-rolled a row of `NavLink`s with the collapse rule in `styles/tailwind.css`,
 Folio hand-rolled another, and the other ten — ai-usage, gallery-downloader, image-viewer,
-mail-sifter, mux-magic, points-market, portly-controllers, queuepilot, rip-deck,
+mail-sifter, mux-magic, points-market, sibling-app, queuepilot, rip-deck,
 board-game-picker — have no persistent destinations anywhere.
 
 **The two that exist already disagree, and neither disagreement was a decision.** Docket
@@ -168,7 +168,7 @@ dismissable, body-portalled panel that takes arbitrary children, and it is `moda
 so the caret is not trapped in what is a disclosure rather than a dialog.
 
 **`bar` ships rather than being cut, because half the fleet wants it.** Route counts from
-each app's own router: ai-usage 2, portly-controllers 2, image-viewer 2, folio 3, mux-magic
+each app's own router: ai-usage 2, sibling-app 2, image-viewer 2, folio 3, mux-magic
 4, board-game-picker 6. A 212px rail costs those more than it returns, and rip-deck exists
 to fit as many bays on a screen as possible. Docket (17 routes, 9 destinations) and
 mail-sifter (11) are the rail's cases. One component with a `layout` prop, the same call

@@ -6,7 +6,7 @@
  *
  *  1. **`navigator.clipboard.writeText`.** The real API. It exists
  *     only in a *secure context*, which a `devshare` URL and
- *     `localhost` both are — and a plain `http://storeman.octen:8080`
+ *     `localhost` both are — and a plain `http://truenas-host:8080`
  *     dev server is not.
  *  2. **A hidden `<textarea>` plus `document.execCommand("copy")`.**
  *     Deprecated, and kept anyway: it is the only thing that works in

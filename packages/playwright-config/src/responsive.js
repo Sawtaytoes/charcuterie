@@ -28,7 +28,7 @@
  *   `white-space: pre` and still passes;
  * - a single-line truncation, `text-overflow: ellipsis` — unless it
  *   has been squeezed narrower than one character, which shows
- *   nothing at all. portly-controllers#27: every seated pad's name
+ *   nothing at all. sibling-app#27: every seated pad's name
  *   was 0px wide at 384px, a tile of swatches nobody could tell
  *   apart, and the ellipsis exemption passed it;
  * - a visually hidden (`sr-only`) element, 1px by 1px on purpose;

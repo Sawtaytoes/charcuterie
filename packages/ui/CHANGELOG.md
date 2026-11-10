@@ -2769,7 +2769,7 @@ items }` → `role="group"` named by its label). Plus a new `emptyState?: ReactN
   inactive — and its own size scale is larger than `DOT_SIZE_CLASS` because a swatch is
   content, not punctuation.
 
-  Surfaced by `portly-controllers`, the fleet's newest consumer.
+  Surfaced by `sibling-app`, the fleet's newest consumer.
 
 ### Patch Changes
 

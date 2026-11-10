@@ -372,7 +372,7 @@ test("the barrel is the only place components are re-exported", async () => {
   // components: +1 → 29. The picker family adds `Listbox` (single-select)
   // and `Combobox` (searchable/virtualized): +2 → 31.
   // `Swatch` — a colour as content with a required name, the one
-  // colour the system does not own — comes out of `portly-controllers`,
+  // colour the system does not own — comes out of `sibling-app`,
   // the fleet's newest consumer: +1 -> 32.
   //
   // The boolean-input family fills the gap `mux-magic`'s `BooleanField`

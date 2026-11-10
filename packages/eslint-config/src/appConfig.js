@@ -8,7 +8,7 @@
  * left every ordinary app hand-composing the same seven blocks,
  * and six of them drifted:
  *
- *   - `portly-controllers`, `gallery-downloader`, `mux-magic` and
+ *   - `sibling-app`, `gallery-downloader`, `mux-magic` and
  *     `image-viewer` each hand-registered the plugin object and
  *     the two picker rules by name, with four different comments
  *     explaining the same reasoning.

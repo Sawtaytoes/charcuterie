@@ -152,7 +152,7 @@ type Story = StoryObj<typeof Nav>
 
 /**
  * A header row, which is what an app with a handful of destinations
- * wants: ai-usage, folio, mux-magic, portly-controllers.
+ * wants: ai-usage, folio, mux-magic, sibling-app.
  */
 export const Playground: Story = {
   parameters: playgroundParameters,

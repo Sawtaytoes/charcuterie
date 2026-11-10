@@ -45,7 +45,7 @@ enforce the demotion. Ten days later the fleet's numbers say the demotion did no
 | image-viewer | 3 | 5 |
 | queuepilot | 2 | 27 |
 | gallery-downloader | 2 | 7 |
-| portly-controllers | 1 | 0 |
+| sibling-app | 1 | 0 |
 | points-market | 0 | 1 |
 | bambuddy | 0 | **152** |
 | spoolbuddy | 0 | 19 |

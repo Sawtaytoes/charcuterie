@@ -58,7 +58,7 @@ On 2026-08-21, after the fleet-wide `Listbox` migration, the state was:
 | Repo | Picker rule enforced? | How |
 | --- | --- | --- |
 | mux-magic | yes | hand-registered plugin + two rule ids, 12-line comment |
-| portly-controllers | yes | hand-registered plugin + two rule ids, 10-line comment |
+| sibling-app | yes | hand-registered plugin + two rule ids, 10-line comment |
 | gallery-downloader | yes | hand-registered plugin + two rule ids |
 | image-viewer | yes | hand-registered plugin + two rule ids |
 | board-game-picker | **no** | config never wired |

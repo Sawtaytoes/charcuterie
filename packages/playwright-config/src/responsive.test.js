@@ -99,7 +99,7 @@ describe("expectNoHorizontalOverflow", () => {
   })
 
   /*
-   * portly-controllers#27: a flex row gave every pad's name 0px at
+   * sibling-app#27: a flex row gave every pad's name 0px at
    * 384px. The label truncates with an ellipsis, so the clipped-box
    * rule exempts it, and it showed nothing at all.
    */

@@ -112,7 +112,7 @@ can scroll to.
 
 **Full suite:** 1916 tests pass, 215 files.
 
-**Fleet survey** (`rg -uu` from the repos root, 2026-09-18): `portly-controllers` is the
+**Fleet survey** (`rg -uu` from the repos root, 2026-09-18): `sibling-app` is the
 only owned app rendering `ToastRegion` today. Mail Sifter has its own hand-rolled
 `ActionToast`, also at a hand-picked `z-50` — which is the shape this library is supposed
 to own, and is filed as follow-up work rather than fixed here.

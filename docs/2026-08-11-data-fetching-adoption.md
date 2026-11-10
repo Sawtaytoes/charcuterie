@@ -33,7 +33,7 @@ Do not fan the app PRs out before step 1 is on the registry.
 | **points-market** | `packages/web` | `fetch` in `lib/api.ts`, inline types | Shared client + hooks; generate schema if OpenAPI, else move inline types to a `contracts` boundary. |
 | **mail-sifter** | `packages/web` | `fetch` in `lib/api.ts`, inline types | Same as points-market. |
 
-**Out of scope** (not request/response, or no HTTP): **ai-usage** and **portly-controllers**
+**Out of scope** (not request/response, or no HTTP): **ai-usage** and **sibling-app**
 (SSE-only — future `@charcuterie/streams`), **castkit/slatecast** (Preact + WebSocket +
 signals; also a 60 KB budget), **castkit/web** (mock-data Storybook), **image-viewer**
 (Electron IPC / filesystem). Do not force react-query into these.

@@ -44,7 +44,7 @@ was asking — it just never asked about the state a button is in while it is be
 
 The value that exposed it is `daylight`'s dark-scheme `intent.accent.solidHover`, `#6A64F0`,
 against its `onSolid` of `#FFFFFF`: **4.47:1, where WCAG 2.2 AA requires 4.5:1 for normal
-text.** `daylight` is the `:root` default. mux-magic and portly-controllers set it
+text.** `daylight` is the `:root` default. mux-magic and sibling-app set it
 explicitly; every other app in the fleet inherits it. So *every accent button in the fleet
 failed AA for as long as a pointer sat on it*, and no gate in the repo could see it.
 

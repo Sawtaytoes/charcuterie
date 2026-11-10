@@ -118,7 +118,7 @@ mux-magic's `packages/web/index.html` was the second failure when this was first
 measured; [#201](https://github.com/Sawtaytoes/mux-magic/pull/201) has since merged and
 its live file is clean, which is the true-negative half of the check on real code.
 Everything else — gallery-downloader (three entries), points-market, mail-sifter,
-castkit, plex-channels, portly-controllers, ai-usage, image-viewer — is clean.
+castkit, plex-channels, sibling-app, ai-usage, image-viewer — is clean.
 
 ## Related
 

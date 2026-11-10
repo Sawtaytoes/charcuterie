@@ -418,7 +418,7 @@
   `1.875rem`/`1.5234rem` — the default block is emitted first, and `:root` and
   `[data-density="compact"]` are the same specificity, so source order is the whole cascade.
 
-  Found by `portly-controllers`, which rendered a segmented control with no segments.
+  Found by `sibling-app`, which rendered a segmented control with no segments.
 
 ## 1.1.0
 

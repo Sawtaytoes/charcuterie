@@ -485,7 +485,7 @@ export const buildVariablesCss = (
        * `data-variant` has had this fallback since M0 (`:root,
        * [data-variant="daylight"]` above); density not having one was
        * an asymmetry rather than a decision. Found by
-       * `portly-controllers`, which rendered a segmented control with
+       * `sibling-app`, which rendered a segmented control with
        * no segments and no error to explain it.
        */
       const densitySelector =

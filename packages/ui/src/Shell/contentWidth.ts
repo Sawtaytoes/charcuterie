@@ -4,7 +4,7 @@
  *
  * Ten repos hand-roll their page chrome and **no two of them cap
  * the column at the same width**: `max-w-5xl` (board-games,
- * portly), `max-w-6xl` and `max-w-3xl` mixed inside one app
+ * sibling-app), `max-w-6xl` and `max-w-3xl` mixed inside one app
  * (mux-magic), `max-w-7xl` (gallery-downloader, spoolbuddy),
  * `max-w-[90rem]` (mail-sifter), `80rem` (points-market), a raw
  * `1400px` in plain CSS (plex-channels), a JS-computed one
