@@ -12,6 +12,12 @@ export type ModalProps = {
    * it the focus manager takes the first tabbable element — the
    * Close button on anything with chrome. */
   initialFocus?: RefObject<HTMLElement | null>
+  /**
+   * `false` only for a caller that animates the panel itself, as
+   * `TableViewport` does when it grows a table out of the page. Every
+   * other panel keeps the library's enter and exit motion.
+   */
+  hasMotion?: boolean
   /** Escape and a backdrop press both close. */
   isDismissable?: boolean
   isVisible: boolean
@@ -63,6 +69,7 @@ export const Modal = ({
   "aria-labelledby": ariaLabelledBy,
   children,
   className,
+  hasMotion = true,
   initialFocus,
   isDismissable = true,
   isVisible,
@@ -73,6 +80,7 @@ export const Modal = ({
     aria-label={ariaLabel}
     aria-labelledby={ariaLabelledBy}
     className={toClassName(MODAL_BOX_CLASS, className)}
+    hasMotion={hasMotion}
     initialFocus={initialFocus}
     isDismissable={isDismissable}
     isVisible={isVisible}

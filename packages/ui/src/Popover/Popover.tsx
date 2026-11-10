@@ -78,6 +78,9 @@ export const Popover = ({
     context,
     floatingStyles,
     getFloatingProps,
+    isExiting,
+    isMounted,
+    motionClassName,
     setFloating,
   } = useAnchoredOverlay({
     isVisible,
@@ -92,10 +95,12 @@ export const Popover = ({
     <>
       {clonedTrigger}
 
-      {isVisible ? (
+      {isMounted ? (
         <FloatingPortal>
           <FloatingFocusManager
             context={context}
+            // A leaving panel hands focus back at once.
+            disabled={isExiting}
             modal={false}
           >
             <div
@@ -104,8 +109,11 @@ export const Popover = ({
               className={toClassName(
                 PANEL_SURFACE_CLASS,
                 "z-[var(--layer-modal)] max-w-xs p-3 text-content-primary text-sm",
+                motionClassName,
                 className,
               )}
+              aria-hidden={isExiting ? true : undefined}
+              inert={isExiting ? true : undefined}
               ref={setFloating}
               // Duplicated from `getFloatingProps()` on purpose, and
               // the two cannot differ — `useRole(context, { role:

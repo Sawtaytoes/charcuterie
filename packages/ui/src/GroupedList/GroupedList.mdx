@@ -118,8 +118,9 @@ wide list and drops under the text in a narrow one.
 - `isHighlighted` rings the row and pulses the ring twice — "this one just changed", after a
   scan or a save. `highlightIntent` picks the colour (`accent` by default). The ring stays
   while the flag does, so the app decides how long it lasts, usually with a timer. **To pulse
-  an already-highlighted row again, change its `key`**: a new key is a new row, and a new row
-  starts the pulse from the beginning. Under `prefers-reduced-motion` and on ePaper the ring
+  an already-highlighted row again, change its `highlightKey`**, not its `key`. Rows enter,
+  leave, and slide by key, so a new `key` would make the row leave while a copy of it
+  entered; a new `highlightKey` restarts only the ring's pulse. Under `prefers-reduced-motion` and on ePaper the ring
   does not pulse; it is simply there. The pulse lives in `@charcuterie/ui/styles.css`, which
   every app already imports.
 

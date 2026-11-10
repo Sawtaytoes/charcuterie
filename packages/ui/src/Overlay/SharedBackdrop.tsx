@@ -1,5 +1,10 @@
 import { FloatingPortal } from "@floating-ui/react"
 import type { ReactNode } from "react"
+import {
+  toFadeMotionClass,
+  usePresence,
+} from "../Motion/usePresence.ts"
+import { toClassName } from "../toClassName.ts"
 
 /**
  * The scrim, and there is exactly one of it however many backdrop
@@ -19,13 +24,19 @@ import type { ReactNode } from "react"
  * — a real bug a same-z-plus-DOM-order scheme has, because a
  * later-mounted scrim then covers the panel. Stacking *between* panels
  * still falls out of append order at the one `--layer-modal`.
+ *
+ * It fades in with the first panel and out with the last, and during
+ * the fade out it is click-through like the panel leaving with it.
  */
 export const SharedBackdrop = ({
   isVisible,
 }: {
   isVisible: boolean
 }): ReactNode => {
-  if (!isVisible) {
+  const { isExiting, isMounted, presenceRef } =
+    usePresence<HTMLDivElement>(isVisible)
+
+  if (!isMounted) {
     return null
   }
 
@@ -33,7 +44,11 @@ export const SharedBackdrop = ({
     <FloatingPortal>
       <div
         aria-hidden="true"
-        className="fixed inset-0 z-[var(--layer-overlay)] bg-scrim"
+        className={toClassName(
+          "fixed inset-0 z-[var(--layer-overlay)] bg-scrim",
+          toFadeMotionClass(isExiting),
+        )}
+        ref={presenceRef}
       />
     </FloatingPortal>
   )

@@ -15,14 +15,25 @@ import {
   useDismiss,
   useFloating,
   useInteractions,
+  useMergeRefs,
   useRole,
 } from "@floating-ui/react"
-import type { ReactElement, RefObject } from "react"
+import type {
+  CSSProperties,
+  ReactElement,
+  RefObject,
+} from "react"
 import {
   createElement,
+  useCallback,
   useContext,
   useLayoutEffect,
 } from "react"
+import {
+  toOverlayMotionClass,
+  toTransformOrigin,
+  usePresence,
+} from "../Motion/usePresence.ts"
 import { AnchoredOverlayScopeContext } from "./AnchoredOverlayScope.ts"
 
 /**
@@ -69,6 +80,17 @@ import { AnchoredOverlayScopeContext } from "./AnchoredOverlayScope.ts"
  * Whether the panel goes in a `FloatingPortal`, the top layer, or in
  * place is the component's call, which is what lets the same hook back
  * a portalled `Listbox` and (for now) a top-layer `Popover`.
+ *
+ * ### Presence, so the panel can leave with motion
+ *
+ * A component renders its panel while `isMounted`, not while
+ * `isVisible`: the two differ only while `isExiting`, the length of
+ * the exit animation. During that time the component makes the panel
+ * `inert` and `aria-hidden` and disables any focus manager on it, so
+ * it is closed to everything but the eye. `motionClassName` is the
+ * enter or exit class, and `floatingStyles` already carries the
+ * `transform-origin` that makes the panel grow out of its trigger,
+ * flipped with the placement.
  */
 export type AnchoredOverlayRole =
   | "dialog"
@@ -243,7 +265,12 @@ export const useAnchoredOverlay = ({
 
   const isAnchored = anchorRef !== undefined
 
-  const { context, floatingStyles, refs } = useFloating({
+  const {
+    context,
+    floatingStyles,
+    placement: resolvedPlacement,
+    refs,
+  } = useFloating({
     // Read-only. Charcuterie remains the sole owner; floating-ui is
     // told what is true and never decides it.
     open: isVisible,
@@ -375,12 +402,37 @@ export const useAnchoredOverlay = ({
 
   const clonedTrigger = isAnchored ? null : clonedChild
 
+  const { isExiting, isMounted, presenceRef } =
+    usePresence(isVisible)
+
+  const mergedFloatingRef = useMergeRefs([
+    refs.setFloating,
+    presenceRef,
+  ])
+
+  // Re-typed as the plain callback `refs.setFloating` was, so the
+  // hook's inferred return type names nothing from React's internals.
+  const setFloating = useCallback(
+    (node: HTMLElement | null) => {
+      mergedFloatingRef?.(node)
+    },
+    [mergedFloatingRef],
+  )
+
+  const panelStyles: CSSProperties = {
+    ...floatingStyles,
+    transformOrigin: toTransformOrigin(resolvedPlacement),
+  }
+
   return {
     clonedTrigger,
     context,
-    floatingStyles,
+    floatingStyles: panelStyles,
     getFloatingProps,
-    setFloating: refs.setFloating,
+    isExiting,
+    isMounted,
+    motionClassName: toOverlayMotionClass(isExiting),
+    setFloating,
     triggerId,
   }
 }

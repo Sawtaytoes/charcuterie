@@ -1,4 +1,6 @@
 import { composeStories } from "@storybook/react"
+import { flushSync } from "react-dom"
+import { createRoot } from "react-dom/client"
 import {
   expect,
   userEvent,
@@ -9,6 +11,8 @@ import { test } from "vitest"
 import { expectNoAxeViolations } from "../expectNoAxeViolations.testHelpers.ts"
 import { mountStory } from "../mountStory.testHelpers.ts"
 import * as stories from "./ReorderList.stories.tsx"
+import type { ReorderListItem } from "./ReorderList.tsx"
+import { ReorderList } from "./ReorderList.tsx"
 
 const { Playground, SingleItem } = composeStories(stories)
 
@@ -187,4 +191,76 @@ test("has no axe violations", async () => {
   const { canvasElement } = await mountStory(Playground)
 
   await expectNoAxeViolations(canvasElement)
+})
+
+test("a leaving row keeps its position and reports both ends, so its move buttons stay disabled", () => {
+  // About the motion, so the suite's freeze is lifted for this test.
+  const frozenStyle = document.getElementById(
+    "charcuterie-freeze-motion",
+  )
+
+  frozenStyle?.remove()
+
+  const host = document.createElement("div")
+
+  host.style.setProperty("--duration-fast", "600ms")
+  host.style.setProperty("--duration-normal", "600ms")
+
+  document.body.append(host)
+
+  const root = createRoot(host)
+
+  const toList = (items: ReorderListItem[]) => (
+    <ReorderList
+      elementType="ul"
+      items={items}
+      label="Rows"
+      onReorder={() => {}}
+      renderItem={({
+        isExiting,
+        isFirst,
+        isLast,
+        item,
+        position,
+      }) =>
+        `${item.label}:${String(position)}:${String(isExiting)}:${String(isFirst)}:${String(isLast)}`
+      }
+    />
+  )
+
+  const rows = [
+    { key: "a", label: "A" },
+    { key: "b", label: "B" },
+    { key: "c", label: "C" },
+  ]
+
+  try {
+    flushSync(() => {
+      root.render(toList(rows))
+    })
+
+    flushSync(() => {
+      root.render(
+        toList(rows.filter((row) => row.key !== "b")),
+      )
+    })
+
+    expect(
+      [...host.querySelectorAll("li")].map(
+        (row) => row.textContent,
+      ),
+    ).toEqual([
+      "A:1:false:true:false",
+      "B:2:true:true:true",
+      "C:2:false:false:true",
+    ])
+  } finally {
+    root.unmount()
+
+    host.remove()
+
+    if (frozenStyle !== null) {
+      document.head.append(frozenStyle)
+    }
+  }
 })

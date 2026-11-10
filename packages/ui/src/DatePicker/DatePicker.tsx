@@ -333,6 +333,9 @@ export const DatePicker = ({
     context,
     floatingStyles,
     getFloatingProps,
+    isExiting,
+    isMounted,
+    motionClassName,
     setFloating,
   } = useAnchoredOverlay({
     anchorRef: anchorElement,
@@ -709,7 +712,7 @@ export const DatePicker = ({
         {echoText}
       </p>
 
-      {isVisible ? (
+      {isMounted ? (
         <FloatingPortal>
           <FloatingFocusManager
             context={context}
@@ -736,8 +739,11 @@ export const DatePicker = ({
                 // phone.
                 "@container z-[var(--layer-modal)] flex flex-col gap-3 overflow-hidden p-3 text-content-primary",
                 isRange ? "w-[41rem]" : "w-80",
+                motionClassName,
               )}
               id={panelId}
+              aria-hidden={isExiting ? true : undefined}
+              inert={isExiting ? true : undefined}
               ref={setFloating}
               role="dialog"
               style={floatingStyles}
