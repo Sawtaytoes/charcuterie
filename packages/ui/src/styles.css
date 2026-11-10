@@ -206,18 +206,24 @@
 /* A list item an action added, removed, or changed (`useListMotion`,
  * `useValueChangeMotion`).
  *
- * An added item rises a little and fades in; a removed one fades and
+ * An added item grows a little and fades in; a removed one fades and
  * shrinks in place before the gap closes, and its neighbours then
  * slide (a transition `useListMotion` writes inline, on the same
- * `--duration-normal` token). A changed value pops: it starts slightly
- * larger and settles, so the eye finds it without a colour that could
- * clash with the element's own. The two `value-changed` names share
- * one set of keyframes so that a second change restarts the
- * animation. */
+ * `--duration-normal` token).
+ *
+ * Neither animates `translate`, because the slide does. A running
+ * animation overrides an inline style, so an enter that moved the
+ * item would freeze the slide of an item that moves again while it is
+ * still entering, and it would jump to its new place instead.
+ *
+ * A changed value pops: it starts slightly larger and settles, so the
+ * eye finds it without a colour that could clash with the element's
+ * own. The two `value-changed` names share one set of keyframes so
+ * that a second change restarts the animation. */
 @keyframes charcuterie-item-in {
   from {
     opacity: 0;
-    translate: 0 0.5rem;
+    scale: 0.96;
   }
 }
 

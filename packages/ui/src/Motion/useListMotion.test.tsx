@@ -483,3 +483,45 @@ test("a leaving item that a reorder moves slides from where it was, instead of j
     Math.abs(beta.getBoundingClientRect().top - topBefore),
   ).toBeLessThan(2)
 })
+
+test("an item that moves while it is still entering slides from where it is shown, instead of jumping", async () => {
+  unfreeze()
+
+  const host = mount(
+    <List initial={["Alpha", "Beta", "Gamma"]} />,
+  )
+
+  await waitFor(() => {
+    expect(getItem(host, "Alpha")).not.toBeNull()
+  })
+
+  await userEvent.click(getButton(host, "Add"))
+
+  const delta = getItem(host, "Delta") as HTMLElement
+
+  expect(delta).toHaveClass("charcuterie-item-enter")
+
+  const topBefore = delta.getBoundingClientRect().top
+
+  // Still entering (the motion is 600ms here), and moved to the top.
+  await userEvent.click(getButton(host, "Reverse"))
+
+  expect(shownOrder(host)[0]).toBe("Delta")
+
+  // Still entering when it moved, or this test would prove nothing.
+  expect(
+    delta
+      .getAnimations()
+      .some(
+        (animation) =>
+          animation instanceof CSSAnimation &&
+          animation.animationName === "charcuterie-item-in",
+      ),
+  ).toBe(true)
+
+  // Sliding, from where it was shown.
+  expect(delta.style.transition).toContain("translate")
+  expect(
+    Math.abs(delta.getBoundingClientRect().top - topBefore),
+  ).toBeLessThan(2)
+})
