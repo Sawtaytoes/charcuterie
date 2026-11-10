@@ -37,6 +37,34 @@ not a global uuid major upgrade. Regression tests exercise tmp creation/cleanup,
 of traversal prefixes, CommonJS loading of the S3 publisher and UUID generation/buffer
 bounds. The standalone VRT manifest uses equivalent pnpm overrides.
 
+## Forced majors for glob and minimatch
+
+GHSA-3g3m-2fjr-6pw4 (glob, AbortSignal bypass) and GHSA-g3hv-75wg-m249 (minimatch,
+globparts amplification) are fixed only in glob 14.0.2 and minimatch 11.0.1; no older line
+received a backport. Both lockfiles therefore override every `glob@>=9.0.0 <14.0.2` to
+`^14.0.4` and every `minimatch@>=7.0.0 <11.0.1` to `^11.0.5`. The parents still declare
+older majors: reg-suit-core's rimraf 5 (glob 10), Storybook's react-docgen plugin (glob 13),
+and ESLint, `@eslint/config-array` and `typescript-eslint` (minimatch 10). Their calls are
+`glob`/`globSync` (rimraf, the docgen plugin), the `minimatch()` function
+(typescript-estree), and `new Minimatch(pattern, { dot: true })` with `.match(path, partial)`
+and `flipNegate` (ESLint and `@eslint/config-array`). glob 14 and minimatch 11 keep all of
+these. None calls the removed minimatch 11 APIs (`makeRe`, `Minimatch#regexp`, `AST`,
+`matchOne`, `slashSplit`, `debug`). Every ESLint `files` and `ignores` pattern in this repo
+matched every tracked path identically under minimatch 10.2.6 and 11.0.5.
+`pnpm test:security` asserts the patched versions behind reg-suit's rimraf in both installs;
+`pnpm lint:eslint` exercises ESLint's matching. Remove each override when its parents declare
+the patched major.
+
+Callers of `shared-vrt.yml@workflows-v1` install the VRT tools from the tag's checkout, so a
+VRT lockfile fix reaches them only after `workflows-v1` moves to a commit that contains it.
+
+`source-map-js` and `ip-address` are scoped overrides that lift transitive copies to the
+patched release within their parents' declared ranges. `undici@>=8.0.0 <8.12.2` is a guard:
+its only parent (node-gyp, through the macOS-only optional fsevents) left the lockfile, so no
+copy resolves today. `@cucumber/messages>uuid` forces 11.1.1 over that parent's exact
+11.0.5 pin, as `reg-publish-s3-plugin>uuid` already does. Remove each once the lockfile
+resolves a patched version without it.
+
 Audit tools compare package versions with advisory metadata; they do not inspect pnpm
 patches. A remaining braces alert against 3.0.3 does not mean the mitigation failed, and
 it is kept visible until an official release is installed.
