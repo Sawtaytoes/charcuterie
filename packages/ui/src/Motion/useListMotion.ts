@@ -104,7 +104,23 @@ export const useListMotion = <Item>({
 }: UseListMotionOptions<Item>): {
   entries: ListMotionEntry<Item>[]
 } => {
-  const [previousItems, setPreviousItems] = useState(items)
+  // Compared by key, never by array identity. Callers routinely build
+  // the array during render (`groupPurchases(recent)`), so an identity
+  // check would see a "change" on every render — and this block sets
+  // state during render, so that would re-render forever.
+  const keySignature = JSON.stringify(items.map(getKey))
+
+  const [previousKeySignature, setPreviousKeySignature] =
+    useState(keySignature)
+
+  // The items as of the last commit, so a removed item leaves showing
+  // its latest content rather than what it held when the keys last
+  // changed.
+  const committedItemsRef = useRef(items)
+
+  useLayoutEffect(() => {
+    committedItemsRef.current = items
+  })
 
   const [exiting, setExiting] = useState<
     ExitingItem<Item>[]
@@ -116,7 +132,11 @@ export const useListMotion = <Item>({
     ReadonlySet<string>
   >(() => new Set())
 
-  if (items !== previousItems) {
+  if (keySignature !== previousKeySignature) {
+    // Read during render on purpose: the last committed list is the
+    // one the user is looking at, and so the one items leave from.
+    const previousItems = committedItemsRef.current
+
     const currentKeys = new Set(items.map(getKey))
 
     const previousKeys = new Set(previousItems.map(getKey))
@@ -133,7 +153,7 @@ export const useListMotion = <Item>({
       .map(getKey)
       .filter((key) => !previousKeys.has(key))
 
-    setPreviousItems(items)
+    setPreviousKeySignature(keySignature)
 
     if (removed.length > 0 || exiting.length > 0) {
       setExiting((previous) => [

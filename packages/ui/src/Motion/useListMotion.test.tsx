@@ -37,7 +37,10 @@ const List = ({
 
   const { entries } = useListMotion({
     getKey: (name: string) => name,
-    items: names,
+    // A fresh array every render, as a caller that derives its list
+    // during render passes. The hook must compare keys, not identity,
+    // or its render-phase update loops forever.
+    items: names.map((name) => name),
   })
 
   return (
