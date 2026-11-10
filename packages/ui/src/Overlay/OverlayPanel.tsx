@@ -8,11 +8,16 @@ import {
   useDismiss,
   useFloating,
   useInteractions,
+  useMergeRefs,
   useRole,
 } from "@floating-ui/react"
 import type { ReactNode, RefObject } from "react"
-import { useCallback, useEffect } from "react"
-
+import { useCallback, useEffect, useRef } from "react"
+import {
+  toOverlayMotionClass,
+  usePresence,
+} from "../Motion/usePresence.ts"
+import { toClassName } from "../toClassName.ts"
 import {
   AnchoredOverlayScopeContext,
   useAnchoredOverlayScope,
@@ -56,6 +61,17 @@ import { SharedBackdrop } from "./SharedBackdrop.tsx"
  * `aria-label` / `aria-labelledby` must be present. Missing both is a
  * dev-time warning, not a throw — the lesson `Spinner`, `Popover`, and
  * `Modal` each learned, applied without breaking a render.
+ *
+ * ### It opens and closes with motion
+ *
+ * The panel scales and fades in, and on close it stays in the page
+ * until its exit animation ends (`usePresence`). While it leaves it is
+ * already closed to everything but the eye: it leaves the stack at
+ * once, so the panel under it is live again; its focus manager is
+ * disabled, which returns focus to the trigger immediately; and it is
+ * `inert`, `aria-hidden`, and click-through. Under reduced motion and
+ * in the automated suites the exit has no length, so it is removed in
+ * the same commit exactly as before.
  */
 export type OverlayPanelProps = {
   "aria-label"?: string
@@ -73,6 +89,12 @@ export type OverlayPanelProps = {
    * manager wins, which reads as the app ignoring you.
    */
   initialFocus?: RefObject<HTMLElement | null>
+  /**
+   * `false` only for a caller that animates the panel itself, as
+   * `TableViewport` does when it grows a table out of the page. Every
+   * other panel keeps the library's enter and exit motion.
+   */
+  hasMotion?: boolean
   /** Escape and an outside press both close. */
   isDismissable?: boolean
   isVisible: boolean
@@ -85,6 +107,7 @@ export const OverlayPanel = ({
   "aria-labelledby": ariaLabelledBy,
   children,
   className,
+  hasMotion = true,
   initialFocus,
   isDismissable = true,
   isVisible,
@@ -103,7 +126,11 @@ export const OverlayPanel = ({
     onCloseRef.current()
   }, [onCloseRef])
 
-  const isTop = !stack.isProvided || stack.topId === id
+  const { isExiting, isMounted, presenceRef } =
+    usePresence(isVisible)
+
+  const isTop =
+    !isExiting && (!stack.isProvided || stack.topId === id)
   const anchors = useAnchoredOverlayScope()
   const hasOpenAnchor = anchors.topId !== null
 
@@ -168,10 +195,28 @@ export const OverlayPanel = ({
    * `--layer-modal` it paints. `0` when unprovided — a lone `Modal`
    * is the only thing open.
    */
-  const stackIndex = Math.max(
-    stack.orderedIds.indexOf(id),
-    0,
-  )
+  const registeredIndex = stack.orderedIds.indexOf(id)
+
+  // A closing panel has already left the stack, so its own index is
+  // gone. It keeps the layer it had, or the panel it is leaving would
+  // be drawn under the one it was covering for the length of its exit.
+  const lastStackIndexRef = useRef(0)
+
+  if (registeredIndex >= 0) {
+    lastStackIndexRef.current = registeredIndex
+  }
+
+  const stackIndex =
+    registeredIndex >= 0
+      ? registeredIndex
+      : isExiting
+        ? lastStackIndexRef.current
+        : 0
+
+  const setPanelRef = useMergeRefs([
+    refs.setFloating,
+    presenceRef,
+  ])
 
   useEffect(() => {
     if (!isVisible) {
@@ -205,7 +250,7 @@ export const OverlayPanel = ({
     }
   }, [ariaLabel, ariaLabelledBy, isVisible])
 
-  if (!isVisible) {
+  if (!isMounted) {
     return null
   }
 
@@ -214,12 +259,17 @@ export const OverlayPanel = ({
       {/* A self-hosting `Modal` renders its own scrim; under a
           provider the shared one already stands behind every panel. */}
       {stack.isProvided ? null : (
-        <SharedBackdrop isVisible />
+        <SharedBackdrop isVisible={isVisible} />
       )}
 
       <FloatingPortal>
         <div
-          className="fixed inset-0 flex items-center justify-center"
+          className={toClassName(
+            "fixed inset-0 flex items-center justify-center",
+            // The centring layer covers the viewport. While the panel
+            // leaves, a press must reach the page under it.
+            isExiting && "pointer-events-none",
+          )}
           /*
            * ⚠️ Cascading, not one shared layer.
            *
@@ -260,13 +310,18 @@ export const OverlayPanel = ({
                 "aria-label": ariaLabel,
                 "aria-labelledby": ariaLabelledBy,
               }}
-              className={className}
+              aria-hidden={isExiting ? true : undefined}
+              className={toClassName(
+                className,
+                hasMotion &&
+                  toOverlayMotionClass(isExiting),
+              )}
               // The fallback the plan calls for: `inert` on every panel
               // but the top, so a lower modal is unreachable across the
               // portal boundary even where `FloatingFocusManager`'s
               // outside-hiding does not reach a sibling portal.
               inert={isTop ? undefined : true}
-              ref={refs.setFloating}
+              ref={setPanelRef}
               role={role}
             >
               <AnchoredOverlayScopeContext.Provider

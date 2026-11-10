@@ -321,6 +321,42 @@ without the grid element; its `containerRef` goes on the element you **measure**
 element `contentMaxInlineSize` is applied to, or the fold reads back its own narrowed output
 and answers "one column" forever.
 
+### Motion: every change an action makes moves
+
+When a user action changes the screen, the change animates, so the user can follow it. The
+library's overlays already do this: every `Modal`, `Dialog`, `Popover`, `Menu`, `Listbox`,
+`Combobox`, `DatePicker`, `Tooltip`, and `Toast` enters and exits, and an `Accordion` section
+animates its height. For the app's own content, use the motion hooks; do not write keyframes
+or durations of your own.
+
+```tsx
+// A list an action adds to, removes from, or reorders.
+const { entries } = useListMotion({ items: purchases, getKey: (p) => p.id })
+
+<AdaptiveGrid itemBlockSize={360}>
+  {entries.map(({ item, key, motionProps }) => (
+    <div key={key} {...motionProps}>
+      <PurchaseCard purchase={item} />
+    </div>
+  ))}
+</AdaptiveGrid>
+
+// A value an action changes: it pops once per change.
+const changedClass = useValueChangeClass(balance)
+
+<div className={toClassName("inline-block text-3xl", changedClass)}>{balance}</div>
+```
+
+An overlay keeps its content while it closes, so do not unmount a `Dialog` with
+`{isOpen ? <Dialog … /> : null}`; pass `isVisible`. When the content comes from a selection
+that is cleared on close, hold it with `useLastPresentValue(selection)`, or the dialog fades
+out empty.
+
+`usePresence` keeps one element that appears and disappears (a banner, an inline panel) in the
+page until its exit ends; pair it with `toFadeMotionClass` or `toOverlayMotionClass`. Nothing
+on the first render animates. Reduced motion and the automated suites remove all of it, and
+your tests need no waits for it.
+
 ## Wiring a new app
 
 ### 1. Install and import the stylesheets
@@ -537,6 +573,8 @@ The short version:
 - Page chrome is `Shell` / `Header` / `Rail` / `Main`. Do not add an `AppShell.tsx`.
 - Destinations are `Nav`, and the width rule is `useNavLayout`. Do not write the breakpoint.
 - Reflowing grids are `AdaptiveGrid`.
+- A change an action makes animates: lists use `useListMotion`, changed values use
+  `useValueChangeClass`, and a single appearing element uses `usePresence`.
 - The library ships no icons; bring your own (lucide).
 
 Charcuterie's own conventions and decision records are in its `AGENTS.md` and

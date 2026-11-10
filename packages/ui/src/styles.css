@@ -132,12 +132,196 @@
     var(--easing-standard) infinite;
 }
 
+/* Overlay enter and exit: "this opened" and "this closed".
+ *
+ * A panel that appears or disappears in one frame is easy to miss, so
+ * every overlay fades and scales a little as it opens and closes (the
+ * 2026-11-09 decision). The keyframes name only the far end: the enter
+ * starts transparent and small and ends on the element's own resting
+ * style, and the exit runs the other way and holds (`forwards`) until
+ * `usePresence` removes the element on `animationend`.
+ *
+ * `scale` and not `transform`, because floating-ui positions an
+ * anchored panel with `transform: translate(...)` in its inline style.
+ * The individual `scale` property composes with that; an animated
+ * `transform` would replace it and throw the panel to the corner.
+ *
+ * The exit is shorter than the enter: arriving is information the user
+ * reads, leaving is just getting out of the way of the next thing.
+ * `pointer-events: none` on the exit is what lets a click land on the
+ * page under a closing panel instead of on its ghost.
+ *
+ * The resting style is the static fallback, so reduced motion switches
+ * all four off below and loses nothing: an enter with no animation is
+ * simply there, and an exit with no animation is removed in the same
+ * commit because `usePresence` reads a zero length. */
+@keyframes charcuterie-overlay-in {
+  from {
+    opacity: 0;
+    scale: 0.96;
+  }
+}
+
+@keyframes charcuterie-overlay-out {
+  to {
+    opacity: 0;
+    scale: 0.96;
+  }
+}
+
+@keyframes charcuterie-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes charcuterie-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+.charcuterie-overlay-enter {
+  animation: charcuterie-overlay-in var(--duration-normal)
+    var(--easing-entrance);
+}
+
+.charcuterie-overlay-exit {
+  animation: charcuterie-overlay-out var(--duration-fast)
+    var(--easing-exit) forwards;
+  pointer-events: none;
+}
+
+.charcuterie-fade-enter {
+  animation: charcuterie-fade-in var(--duration-normal)
+    var(--easing-entrance);
+}
+
+.charcuterie-fade-exit {
+  animation: charcuterie-fade-out var(--duration-fast)
+    var(--easing-exit) forwards;
+  pointer-events: none;
+}
+
+/* A list item an action added, removed, or changed (`useListMotion`,
+ * `useValueChangeClass`).
+ *
+ * An added item rises a little and fades in; a removed one fades and
+ * shrinks in place before the gap closes, and its neighbours then
+ * slide (a transition `useListMotion` writes inline, on the same
+ * `--duration-normal` token). A changed value pops: it starts slightly
+ * larger and settles, so the eye finds it without a colour that could
+ * clash with the element's own. The two `value-changed` names share
+ * one set of keyframes so that a second change restarts the
+ * animation. */
+@keyframes charcuterie-item-in {
+  from {
+    opacity: 0;
+    translate: 0 0.5rem;
+  }
+}
+
+@keyframes charcuterie-item-out {
+  to {
+    opacity: 0;
+    scale: 0.94;
+  }
+}
+
+@keyframes charcuterie-value-pop {
+  from {
+    scale: 1.15;
+  }
+}
+
+@keyframes charcuterie-value-pop-again {
+  from {
+    scale: 1.15;
+  }
+}
+
+.charcuterie-item-enter {
+  animation: charcuterie-item-in var(--duration-normal)
+    var(--easing-entrance);
+}
+
+.charcuterie-item-exit {
+  animation: charcuterie-item-out var(--duration-fast)
+    var(--easing-exit) forwards;
+  pointer-events: none;
+}
+
+.charcuterie-value-changed {
+  animation: charcuterie-value-pop var(--duration-slow)
+    var(--easing-emphasized);
+}
+
+.charcuterie-value-changed-again {
+  animation: charcuterie-value-pop-again
+    var(--duration-slow) var(--easing-emphasized);
+}
+
+/* A disclosure panel's height opens and shuts instead of jumping.
+ *
+ * Keyframes rather than a transition, because Tailwind's preflight
+ * makes `[hidden]` `display: none !important`, which no transition can
+ * delay. `usePresence` keeps the panel un-hidden until the close
+ * animation ends, exactly as it keeps a closing modal in the page.
+ * `interpolate-size` is what lets `height` animate to and from `auto`;
+ * a browser without it gets no animation at all (the `@supports`), and
+ * a panel that simply opens and shuts, rather than a half-length
+ * pause and a jump. */
+@keyframes charcuterie-disclosure-in {
+  from {
+    height: 0;
+    opacity: 0;
+  }
+}
+
+@keyframes charcuterie-disclosure-out {
+  to {
+    height: 0;
+    opacity: 0;
+  }
+}
+
+@supports (interpolate-size: allow-keywords) {
+  .charcuterie-disclosure-enter,
+  .charcuterie-disclosure-exit {
+    interpolate-size: allow-keywords;
+    overflow: clip;
+  }
+
+  .charcuterie-disclosure-enter {
+    animation: charcuterie-disclosure-in
+      var(--duration-normal) var(--easing-standard);
+  }
+
+  .charcuterie-disclosure-exit {
+    animation: charcuterie-disclosure-out
+      var(--duration-fast) var(--easing-exit) forwards;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .charcuterie-spin,
   .charcuterie-shimmer,
   .charcuterie-sweep,
   .charcuterie-pulse,
-  .charcuterie-highlight {
+  .charcuterie-highlight,
+  .charcuterie-overlay-enter,
+  .charcuterie-overlay-exit,
+  .charcuterie-fade-enter,
+  .charcuterie-fade-exit,
+  .charcuterie-item-enter,
+  .charcuterie-item-exit,
+  .charcuterie-value-changed,
+  .charcuterie-value-changed-again {
+    animation: none;
+  }
+
+  .charcuterie-disclosure-enter,
+  .charcuterie-disclosure-exit {
     animation: none;
   }
 

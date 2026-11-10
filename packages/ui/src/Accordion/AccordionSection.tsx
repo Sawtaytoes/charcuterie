@@ -1,7 +1,8 @@
 import type { ReactNode } from "react"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 
 import { FOCUS_RING_CLASS } from "../intentStyles.ts"
+import { usePresence } from "../Motion/usePresence.ts"
 import { toClassName } from "../toClassName.ts"
 import type {
   AccordionHeadingLevel,
@@ -62,6 +63,23 @@ export const AccordionSection = ({
   const { isDisabled = false, key, label } = item
 
   const Heading = HEADING_TAG[headingLevel]
+
+  const {
+    isExiting: isCollapsing,
+    isMounted: isShown,
+    presenceRef,
+  } = usePresence<HTMLDivElement>(isExpanded)
+
+  // Latched on the first change and never cleared. Before it, the
+  // section is in the state the page loaded with, and that should not
+  // move; after it, collapsing back to that state still animates.
+  const [isInitiallyExpanded] = useState(isExpanded)
+
+  const [hasToggled, setHasToggled] = useState(false)
+
+  if (!hasToggled && isExpanded !== isInitiallyExpanded) {
+    setHasToggled(true)
+  }
 
   useEffect(() => {
     if (isDisabled) {
@@ -141,13 +159,29 @@ export const AccordionSection = ({
       {/* biome-ignore lint/a11y/useSemanticElements: the semantic element for `group` is `<fieldset>`, which is a form-control grouping — it drags `<legend>` semantics and form-reset behaviour onto an accordion panel that contains prose. */}
       <div
         aria-labelledby={id}
-        className="px-4 pt-1 pb-4 text-content-secondary text-sm"
+        // The height animates open and shut (`styles.css`). The
+        // padding lives on the inner box, because a padded box
+        // collapsed to `height: 0` is still as tall as its padding.
+        // No class until the section is first toggled, so a section
+        // that starts open does not animate open on page load.
+        className={toClassName(
+          "text-content-secondary text-sm",
+          hasToggled &&
+            (isCollapsing
+              ? "charcuterie-disclosure-exit"
+              : "charcuterie-disclosure-enter"),
+        )}
         // `hidden` rather than unmounting, matching `Tabs`. A panel
         // that unmounts loses a scroll position, a partially typed
         // form, and any subscription its content opened — and the
         // fleet's log panes are exactly that.
-        hidden={!isExpanded}
+        //
+        // A collapsing panel stays un-hidden for the length of its
+        // close animation, and is `inert` while it does.
+        hidden={!isShown}
         id={panelId}
+        inert={isCollapsing ? true : undefined}
+        ref={presenceRef}
         // `group`, not `region`. A `group` is explicitly "a set of
         // UI objects **not** intended to be included in a page
         // summary", so it carries `aria-labelledby` and the
@@ -156,7 +190,7 @@ export const AccordionSection = ({
         // is reaching for and does not have a role for.
         role="group"
       >
-        {item.content}
+        <div className="px-4 pt-1 pb-4">{item.content}</div>
       </div>
     </div>
   )

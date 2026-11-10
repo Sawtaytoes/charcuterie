@@ -296,6 +296,9 @@ export const Menu = ({
     context,
     floatingStyles,
     getFloatingProps,
+    isExiting,
+    isMounted,
+    motionClassName,
     setFloating,
     triggerId,
   } = useAnchoredOverlay({
@@ -444,10 +447,12 @@ export const Menu = ({
     <>
       {clonedTrigger}
 
-      {isVisible ? (
+      {isMounted ? (
         <FloatingPortal>
           <FloatingFocusManager
             context={context}
+            // A leaving panel hands focus back at once.
+            disabled={isExiting}
             // `false`, so Tab leaves the menu and lands on the next
             // control in the page — which is what closes it, through
             // `useDismiss`. A trapped menu is a dialog.
@@ -478,6 +483,7 @@ export const Menu = ({
                 // written straight onto the element by the `size`
                 // middleware; this scrolls inside it.
                 "charcuterie-scrollbar z-[var(--layer-modal)] flex min-w-48 flex-col gap-0.5 overflow-y-auto p-1",
+                motionClassName,
                 className,
               )}
               onKeyDown={(keyEvent) => {
@@ -501,6 +507,8 @@ export const Menu = ({
                   command()
                 }
               }}
+              aria-hidden={isExiting ? true : undefined}
+              inert={isExiting ? true : undefined}
               ref={setFloating}
               // Duplicated from `getFloatingProps()` on purpose, and
               // the two cannot differ — `useRole(context, { role:

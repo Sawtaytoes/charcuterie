@@ -14,10 +14,16 @@ import {
   useFocus,
   useHover,
   useInteractions,
+  useMergeRefs,
   useRole,
 } from "@floating-ui/react"
 import type { ReactElement, ReactNode } from "react"
 
+import {
+  toFadeMotionClass,
+  toTransformOrigin,
+  usePresence,
+} from "../Motion/usePresence.ts"
 import type { SlotProps } from "../slotProps.ts"
 import { mergeSlotProps } from "../slotProps.ts"
 import { toClassName } from "../toClassName.ts"
@@ -110,7 +116,12 @@ export const Tooltip = ({
 }: TooltipProps): ReactNode => {
   const { isVisible, setIsVisible } = useVisibility()
 
-  const { context, floatingStyles, refs } = useFloating({
+  const {
+    context,
+    floatingStyles,
+    placement: resolvedPlacement,
+    refs,
+  } = useFloating({
     // Read-only, as everywhere: floating-ui is told what is true and
     // never decides it.
     open: isVisible,
@@ -151,11 +162,21 @@ export const Tooltip = ({
     }),
   )
 
+  // A tip fades rather than scales: it is a label, not a surface, and
+  // a growing label reads as a wobble.
+  const { isExiting, isMounted, presenceRef } =
+    usePresence(isVisible)
+
+  const setTooltipRef = useMergeRefs([
+    refs.setFloating,
+    presenceRef,
+  ])
+
   return (
     <>
       {clonedTrigger}
 
-      {isVisible ? (
+      {isMounted ? (
         <FloatingPortal>
           <div
             {...getFloatingProps()}
@@ -173,6 +194,7 @@ export const Tooltip = ({
               // content rather than fine print. It was the whole
               // tooltip at 12px before 2026-08-10.
               "z-[var(--layer-tooltip)] max-w-xs rounded-md bg-intent-neutral-solid px-2 py-1 text-intent-neutral-on-solid text-sm shadow-medium",
+              toFadeMotionClass(isExiting),
               className,
             )}
             // Portalled to `document.body`, the same reversal as the
@@ -182,14 +204,20 @@ export const Tooltip = ({
             // focus never enters a tooltip, and moving it here is what
             // would make one unescapable. `--layer-tooltip` keeps it
             // above a modal.
-            ref={refs.setFloating}
+            aria-hidden={isExiting ? true : undefined}
+            ref={setTooltipRef}
             // Duplicated from `getFloatingProps()` deliberately, and
             // the two cannot differ — `useRole(context, { role:
             // "tooltip" })` above is where it comes from. Stated here
             // because a linter cannot see a role through a spread, and
             // neither can the next reader.
             role="tooltip"
-            style={floatingStyles}
+            style={{
+              ...floatingStyles,
+              transformOrigin: toTransformOrigin(
+                resolvedPlacement,
+              ),
+            }}
           >
             {label}
           </div>

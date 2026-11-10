@@ -34,6 +34,12 @@ export type DialogProps = {
    * the case: every keystroke landed on "Close".
    */
   initialFocus?: RefObject<HTMLElement | null>
+  /**
+   * `false` only for a caller that animates the panel itself, as
+   * `TableViewport` does when it grows a table out of the page. Every
+   * other panel keeps the library's enter and exit motion.
+   */
+  hasMotion?: boolean
   isDismissable?: boolean
   isVisible: boolean
   /**
@@ -91,6 +97,7 @@ export const Dialog = ({
   className,
   footer,
   heading,
+  hasMotion = true,
   headingLevel = 2,
   initialFocus,
   isDismissable = true,
@@ -106,6 +113,7 @@ export const Dialog = ({
     <Modal
       aria-labelledby={headingId}
       className={toClassName(SIZE_CLASS[size], className)}
+      hasMotion={hasMotion}
       initialFocus={initialFocus}
       isDismissable={isDismissable}
       isVisible={isVisible}

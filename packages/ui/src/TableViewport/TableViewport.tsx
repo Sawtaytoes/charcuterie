@@ -155,6 +155,10 @@ export const TableViewport = ({
         {isExpanded ? null : content}
       </section>
       <Dialog
+        // This component grows the dialog out of the page and reverses
+        // it before closing (`animateExpansion`), so the library's own
+        // enter and exit would run on top of it.
+        hasMotion={false}
         heading={label}
         isVisible={isExpanded}
         size="full"

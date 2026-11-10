@@ -358,6 +358,35 @@ export type { MetricCardProps } from "./MetricCard/MetricCard.tsx"
 export { MetricCard } from "./MetricCard/MetricCard.tsx"
 export type { ModalProps } from "./Modal/Modal.tsx"
 export { Modal } from "./Modal/Modal.tsx"
+/**
+ * The value, or the last value it had once it becomes empty — so an
+ * overlay built from a selection keeps its content while it closes.
+ */
+export { useLastPresentValue } from "./Motion/useLastPresentValue.ts"
+/**
+ * Keep an element in the page until its exit animation ends, and the
+ * enter/exit classes every library overlay uses. For an app's own
+ * thing that appears and disappears — a row, a banner, a panel — so it
+ * moves the way the library's overlays do.
+ */
+export type {
+  ListMotionEntry,
+  ListMotionProps,
+  UseListMotionOptions,
+} from "./Motion/useListMotion.ts"
+/**
+ * An added item enters, a removed one leaves, and the rest slide to
+ * their new places. Spread `motionProps` on a wrapper the hook owns.
+ */
+export { useListMotion } from "./Motion/useListMotion.ts"
+export type { UsePresenceResult } from "./Motion/usePresence.ts"
+export {
+  toFadeMotionClass,
+  toOverlayMotionClass,
+  usePresence,
+} from "./Motion/usePresence.ts"
+/** A class that pops an element each time the value it shows changes. */
+export { useValueChangeClass } from "./Motion/useValueChangeClass.ts"
 export type {
   NavLayout,
   NavProps,
