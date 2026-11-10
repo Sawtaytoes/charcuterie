@@ -5,6 +5,7 @@ import { createRoot } from "react-dom/client"
 import { expect, userEvent, waitFor } from "storybook/test"
 import { afterEach, beforeEach, test } from "vitest"
 
+import { Menu } from "../Menu/Menu.tsx"
 import { Modal } from "../Modal/Modal.tsx"
 import { OverlayStackProvider } from "./OverlayStack.tsx"
 
@@ -141,5 +142,179 @@ test("closing a modal that a stacked modal covered returns focus to the button t
 
   await waitFor(() => {
     expect(outerTrigger).toHaveFocus()
+  })
+})
+
+const MenuThenModal = (): ReactNode => {
+  const [isMenuVisible, setIsMenuVisible] = useState(false)
+
+  const [isModalVisible, setIsModalVisible] =
+    useState(false)
+
+  return (
+    <>
+      <Menu
+        isVisible={isMenuVisible}
+        items={[
+          {
+            key: "rename",
+            label: "Rename",
+            onSelect: () => {
+              setIsModalVisible(true)
+            },
+          },
+        ]}
+        onDismiss={() => {
+          setIsMenuVisible(false)
+        }}
+        trigger={
+          <button
+            onClick={() => {
+              setIsMenuVisible((isVisible) => !isVisible)
+            }}
+            type="button"
+          >
+            Actions
+          </button>
+        }
+      />
+
+      <Modal
+        aria-label="Rename"
+        isVisible={isModalVisible}
+        onClose={() => {
+          setIsModalVisible(false)
+        }}
+      >
+        <button type="button">Inside rename</button>
+      </Modal>
+    </>
+  )
+}
+
+test("a modal opened from a menu item returns focus to the menu's trigger, once the item has gone", async () => {
+  mount(<MenuThenModal />)
+
+  await waitFor(() => {
+    expect(getButton("Actions")).toBeDefined()
+  })
+
+  await userEvent.click(getButton("Actions"))
+
+  const item = await waitFor(() => {
+    const found = document.querySelector<HTMLElement>(
+      '[role="menuitem"]',
+    )
+
+    expect(found).not.toBeNull()
+
+    return found as HTMLElement
+  })
+
+  await userEvent.click(item)
+
+  await waitFor(() => {
+    expect(getButton("Inside rename")).toHaveFocus()
+  })
+
+  // The menu has finished leaving, so the item that opened the modal
+  // is gone from the page.
+  await waitFor(
+    () => {
+      expect(item.isConnected).toBe(false)
+    },
+    { timeout: 5_000 },
+  )
+
+  await userEvent.keyboard("{Escape}")
+
+  await waitFor(() => {
+    expect(getButton("Actions")).toHaveFocus()
+  })
+})
+
+const SwappedModals = (): ReactNode => {
+  const [isFirstVisible, setIsFirstVisible] =
+    useState(false)
+
+  const [isSecondVisible, setIsSecondVisible] =
+    useState(false)
+
+  return (
+    <OverlayStackProvider>
+      <button
+        onClick={() => {
+          setIsFirstVisible(true)
+        }}
+        type="button"
+      >
+        Open first
+      </button>
+
+      <Modal
+        aria-label="First"
+        isVisible={isFirstVisible}
+        onClose={() => {
+          setIsFirstVisible(false)
+        }}
+      >
+        <button
+          onClick={() => {
+            setIsFirstVisible(false)
+
+            setIsSecondVisible(true)
+          }}
+          type="button"
+        >
+          Next
+        </button>
+      </Modal>
+
+      <Modal
+        aria-label="Second"
+        isVisible={isSecondVisible}
+        onClose={() => {
+          setIsSecondVisible(false)
+        }}
+      >
+        <button type="button">Inside second</button>
+      </Modal>
+    </OverlayStackProvider>
+  )
+}
+
+test("a modal that replaced another returns focus to the first one's opener", async () => {
+  mount(<SwappedModals />)
+
+  await waitFor(() => {
+    expect(getButton("Open first")).toBeDefined()
+  })
+
+  await userEvent.click(getButton("Open first"))
+
+  await waitFor(() => {
+    expect(getButton("Next")).toHaveFocus()
+  })
+
+  const next = getButton("Next")
+
+  await userEvent.click(next)
+
+  await waitFor(() => {
+    expect(getButton("Inside second")).toHaveFocus()
+  })
+
+  // The first modal has finished leaving, and "Next" with it.
+  await waitFor(
+    () => {
+      expect(next.isConnected).toBe(false)
+    },
+    { timeout: 5_000 },
+  )
+
+  await userEvent.keyboard("{Escape}")
+
+  await waitFor(() => {
+    expect(getButton("Open first")).toHaveFocus()
   })
 })

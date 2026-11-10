@@ -15,7 +15,9 @@ import type { ReactNode, RefObject } from "react"
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
+  useRef,
   useState,
 } from "react"
 import {
@@ -27,6 +29,7 @@ import {
   AnchoredOverlayScopeContext,
   useAnchoredOverlayScope,
 } from "./AnchoredOverlayScope.ts"
+import { findReturnFocusTarget } from "./focusHistory.ts"
 import { lockScrollBehind } from "./lockScrollBehind.ts"
 import { useOverlayStack } from "./OverlayStack.tsx"
 import { SharedBackdrop } from "./SharedBackdrop.tsx"
@@ -134,48 +137,55 @@ export const OverlayPanel = ({
   const { isExiting, isMounted, presenceRef } =
     usePresence(isVisible)
 
-  // The element that had focus when the panel opened, read during the
-  // render that opens it, before the focus manager moves focus inside.
+  // Where focus goes when the panel closes: the element that had focus
+  // when it opened, or, if that has gone, the most recently focused
+  // element that is still there (`findReturnFocusTarget`).
   //
-  // Focus goes back to it on close. The focus manager's own memory is
-  // not enough: when a panel stacked on this one closes, this one's
-  // manager is enabled again and remembers whatever had focus then,
-  // which is a button INSIDE this panel. Unmounted at once, that button
-  // was gone and floating-ui fell back further; kept in the page for
-  // the exit motion, it is still there, but inert, so focus landed
-  // nowhere.
-  const [opener, setOpener] = useState<HTMLElement | null>(
-    null,
-  )
+  // The focus manager's own memory is not enough. When a panel stacked
+  // on this one closes, this one's manager is enabled again and
+  // remembers whatever had focus then, which is a button INSIDE this
+  // panel. Unmounted at once, that button was gone and floating-ui fell
+  // back further; kept in the page for the exit motion, it is still
+  // there, but inert, so focus landed nowhere.
+  //
+  // Recorded in a layout effect, which never runs on the server, and
+  // which runs before the focus manager moves focus inside: it does
+  // that in a microtask.
+  const openerRef = useRef<HTMLElement | null>(null)
 
-  const [isLastVisible, setIsLastVisible] = useState(false)
+  const panelElementRef = useRef<HTMLElement | null>(null)
 
-  if (isVisible !== isLastVisible) {
-    setIsLastVisible(isVisible)
-
-    if (isVisible) {
-      const focused =
-        typeof document === "undefined"
-          ? null
-          : document.activeElement
-
-      setOpener(
-        focused instanceof HTMLElement &&
-          focused !== document.body
-          ? focused
-          : null,
-      )
+  useLayoutEffect(() => {
+    if (!isVisible) {
+      return
     }
-  }
 
-  // A ref object, which is what `returnFocus` takes. Falls back to the
-  // manager's own choice when there was no opener, or it has gone.
-  const openerRef = useMemo(
-    () => ({ current: opener }),
-    [opener],
+    const focused = document.activeElement
+
+    openerRef.current =
+      focused instanceof HTMLElement ? focused : null
+  }, [isVisible])
+
+  useLayoutEffect(() => {
+    if (!isMounted) {
+      openerRef.current = null
+    }
+  }, [isMounted])
+
+  // The manager reads `returnFocus.current` as the panel closes, so a
+  // getter decides then, with the page as it is at that moment, rather
+  // than in an earlier render.
+  const returnFocus = useMemo(
+    () => ({
+      get current() {
+        return findReturnFocusTarget({
+          opener: openerRef.current,
+          panel: panelElementRef.current,
+        })
+      },
+    }),
+    [],
   )
-
-  const returnFocus = opener?.isConnected ? openerRef : true
 
   const isTop =
     !isExiting && (!stack.isProvided || stack.topId === id)
@@ -269,6 +279,7 @@ export const OverlayPanel = ({
   const setPanelRef = useMergeRefs([
     refs.setFloating,
     presenceRef,
+    panelElementRef,
   ])
 
   useEffect(() => {
@@ -378,6 +389,11 @@ export const OverlayPanel = ({
               // but the top, so a lower modal is unreachable across the
               // portal boundary even where `FloatingFocusManager`'s
               // outside-hiding does not reach a sibling portal.
+              // Read by `findReturnFocusTarget`, so a panel that closes
+              // does not send focus into another that is leaving.
+              data-overlay-exiting={
+                isExiting ? "" : undefined
+              }
               inert={isTop ? undefined : true}
               ref={setPanelRef}
               role={role}
