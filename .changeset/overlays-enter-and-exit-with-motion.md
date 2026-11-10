@@ -11,3 +11,6 @@ New exports, so an app's own content moves the same way when an action changes i
 - `useListMotion({ items, getKey })`: an added item enters, a removed item stays (`inert` and `aria-hidden`) until its exit ends, and the items around them slide to their new places. Items on the first render do not animate.
 - `useValueChangeClass(value)`: a class that pops an element each time the value it shows changes, but not when data first arrives.
 - `usePresence`, `toOverlayMotionClass`, and `toFadeMotionClass`, for a single element that appears and disappears.
+- `useLastPresentValue(value)`: holds the last non-empty value, so a dialog built from a selection keeps its content while it fades out.
+
+`Modal` and `Dialog` take `hasMotion` (default `true`). Only a caller that animates the panel itself sets it to `false`; `TableViewport` does, for its own expansion animation.
