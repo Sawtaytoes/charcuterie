@@ -12,7 +12,12 @@ import {
   useRole,
 } from "@floating-ui/react"
 import type { ReactNode, RefObject } from "react"
-import { useCallback, useEffect, useState } from "react"
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react"
 import {
   toOverlayMotionClass,
   usePresence,
@@ -128,6 +133,49 @@ export const OverlayPanel = ({
 
   const { isExiting, isMounted, presenceRef } =
     usePresence(isVisible)
+
+  // The element that had focus when the panel opened, read during the
+  // render that opens it, before the focus manager moves focus inside.
+  //
+  // Focus goes back to it on close. The focus manager's own memory is
+  // not enough: when a panel stacked on this one closes, this one's
+  // manager is enabled again and remembers whatever had focus then,
+  // which is a button INSIDE this panel. Unmounted at once, that button
+  // was gone and floating-ui fell back further; kept in the page for
+  // the exit motion, it is still there, but inert, so focus landed
+  // nowhere.
+  const [opener, setOpener] = useState<HTMLElement | null>(
+    null,
+  )
+
+  const [isLastVisible, setIsLastVisible] = useState(false)
+
+  if (isVisible !== isLastVisible) {
+    setIsLastVisible(isVisible)
+
+    if (isVisible) {
+      const focused =
+        typeof document === "undefined"
+          ? null
+          : document.activeElement
+
+      setOpener(
+        focused instanceof HTMLElement &&
+          focused !== document.body
+          ? focused
+          : null,
+      )
+    }
+  }
+
+  // A ref object, which is what `returnFocus` takes. Falls back to the
+  // manager's own choice when there was no opener, or it has gone.
+  const openerRef = useMemo(
+    () => ({ current: opener }),
+    [opener],
+  )
+
+  const returnFocus = opener?.isConnected ? openerRef : true
 
   const isTop =
     !isExiting && (!stack.isProvided || stack.topId === id)
@@ -307,6 +355,7 @@ export const OverlayPanel = ({
             // anyway, and two live traps fight over one caret.
             disabled={!isTop}
             modal
+            returnFocus={returnFocus}
           >
             <div
               {...getFloatingProps()}
