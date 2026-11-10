@@ -28,7 +28,7 @@
     "@charcuterie/vitest-config": "workspace:^",
     "@storybook/addon-a11y": "^10.3.6",
     "@storybook/addon-docs": "^10.3.6",
-    "@storybook/addon-vitest": "^10.3.6",
+    "@storybook/addon-vitest": "^10.6.6",
     "@storybook/react": "^10.3.6",
     "@storybook/react-vite": "^10.3.6",
     "@tailwindcss/vite": "^4.3.0",
@@ -43,11 +43,11 @@
     "reg-publish-s3-plugin": "^0.14.2",
     "reg-suit": "^0.14.2",
     "remark-gfm": "^4.0.1",
-    "storybook": "^10.3.6",
+    "storybook": "^10.6.2",
     "storybook-addon-pseudo-states": "^10.5.5",
     "tailwindcss": "^4.3.0",
     "typescript": "^6.0.3",
-    "vite": "^8.0.16",
+    "vite": "^8.1.6",
     "vitest": "^4.1.8"
   }
 }
