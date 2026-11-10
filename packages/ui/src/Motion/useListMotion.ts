@@ -33,8 +33,11 @@ import {
  *
  * `motionProps` go on an element the hook owns — usually a plain
  * wrapper `div` that is the list's direct child. The hook writes that
- * element's `translate` and `transition` inline while it slides, so it
- * must not be an element whose own styles carry those.
+ * element's `translate` and `transition` inline while it slides, and
+ * its enter and exit animate `opacity` and `scale`, so it must not be
+ * an element whose own styles carry those: a running enter or exit
+ * overrides the element's own `scale`, and a slide replaces its own
+ * `transition`. Put a hover or press effect on an element inside it.
  *
  * ### Only what an action changed moves
  *

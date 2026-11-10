@@ -214,11 +214,12 @@
  * Neither animates `translate`, because the slide does. A running
  * animation overrides an inline style, so an enter that moved the
  * item would freeze the slide of an item that moves again while it is
- * still entering, and it would jump to its new place instead. A changed value pops: it starts slightly
- * larger and settles, so the eye finds it without a colour that could
- * clash with the element's own. The two `value-changed` names share
- * one set of keyframes so that a second change restarts the
- * animation. */
+ * still entering, and it would jump to its new place instead.
+ *
+ * A changed value pops: it starts slightly larger and settles, so the
+ * eye finds it without a colour that could clash with the element's
+ * own. The two `value-changed` names share one set of keyframes so
+ * that a second change restarts the animation. */
 @keyframes charcuterie-item-in {
   from {
     opacity: 0;

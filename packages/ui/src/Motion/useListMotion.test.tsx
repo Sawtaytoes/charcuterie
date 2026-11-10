@@ -507,6 +507,20 @@ test("an item that moves while it is still entering slides from where it is show
   await userEvent.click(getButton(host, "Reverse"))
 
   expect(shownOrder(host)[0]).toBe("Delta")
+
+  // Still entering when it moved, or this test would prove nothing.
+  expect(
+    delta
+      .getAnimations()
+      .some(
+        (animation) =>
+          animation instanceof CSSAnimation &&
+          animation.animationName === "charcuterie-item-in",
+      ),
+  ).toBe(true)
+
+  // Sliding, from where it was shown.
+  expect(delta.style.transition).toContain("translate")
   expect(
     Math.abs(delta.getBoundingClientRect().top - topBefore),
   ).toBeLessThan(2)
