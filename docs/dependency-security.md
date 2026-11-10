@@ -37,6 +37,25 @@ not a global uuid major upgrade. Regression tests exercise tmp creation/cleanup,
 of traversal prefixes, CommonJS loading of the S3 publisher and UUID generation/buffer
 bounds. The standalone VRT manifest uses equivalent pnpm overrides.
 
+## Forced majors for glob and minimatch
+
+GHSA-3g3m-2fjr-6pw4 (glob, AbortSignal bypass) and GHSA-g3hv-75wg-m249 (minimatch,
+globparts amplification) are fixed only in glob 14.0.2 and minimatch 11.0.1; no older line
+received a backport. Both lockfiles therefore override every `glob@>=9.0.0 <14.0.2` to
+`^14.0.4` and every `minimatch@>=7.0.0 <11.0.1` to `^11.0.5`. The parents still declare
+older majors: reg-suit-core's rimraf 5 (glob 10), Storybook's react-docgen plugin (glob 13),
+and ESLint, `@eslint/config-array` and `typescript-eslint` (minimatch 10). They use only
+`glob`, `globSync` and the `minimatch` function, which glob 14 and minimatch 11 keep. The
+removed minimatch 11 APIs (`makeRe`, `Minimatch#regexp`, `AST`, `matchOne`) are not
+called by any of them. `pnpm test:security` checks that reg-suit's rimraf loads glob 14 and
+still deletes by glob and by path in both installs; `pnpm lint:eslint` exercises
+ESLint's minimatch. Remove each override when its parents declare the patched major.
+
+The scoped `undici`, `source-map-js` and `ip-address` overrides only lift transitive
+copies within their parents' declared ranges to the patched release. They can go once
+the lockfile resolves a patched version without them. `@cucumber/messages>uuid` matches
+the existing reg-publish uuid override.
+
 Audit tools compare package versions with advisory metadata; they do not inspect pnpm
 patches. A remaining braces alert against 3.0.3 does not mean the mitigation failed, and
 it is kept visible until an official release is installed.

@@ -144,7 +144,7 @@
     "@codemirror/state": "^6",
     "@codemirror/view": "^6",
     "@lezer/common": "^1",
-    "@storybook/react": "^10.3.6",
+    "@storybook/react": "^10.6.2",
     "@tiptap/core": "^3.31.4",
     "@tiptap/extension-image": "^3.31.4",
     "@tiptap/extension-text-align": "^3.31.4",
@@ -158,13 +158,13 @@
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-router": "^8.3.0",
-    "storybook": "^10.3.6",
+    "storybook": "^10.6.2",
     "tailwindcss": "^4.3.0",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.8",
+    "vitest": "^4.1.12",
     "axe-core": "4.12.1",
-    "@vitest/browser": "^4.1.8",
-    "@storybook/addon-docs": "^10.3.6"
+    "@vitest/browser": "^4.1.12",
+    "@storybook/addon-docs": "^10.6.2"
   },
   "repository": {
     "type": "git",

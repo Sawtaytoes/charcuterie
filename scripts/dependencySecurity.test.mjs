@@ -1,5 +1,14 @@
 import assert from "node:assert/strict"
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  writeFileSync,
+} from "node:fs"
 import { createRequire } from "node:module"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
 import { test } from "node:test"
 
 const rootRequire = createRequire(
@@ -12,9 +21,14 @@ const vrtRequire = createRequire(
   ),
 )
 
-for (const [name, require] of [
-  ["workspace", rootRequire],
-  ["standalone VRT", vrtRequire],
+// The workspace reaches reg-suit through the docs package, which runs VRT.
+const docsRequire = createRequire(
+  new URL("../packages/docs/package.json", import.meta.url),
+)
+
+for (const [name, require, regSuitRequire] of [
+  ["workspace", rootRequire, docsRequire],
+  ["standalone VRT", vrtRequire, vrtRequire],
 ]) {
   const braces = require("braces")
 
@@ -91,6 +105,58 @@ for (const [name, require] of [
       typeof require("reg-publish-s3-plugin"),
       "function",
     )
+  })
+
+  test(`${name}: reg-suit's rimraf runs on the patched glob major`, () => {
+    const rimrafRequire = createRequire(
+      createRequire(
+        regSuitRequire.resolve("reg-suit/package.json"),
+      ).resolve("reg-suit-core"),
+    )
+    const { rimrafSync } = rimrafRequire("rimraf")
+    const globRequire = createRequire(
+      rimrafRequire.resolve("rimraf"),
+    )
+    const [globMajor, globMinor, globPatch] = globRequire(
+      "glob/package.json",
+    )
+      .version.split(".")
+      .map(Number)
+    assert.ok(
+      globMajor > 14 ||
+        (globMajor === 14 &&
+          (globMinor > 0 || globPatch >= 2)),
+      "glob must be 14.0.2 or later (GHSA-3g3m-2fjr-6pw4)",
+    )
+    const [minimatchMajor, minimatchMinor, minimatchPatch] =
+      createRequire(globRequire.resolve("glob"))(
+        "minimatch/package.json",
+      )
+        .version.split(".")
+        .map(Number)
+    assert.ok(
+      minimatchMajor > 11 ||
+        (minimatchMajor === 11 &&
+          (minimatchMinor > 0 || minimatchPatch >= 1)),
+      "minimatch must be 11.0.1 or later (GHSA-g3hv-75wg-m249)",
+    )
+
+    const root = mkdtempSync(
+      join(tmpdir(), "security-regression-"),
+    )
+    mkdirSync(join(root, "actual"))
+    writeFileSync(join(root, "actual", "a.png"), "")
+    writeFileSync(join(root, "keep.txt"), "")
+    writeFileSync(join(root, "drop.log"), "")
+    rimrafSync(join(root, "*.log"), { glob: {} })
+    assert.deepEqual(readdirSync(root).sort(), [
+      "actual",
+      "keep.txt",
+    ])
+    rimrafSync(join(root, "actual"))
+    assert.deepEqual(readdirSync(root), ["keep.txt"])
+    rimrafSync(root)
+    assert.equal(existsSync(root), false)
   })
 }
 

@@ -16,6 +16,12 @@ overrides:
   http-cache-semantics@^4.0.0: 4.3.0
   external-editor>tmp: 0.2.7
   reg-publish-s3-plugin>uuid: 11.1.1
+  "@cucumber/messages>uuid": 11.1.1
+  "glob@>=9.0.0 <14.0.2": ^14.0.4
+  "minimatch@>=7.0.0 <11.0.1": ^11.0.5
+  "undici@>=8.0.0 <8.12.2": ^8.12.2
+  "source-map-js@<1.2.2": ^1.2.2
+  "ip-address@<10.7.4": ^10.7.4
 patchedDependencies:
   braces@3.0.3: patches/braces-npm-3.0.3-582c14023c.patch
   http-cache-semantics@4.3.0: patches/http-cache-semantics-npm-4.3.0-ee45f76976.patch
