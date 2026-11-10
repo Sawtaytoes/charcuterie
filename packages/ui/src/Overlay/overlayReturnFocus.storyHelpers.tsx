@@ -190,3 +190,53 @@ export const ModalWithoutOpener = (): ReactNode => {
     </>
   )
 }
+
+/**
+ * A row whose Delete button opens a confirm modal, and whose Confirm
+ * removes the row, and the button with it. A search field the user
+ * typed in earlier sits above.
+ */
+export const DeleteRowWithConfirm = (): ReactNode => {
+  const [hasRow, setHasRow] = useState(true)
+
+  const [isConfirmVisible, setIsConfirmVisible] =
+    useState(false)
+
+  return (
+    <>
+      <input aria-label="Filter" type="search" />
+
+      <button type="button">Sort</button>
+
+      {hasRow ? (
+        <button
+          onClick={() => {
+            setIsConfirmVisible(true)
+          }}
+          type="button"
+        >
+          Delete row
+        </button>
+      ) : null}
+
+      <Modal
+        aria-label="Confirm"
+        isVisible={isConfirmVisible}
+        onClose={() => {
+          setIsConfirmVisible(false)
+        }}
+      >
+        <button
+          onClick={() => {
+            setHasRow(false)
+
+            setIsConfirmVisible(false)
+          }}
+          type="button"
+        >
+          Confirm
+        </button>
+      </Modal>
+    </>
+  )
+}

@@ -79,9 +79,35 @@ const isReturnable = (
 }
 
 /**
+ * Input types that do not bring up an on-screen keyboard.
+ */
+const KEYLESS_INPUT_TYPES = new Set([
+  "button",
+  "checkbox",
+  "color",
+  "file",
+  "image",
+  "radio",
+  "range",
+  "reset",
+  "submit",
+])
+
+/**
+ * Whether focusing `element` brings up the keyboard on a phone. The
+ * history fallback skips these: the user left that field, and did not
+ * ask to type in it again.
+ */
+const isTextEntry = (element: HTMLElement): boolean =>
+  element instanceof HTMLTextAreaElement ||
+  element.isContentEditable ||
+  (element instanceof HTMLInputElement &&
+    !KEYLESS_INPUT_TYPES.has(element.type))
+
+/**
  * Where a closing panel sends focus: the element that opened it if
  * that still can take focus; otherwise, if there was an opener, the
- * most recently focused element that can.
+ * most recently focused element that can and is not a text field.
  *
  * A panel that opened while nothing had focus returns nothing, so
  * focus stays where it was, as before. The history is only for an
@@ -114,7 +140,10 @@ export const findReturnFocusTarget = ({
   ) {
     const element = history[index]?.deref()
 
-    if (isReturnable(element, panel)) {
+    if (
+      isReturnable(element, panel) &&
+      !isTextEntry(element)
+    ) {
       return element
     }
   }

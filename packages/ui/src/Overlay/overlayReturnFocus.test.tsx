@@ -5,6 +5,7 @@ import { expect, userEvent, waitFor } from "storybook/test"
 import { afterEach, beforeEach, test } from "vitest"
 
 import {
+  DeleteRowWithConfirm,
   MenuThenModal,
   ModalWithoutOpener,
   StackedModals,
@@ -215,4 +216,40 @@ test("a modal that opened while nothing had focus leaves focus where it was when
   )
 
   expect(search).not.toHaveFocus()
+})
+
+test("when the opener is removed, focus does not go back to a text field the user left", async () => {
+  mount(<DeleteRowWithConfirm />)
+
+  const filter = await waitFor(() => {
+    const found = document.querySelector<HTMLInputElement>(
+      'input[aria-label="Filter"]',
+    )
+
+    expect(found).not.toBeNull()
+
+    return found as HTMLInputElement
+  })
+
+  await userEvent.click(getButton("Sort"))
+
+  await userEvent.click(filter)
+
+  await userEvent.keyboard("ab")
+
+  await userEvent.click(getButton("Delete row"))
+
+  await waitFor(() => {
+    expect(getButton("Confirm")).toHaveFocus()
+  })
+
+  await userEvent.click(getButton("Confirm"))
+
+  // The row and its Delete button are gone. The newest button the
+  // user pressed that is still there takes focus, not the field.
+  await waitFor(() => {
+    expect(getButton("Sort")).toHaveFocus()
+  })
+
+  expect(filter).not.toHaveFocus()
 })
