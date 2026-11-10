@@ -385,8 +385,9 @@ export {
   toOverlayMotionClass,
   usePresence,
 } from "./Motion/usePresence.ts"
-/** A class that pops an element each time the value it shows changes. */
-export { useValueChangeClass } from "./Motion/useValueChangeClass.ts"
+/** Props that pop an element each time the value it shows changes. */
+export type { ValueChangeMotionProps } from "./Motion/useValueChangeMotion.ts"
+export { useValueChangeMotion } from "./Motion/useValueChangeMotion.ts"
 export type {
   NavLayout,
   NavProps,

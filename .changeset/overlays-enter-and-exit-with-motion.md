@@ -6,10 +6,12 @@ Overlays now open and close with motion. `Modal`, `Dialog`, `Lightbox`, and `Com
 
 Durations and easing are the `--duration-*` and `--easing-*` tokens. Under `prefers-reduced-motion`, and in suites that freeze motion, the exit has no length, so the element is removed in the same commit as before. A DOM with no CSS engine (jsdom, happy-dom) behaves the same way.
 
+**Check browser tests that do not freeze motion.** In a real browser with motion on (vitest browser mode, or Playwright end-to-end tests that freeze motion only for screenshots), a closed overlay, a collapsed section, or a removed list item now stays in the page for its exit, about 90 to 140 ms. Role queries already skip it, because it is `aria-hidden`. A synchronous text query, or a count of a CSS locator, made right after a close can still find it: wait for it to go (`waitFor`, or Playwright's auto-waiting `expect(...).toBeHidden()`), or freeze motion in that suite with `FREEZE_MOTION_CSS` from `@charcuterie/storybook-config/testing`.
+
 New exports, so an app's own content moves the same way when an action changes it:
 
 - `useListMotion({ items, getKey })`: an added item enters, a removed item stays (`inert` and `aria-hidden`) until its exit ends, and the items around them slide to their new places. Items on the first render do not animate.
-- `useValueChangeClass(value)`: a class that pops an element each time the value it shows changes, but not when data first arrives.
+- `useValueChangeMotion(value)`: props (`className` and `onAnimationEnd`) that pop an element each time the value it shows changes, but not when data first arrives. The class comes off when the pop ends.
 - `usePresence`, `toOverlayMotionClass`, and `toFadeMotionClass`, for a single element that appears and disappears.
 - `useLastPresentValue(value)`: holds the last non-empty value, so a dialog built from a selection keeps its content while it fades out.
 

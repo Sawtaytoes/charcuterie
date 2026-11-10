@@ -12,7 +12,7 @@ import {
   useRole,
 } from "@floating-ui/react"
 import type { ReactNode, RefObject } from "react"
-import { useCallback, useEffect, useRef } from "react"
+import { useCallback, useEffect, useState } from "react"
 import {
   toOverlayMotionClass,
   usePresence,
@@ -200,17 +200,22 @@ export const OverlayPanel = ({
   // A closing panel has already left the stack, so its own index is
   // gone. It keeps the layer it had, or the panel it is leaving would
   // be drawn under the one it was covering for the length of its exit.
-  const lastStackIndexRef = useRef(0)
+  // State with a render-phase update, not a ref written during render,
+  // so a render React throws away cannot leave a layer behind.
+  const [lastStackIndex, setLastStackIndex] = useState(0)
 
-  if (registeredIndex >= 0) {
-    lastStackIndexRef.current = registeredIndex
+  if (
+    registeredIndex >= 0 &&
+    registeredIndex !== lastStackIndex
+  ) {
+    setLastStackIndex(registeredIndex)
   }
 
   const stackIndex =
     registeredIndex >= 0
       ? registeredIndex
       : isExiting
-        ? lastStackIndexRef.current
+        ? lastStackIndex
         : 0
 
   const setPanelRef = useMergeRefs([
@@ -233,9 +238,13 @@ export const OverlayPanel = ({
   // Ref-counted through `lockScrollBehind`'s module scope, so N
   // stacked panels lock the page once and free it only when the last
   // closes — with or without a provider.
+  //
+  // Held while the panel is mounted, not only while it is visible, so
+  // the page's scrollbar does not come back, and shift the page
+  // sideways, while the panel is still fading out over it.
   useEffect(
-    () => (isVisible ? lockScrollBehind() : undefined),
-    [isVisible],
+    () => (isMounted ? lockScrollBehind() : undefined),
+    [isMounted],
   )
 
   useEffect(() => {

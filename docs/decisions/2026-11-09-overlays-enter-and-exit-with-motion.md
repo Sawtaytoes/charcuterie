@@ -25,7 +25,7 @@ Every library overlay animates as it opens and as it closes.
 - **A `GroupedList` row** enters, leaves, and slides as its group's items change.
 - **An app's own lists and values** get the same motion from two exported hooks.
   `useListMotion` makes an added item enter, keeps a removed item in place until its exit
-  ends, and slides the items that moved. `useValueChangeClass` pops a value that an action
+  ends, and slides the items that moved. `useValueChangeMotion` pops a value that an action
   changed. Neither animates what was there on the first render or data arriving from
   `null`: a page that loads should not perform.
 
@@ -70,7 +70,9 @@ designed motion, `prefers-reduced-motion`, and `FREEZE_MOTION_CSS` give the same
 three different lengths. A number in JavaScript would hold a closed panel in the page under
 all three. Every existing test that asserts "it closed" would then have to learn to wait,
 and so would every app's tests. Reading the computed style lets the motionless renderings
-finish before paint.
+finish before paint. This covers suites that freeze motion and DOMs with no CSS engine. A
+browser test that runs with motion on still sees a closed element for the length of its exit,
+so it must wait for it to go or freeze motion itself.
 
 **Closed means closed at once.** The motion is for the eye. Focus, the stack, the keyboard,
 and the pointer must not wait for it, or the user's next action lands on a panel that is

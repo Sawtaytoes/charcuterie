@@ -40,6 +40,10 @@ afterEach(() => {
   }
 })
 
+const SLOW_EXIT = "1500ms"
+
+const MOTION_TIMEOUT = { timeout: 5_000 }
+
 test("the animation length is the longest delay plus duration, and zero with no animation", () => {
   const element = document.createElement("div")
 
@@ -72,6 +76,10 @@ test("a closing modal stays in the page, closed to everything but the eye, until
 
   expect(modal).toHaveClass("charcuterie-overlay-enter")
 
+  // Long enough that a loaded host cannot finish the exit between two
+  // lines of this test. The inline longhand beats the class's.
+  modal.style.animationDuration = SLOW_EXIT
+
   await userEvent.keyboard("{Escape}")
 
   // Already gone to a role query, the keyboard, and the pointer…
@@ -89,7 +97,7 @@ test("a closing modal stays in the page, closed to everything but the eye, until
 
   await waitFor(() => {
     expect(modal.isConnected).toBe(false)
-  })
+  }, MOTION_TIMEOUT)
 })
 
 test("a modal re-opened during its exit stays open", async () => {
@@ -102,6 +110,8 @@ test("a modal re-opened during its exit stays open", async () => {
   await userEvent.click(trigger)
 
   const modal = body.getByRole("dialog")
+
+  modal.style.animationDuration = SLOW_EXIT
 
   await userEvent.keyboard("{Escape}")
 
@@ -122,6 +132,16 @@ test("a modal re-opened during its exit stays open", async () => {
   })
 
   expect(modal.isConnected).toBe(true)
+
+  // Closed again, and gone, so its focus manager has let go of the
+  // page before the next test mounts into it.
+  modal.style.animationDuration = ""
+
+  await userEvent.keyboard("{Escape}")
+
+  await waitFor(() => {
+    expect(modal.isConnected).toBe(false)
+  }, MOTION_TIMEOUT)
 })
 
 test("an anchored menu grows out of its trigger and leaves with motion", async () => {
@@ -134,6 +154,8 @@ test("an anchored menu grows out of its trigger and leaves with motion", async (
   expect(menu).toHaveClass("charcuterie-overlay-enter")
   expect(menu.style.transformOrigin).not.toBe("")
 
+  menu.style.animationDuration = SLOW_EXIT
+
   await userEvent.keyboard("{Escape}")
 
   expect(body.queryByRole("menu")).toBeNull()
@@ -141,7 +163,7 @@ test("an anchored menu grows out of its trigger and leaves with motion", async (
 
   await waitFor(() => {
     expect(menu.isConnected).toBe(false)
-  })
+  }, MOTION_TIMEOUT)
 })
 
 test("an accordion section stays shown while it collapses, then hides", async () => {
@@ -160,6 +182,8 @@ test("an accordion section stays shown while it collapses, then hides", async ()
   expect(panel).not.toBeNull()
   expect(panel).not.toHaveAttribute("hidden")
 
+  panel?.style.setProperty("animation-duration", SLOW_EXIT)
+
   await userEvent.click(firstHeader)
 
   // `interpolate-size` is Chromium's, which is what this suite runs.
@@ -169,5 +193,31 @@ test("an accordion section stays shown while it collapses, then hides", async ()
 
   await waitFor(() => {
     expect(panel).toHaveAttribute("hidden")
+  }, MOTION_TIMEOUT)
+})
+
+test("an accordion section drops its open class when it has opened", async () => {
+  const { canvas } = await mountStory(AccordionPlayground)
+
+  const [firstHeader] = canvas.getAllByRole("button", {
+    expanded: false,
   })
+
+  await userEvent.click(firstHeader)
+
+  const panel = document.getElementById(
+    firstHeader.getAttribute("aria-controls") ?? "",
+  ) as HTMLElement
+
+  expect(panel).toHaveClass("charcuterie-disclosure-enter")
+
+  // Off once it has opened, so showing an ancestor again does not
+  // replay it, and its `overflow: clip` no longer clips the content.
+  await waitFor(() => {
+    expect(panel).not.toHaveClass(
+      "charcuterie-disclosure-enter",
+    )
+  }, MOTION_TIMEOUT)
+
+  expect(panel).not.toHaveAttribute("hidden")
 })

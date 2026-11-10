@@ -6,7 +6,10 @@ import {
   useState,
 } from "react"
 
-import { getAnimationLengthMs } from "./usePresence.ts"
+import {
+  getAnimationLengthMs,
+  getTransitionLengthMs,
+} from "./usePresence.ts"
 
 /**
  * Motion for a list an action changes: an added item enters, a
@@ -49,6 +52,26 @@ import { getAnimationLengthMs } from "./usePresence.ts"
  * Under reduced motion, in the frozen suites, and in a DOM with no CSS
  * engine, an exit is removed in the same commit and a slide has no
  * length.
+ *
+ * ### Why not `useFlipList`
+ *
+ * `@charcuterie/logic`'s `useFlipList` slides a list React re-orders,
+ * and this hook measures the same way it does: the "before" positions
+ * are read during the render that changes the order, from the commit
+ * the user is looking at. It does not use that hook, for three
+ * reasons. `useFlipList` animates with the Web Animations API, which
+ * the suites' motion freeze cannot reach, so a frozen suite would
+ * still shoot items mid-slide; it animates `transform`, which a
+ * caller's own transform would fight; and it has no exits, which are
+ * most of what this hook is for. The slide here is a CSS transition,
+ * so the freeze and reduced motion remove it like every other motion.
+ *
+ * ### Enter classes come off when they finish
+ *
+ * An element that goes from `display: none` back to shown restarts
+ * its CSS animation. So the enter class comes off when its animation
+ * ends, or switching back to a hidden tab would replay "added" on an
+ * item no action added.
  */
 export type ListMotionProps = Pick<
   HTMLAttributes<HTMLElement>,
@@ -83,6 +106,8 @@ type Position = {
 }
 
 const ENTER_CLASS = "charcuterie-item-enter"
+
+const ENTER_ANIMATION = "charcuterie-item-in"
 
 const EXIT_CLASS = "charcuterie-item-exit"
 
@@ -190,11 +215,62 @@ export const useListMotion = <Item>({
       return existing
     }
 
+    let stopListening: (() => void) | undefined
+
     const callback = (node: HTMLElement | null) => {
+      stopListening?.()
+
+      stopListening = undefined
+
       if (node === null) {
         elementsRef.current.delete(key)
-      } else {
-        elementsRef.current.set(key, node)
+
+        // Dropped on detach, so a list whose keys keep changing does
+        // not keep a callback for every key it ever showed. A key
+        // that comes back gets a new one. Only this callback's own
+        // entry: React detaches an old callback after a new one for
+        // the same key may already be in the map.
+        if (refCallbacksRef.current.get(key) === callback) {
+          refCallbacksRef.current.delete(key)
+        }
+
+        return
+      }
+
+      elementsRef.current.set(key, node)
+
+      // StrictMode detaches and re-attaches the same callback; put it
+      // back so the next render hands React the same identity.
+      if (!refCallbacksRef.current.has(key)) {
+        refCallbacksRef.current.set(key, callback)
+      }
+
+      const onAnimationEnd = (event: AnimationEvent) => {
+        if (
+          event.target === node &&
+          event.animationName === ENTER_ANIMATION
+        ) {
+          setEnteredKeys((previous) => {
+            if (!previous.has(key)) {
+              return previous
+            }
+
+            const next = new Set(previous)
+
+            next.delete(key)
+
+            return next
+          })
+        }
+      }
+
+      node.addEventListener("animationend", onAnimationEnd)
+
+      stopListening = () => {
+        node.removeEventListener(
+          "animationend",
+          onAnimationEnd,
+        )
       }
     }
 
@@ -335,45 +411,61 @@ export const useListMotion = <Item>({
     [],
   )
 
-  const positionsRef = useRef(new Map<string, Position>())
-
   const orderSignature = entries
     .map((entry) => entry.key)
     .join("\n")
 
-  const previousOrderRef = useRef(orderSignature)
+  // The order the DOM shows now: the last committed one.
+  const committedOrderRef = useRef(orderSignature)
+
+  const firstPositionsRef = useRef<Map<
+    string,
+    Position
+  > | null>(null)
+
+  // "First", read during the render that changes the order, while the
+  // DOM still holds the commit the user is looking at. Read any
+  // earlier and a row that grew in between, with no key change, would
+  // send every row below it sliding from where it used to be. This is
+  // `useFlipList`'s reason too; reading layout here has no effect on
+  // the tree, and a repeated render reads the same unchanged DOM.
+  if (committedOrderRef.current !== orderSignature) {
+    const positions = new Map<string, Position>()
+
+    for (const [key, element] of elementsRef.current) {
+      positions.set(key, readPosition(element))
+    }
+
+    firstPositionsRef.current = positions
+  }
 
   // Slide every item that the change moved. Positions are offsets
   // inside the list's own box, so scrolling the page between two
   // renders is not mistaken for a move.
   // biome-ignore lint/correctness/useExhaustiveDependencies: runs when the order of keys changes; the positions it reads are in refs.
   useLayoutEffect(() => {
-    const previousPositions = positionsRef.current
+    const previousPositions = firstPositionsRef.current
 
-    const nextPositions = new Map<string, Position>()
+    // Consumed either way: a stale set of positions is worse than
+    // none.
+    firstPositionsRef.current = null
 
-    for (const [key, element] of elementsRef.current) {
-      nextPositions.set(key, readPosition(element))
-    }
-
-    positionsRef.current = nextPositions
-
-    if (previousOrderRef.current === orderSignature) {
+    if (committedOrderRef.current === orderSignature) {
       return
     }
 
-    previousOrderRef.current = orderSignature
+    committedOrderRef.current = orderSignature
+
+    if (previousPositions === null) {
+      return
+    }
 
     for (const [key, element] of elementsRef.current) {
       const before = previousPositions.get(key)
 
-      const after = nextPositions.get(key)
+      const after = readPosition(element)
 
-      if (
-        before === undefined ||
-        after === undefined ||
-        exitingKeys.has(key)
-      ) {
+      if (before === undefined || exitingKeys.has(key)) {
         continue
       }
 
@@ -397,6 +489,15 @@ export const useListMotion = <Item>({
 
       element.style.translate = ""
 
+      // Reduced motion and the frozen suites make the slide 0s long,
+      // and a 0s transition never starts, so it would never end and
+      // never clear what it wrote.
+      if (getTransitionLengthMs(element) === 0) {
+        element.style.transition = ""
+
+        continue
+      }
+
       const clear = (event: TransitionEvent) => {
         if (event.target !== element) {
           return
@@ -405,9 +506,16 @@ export const useListMotion = <Item>({
         element.style.transition = ""
 
         element.removeEventListener("transitionend", clear)
+
+        element.removeEventListener(
+          "transitioncancel",
+          clear,
+        )
       }
 
       element.addEventListener("transitionend", clear)
+
+      element.addEventListener("transitioncancel", clear)
     }
   }, [orderSignature])
 

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react"
 import { useState } from "react"
+import type { Root } from "react-dom/client"
 import { createRoot } from "react-dom/client"
 import { expect, userEvent, waitFor } from "storybook/test"
 import { afterEach, beforeEach, test } from "vitest"
@@ -18,11 +19,28 @@ beforeEach(() => {
   frozenStyle = document.getElementById(FREEZE_ID)
 })
 
+const mounted: { host: HTMLElement; root: Root }[] = []
+
 afterEach(() => {
+  for (const { host, root } of mounted.splice(0)) {
+    root.unmount()
+
+    host.remove()
+  }
+
   if (frozenStyle !== null && !frozenStyle.isConnected) {
     document.head.append(frozenStyle)
   }
 })
+
+/**
+ * Long enough that a loaded test host cannot finish an exit or a
+ * slide between two lines of a test. The tokens are inherited, so
+ * setting them on the host slows every motion inside it.
+ */
+const SLOW_MOTION = "600ms"
+
+const MOTION_TIMEOUT = { timeout: 5_000 }
 
 const unfreeze = () => {
   frozenStyle?.remove()
@@ -34,6 +52,8 @@ const List = ({
   initial: string[]
 }): ReactNode => {
   const [names, setNames] = useState(initial)
+
+  const [isTall, setIsTall] = useState(false)
 
   const { entries } = useListMotion({
     getKey: (name: string) => name,
@@ -74,9 +94,27 @@ const List = ({
         Reverse
       </button>
 
-      <ul>
+      <button
+        onClick={() => {
+          setIsTall(true)
+        }}
+        type="button"
+      >
+        Grow Alpha
+      </button>
+
+      <ul className="m-0 list-none p-0">
         {entries.map(({ item, key, motionProps }) => (
-          <li key={key} {...motionProps}>
+          <li
+            key={key}
+            {...motionProps}
+            style={{
+              blockSize:
+                isTall && item === "Alpha"
+                  ? "100px"
+                  : "40px",
+            }}
+          >
             {item}
           </li>
         ))}
@@ -88,12 +126,29 @@ const List = ({
 const mount = (node: ReactNode) => {
   const host = document.createElement("div")
 
+  for (const token of [
+    "--duration-fast",
+    "--duration-normal",
+    "--duration-slow",
+  ]) {
+    host.style.setProperty(token, SLOW_MOTION)
+  }
+
   document.body.append(host)
 
-  createRoot(host).render(node)
+  const root = createRoot(host)
+
+  root.render(node)
+
+  mounted.push({ host, root })
 
   return host
 }
+
+const getButton = (host: HTMLElement, name: string) =>
+  [...host.querySelectorAll("button")].find(
+    (button) => button.textContent === name,
+  ) as HTMLButtonElement
 
 const getItem = (host: HTMLElement, key: string) =>
   host.querySelector<HTMLElement>(
@@ -113,9 +168,7 @@ test("items on the first render do not animate; an added item enters", async () 
 
   expect(getItem(host, "Alpha")?.className).toBe("")
 
-  await userEvent.click(
-    host.querySelector("button") as HTMLButtonElement,
-  )
+  await userEvent.click(getButton(host, "Add"))
 
   await waitFor(() => {
     expect(getItem(host, "Delta")).toHaveClass(
@@ -137,9 +190,7 @@ test("a removed item stays, inert, at its index until its exit ends", async () =
 
   const alpha = getItem(host, "Alpha") as HTMLElement
 
-  await userEvent.click(
-    host.querySelectorAll("button")[1] as HTMLButtonElement,
-  )
+  await userEvent.click(getButton(host, "Remove Alpha"))
 
   expect(alpha).toHaveClass("charcuterie-item-exit")
   expect(alpha).toHaveAttribute("inert")
@@ -148,7 +199,7 @@ test("a removed item stays, inert, at its index until its exit ends", async () =
 
   await waitFor(() => {
     expect(alpha.isConnected).toBe(false)
-  })
+  }, MOTION_TIMEOUT)
 })
 
 test("with motion frozen, a removed item is gone in the same commit", async () => {
@@ -160,9 +211,7 @@ test("with motion frozen, a removed item is gone in the same commit", async () =
     expect(getItem(host, "Alpha")).not.toBeNull()
   })
 
-  await userEvent.click(
-    host.querySelectorAll("button")[1] as HTMLButtonElement,
-  )
+  await userEvent.click(getButton(host, "Remove Alpha"))
 
   expect(getItem(host, "Alpha")).toBeNull()
 })
@@ -178,9 +227,7 @@ test("a reorder slides each moved item from where it was", async () => {
     expect(getItem(host, "Alpha")).not.toBeNull()
   })
 
-  await userEvent.click(
-    host.querySelectorAll("button")[2] as HTMLButtonElement,
-  )
+  await userEvent.click(getButton(host, "Reverse"))
 
   const alpha = getItem(host, "Alpha") as HTMLElement
 
@@ -190,5 +237,83 @@ test("a reorder slides each moved item from where it was", async () => {
 
   await waitFor(() => {
     expect(alpha.style.transition).toBe("")
+  }, MOTION_TIMEOUT)
+})
+
+test("an added item loses its enter class when it has entered, so showing the list again does not replay it", async () => {
+  unfreeze()
+
+  const host = mount(
+    <List initial={["Alpha", "Beta", "Gamma"]} />,
+  )
+
+  await waitFor(() => {
+    expect(getItem(host, "Alpha")).not.toBeNull()
   })
+
+  await userEvent.click(getButton(host, "Add"))
+
+  const delta = await waitFor(() => {
+    const found = getItem(host, "Delta")
+
+    expect(found).toHaveClass("charcuterie-item-enter")
+
+    return found as HTMLElement
+  })
+
+  await waitFor(() => {
+    expect(delta).not.toHaveClass("charcuterie-item-enter")
+  }, MOTION_TIMEOUT)
+
+  // Hidden and shown again, with a style flush at each step, which is
+  // what restarts a CSS animation still named on the element.
+  host.hidden = true
+
+  delta.getBoundingClientRect()
+
+  host.hidden = false
+
+  delta.getBoundingClientRect()
+
+  expect(delta.getAnimations()).toHaveLength(0)
+})
+
+test("a row that changed size without a change of keys does not send the rows after it sliding on the next add", async () => {
+  unfreeze()
+
+  const host = mount(
+    <List initial={["Alpha", "Beta", "Gamma"]} />,
+  )
+
+  await waitFor(() => {
+    expect(getItem(host, "Alpha")).not.toBeNull()
+  })
+
+  await userEvent.click(getButton(host, "Grow Alpha"))
+
+  await userEvent.click(getButton(host, "Add"))
+
+  await waitFor(() => {
+    expect(getItem(host, "Delta")).not.toBeNull()
+  })
+
+  // Delta was appended after them, so neither moved.
+  expect(getItem(host, "Beta")?.style.translate).toBe("")
+  expect(getItem(host, "Beta")?.style.transition).toBe("")
+  expect(getItem(host, "Gamma")?.style.transition).toBe("")
+})
+
+test("with motion frozen, a reorder leaves no inline transition behind", async () => {
+  const host = mount(
+    <List initial={["Alpha", "Beta", "Gamma"]} />,
+  )
+
+  await waitFor(() => {
+    expect(getItem(host, "Alpha")).not.toBeNull()
+  })
+
+  await userEvent.click(getButton(host, "Reverse"))
+
+  expect(getItem(host, "Alpha")?.style.transition).toBe("")
+  expect(getItem(host, "Alpha")?.style.translate).toBe("")
 })

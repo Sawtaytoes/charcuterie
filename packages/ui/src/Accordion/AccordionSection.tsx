@@ -81,6 +81,20 @@ export const AccordionSection = ({
     setHasToggled(true)
   }
 
+  // The open class comes off when the open animation ends. Left on, it
+  // would replay each time an ancestor goes from hidden to shown (a
+  // tab switched back to), and its `overflow: clip` would keep
+  // clipping the open section's content.
+  const [isOpenSettled, setIsOpenSettled] = useState(false)
+
+  const [isLastExpanded, setIsLastExpanded] = useState(isExpanded)
+
+  if (isLastExpanded !== isExpanded) {
+    setIsLastExpanded(isExpanded)
+
+    setIsOpenSettled(false)
+  }
+
   useEffect(() => {
     if (isDisabled) {
       return
@@ -169,7 +183,8 @@ export const AccordionSection = ({
           hasToggled &&
             (isCollapsing
               ? "charcuterie-disclosure-exit"
-              : "charcuterie-disclosure-enter"),
+              : !isOpenSettled &&
+                "charcuterie-disclosure-enter"),
         )}
         // `hidden` rather than unmounting, matching `Tabs`. A panel
         // that unmounts loses a scroll position, a partially typed
@@ -181,6 +196,15 @@ export const AccordionSection = ({
         hidden={!isShown}
         id={panelId}
         inert={isCollapsing ? true : undefined}
+        onAnimationEnd={(event) => {
+          if (
+            event.target === event.currentTarget &&
+            event.animationName ===
+              "charcuterie-disclosure-in"
+          ) {
+            setIsOpenSettled(true)
+          }
+        }}
         ref={presenceRef}
         // `group`, not `region`. A `group` is explicitly "a set of
         // UI objects **not** intended to be included in a page

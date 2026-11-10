@@ -105,6 +105,36 @@ export const getAnimationLengthMs = (
   }, 0)
 }
 
+/**
+ * The longest transition on `element`, delay included, in
+ * milliseconds. Zero under reduced motion, in the frozen suites, and
+ * in a DOM with no CSS engine — the same three cases as
+ * `getAnimationLengthMs`.
+ */
+export const getTransitionLengthMs = (
+  element: Element,
+): number => {
+  const style = globalThis.getComputedStyle(element)
+
+  const durations = (style.transitionDuration ?? "").split(
+    ",",
+  )
+
+  const delays = (style.transitionDelay ?? "").split(",")
+
+  return durations.reduce((longest, value, index) => {
+    const duration = toMilliseconds(value)
+
+    const delay = toMilliseconds(
+      delays[index % delays.length] ?? "0s",
+    )
+
+    return duration === 0
+      ? longest
+      : Math.max(longest, duration + Math.max(delay, 0))
+  }, 0)
+}
+
 export const usePresence = <
   Element extends HTMLElement = HTMLElement,
 >(

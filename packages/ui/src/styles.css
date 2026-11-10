@@ -204,7 +204,7 @@
 }
 
 /* A list item an action added, removed, or changed (`useListMotion`,
- * `useValueChangeClass`).
+ * `useValueChangeMotion`).
  *
  * An added item rises a little and fades in; a removed one fades and
  * shrinks in place before the gap closes, and its neighbours then
