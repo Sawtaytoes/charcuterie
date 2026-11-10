@@ -4,6 +4,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readdirSync,
+  rmSync,
   writeFileSync,
 } from "node:fs"
 import { createRequire } from "node:module"
@@ -144,19 +145,25 @@ for (const [name, require, regSuitRequire] of [
     const root = mkdtempSync(
       join(tmpdir(), "security-regression-"),
     )
-    mkdirSync(join(root, "actual"))
-    writeFileSync(join(root, "actual", "a.png"), "")
-    writeFileSync(join(root, "keep.txt"), "")
-    writeFileSync(join(root, "drop.log"), "")
-    rimrafSync(join(root, "*.log"), { glob: {} })
-    assert.deepEqual(readdirSync(root).sort(), [
-      "actual",
-      "keep.txt",
-    ])
-    rimrafSync(join(root, "actual"))
-    assert.deepEqual(readdirSync(root), ["keep.txt"])
-    rimrafSync(root)
-    assert.equal(existsSync(root), false)
+    try {
+      // reg-suit-core's own call: delete the actual-images directory by path.
+      mkdirSync(join(root, "actual"))
+      writeFileSync(join(root, "actual", "a.png"), "")
+      writeFileSync(join(root, "keep.txt"), "")
+      writeFileSync(join(root, "drop.log"), "")
+      rimrafSync(join(root, "actual"))
+      assert.deepEqual(readdirSync(root).sort(), [
+        "drop.log",
+        "keep.txt",
+      ])
+      // rimraf's glob mode loads glob 14 through CommonJS.
+      rimrafSync(join(root, "*.log"), { glob: {} })
+      assert.deepEqual(readdirSync(root), ["keep.txt"])
+      rimrafSync(root)
+      assert.equal(existsSync(root), false)
+    } finally {
+      rmSync(root, { force: true, recursive: true })
+    }
   })
 }
 
