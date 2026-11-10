@@ -12,7 +12,14 @@ import {
   useRole,
 } from "@floating-ui/react"
 import type { ReactNode, RefObject } from "react"
-import { useCallback, useEffect, useState } from "react"
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 import {
   toOverlayMotionClass,
   usePresence,
@@ -22,6 +29,7 @@ import {
   AnchoredOverlayScopeContext,
   useAnchoredOverlayScope,
 } from "./AnchoredOverlayScope.ts"
+import { findReturnFocusTarget } from "./focusHistory.ts"
 import { lockScrollBehind } from "./lockScrollBehind.ts"
 import { useOverlayStack } from "./OverlayStack.tsx"
 import { SharedBackdrop } from "./SharedBackdrop.tsx"
@@ -129,6 +137,56 @@ export const OverlayPanel = ({
   const { isExiting, isMounted, presenceRef } =
     usePresence(isVisible)
 
+  // Where focus goes when the panel closes: the element that had focus
+  // when it opened, or, if that has gone, the most recently focused
+  // element that is still there (`findReturnFocusTarget`).
+  //
+  // The focus manager's own memory is not enough. When a panel stacked
+  // on this one closes, this one's manager is enabled again and
+  // remembers whatever had focus then, which is a button INSIDE this
+  // panel. Unmounted at once, that button was gone and floating-ui fell
+  // back further; kept in the page for the exit motion, it is still
+  // there, but inert, so focus landed nowhere.
+  //
+  // Recorded in a layout effect, which never runs on the server, and
+  // which runs before the focus manager moves focus inside: it does
+  // that in a microtask.
+  const openerRef = useRef<HTMLElement | null>(null)
+
+  const panelElementRef = useRef<HTMLElement | null>(null)
+
+  useLayoutEffect(() => {
+    if (!isVisible) {
+      return
+    }
+
+    const focused = document.activeElement
+
+    openerRef.current =
+      focused instanceof HTMLElement ? focused : null
+  }, [isVisible])
+
+  useLayoutEffect(() => {
+    if (!isMounted) {
+      openerRef.current = null
+    }
+  }, [isMounted])
+
+  // The manager reads `returnFocus.current` as the panel closes, so a
+  // getter decides then, with the page as it is at that moment, rather
+  // than in an earlier render.
+  const returnFocus = useMemo(
+    () => ({
+      get current() {
+        return findReturnFocusTarget({
+          opener: openerRef.current,
+          panel: panelElementRef.current,
+        })
+      },
+    }),
+    [],
+  )
+
   const isTop =
     !isExiting && (!stack.isProvided || stack.topId === id)
   const anchors = useAnchoredOverlayScope()
@@ -221,6 +279,7 @@ export const OverlayPanel = ({
   const setPanelRef = useMergeRefs([
     refs.setFloating,
     presenceRef,
+    panelElementRef,
   ])
 
   useEffect(() => {
@@ -307,6 +366,7 @@ export const OverlayPanel = ({
             // anyway, and two live traps fight over one caret.
             disabled={!isTop}
             modal
+            returnFocus={returnFocus}
           >
             <div
               {...getFloatingProps()}
@@ -325,6 +385,14 @@ export const OverlayPanel = ({
                 hasMotion &&
                   toOverlayMotionClass(isExiting),
               )}
+              // Both read by `findReturnFocusTarget`: a closing panel
+              // does not send focus into another that is leaving, and
+              // an `inert` overlay panel, unlike other `inert` content,
+              // can still receive it once it is turned back on.
+              data-overlay-exiting={
+                isExiting ? "" : undefined
+              }
+              data-overlay-panel=""
               // The fallback the plan calls for: `inert` on every panel
               // but the top, so a lower modal is unreachable across the
               // portal boundary even where `FloatingFocusManager`'s
