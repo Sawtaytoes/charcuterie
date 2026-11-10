@@ -1,0 +1,5 @@
+---
+"@charcuterie/ui": patch
+---
+
+A modal (`Modal`, `Dialog`, `Lightbox`, `CommandPalette`) that another overlay covered now returns focus to the button that opened it when it closes. Since 4.28.0 a closing panel stays in the page for its exit motion, and the focus manager, re-enabled when the covering overlay closed, sent focus to a button inside the leaving panel, which is inert, so focus landed nowhere. Each panel now remembers what had focus when it opened and returns focus there when it closes. If that element has gone, as a menu item or a replaced modal's button does, focus goes to the most recently focused element that can still take it. A modal that opened while nothing had focus leaves focus where it was.
