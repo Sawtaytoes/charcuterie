@@ -237,6 +237,8 @@ export const GroupedListRow = ({
       {isHighlighted ? (
         <span
           aria-hidden
+          // A new key is a new ring, and a new ring pulses again.
+          key={item.highlightKey}
           className={toClassName(
             "charcuterie-highlight pointer-events-none absolute inset-0 inset-ring-2",
             HIGHLIGHT_RING_CLASS[highlightIntent],

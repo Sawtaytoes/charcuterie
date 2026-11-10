@@ -58,13 +58,20 @@ export type GroupedListItem = {
    * it lasts, usually by clearing it on a timer.
    *
    * **To pulse a row that is already highlighted again, change its
-   * `key`.** A new key is a new row, and a new row starts the pulse
-   * from the beginning; `` `${id}-${sequence}` `` is the usual shape.
+   * `highlightKey`**, not its `key`. Rows enter, leave, and slide
+   * with motion, so a new `key` is a new row: the old one would leave
+   * while a copy of it entered. A new `highlightKey` starts only the
+   * ring's pulse from the beginning; a scan count is the usual value.
    *
    * Under `prefers-reduced-motion` and on ePaper the ring does not
    * pulse; it is simply there.
    */
   isHighlighted?: boolean
+  /**
+   * Changing it restarts the highlight ring's pulse. See
+   * `isHighlighted`.
+   */
+  highlightKey?: number | string
   /**
    * `true` draws the row receded — a sunken surface and a quieter
    * label — for an entry that exists but is switched off. It stays

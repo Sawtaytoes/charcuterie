@@ -2,6 +2,8 @@ import {
   composeStories,
   composeStory,
 } from "@storybook/react"
+import { flushSync } from "react-dom"
+import { createRoot } from "react-dom/client"
 import {
   expect,
   userEvent,
@@ -15,6 +17,8 @@ import { expectNoAxeViolations } from "../expectNoAxeViolations.testHelpers.ts"
 import { mountStory } from "../mountStory.testHelpers.ts"
 import { expectAgentDrivable } from "../testing/index.ts"
 import meta, * as stories from "./GroupedList.stories.tsx"
+import type { GroupedListGroup } from "./GroupedList.tsx"
+import { GroupedList } from "./GroupedList.tsx"
 
 const {
   AllStates,
@@ -777,5 +781,62 @@ test("every row state passes axe in both schemes", async () => {
     canvasElement.setAttribute("data-scheme", scheme)
 
     await expectNoAxeViolations(canvasElement)
+  }
+})
+
+test("a new highlightKey pulses the ring again without replacing the row", async () => {
+  const host = document.createElement("div")
+
+  document.body.append(host)
+
+  const root = createRoot(host)
+
+  const toGroups = (
+    highlightKey: number,
+  ): GroupedListGroup[] => [
+    {
+      heading: "Chores",
+      items: [
+        {
+          highlightKey,
+          isHighlighted: true,
+          key: "dishes",
+          label: "Dishes",
+        },
+      ],
+      key: "chores",
+    },
+  ]
+
+  try {
+    flushSync(() => {
+      root.render(<GroupedList groups={toGroups(1)} />)
+    })
+
+    const row = host.querySelector("li") as HTMLElement
+
+    const ring = row.querySelector(".charcuterie-highlight")
+
+    expect(ring).not.toBeNull()
+
+    flushSync(() => {
+      root.render(<GroupedList groups={toGroups(2)} />)
+    })
+
+    // The same row, which neither left nor entered…
+    expect(host.querySelector("li")).toBe(row)
+    expect(row).not.toHaveClass("charcuterie-item-enter")
+
+    // …wearing a new ring, which starts its pulse from the beginning.
+    const nextRing = row.querySelector(
+      ".charcuterie-highlight",
+    )
+
+    expect(nextRing).not.toBeNull()
+    expect(nextRing).not.toBe(ring)
+  } finally {
+    root.unmount()
+
+    host.remove()
   }
 })

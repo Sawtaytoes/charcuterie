@@ -15,4 +15,6 @@ New exports, so an app's own content moves the same way when an action changes i
 - `usePresence`, `toOverlayMotionClass`, and `toFadeMotionClass`, for a single element that appears and disappears.
 - `useLastPresentValue(value)`: holds the last non-empty value, so a dialog built from a selection keeps its content while it fades out.
 
+**`GroupedList` items take `highlightKey`.** To pulse a highlighted row again, change its `highlightKey`, not its `key`. Rows now enter and leave by key, so a changed `key` makes the old row fade out while a copy fades in. If you build keys like `` `${id}-${sequence}` `` to restart the pulse, pass `key: id` and `highlightKey: sequence` instead.
+
 `Modal` and `Dialog` take `hasMotion` (default `true`). Only a caller that animates the panel itself sets it to `false`; `TableViewport` does, for its own expansion animation.
