@@ -2,7 +2,7 @@
 "@charcuterie/ui": minor
 ---
 
-Overlays now open and close with motion. `Modal`, `Dialog`, `Lightbox`, and `CommandPalette` panels scale and fade in, and the shared scrim fades. `Popover`, `Menu`, `Listbox`, `Picker`, `Combobox`, and `DatePicker` panels grow out of their trigger. `Tooltip` fades. Each one stays in the page until its exit animation ends. While it leaves, it is `inert`, `aria-hidden`, and click-through, and it has already returned focus. An `Accordion` section animates its height open and shut.
+Overlays now open and close with motion. `Modal`, `Dialog`, `Lightbox`, and `CommandPalette` panels scale and fade in, and the shared scrim fades. `Popover`, `Menu`, `Listbox`, `Picker`, `Combobox`, and `DatePicker` panels grow out of their trigger. `Tooltip` fades. Each one stays in the page until its exit animation ends. While it leaves, it is `inert`, `aria-hidden`, and click-through, and it has already returned focus. An `Accordion` section animates its height open and shut, and a `ReorderList` row slides to its new place when it is moved by a button, a key, or a drop.
 
 Durations and easing are the `--duration-*` and `--easing-*` tokens. Under `prefers-reduced-motion`, and in suites that freeze motion, the exit has no length, so the element is removed in the same commit as before. A DOM with no CSS engine (jsdom, happy-dom) behaves the same way.
 

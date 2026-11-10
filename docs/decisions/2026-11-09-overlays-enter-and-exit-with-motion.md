@@ -21,6 +21,7 @@ Every library overlay animates as it opens and as it closes.
 - **`Tooltip`** fades only.
 - **An `Accordion` section** animates its height. A section that starts open does not
   animate on page load.
+- **A `ReorderList` row** slides to its new place when a button, a key, or a drop moves it.
 - **An app's own lists and values** get the same motion from two exported hooks.
   `useListMotion` makes an added item enter, keeps a removed item in place until its exit
   ends, and slides the items that moved. `useValueChangeClass` pops a value that an action

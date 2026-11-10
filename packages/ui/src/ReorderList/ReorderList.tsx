@@ -6,6 +6,7 @@ import {
   toSettledIndex,
 } from "../Board/boardMove.ts"
 import { useBoardDrag } from "../Board/useBoardDrag.ts"
+import { useListMotion } from "../Motion/useListMotion.ts"
 import { toClassName } from "../toClassName.ts"
 import { VisuallyHidden } from "../VisuallyHidden/VisuallyHidden.tsx"
 
@@ -216,6 +217,13 @@ export const ReorderList = <TItem extends ReorderListItem>({
     },
   })
 
+  // A row moved by a button, a key, or a drop slides to its new place
+  // instead of jumping, so the user sees where it went.
+  const { entries } = useListMotion({
+    getKey: (item: TItem) => item.key,
+    items,
+  })
+
   const ListElement = elementType
 
   const ItemElement =
@@ -240,56 +248,74 @@ export const ReorderList = <TItem extends ReorderListItem>({
           }
         }}
       >
-        {items.map((item, index) => (
-          <ItemElement
-            className={itemClassName}
-            key={item.key}
-            {...{ [ITEM_ATTRIBUTE]: item.key }}
-          >
-            {renderItem({
-              gripProps: isReorderable
-                ? {
-                    onPointerDown: (pointerEvent) => {
-                      startDrag(pointerEvent, {
-                        fromIndex: index,
-                        fromLaneKey: LANE_KEY,
-                        itemKey: item.key,
-                      })
-                    },
-                    /*
-                     * Without it the browser claims the gesture
-                     * for a scroll and the `pointermove` stream
-                     * stops one frame in — which reads as "drag
-                     * works on the desktop and not on the
-                     * tablet", the exact bug this component
-                     * exists to end.
-                     */
-                    style: { touchAction: "none" },
-                    title: "Drag to reorder",
-                  }
-                : {},
-              index,
-              isDragged: drag?.itemKey === item.key,
-              isFirst: index === 0,
-              isLast: index === items.length - 1,
-              item,
-              moveBy: (offset) => {
-                const toIndex = index + offset
+        {entries.map(
+          ({ isExiting, item, key, motionProps }) => {
+            // A leaving row has no index, no grip, and no attribute, so
+            // a drag never measures it as a drop slot.
+            const index = isExiting
+              ? -1
+              : items.indexOf(item)
 
-                if (
-                  !isReorderable ||
-                  toIndex < 0 ||
-                  toIndex > items.length - 1
-                ) {
-                  return
-                }
+            return (
+              <ItemElement
+                {...motionProps}
+                className={toClassName(
+                  itemClassName,
+                  motionProps.className,
+                )}
+                key={key}
+                {...(isExiting
+                  ? {}
+                  : { [ITEM_ATTRIBUTE]: item.key })}
+              >
+                {renderItem({
+                  gripProps:
+                    isReorderable && !isExiting
+                      ? {
+                          onPointerDown: (pointerEvent) => {
+                            startDrag(pointerEvent, {
+                              fromIndex: index,
+                              fromLaneKey: LANE_KEY,
+                              itemKey: item.key,
+                            })
+                          },
+                          /*
+                           * Without it the browser claims the gesture
+                           * for a scroll and the `pointermove` stream
+                           * stops one frame in — which reads as "drag
+                           * works on the desktop and not on the
+                           * tablet", the exact bug this component
+                           * exists to end.
+                           */
+                          style: { touchAction: "none" },
+                          title: "Drag to reorder",
+                        }
+                      : {},
+                  index,
+                  isDragged: drag?.itemKey === item.key,
+                  isFirst: index === 0,
+                  isLast: index === items.length - 1,
+                  item,
+                  moveBy: (offset) => {
+                    const toIndex = index + offset
 
-                commit(index, toIndex)
-              },
-              position: index + 1,
-            })}
-          </ItemElement>
-        ))}
+                    if (
+                      isExiting ||
+                      !isReorderable ||
+                      toIndex < 0 ||
+                      toIndex > items.length - 1
+                    ) {
+                      return
+                    }
+
+                    commit(index, toIndex)
+                  },
+                  position: index + 1,
+                })}
+              </ItemElement>
+            )
+          },
+        )}
 
         {/*
          * A real element rather than a border on a row, and
