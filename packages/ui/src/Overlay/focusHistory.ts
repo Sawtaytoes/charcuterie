@@ -40,26 +40,54 @@ if (typeof document !== "undefined") {
 
 /**
  * Whether focus can land on `element` once `panel` has closed: it is
- * still in the page, outside the closing panel, and outside any panel
- * that is itself leaving.
+ * still in the page, enabled, and rendered; it is outside the closing
+ * panel and outside any panel that is itself leaving; and it is not
+ * inside anything else that is `inert`, such as a menu that is still
+ * leaving.
  *
- * It does not check `inert`. A lower panel that the closing one
- * covered is still `inert` at the moment this is read, and is exactly
- * where focus belongs.
+ * An `inert` overlay panel does not rule an element out: a lower panel
+ * that the closing one covered is still `inert` at the moment this is
+ * read, and is turned back on in the same commit.
  */
 const isReturnable = (
   element: HTMLElement | null | undefined,
   panel: HTMLElement | null,
-): element is HTMLElement =>
-  element?.isConnected === true &&
-  element !== element.ownerDocument.body &&
-  !(panel?.contains(element) ?? false) &&
-  element.closest("[data-overlay-exiting]") === null
+): element is HTMLElement => {
+  if (
+    element?.isConnected !== true ||
+    element === element.ownerDocument.body ||
+    (panel?.contains(element) ?? false) ||
+    element.closest("[data-overlay-exiting]") !== null ||
+    element.matches(":disabled")
+  ) {
+    return false
+  }
+
+  if (
+    typeof element.checkVisibility === "function" &&
+    !element.checkVisibility()
+  ) {
+    return false
+  }
+
+  const inertAncestor = element.closest("[inert]")
+
+  return (
+    inertAncestor === null ||
+    inertAncestor.hasAttribute("data-overlay-panel")
+  )
+}
 
 /**
  * Where a closing panel sends focus: the element that opened it if
- * that still can take focus; otherwise the most recently focused
- * element that can.
+ * that still can take focus; otherwise, if there was an opener, the
+ * most recently focused element that can.
+ *
+ * A panel that opened while nothing had focus returns nothing, so
+ * focus stays where it was, as before. The history is only for an
+ * opener that has gone, not for a panel that never had one: sending
+ * focus to a field the user left minutes ago would open the keyboard
+ * on a phone.
  */
 export const findReturnFocusTarget = ({
   opener,
@@ -68,6 +96,13 @@ export const findReturnFocusTarget = ({
   opener: HTMLElement | null
   panel: HTMLElement | null
 }): HTMLElement | null => {
+  if (
+    opener === null ||
+    opener === opener.ownerDocument.body
+  ) {
+    return null
+  }
+
   if (isReturnable(opener, panel)) {
     return opener
   }

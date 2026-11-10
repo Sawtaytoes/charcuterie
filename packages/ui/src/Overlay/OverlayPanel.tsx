@@ -385,15 +385,18 @@ export const OverlayPanel = ({
                 hasMotion &&
                   toOverlayMotionClass(isExiting),
               )}
+              // Both read by `findReturnFocusTarget`: a closing panel
+              // does not send focus into another that is leaving, and
+              // an `inert` overlay panel, unlike other `inert` content,
+              // can still receive it once it is turned back on.
+              data-overlay-exiting={
+                isExiting ? "" : undefined
+              }
+              data-overlay-panel=""
               // The fallback the plan calls for: `inert` on every panel
               // but the top, so a lower modal is unreachable across the
               // portal boundary even where `FloatingFocusManager`'s
               // outside-hiding does not reach a sibling portal.
-              // Read by `findReturnFocusTarget`, so a panel that closes
-              // does not send focus into another that is leaving.
-              data-overlay-exiting={
-                isExiting ? "" : undefined
-              }
               inert={isTop ? undefined : true}
               ref={setPanelRef}
               role={role}
