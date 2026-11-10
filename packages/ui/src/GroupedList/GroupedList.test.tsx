@@ -840,3 +840,91 @@ test("a new highlightKey pulses the ring again without replacing the row", async
     host.remove()
   }
 })
+
+test("a group an action creates enters, and a group it empties leaves with its last row", async () => {
+  // About the motion, so the suite's freeze is lifted for this test.
+  const frozenStyle = document.getElementById(
+    "charcuterie-freeze-motion",
+  )
+
+  frozenStyle?.remove()
+
+  const host = document.createElement("div")
+
+  // Long enough that a loaded host cannot finish the exit first.
+  host.style.setProperty("--duration-fast", "600ms")
+  host.style.setProperty("--duration-normal", "600ms")
+
+  document.body.append(host)
+
+  const root = createRoot(host)
+
+  const chores: GroupedListGroup = {
+    heading: "Chores",
+    items: [{ key: "dishes", label: "Dishes" }],
+    key: "chores",
+  }
+
+  const reading: GroupedListGroup = {
+    heading: "Reading",
+    items: [{ key: "book", label: "Book" }],
+    key: "reading",
+  }
+
+  const groupOf = (heading: string) =>
+    [...host.querySelectorAll("h3")]
+      .find((element) => element.textContent === heading)
+      ?.closest("[data-motion-key]")
+
+  try {
+    flushSync(() => {
+      root.render(<GroupedList groups={[chores]} />)
+    })
+
+    // On the first render, nothing moves.
+    expect(groupOf("Chores")?.className).not.toContain(
+      "charcuterie-item-enter",
+    )
+
+    flushSync(() => {
+      root.render(
+        <GroupedList groups={[chores, reading]} />,
+      )
+    })
+
+    expect(groupOf("Reading")).toHaveClass(
+      "charcuterie-item-enter",
+    )
+
+    flushSync(() => {
+      root.render(
+        <GroupedList
+          groups={[chores, { ...reading, items: [] }]}
+        />,
+      )
+    })
+
+    // Still drawn, with its last row, while it leaves…
+    const leaving = groupOf("Reading")
+
+    expect(leaving).toHaveClass("charcuterie-item-exit")
+    expect(leaving).toHaveAttribute("inert")
+    expect(leaving?.textContent).toContain("Book")
+
+    // …and gone once it has.
+    await waitFor(
+      () => {
+        expect(groupOf("Reading")).toBeUndefined()
+      },
+      { timeout: 5_000 },
+    )
+  } finally {
+    root.unmount()
+
+    host.remove()
+
+    if (frozenStyle !== null) {
+      document.head.append(frozenStyle)
+    }
+  }
+})

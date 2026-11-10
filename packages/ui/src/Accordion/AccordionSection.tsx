@@ -87,7 +87,8 @@ export const AccordionSection = ({
   // clipping the open section's content.
   const [isOpenSettled, setIsOpenSettled] = useState(false)
 
-  const [isLastExpanded, setIsLastExpanded] = useState(isExpanded)
+  const [isLastExpanded, setIsLastExpanded] =
+    useState(isExpanded)
 
   if (isLastExpanded !== isExpanded) {
     setIsLastExpanded(isExpanded)

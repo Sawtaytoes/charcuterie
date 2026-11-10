@@ -82,6 +82,12 @@ export type ListMotionProps = Pick<
 }
 
 export type ListMotionEntry<Item> = {
+  /**
+   * The item's index in `items`. A leaving item keeps the index it had
+   * when it was removed, so a row that shows its position does not
+   * read "0" while it leaves.
+   */
+  index: number
   /** Removed, and leaving. Already `inert` through `motionProps`. */
   isExiting: boolean
   item: Item
@@ -146,6 +152,11 @@ export const useListMotion = <Item>({
   useLayoutEffect(() => {
     committedItemsRef.current = items
   })
+
+  // The keys the last commit showed, in order, leaving items included.
+  const shownKeysRef = useRef<readonly string[]>(
+    items.map(getKey),
+  )
 
   const [exiting, setExiting] = useState<
     ExitingItem<Item>[]
@@ -281,43 +292,99 @@ export const useListMotion = <Item>({
 
   const exitingKeys = new Set(exiting.map((one) => one.key))
 
-  const entries: ListMotionEntry<Item>[] = items.map(
-    (item) => {
-      const key = getKey(item)
+  // Each leaving item stays where the user last saw it: after the item
+  // that was shown just before it, whether that one stayed, left too,
+  // or was added in front of it since. A stored index would not hold:
+  // in a newest-first list capped at three, `[A, B, C]` becoming
+  // `[X, A, B]` would put the leaving C between A and B.
+  const itemKeys = items.map(getKey)
 
-      return {
-        isExiting: false,
-        item,
-        key,
-        motionProps: {
-          className: enteredKeys.has(key)
-            ? ENTER_CLASS
-            : undefined,
-          "data-motion-key": key,
-          ref: getRef(key),
-        },
-      }
-    },
+  const itemKeySet = new Set(itemKeys)
+
+  const exitingByKey = new Map(
+    exiting.map((one) => [one.key, one]),
   )
 
-  // Each leaving item goes back where it was, so the gap it leaves
-  // opens only when it has finished leaving.
-  for (const one of [...exiting].sort(
-    (first, second) => first.index - second.index,
-  )) {
-    entries.splice(Math.min(one.index, entries.length), 0, {
-      isExiting: true,
-      item: one.item,
-      key: one.key,
-      motionProps: {
-        "aria-hidden": true,
-        className: EXIT_CLASS,
-        "data-motion-key": one.key,
-        inert: true,
-        ref: getRef(one.key),
-      },
-    })
+  // Leaving items, by the key of the staying item they follow. `null`
+  // holds the ones that were shown before every staying item.
+  const exitingAfter = new Map<
+    string | null,
+    ExitingItem<Item>[]
+  >()
+
+  const placedKeys = new Set<string>()
+
+  let lastStayingKey: string | null = null
+
+  for (const key of shownKeysRef.current) {
+    const one = exitingByKey.get(key)
+
+    if (one !== undefined) {
+      exitingAfter.set(lastStayingKey, [
+        ...(exitingAfter.get(lastStayingKey) ?? []),
+        one,
+      ])
+
+      placedKeys.add(key)
+    } else if (itemKeySet.has(key)) {
+      lastStayingKey = key
+    }
   }
+
+  // A leaving item the last commit did not show (removed in the same
+  // batch that would have shown it) goes at the end.
+  const unplaced = exiting.filter(
+    (one) => !placedKeys.has(one.key),
+  )
+
+  const toExitingEntry = (
+    one: ExitingItem<Item>,
+  ): ListMotionEntry<Item> => ({
+    index: one.index,
+    isExiting: true,
+    item: one.item,
+    key: one.key,
+    motionProps: {
+      "aria-hidden": true,
+      className: EXIT_CLASS,
+      "data-motion-key": one.key,
+      inert: true,
+      ref: getRef(one.key),
+    },
+  })
+
+  const entries: ListMotionEntry<Item>[] = [
+    ...(exitingAfter.get(null) ?? []).map(toExitingEntry),
+    ...items.flatMap((item, index) => {
+      const key = itemKeys[index] ?? getKey(item)
+
+      return [
+        {
+          index,
+          isExiting: false,
+          item,
+          key,
+          motionProps: {
+            className: enteredKeys.has(key)
+              ? ENTER_CLASS
+              : undefined,
+            "data-motion-key": key,
+            ref: getRef(key),
+          },
+        },
+        ...(exitingAfter.get(key) ?? []).map(
+          toExitingEntry,
+        ),
+      ]
+    }),
+    ...unplaced.map(toExitingEntry),
+  ]
+
+  // The order this commit shows, leaving items included, which is
+  // where the next change places what leaves.
+  useLayoutEffect(() => {
+    shownKeysRef.current = entries.map((entry) => entry.key)
+  })
 
   const finishExit = useCallback((key: string) => {
     setExiting((previous) =>
@@ -423,6 +490,11 @@ export const useListMotion = <Item>({
     Position
   > | null>(null)
 
+  // The listener of the slide each element is running, if any.
+  const slideStopsRef = useRef(
+    new Map<HTMLElement, () => void>(),
+  )
+
   // "First", read during the render that changes the order, while the
   // DOM still holds the commit the user is looking at. Read any
   // earlier and a row that grew in between, with no key change, would
@@ -477,6 +549,13 @@ export const useListMotion = <Item>({
         continue
       }
 
+      // A slide that starts while the last one runs takes over from
+      // it. The last one's listener goes first, without touching the
+      // style: if it ran on the cancel this slide causes, it would
+      // clear the `transition` this slide is about to set, and a
+      // browser that follows the spec would then stop this slide dead.
+      slideStopsRef.current.get(element)?.()
+
       element.style.transition = "none"
 
       element.style.translate = `${deltaLeft}px ${deltaTop}px`
@@ -498,6 +577,17 @@ export const useListMotion = <Item>({
         continue
       }
 
+      const stop = () => {
+        element.removeEventListener("transitionend", clear)
+
+        element.removeEventListener(
+          "transitioncancel",
+          clear,
+        )
+
+        slideStopsRef.current.delete(element)
+      }
+
       const clear = (event: TransitionEvent) => {
         if (event.target !== element) {
           return
@@ -505,17 +595,14 @@ export const useListMotion = <Item>({
 
         element.style.transition = ""
 
-        element.removeEventListener("transitionend", clear)
-
-        element.removeEventListener(
-          "transitioncancel",
-          clear,
-        )
+        stop()
       }
 
       element.addEventListener("transitionend", clear)
 
       element.addEventListener("transitioncancel", clear)
+
+      slideStopsRef.current.set(element, stop)
     }
   }, [orderSignature])
 

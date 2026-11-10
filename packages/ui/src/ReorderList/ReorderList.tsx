@@ -59,6 +59,12 @@ export type ReorderListRenderArguments<
   }
   index: number
   isDragged: boolean
+  /**
+   * Removed, and leaving with motion. It is `inert`, keeps the
+   * position it had, and reports itself as both first and last, so a
+   * host that disables its move buttons at the ends disables both.
+   */
+  isExiting: boolean
   isFirst: boolean
   isLast: boolean
   item: TItem
@@ -249,12 +255,16 @@ export const ReorderList = <TItem extends ReorderListItem>({
         }}
       >
         {entries.map(
-          ({ isExiting, item, key, motionProps }) => {
-            // A leaving row has no index, no grip, and no attribute, so
-            // a drag never measures it as a drop slot.
-            const index = isExiting
-              ? -1
-              : items.indexOf(item)
+          ({
+            index,
+            isExiting,
+            item,
+            key,
+            motionProps,
+          }) => {
+            // A leaving row keeps the index it had, for printing, but
+            // has no grip and no attribute, so a drag never measures it
+            // as a drop slot, and `moveBy` does nothing on it.
 
             return (
               <ItemElement
@@ -293,8 +303,10 @@ export const ReorderList = <TItem extends ReorderListItem>({
                       : {},
                   index,
                   isDragged: drag?.itemKey === item.key,
-                  isFirst: index === 0,
-                  isLast: index === items.length - 1,
+                  isExiting,
+                  isFirst: isExiting || index === 0,
+                  isLast:
+                    isExiting || index === items.length - 1,
                   item,
                   moveBy: (offset) => {
                     const toIndex = index + offset

@@ -2,6 +2,7 @@ import { useUniqueId } from "@charcuterie/logic"
 import type { IntentName } from "@charcuterie/tokens"
 import type { ReactNode } from "react"
 
+import { useListMotion } from "../Motion/useListMotion.ts"
 import { toClassName } from "../toClassName.ts"
 import { GroupedListRows } from "./GroupedListRows.tsx"
 import { STICKY_HEADING_CLASS } from "./groupedListStickyHeading.ts"
@@ -252,6 +253,15 @@ export const GroupedList = ({
     (group) => group.items.length > 0,
   )
 
+  // Groups move like their rows do. A group an action creates (the
+  // first scan of a day) enters with its first row, and a group an
+  // action empties leaves with its last row, instead of either one
+  // appearing or vanishing in a frame.
+  const { entries: groupEntries } = useListMotion({
+    getKey: (group: GroupedListGroup) => group.key,
+    items: shownGroups,
+  })
+
   const Heading = HEADING_TAG[headingLevel]
 
   return (
@@ -262,51 +272,63 @@ export const GroupedList = ({
         className,
       )}
     >
-      {shownGroups.length === 0
+      {groupEntries.length === 0
         ? (emptyState ?? null)
-        : shownGroups.map((group, index) => {
-            const headingId = `${baseId}-heading-${index}`
+        : groupEntries.map(
+            (
+              { item: group, key, motionProps },
+              position,
+            ) => {
+              // By place in what is drawn, so a leaving group and the
+              // group now at its old index never share an id.
+              const headingId = `${baseId}-heading-${position}`
 
-            return (
-              <div
-                className={toClassName(
-                  "flex flex-col",
-                  isHeadingSticky ? "gap-0" : "gap-2",
-                )}
-                key={group.key}
-              >
+              return (
                 <div
+                  {...motionProps}
                   className={toClassName(
-                    "flex flex-wrap items-baseline gap-x-3 gap-y-0.5",
-                    isHeadingSticky && STICKY_HEADING_CLASS,
+                    "flex flex-col",
+                    isHeadingSticky ? "gap-0" : "gap-2",
+                    motionProps.className,
                   )}
+                  key={key}
                 >
-                  <Heading
+                  <div
                     className={toClassName(
-                      "m-0 min-w-0 wrap-anywhere font-semibold text-content-primary",
-                      size === "sm" ? "text-sm" : "text-md",
+                      "flex flex-wrap items-baseline gap-x-3 gap-y-0.5",
+                      isHeadingSticky &&
+                        STICKY_HEADING_CLASS,
                     )}
-                    id={headingId}
                   >
-                    {group.heading}
-                  </Heading>
+                    <Heading
+                      className={toClassName(
+                        "m-0 min-w-0 wrap-anywhere font-semibold text-content-primary",
+                        size === "sm"
+                          ? "text-sm"
+                          : "text-md",
+                      )}
+                      id={headingId}
+                    >
+                      {group.heading}
+                    </Heading>
 
-                  {group.summary ? (
-                    <span className="min-w-0 wrap-anywhere text-content-secondary text-sm">
-                      {group.summary}
-                    </span>
-                  ) : null}
+                    {group.summary ? (
+                      <span className="min-w-0 wrap-anywhere text-content-secondary text-sm">
+                        {group.summary}
+                      </span>
+                    ) : null}
+                  </div>
+
+                  <GroupedListRows
+                    headingId={headingId}
+                    isTextTruncated={isTextTruncated}
+                    items={group.items}
+                    size={size}
+                  />
                 </div>
-
-                <GroupedListRows
-                  headingId={headingId}
-                  isTextTruncated={isTextTruncated}
-                  items={group.items}
-                  size={size}
-                />
-              </div>
-            )
-          })}
+              )
+            },
+          )}
     </div>
   )
 }

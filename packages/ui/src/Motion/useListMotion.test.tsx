@@ -103,6 +103,43 @@ const List = ({
         Grow Alpha
       </button>
 
+      <button
+        onClick={() => {
+          setNames((previous) => ["Newest", ...previous])
+        }}
+        type="button"
+      >
+        Add to front
+      </button>
+
+      <button
+        onClick={() => {
+          // A newest-first list capped at its length: one in at the
+          // top, the oldest out at the bottom.
+          setNames((previous) => [
+            "Newest",
+            ...previous.slice(0, -1),
+          ])
+        }}
+        type="button"
+      >
+        Add capped
+      </button>
+
+      {["Beta", "Gamma"].map((name) => (
+        <button
+          key={name}
+          onClick={() => {
+            setNames((previous) =>
+              previous.filter((one) => one !== name),
+            )
+          }}
+          type="button"
+        >
+          {`Remove ${name}`}
+        </button>
+      ))}
+
       <ul className="m-0 list-none p-0">
         {entries.map(({ item, key, motionProps }) => (
           <li
@@ -316,4 +353,85 @@ test("with motion frozen, a reorder leaves no inline transition behind", async (
 
   expect(getItem(host, "Alpha")?.style.transition).toBe("")
   expect(getItem(host, "Alpha")?.style.translate).toBe("")
+})
+
+const shownOrder = (host: HTMLElement) =>
+  [
+    ...host.querySelectorAll<HTMLElement>(
+      "[data-motion-key]",
+    ),
+  ].map((element) => element.dataset.motionKey)
+
+test("a capped newest-first list keeps its leaving last item at the bottom", async () => {
+  unfreeze()
+
+  const host = mount(
+    <List initial={["Alpha", "Beta", "Gamma"]} />,
+  )
+
+  await waitFor(() => {
+    expect(getItem(host, "Alpha")).not.toBeNull()
+  })
+
+  await userEvent.click(getButton(host, "Add capped"))
+
+  expect(shownOrder(host)).toEqual([
+    "Newest",
+    "Alpha",
+    "Beta",
+    "Gamma",
+  ])
+  expect(getItem(host, "Gamma")).toHaveClass(
+    "charcuterie-item-exit",
+  )
+})
+
+test("an item added in front while another leaves does not move the leaving one", async () => {
+  unfreeze()
+
+  const host = mount(
+    <List initial={["Alpha", "Beta", "Gamma"]} />,
+  )
+
+  await waitFor(() => {
+    expect(getItem(host, "Alpha")).not.toBeNull()
+  })
+
+  await userEvent.click(getButton(host, "Remove Beta"))
+
+  await userEvent.click(getButton(host, "Add to front"))
+
+  expect(shownOrder(host)).toEqual([
+    "Newest",
+    "Alpha",
+    "Beta",
+    "Gamma",
+  ])
+})
+
+test("two items removed one after the other keep their order while they leave", async () => {
+  unfreeze()
+
+  const host = mount(
+    <List initial={["Alpha", "Beta", "Gamma", "Delta"]} />,
+  )
+
+  await waitFor(() => {
+    expect(getItem(host, "Alpha")).not.toBeNull()
+  })
+
+  await userEvent.click(getButton(host, "Remove Beta"))
+
+  await userEvent.click(getButton(host, "Remove Gamma"))
+
+  expect(shownOrder(host)).toEqual([
+    "Alpha",
+    "Beta",
+    "Gamma",
+    "Delta",
+  ])
+
+  await waitFor(() => {
+    expect(shownOrder(host)).toEqual(["Alpha", "Delta"])
+  }, MOTION_TIMEOUT)
 })
