@@ -16,16 +16,20 @@ export const GroupedListRows = ({
   headingId,
   isTextTruncated,
   items,
+  onExitEnd,
   size,
 }: {
   headingId: string
   isTextTruncated: boolean
+  /** A row finished leaving; the groups below are about to move. */
+  onExitEnd: () => void
   items: readonly GroupedListItem[]
   size: GroupedListSize
 }): ReactNode => {
   const { entries } = useListMotion({
     getKey: (item: GroupedListItem) => item.key,
     items,
+    onExitEnd,
   })
 
   return (

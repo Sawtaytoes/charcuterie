@@ -1,3 +1,4 @@
+import { useLatestRef } from "@charcuterie/logic"
 import type { HTMLAttributes } from "react"
 import {
   useCallback,
@@ -40,10 +41,11 @@ import {
  * Items present on the first render do not animate in: a page that
  * loads should not perform. After that, a key the list has not seen
  * enters; a key that disappears stays in the list, `inert` and
- * `aria-hidden`, at the index it had, until its exit animation ends;
- * and when the order of keys changes, every item that moved slides
- * from where it was. A re-render that changes no key moves nothing,
- * so a window resize is never animated after the fact.
+ * `aria-hidden`, where it was last shown, until its exit animation
+ * ends; and when the order of keys (or the caller's `layoutKey`)
+ * changes, every item that moved slides from where it was. A
+ * re-render that changes neither moves nothing, so a window resize is
+ * never animated after the fact.
  *
  * ### The same three renderings as every other motion
  *
@@ -98,6 +100,25 @@ export type ListMotionEntry<Item> = {
 export type UseListMotionOptions<Item> = {
   getKey: (item: Item) => string
   items: readonly Item[]
+  /**
+   * Anything else that changes the items' sizes, so the items after
+   * a changed one slide to their new places too. Without it, only a
+   * change in the order of keys slides anything.
+   *
+   * `GroupedList` passes each group's row keys: a row added to one
+   * group makes the groups below it taller or shorter, and they slide
+   * rather than jump.
+   */
+  layoutKey?: string
+  /**
+   * Called when a leaving item has finished leaving and is about to be
+   * removed, which closes the gap it held. A parent whose own layout
+   * that gap changes sets state here: React renders the parent and
+   * this list in one batch, so the parent measures before the gap
+   * closes and can slide what it moves. `GroupedList` does, so the
+   * groups below a group that lost a row slide up.
+   */
+  onExitEnd?: () => void
 }
 
 type ExitingItem<Item> = {
@@ -124,14 +145,42 @@ const SLIDE_TRANSITION =
  * design duration. */
 const SAFETY_MARGIN_MS = 50
 
-const readPosition = (element: HTMLElement): Position => ({
-  left: element.offsetLeft,
-  top: element.offsetTop,
-})
+/**
+ * Where `element` sits inside its parent, the list.
+ *
+ * Inside the parent's own box, whatever the parent's CSS. `offsetTop`
+ * is measured from the nearest positioned ancestor, which is often
+ * outside the list: in a `GroupedList`, a row's offset would then
+ * include its group's, and a group and its rows moving in one commit
+ * would slide each row by the group's move twice, once in the row and
+ * once in the group. Offsets ignore `translate`, so a slide in flight
+ * does not change what is measured.
+ */
+const readPosition = (element: HTMLElement): Position => {
+  const parent = element.parentElement
+
+  if (
+    parent === null ||
+    element.offsetParent === parent ||
+    parent.offsetParent !== element.offsetParent
+  ) {
+    return {
+      left: element.offsetLeft,
+      top: element.offsetTop,
+    }
+  }
+
+  return {
+    left: element.offsetLeft - parent.offsetLeft,
+    top: element.offsetTop - parent.offsetTop,
+  }
+}
 
 export const useListMotion = <Item>({
   getKey,
   items,
+  layoutKey = "",
+  onExitEnd,
 }: UseListMotionOptions<Item>): {
   entries: ListMotionEntry<Item>[]
 } => {
@@ -386,23 +435,30 @@ export const useListMotion = <Item>({
     shownKeysRef.current = entries.map((entry) => entry.key)
   })
 
-  const finishExit = useCallback((key: string) => {
-    setExiting((previous) =>
-      previous.filter((one) => one.key !== key),
-    )
+  const onExitEndRef = useLatestRef(onExitEnd)
 
-    setEnteredKeys((previous) => {
-      if (!previous.has(key)) {
-        return previous
-      }
+  const finishExit = useCallback(
+    (key: string) => {
+      setExiting((previous) =>
+        previous.filter((one) => one.key !== key),
+      )
 
-      const next = new Set(previous)
+      onExitEndRef.current?.()
 
-      next.delete(key)
+      setEnteredKeys((previous) => {
+        if (!previous.has(key)) {
+          return previous
+        }
 
-      return next
-    })
-  }, [])
+        const next = new Set(previous)
+
+        next.delete(key)
+
+        return next
+      })
+    },
+    [onExitEndRef],
+  )
 
   const watchersRef = useRef(new Map<string, () => void>())
 
@@ -478,9 +534,12 @@ export const useListMotion = <Item>({
     [],
   )
 
-  const orderSignature = entries
-    .map((entry) => entry.key)
-    .join("\n")
+  // What slides the items: the order of keys, plus the caller's
+  // `layoutKey`.
+  const orderSignature = JSON.stringify([
+    entries.map((entry) => entry.key),
+    layoutKey,
+  ])
 
   // The order the DOM shows now: the last committed one.
   const committedOrderRef = useRef(orderSignature)
@@ -514,7 +573,6 @@ export const useListMotion = <Item>({
   // Slide every item that the change moved. Positions are offsets
   // inside the list's own box, so scrolling the page between two
   // renders is not mistaken for a move.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: runs when the order of keys changes; the positions it reads are in refs.
   useLayoutEffect(() => {
     const previousPositions = firstPositionsRef.current
 
@@ -537,7 +595,10 @@ export const useListMotion = <Item>({
 
       const after = readPosition(element)
 
-      if (before === undefined || exitingKeys.has(key)) {
+      // Leaving items slide too: one that a reorder moves would
+      // otherwise jump, then fade where it never was. Their exit
+      // animates `opacity` and `scale`, never `translate`.
+      if (before === undefined) {
         continue
       }
 

@@ -126,6 +126,19 @@ const List = ({
         Add capped
       </button>
 
+      <button
+        onClick={() => {
+          setNames((previous) =>
+            previous
+              .filter((name) => name !== "Beta")
+              .reverse(),
+          )
+        }}
+        type="button"
+      >
+        Remove Beta and reverse
+      </button>
+
       {["Beta", "Gamma"].map((name) => (
         <button
           key={name}
@@ -434,4 +447,39 @@ test("two items removed one after the other keep their order while they leave", 
   await waitFor(() => {
     expect(shownOrder(host)).toEqual(["Alpha", "Delta"])
   }, MOTION_TIMEOUT)
+})
+
+test("a leaving item that a reorder moves slides from where it was, instead of jumping", async () => {
+  unfreeze()
+
+  const host = mount(
+    <List initial={["Alpha", "Beta", "Gamma", "Delta"]} />,
+  )
+
+  await waitFor(() => {
+    expect(getItem(host, "Alpha")).not.toBeNull()
+  })
+
+  const beta = getItem(host, "Beta") as HTMLElement
+
+  const topBefore = beta.getBoundingClientRect().top
+
+  await userEvent.click(
+    getButton(host, "Remove Beta and reverse"),
+  )
+
+  // Drawn after Alpha, its last-shown neighbour, at the end of the
+  // reversed list…
+  expect(shownOrder(host)).toEqual([
+    "Delta",
+    "Gamma",
+    "Alpha",
+    "Beta",
+  ])
+
+  // …and starting from where the user last saw it.
+  expect(beta.style.transition).toContain("translate")
+  expect(
+    Math.abs(beta.getBoundingClientRect().top - topBefore),
+  ).toBeLessThan(2)
 })

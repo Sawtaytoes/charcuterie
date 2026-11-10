@@ -1,6 +1,7 @@
 import { useUniqueId } from "@charcuterie/logic"
 import type { IntentName } from "@charcuterie/tokens"
 import type { ReactNode } from "react"
+import { useCallback, useState } from "react"
 
 import { useListMotion } from "../Motion/useListMotion.ts"
 import { toClassName } from "../toClassName.ts"
@@ -257,9 +258,29 @@ export const GroupedList = ({
   // first scan of a day) enters with its first row, and a group an
   // action empties leaves with its last row, instead of either one
   // appearing or vanishing in a frame.
+  //
+  // The row keys are the layout key: a row added to or removed from
+  // one group changes its height, and the groups below it slide to
+  // their new places with it.
+  //
+  // A row that finishes leaving closes its gap one render after its
+  // key went away, so the rows report it, and that report is part of
+  // the layout key too.
+  const [rowExitCount, setRowExitCount] = useState(0)
+
+  const onRowExitEnd = useCallback(() => {
+    setRowExitCount((count) => count + 1)
+  }, [])
+
   const { entries: groupEntries } = useListMotion({
     getKey: (group: GroupedListGroup) => group.key,
     items: shownGroups,
+    layoutKey: JSON.stringify([
+      shownGroups.map((group) =>
+        group.items.map((item) => item.key),
+      ),
+      rowExitCount,
+    ]),
   })
 
   const Heading = HEADING_TAG[headingLevel]
@@ -321,6 +342,7 @@ export const GroupedList = ({
 
                   <GroupedListRows
                     headingId={headingId}
+                    onExitEnd={onRowExitEnd}
                     isTextTruncated={isTextTruncated}
                     items={group.items}
                     size={size}

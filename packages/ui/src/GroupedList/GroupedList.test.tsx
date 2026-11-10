@@ -928,3 +928,137 @@ test("a group an action creates enters, and a group it empties leaves with its l
     }
   }
 })
+
+const mountUnfrozen = () => {
+  const frozenStyle = document.getElementById(
+    "charcuterie-freeze-motion",
+  )
+
+  frozenStyle?.remove()
+
+  const host = document.createElement("div")
+
+  host.style.setProperty("--duration-fast", "600ms")
+  host.style.setProperty("--duration-normal", "600ms")
+
+  document.body.append(host)
+
+  const root = createRoot(host)
+
+  return {
+    host,
+    render: (groups: GroupedListGroup[]) => {
+      flushSync(() => {
+        root.render(<GroupedList groups={groups} />)
+      })
+    },
+    unmount: () => {
+      root.unmount()
+
+      host.remove()
+
+      if (frozenStyle !== null) {
+        document.head.append(frozenStyle)
+      }
+    },
+  }
+}
+
+const toGroup = (key: string, rowKeys: string[]) => ({
+  heading: key,
+  items: rowKeys.map((rowKey) => ({
+    key: rowKey,
+    label: rowKey,
+  })),
+  key,
+})
+
+const topOf = (host: HTMLElement, key: string) =>
+  (
+    host.querySelector(
+      `[data-motion-key="${key}"]`,
+    ) as HTMLElement
+  ).getBoundingClientRect().top
+
+test("a row whose group moves in the same commit starts its slide where it was shown", () => {
+  const { host, render, unmount } = mountUnfrozen()
+
+  try {
+    render([
+      toGroup("A", ["a1", "a2"]),
+      toGroup("B", ["b1", "b2"]),
+    ])
+
+    const before = topOf(host, "b1")
+
+    // B moves above A, and gains a row above b1, in one commit.
+    render([
+      toGroup("B", ["b0", "b1", "b2"]),
+      toGroup("A", ["a1", "a2"]),
+    ])
+
+    // The row's slide and its group's slide add up to no jump at all.
+    expect(
+      Math.abs(topOf(host, "b1") - before),
+    ).toBeLessThan(2)
+  } finally {
+    unmount()
+  }
+})
+
+test("a group below one that gains a row slides down instead of jumping", () => {
+  const { host, render, unmount } = mountUnfrozen()
+
+  try {
+    render([toGroup("A", ["a1"]), toGroup("B", ["b1"])])
+
+    const before = topOf(host, "B")
+
+    render([
+      toGroup("A", ["a1", "a2"]),
+      toGroup("B", ["b1"]),
+    ])
+
+    expect(
+      Math.abs(topOf(host, "B") - before),
+    ).toBeLessThan(2)
+  } finally {
+    unmount()
+  }
+})
+
+test("a group below one whose row has finished leaving slides up instead of jumping", async () => {
+  const { host, render, unmount } = mountUnfrozen()
+
+  try {
+    render([
+      toGroup("A", ["a1", "a2"]),
+      toGroup("B", ["b1"]),
+    ])
+
+    const leaving = host.querySelector(
+      '[data-motion-key="a2"]',
+    ) as HTMLElement
+
+    render([toGroup("A", ["a1"]), toGroup("B", ["b1"])])
+
+    const group = host.querySelector(
+      '[data-motion-key="B"]',
+    ) as HTMLElement
+
+    // The leaving row still holds its space, so nothing has moved yet.
+    expect(group.style.transition).toBe("")
+
+    await waitFor(
+      () => {
+        expect(leaving.isConnected).toBe(false)
+      },
+      { timeout: 5_000 },
+    )
+
+    // Its gap closed, and the group below is sliding up into it.
+    expect(group.style.transition).toContain("translate")
+  } finally {
+    unmount()
+  }
+})

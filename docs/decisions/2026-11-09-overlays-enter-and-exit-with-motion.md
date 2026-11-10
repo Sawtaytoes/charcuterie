@@ -44,7 +44,10 @@ The rules for how:
 4. **The exit is shorter than the enter** (`--duration-fast` against `--duration-normal`).
    A list's slide is a CSS transition on `translate`, written inline on a wrapper the hook
    owns, and positions are offsets in the list's own box, so a page scroll is never taken
-   for a move. Only a change in the order of keys slides anything.
+   for a move. Only a change in the order of keys slides anything, unless the caller passes
+   a `layoutKey` for other changes that move the items. `GroupedList` passes its groups' row
+   keys, plus a count of rows that have finished leaving, so the groups below a group that
+   gains or loses a row slide instead of jumping.
 5. **Reduced motion sets `animation: none` on all of it.** A zero-length exit removes the
    element in the same commit, so reduced motion, the frozen suites, and a DOM with no CSS
    engine all behave as they did before this change.
