@@ -1,9 +1,11 @@
 import { useUniqueId } from "@charcuterie/logic"
 import type { IntentName } from "@charcuterie/tokens"
 import type { ReactNode } from "react"
+import { useCallback, useState } from "react"
 
+import { useListMotion } from "../Motion/useListMotion.ts"
 import { toClassName } from "../toClassName.ts"
-import { GroupedListRow } from "./GroupedListRow.tsx"
+import { GroupedListRows } from "./GroupedListRows.tsx"
 import { STICKY_HEADING_CLASS } from "./groupedListStickyHeading.ts"
 
 export type GroupedListHeadingLevel = 2 | 3 | 4 | 5 | 6
@@ -58,13 +60,20 @@ export type GroupedListItem = {
    * it lasts, usually by clearing it on a timer.
    *
    * **To pulse a row that is already highlighted again, change its
-   * `key`.** A new key is a new row, and a new row starts the pulse
-   * from the beginning; `` `${id}-${sequence}` `` is the usual shape.
+   * `highlightKey`**, not its `key`. Rows enter, leave, and slide
+   * with motion, so a new `key` is a new row: the old one would leave
+   * while a copy of it entered. A new `highlightKey` starts only the
+   * ring's pulse from the beginning; a scan count is the usual value.
    *
    * Under `prefers-reduced-motion` and on ePaper the ring does not
    * pulse; it is simply there.
    */
   isHighlighted?: boolean
+  /**
+   * Changing it restarts the highlight ring's pulse. See
+   * `isHighlighted`.
+   */
+  highlightKey?: number | string
   /**
    * `true` draws the row receded — a sunken surface and a quieter
    * label — for an entry that exists but is switched off. It stays
@@ -245,6 +254,35 @@ export const GroupedList = ({
     (group) => group.items.length > 0,
   )
 
+  // Groups move like their rows do. A group an action creates (the
+  // first scan of a day) enters with its first row, and a group an
+  // action empties leaves with its last row, instead of either one
+  // appearing or vanishing in a frame.
+  //
+  // The row keys are the layout key: a row added to or removed from
+  // one group changes its height, and the groups below it slide to
+  // their new places with it.
+  //
+  // A row that finishes leaving closes its gap one render after its
+  // key went away, so the rows report it, and that report is part of
+  // the layout key too.
+  const [rowExitCount, setRowExitCount] = useState(0)
+
+  const onRowExitEnd = useCallback(() => {
+    setRowExitCount((count) => count + 1)
+  }, [])
+
+  const { entries: groupEntries } = useListMotion({
+    getKey: (group: GroupedListGroup) => group.key,
+    items: shownGroups,
+    layoutKey: JSON.stringify([
+      shownGroups.map((group) =>
+        group.items.map((item) => item.key),
+      ),
+      rowExitCount,
+    ]),
+  })
+
   const Heading = HEADING_TAG[headingLevel]
 
   return (
@@ -255,58 +293,64 @@ export const GroupedList = ({
         className,
       )}
     >
-      {shownGroups.length === 0
+      {groupEntries.length === 0
         ? (emptyState ?? null)
-        : shownGroups.map((group, index) => {
-            const headingId = `${baseId}-heading-${index}`
+        : groupEntries.map(
+            (
+              { item: group, key, motionProps },
+              position,
+            ) => {
+              // By place in what is drawn, so a leaving group and the
+              // group now at its old index never share an id.
+              const headingId = `${baseId}-heading-${position}`
 
-            return (
-              <div
-                className={toClassName(
-                  "flex flex-col",
-                  isHeadingSticky ? "gap-0" : "gap-2",
-                )}
-                key={group.key}
-              >
+              return (
                 <div
+                  {...motionProps}
                   className={toClassName(
-                    "flex flex-wrap items-baseline gap-x-3 gap-y-0.5",
-                    isHeadingSticky && STICKY_HEADING_CLASS,
+                    "flex flex-col",
+                    isHeadingSticky ? "gap-0" : "gap-2",
+                    motionProps.className,
                   )}
+                  key={key}
                 >
-                  <Heading
+                  <div
                     className={toClassName(
-                      "m-0 min-w-0 wrap-anywhere font-semibold text-content-primary",
-                      size === "sm" ? "text-sm" : "text-md",
+                      "flex flex-wrap items-baseline gap-x-3 gap-y-0.5",
+                      isHeadingSticky &&
+                        STICKY_HEADING_CLASS,
                     )}
-                    id={headingId}
                   >
-                    {group.heading}
-                  </Heading>
+                    <Heading
+                      className={toClassName(
+                        "m-0 min-w-0 wrap-anywhere font-semibold text-content-primary",
+                        size === "sm"
+                          ? "text-sm"
+                          : "text-md",
+                      )}
+                      id={headingId}
+                    >
+                      {group.heading}
+                    </Heading>
 
-                  {group.summary ? (
-                    <span className="min-w-0 wrap-anywhere text-content-secondary text-sm">
-                      {group.summary}
-                    </span>
-                  ) : null}
+                    {group.summary ? (
+                      <span className="min-w-0 wrap-anywhere text-content-secondary text-sm">
+                        {group.summary}
+                      </span>
+                    ) : null}
+                  </div>
+
+                  <GroupedListRows
+                    headingId={headingId}
+                    onExitEnd={onRowExitEnd}
+                    isTextTruncated={isTextTruncated}
+                    items={group.items}
+                    size={size}
+                  />
                 </div>
-
-                <ul
-                  aria-labelledby={headingId}
-                  className="m-0 flex list-none flex-col divide-y divide-border-subtle overflow-hidden rounded-md border border-border-subtle bg-surface-raised p-0"
-                >
-                  {group.items.map((item) => (
-                    <GroupedListRow
-                      isTextTruncated={isTextTruncated}
-                      item={item}
-                      key={item.key}
-                      size={size}
-                    />
-                  ))}
-                </ul>
-              </div>
-            )
-          })}
+              )
+            },
+          )}
     </div>
   )
 }

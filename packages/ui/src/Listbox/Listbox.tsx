@@ -122,6 +122,9 @@ export const Listbox = ({
     context,
     floatingStyles,
     getFloatingProps,
+    isExiting,
+    isMounted,
+    motionClassName,
     setFloating,
     triggerId,
   } = useAnchoredOverlay({
@@ -204,10 +207,12 @@ export const Listbox = ({
     <>
       {clonedTrigger}
 
-      {isVisible ? (
+      {isMounted ? (
         <FloatingPortal>
           <FloatingFocusManager
             context={context}
+            // A leaving panel hands focus back at once.
+            disabled={isExiting}
             initialFocus={-1}
             modal={false}
           >
@@ -223,6 +228,7 @@ export const Listbox = ({
                 // middleware (`maxHeightPx`), written as an inline
                 // style; this scrolls within it.
                 "z-[var(--layer-modal)] flex min-w-48 flex-col gap-0.5 overflow-auto p-1",
+                motionClassName,
                 className,
               )}
               onKeyDown={(keyEvent) => {
@@ -267,6 +273,8 @@ export const Listbox = ({
                   runTypeahead(keyEvent.key)
                 }
               }}
+              aria-hidden={isExiting ? true : undefined}
+              inert={isExiting ? true : undefined}
               ref={setFloating}
               // Duplicated from `getFloatingProps()` on purpose, and
               // the two cannot differ — `useRole(context, { role:

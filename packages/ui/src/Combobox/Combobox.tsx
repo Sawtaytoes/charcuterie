@@ -244,6 +244,9 @@ export const Combobox = ({
     context,
     floatingStyles,
     getFloatingProps,
+    isExiting,
+    isMounted,
+    motionClassName,
     setFloating,
     triggerId,
   } = useAnchoredOverlay({
@@ -886,13 +889,13 @@ export const Combobox = ({
 
       {clonedTrigger}
 
-      {isVisible ? (
+      {isMounted ? (
         <FloatingPortal>
           <FloatingFocusManager
             context={context}
             // Attached mode keeps focus in the consumer's input — the
             // panel must never grab it.
-            disabled={isAttached}
+            disabled={isAttached || isExiting}
             initialFocus={inputElement}
             modal={false}
           >
@@ -901,8 +904,11 @@ export const Combobox = ({
               className={toClassName(
                 PANEL_SURFACE_CLASS,
                 "z-[var(--layer-modal)] flex min-w-64 flex-col overflow-hidden",
+                motionClassName,
                 className,
               )}
+              aria-hidden={isExiting ? true : undefined}
+              inert={isExiting ? true : undefined}
               ref={setFloating}
               style={floatingStyles}
             >
