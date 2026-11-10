@@ -3,7 +3,7 @@ import type { IntentName } from "@charcuterie/tokens"
 import type { ReactNode } from "react"
 
 import { toClassName } from "../toClassName.ts"
-import { GroupedListRow } from "./GroupedListRow.tsx"
+import { GroupedListRows } from "./GroupedListRows.tsx"
 import { STICKY_HEADING_CLASS } from "./groupedListStickyHeading.ts"
 
 export type GroupedListHeadingLevel = 2 | 3 | 4 | 5 | 6
@@ -291,19 +291,12 @@ export const GroupedList = ({
                   ) : null}
                 </div>
 
-                <ul
-                  aria-labelledby={headingId}
-                  className="m-0 flex list-none flex-col divide-y divide-border-subtle overflow-hidden rounded-md border border-border-subtle bg-surface-raised p-0"
-                >
-                  {group.items.map((item) => (
-                    <GroupedListRow
-                      isTextTruncated={isTextTruncated}
-                      item={item}
-                      key={item.key}
-                      size={size}
-                    />
-                  ))}
-                </ul>
+                <GroupedListRows
+                  headingId={headingId}
+                  isTextTruncated={isTextTruncated}
+                  items={group.items}
+                  size={size}
+                />
               </div>
             )
           })}

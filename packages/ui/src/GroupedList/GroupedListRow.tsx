@@ -2,6 +2,7 @@ import type { IntentName } from "@charcuterie/tokens"
 import type { ReactNode } from "react"
 
 import { useIsTextClipped } from "../Badge/useIsTextClipped.ts"
+import type { ListMotionProps } from "../Motion/useListMotion.ts"
 import { toClassName } from "../toClassName.ts"
 import type {
   GroupedListItem,
@@ -11,6 +12,8 @@ import type {
 export type GroupedListRowProps = {
   isTextTruncated: boolean
   item: GroupedListItem
+  /** From `useListMotion`, so an added row enters and a removed one leaves. */
+  motionProps?: ListMotionProps
   size: GroupedListSize
 }
 
@@ -97,6 +100,7 @@ const SELECTABLE_ROW_CLASS =
 export const GroupedListRow = ({
   isTextTruncated,
   item,
+  motionProps,
   size,
 }: GroupedListRowProps): ReactNode => {
   const [labelRef, clippedLabel] = useIsTextClipped()
@@ -125,12 +129,14 @@ export const GroupedListRow = ({
 
   return (
     <li
+      {...motionProps}
       className={toClassName(
         "flex flex-wrap items-center gap-x-3 gap-y-2",
         ROW_SIZE_CLASS[size],
         isSelectable && SELECTABLE_ROW_CLASS,
         isHighlighted && "relative",
         isMuted && "bg-surface-sunken",
+        motionProps?.className,
       )}
     >
       {isSelectable ? (
