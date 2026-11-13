@@ -155,11 +155,26 @@ export const getIndicatorOffset = (
  * one's click would already have arrived) and after a short timer
  * (for a click with no gesture in front of it, such as a screen
  * reader's activation).
+ *
+ * And it swallows only a click that could be the gesture's own: one
+ * on the handle (where pointer capture sends it), or on an ancestor
+ * of the handle (where a `pointerup` that left the handle without
+ * capture sends it). A click on any other control passes, so a
+ * bystander is never the one that pays.
  */
 const CLICK_BLOCK_MS = 400
 
-const blockNextClick = () => {
+const blockNextClick = (handle: Element) => {
   const swallow = (clickEvent: MouseEvent) => {
+    const { target } = clickEvent
+
+    if (
+      !(target instanceof Node) ||
+      !target.contains(handle)
+    ) {
+      return
+    }
+
     clickEvent.preventDefault()
 
     clickEvent.stopPropagation()
@@ -443,7 +458,7 @@ export const useBoardDrag = ({
          * next REAL click, anywhere on the page, and eats it.
          */
         if (isCommitted) {
-          blockNextClick()
+          blockNextClick(handle)
         }
 
         if (isCommitted && live.target) {
@@ -467,8 +482,15 @@ export const useBoardDrag = ({
 
       // A second press while a gesture is live (another finger, or
       // a pointer whose `pointerup` never arrived) replaces the
-      // first gesture rather than stacking listeners beside it.
-      stopGestureRef.current?.()
+      // first gesture rather than stacking listeners beside it. Its
+      // drag state goes with it: otherwise this press, released
+      // without moving, would drop ITS card on the first gesture's
+      // target.
+      if (stopGestureRef.current) {
+        stopGestureRef.current()
+
+        setDragState(null)
+      }
 
       stopGestureRef.current = stopGesture
 

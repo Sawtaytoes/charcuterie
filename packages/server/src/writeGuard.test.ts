@@ -564,6 +564,43 @@ describe("judgeWriteRequest", () => {
   })
 })
 
+describe("an Origin on the same host", () => {
+  test("matches on host and port, not scheme, because a TLS proxy sends http", () => {
+    expect(
+      judgeWriteRequest(
+        {
+          headers: new Headers({
+            "content-type": "application/json",
+            host: PUBLIC_HOST,
+            origin: `https://${PUBLIC_HOST}`,
+            "sec-fetch-site": "same-origin",
+          }),
+          method: "POST",
+          url: `http://${PUBLIC_HOST}/api/items`,
+        },
+        OPTIONS,
+      ),
+    ).toEqual({ isAllowed: true })
+  })
+
+  test("a different port is a different origin", () => {
+    expect(
+      judgeWriteRequest(
+        {
+          headers: new Headers({
+            "content-type": "application/json",
+            host: LAN_HOST,
+            origin: "http://192.0.2.10:3014",
+          }),
+          method: "POST",
+          url: `http://${LAN_HOST}/api/items`,
+        },
+        OPTIONS,
+      ),
+    ).toMatchObject({ isAllowed: false, status: 403 })
+  })
+})
+
 describe("parseHostList", () => {
   test("splits, trims, and drops blanks", () => {
     expect(

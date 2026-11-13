@@ -24,10 +24,16 @@ import {
 const POINTER_ID = 7
 
 type Harness = {
+  /** The move handle; a click on it would open the move menu. */
+  handle: HTMLButtonElement
   host: HTMLElement
   onDrop: ReturnType<typeof vi.fn>
+  onHandleClick: ReturnType<typeof vi.fn>
   root: Root
-  startDrag: () => void
+  startDrag: (
+    pointerId?: number,
+    origin?: BoardDragOrigin,
+  ) => void
 }
 
 let harness: Harness | null = null
@@ -67,26 +73,30 @@ const mountHarness = (): Harness => {
       ) => void
     >()
 
-  const handle = document.createElement("div")
+  const onHandleClick = vi.fn()
 
-  handle.setPointerCapture = () => {}
-
-  let start: (() => void) | null = null
+  let start: Harness["startDrag"] = () => {}
 
   const DragHarness = () => {
     const { registerLane, startDrag } = useBoardDrag({
       onDrop,
     })
 
-    start = () => {
+    start = (pointerId = POINTER_ID, origin = ORIGIN) => {
+      const handle = host.querySelector("button")
+
+      if (!handle) {
+        throw new Error("The harness drew no handle.")
+      }
+
       startDrag(
         {
           clientX: 20,
           clientY: 20,
           currentTarget: handle,
-          pointerId: POINTER_ID,
+          pointerId,
         },
-        ORIGIN,
+        origin,
       )
     }
 
@@ -95,7 +105,19 @@ const mountHarness = (): Harness => {
         ref={registerLane("lane")}
         style={{ height: 200, width: 200 }}
       >
-        <div data-board-card="" style={{ height: 40 }} />
+        <div data-board-card="" style={{ height: 40 }}>
+          <button
+            onClick={onHandleClick}
+            ref={(element) => {
+              if (element) {
+                element.setPointerCapture = () => {}
+              }
+            }}
+            type="button"
+          >
+            Move
+          </button>
+        </div>
       </div>
     )
   }
@@ -104,12 +126,20 @@ const mountHarness = (): Harness => {
     root.render(<DragHarness />)
   })
 
+  const handle = host.querySelector("button")
+
+  if (!handle) {
+    throw new Error("The harness drew no handle.")
+  }
+
   const created: Harness = {
+    handle,
     host,
     onDrop,
+    onHandleClick,
     root,
-    startDrag: () => {
-      start?.()
+    startDrag: (pointerId, origin) => {
+      start(pointerId, origin)
     },
   }
 
@@ -121,6 +151,7 @@ const mountHarness = (): Harness => {
 const firePointer = (
   type: "pointercancel" | "pointermove" | "pointerup",
   point: { x: number; y: number },
+  pointerId = POINTER_ID,
 ) => {
   const box = harness?.host.getBoundingClientRect()
 
@@ -130,7 +161,7 @@ const firePointer = (
       cancelable: true,
       clientX: (box?.left ?? 0) + point.x,
       clientY: (box?.top ?? 0) + point.y,
-      pointerId: POINTER_ID,
+      pointerId,
     }),
   )
 }
@@ -159,10 +190,14 @@ const dragIntoLane = (activeHarness: Harness) => {
   })
 }
 
+const finishDrag = () => {
+  flushSync(() => {
+    firePointer("pointerup", { x: 60, y: 100 })
+  })
+}
+
 test("a cancelled drag leaves the next real click alone", () => {
   const activeHarness = mountHarness()
-
-  const { button, onClick } = mountBystander()
 
   dragIntoLane(activeHarness)
 
@@ -172,28 +207,61 @@ test("a cancelled drag leaves the next real click alone", () => {
 
   expect(activeHarness.onDrop).not.toHaveBeenCalled()
 
-  button.click()
+  // A cancelled gesture produces no click, so this one is real.
+  activeHarness.handle.click()
 
-  expect(onClick).toHaveBeenCalledTimes(1)
+  expect(activeHarness.onHandleClick).toHaveBeenCalledTimes(
+    1,
+  )
 })
 
 test("a finished drag swallows its own click, and only that one", () => {
+  const activeHarness = mountHarness()
+
+  dragIntoLane(activeHarness)
+
+  finishDrag()
+
+  expect(activeHarness.onDrop).toHaveBeenCalledTimes(1)
+
+  // The synthetic click the gesture produced.
+  activeHarness.handle.click()
+
+  expect(activeHarness.onHandleClick).not.toHaveBeenCalled()
+
+  activeHarness.handle.click()
+
+  expect(activeHarness.onHandleClick).toHaveBeenCalledTimes(
+    1,
+  )
+})
+
+test("a finished drag's click on an ancestor of the handle is swallowed too", () => {
+  const activeHarness = mountHarness()
+
+  const onHostClick = vi.fn()
+
+  activeHarness.host.addEventListener("click", onHostClick)
+
+  dragIntoLane(activeHarness)
+
+  finishDrag()
+
+  // Without pointer capture, a release off the handle clicks the
+  // nearest common ancestor.
+  activeHarness.host.click()
+
+  expect(onHostClick).not.toHaveBeenCalled()
+})
+
+test("a finished drag never eats a click on another control", () => {
   const activeHarness = mountHarness()
 
   const { button, onClick } = mountBystander()
 
   dragIntoLane(activeHarness)
 
-  flushSync(() => {
-    firePointer("pointerup", { x: 60, y: 100 })
-  })
-
-  expect(activeHarness.onDrop).toHaveBeenCalledTimes(1)
-
-  // The synthetic click the gesture produced.
-  button.click()
-
-  expect(onClick).not.toHaveBeenCalled()
+  finishDrag()
 
   button.click()
 
@@ -203,26 +271,24 @@ test("a finished drag swallows its own click, and only that one", () => {
 test("a finished drag with no click of its own does not eat the next press", () => {
   const activeHarness = mountHarness()
 
-  const { button, onClick } = mountBystander()
-
   dragIntoLane(activeHarness)
 
-  flushSync(() => {
-    firePointer("pointerup", { x: 60, y: 100 })
-  })
+  finishDrag()
 
   // A touch that travelled produces no click; the next gesture
   // starts with a press.
-  button.dispatchEvent(
+  activeHarness.handle.dispatchEvent(
     new PointerEvent("pointerdown", {
       bubbles: true,
       pointerId: POINTER_ID + 1,
     }),
   )
 
-  button.click()
+  activeHarness.handle.click()
 
-  expect(onClick).toHaveBeenCalledTimes(1)
+  expect(activeHarness.onHandleClick).toHaveBeenCalledTimes(
+    1,
+  )
 })
 
 test("a drag's blocker expires on its own when no click comes", () => {
@@ -231,19 +297,17 @@ test("a drag's blocker expires on its own when no click comes", () => {
   try {
     const activeHarness = mountHarness()
 
-    const { button, onClick } = mountBystander()
-
     dragIntoLane(activeHarness)
 
-    flushSync(() => {
-      firePointer("pointerup", { x: 60, y: 100 })
-    })
+    finishDrag()
 
     vi.advanceTimersByTime(1000)
 
-    button.click()
+    activeHarness.handle.click()
 
-    expect(onClick).toHaveBeenCalledTimes(1)
+    expect(
+      activeHarness.onHandleClick,
+    ).toHaveBeenCalledTimes(1)
   } finally {
     vi.useRealTimers()
   }
@@ -260,11 +324,39 @@ test("another pointer's cancel does not end this drag", () => {
     }),
   )
 
-  flushSync(() => {
-    firePointer("pointerup", { x: 60, y: 100 })
-  })
+  finishDrag()
 
   expect(activeHarness.onDrop).toHaveBeenCalledTimes(1)
+})
+
+test("a second press replaces the drag and does not inherit its target", () => {
+  const activeHarness = mountHarness()
+
+  dragIntoLane(activeHarness)
+
+  const secondPointer = POINTER_ID + 1
+
+  flushSync(() => {
+    activeHarness.startDrag(secondPointer, {
+      fromIndex: 1,
+      fromLaneKey: "lane",
+      itemKey: "other-card",
+    })
+  })
+
+  // Released where it was pressed: a press, not a drag.
+  flushSync(() => {
+    firePointer(
+      "pointerup",
+      { x: 20, y: 20 },
+      secondPointer,
+    )
+  })
+
+  // And the first pointer's late release belongs to no gesture.
+  finishDrag()
+
+  expect(activeHarness.onDrop).not.toHaveBeenCalled()
 })
 
 test("unmounting mid-drag removes the pointer listeners", () => {

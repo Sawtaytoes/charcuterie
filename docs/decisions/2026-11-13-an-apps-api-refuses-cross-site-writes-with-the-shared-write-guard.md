@@ -57,6 +57,12 @@ memory before checking its size.
   on a bodiless `POST`. An app's own page sends a bodiless `POST` for actions like "reset",
   and the browser already proves it is same-origin with `Origin`. A cross-site page cannot
   forge either header.
+- **An `Origin` matches on host and port, not on scheme.** Behind the TLS proxy the server
+  sees `http`, while the page's `Origin` is `https`, so a scheme check would refuse every
+  real write unless the guard trusted a forwarded header. The case a scheme check would
+  catch is a plain-HTTP page on the app's own host and port, in a browser that sends no
+  `Sec-Fetch-Site`. Only the app itself or a network attacker can serve that page, and a
+  network attacker can already reach the port directly.
 - **A body limit is middleware ahead of the handler, not a size check after it.** A check
   after `await c.req.arrayBuffer()` runs when the body is already in memory.
   `hono/body-limit` refuses a request with `Content-Length` from the header and counts a

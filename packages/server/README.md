@@ -131,8 +131,9 @@ can open a connection to the port can still write.
 `{ error }`. Mount it on the route, **ahead of** the handler. A size check after
 `await c.req.arrayBuffer()` or `c.req.parseBody()` is not a limit: the whole body is
 already in memory when it runs. The middleware refuses a request with `Content-Length` from
-the header alone, and counts a chunked request as it streams, so a route never holds more
-than `maxBytes`. A route that needs a larger limit than an `/api/*` default must be
+the header alone, and counts a chunked request as it streams, so a route never reads more
+than `maxBytes` of body. Parsing can still allocate a small multiple of that, so size each
+route's limit for that route. A route that needs a larger limit than an `/api/*` default must be
 registered on a path the default does not cover, because both limits run.
 
 ## MQTT cmd/resp

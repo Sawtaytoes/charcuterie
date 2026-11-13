@@ -443,8 +443,9 @@ export type BodyLimitOptions = {
  * Mount it on the route, ahead of the handler:
  * `app.post("/api/photos", createBodyLimit({ maxBytes: 30 * MB }),
  * handler)`. Then `c.req.json()`, `c.req.parseBody()`, and
- * `c.req.arrayBuffer()` can never hold more than `maxBytes` in
- * memory. A size check AFTER `await c.req.arrayBuffer()` is not a
+ * `c.req.arrayBuffer()` never read more than `maxBytes` of body.
+ * (Parsing can still allocate a small multiple of that, which is
+ * why each route gets a limit sized for it.) A size check AFTER `await c.req.arrayBuffer()` is not a
  * limit: the whole body is already in memory when it runs.
  *
  * How it bounds memory: a request with `Content-Length` is refused
