@@ -269,7 +269,7 @@ jobs:
           set -euo pipefail
           # Caches live in the runner's tool cache when it has one. On the
           # self-hosted GitHub runners that is `_work/_tool`, on the same
-          # persistent volume as the workspace: pnpm then hard-links packages
+          # persistent volume as the workspace: pnpm then links (hard links or clones) packages
           # into `node_modules` instead of copying every file, and a
           # downloaded browser survives a container rebuild. Each cache is
           # keyed by its own contents (package hashes, browser revision).

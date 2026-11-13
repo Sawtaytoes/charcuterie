@@ -5,7 +5,7 @@ import { join } from "node:path"
 
 /**
  * The shared workflow sets `VRT_PNPM_STORE_DIR` to a store on the same
- * filesystem as the workspace, so pnpm hard-links each package into
+ * filesystem as the workspace, so pnpm links (hard links or clones) each package into
  * `node_modules`. A store on another filesystem makes pnpm copy every file:
  * 515 MB for mux-magic on each run, measured on 2026-11-13, because the
  * checkout's `git clean -ffdx` removes `node_modules` every time.

@@ -321,7 +321,7 @@ jobs:
           # is root-owned — the non-root runner can't write there. Keep the
           # browser and the pnpm store in the runner's tool cache instead:
           # `_work/_tool` is on the runner-home volume beside the workspace, so
-          # both persist across container rebuilds and pnpm hard-links
+          # both persist across container rebuilds and pnpm links (hard links or clones)
           # packages into node_modules instead of copying them. ($HOME is the
           # container overlay, not that volume.) A GitHub cache restore is not
           # used here: on this persistent runner it re-extracted the whole
