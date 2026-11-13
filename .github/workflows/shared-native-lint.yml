@@ -108,10 +108,23 @@ jobs:
 
       - id: changed
         env:
-          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
           EXCLUDE: ${{ inputs.pythonExclude }}
         run: |
           set -euo pipefail
+
+          # Forgejo reports a reusable workflow's event as `workflow_call`, so
+          # the context above can lose a pull request's base. Read the original
+          # event payload, as the docs-only detector and the docs lint do.
+          # Dispatches and unreadable events keep the fail-safe below.
+          if [ -n "${GITHUB_EVENT_PATH:-}" ] && [ -f "$GITHUB_EVENT_PATH" ]; then
+            BASE_SHA="$(node -e '
+              const fs = require("node:fs");
+              const event = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+              const base = event.pull_request ? event.pull_request.base?.sha : event.before;
+              process.stdout.write(typeof base === "string" ? base : "");
+            ' "$GITHUB_EVENT_PATH")" || BASE_SHA=""
+          fi
 
           if [ -z "${BASE_SHA:-}" ] \
             || [ "${BASE_SHA}" = "0000000000000000000000000000000000000000" ] \
@@ -124,7 +137,10 @@ jobs:
 
           # `--diff-filter=d` drops deletions: ruff cannot read a file that is
           # no longer there, and a deleted file cannot be badly formatted.
-          git diff --name-only --diff-filter=d "${BASE_SHA}" HEAD \
+          # From the merge base, so a base branch that moved on does not add
+          # its own files to this change's list.
+          mergeBase="$(git merge-base "${BASE_SHA}" HEAD || echo "${BASE_SHA}")"
+          git diff --name-only --diff-filter=d "${mergeBase}" HEAD \
             | grep -E '\.pyi?$' > /tmp/pythonChanged.txt || true
 
           for prefix in ${EXCLUDE:-}; do
@@ -177,10 +193,23 @@ jobs:
 
       - id: changed
         env:
-          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
           EXCLUDE: ${{ inputs.cppExclude }}
         run: |
           set -euo pipefail
+
+          # Forgejo reports a reusable workflow's event as `workflow_call`, so
+          # the context above can lose a pull request's base. Read the original
+          # event payload, as the docs-only detector and the docs lint do.
+          # Dispatches and unreadable events keep the fail-safe below.
+          if [ -n "${GITHUB_EVENT_PATH:-}" ] && [ -f "$GITHUB_EVENT_PATH" ]; then
+            BASE_SHA="$(node -e '
+              const fs = require("node:fs");
+              const event = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+              const base = event.pull_request ? event.pull_request.base?.sha : event.before;
+              process.stdout.write(typeof base === "string" ? base : "");
+            ' "$GITHUB_EVENT_PATH")" || BASE_SHA=""
+          fi
 
           if [ -z "${BASE_SHA:-}" ] \
             || [ "${BASE_SHA}" = "0000000000000000000000000000000000000000" ] \
@@ -191,7 +220,8 @@ jobs:
             exit 0
           fi
 
-          git diff --name-only --diff-filter=d "${BASE_SHA}" HEAD \
+          mergeBase="$(git merge-base "${BASE_SHA}" HEAD || echo "${BASE_SHA}")"
+          git diff --name-only --diff-filter=d "${mergeBase}" HEAD \
             | grep -E '\.(c|cc|cpp|cxx|h|hh|hpp|hxx)$' > /tmp/cppChanged.txt || true
 
           for prefix in ${EXCLUDE:-}; do
