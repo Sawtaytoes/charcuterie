@@ -71,6 +71,10 @@ describe("shared native lint changed files", () => {
           "fixture@example.invalid",
         )
         writeFileSync(join(cwd, "README.md"), "base")
+        // Present at the fork point and deleted by the change: a deleted
+        // file cannot be linted, so neither may reach the list.
+        writeFileSync(join(cwd, "deleted.py"), "z = 3\n")
+        writeFileSync(join(cwd, "deleted.cpp"), "int z;\n")
         git("add", ".")
         git("commit", "-qm", "base")
         const forkPoint = git("rev-parse", "HEAD").trim()
@@ -86,7 +90,6 @@ describe("shared native lint changed files", () => {
         git("checkout", "-q", "-b", "change", forkPoint)
         writeFileSync(join(cwd, "changed.py"), "y = 2\n")
         writeFileSync(join(cwd, "changed.cpp"), "int y;\n")
-        writeFileSync(join(cwd, "deleted.py"), "z = 3\n")
         mkdirSync(join(cwd, "vendor"))
         writeFileSync(
           join(cwd, "vendor/skip.py"),
@@ -98,7 +101,7 @@ describe("shared native lint changed files", () => {
         )
         git("add", ".")
         git("commit", "-qm", "change")
-        git("rm", "-q", "deleted.py")
+        git("rm", "-q", "deleted.py", "deleted.cpp")
         git("commit", "-qm", "delete a file")
 
         const payload =
