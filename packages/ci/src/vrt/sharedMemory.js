@@ -10,7 +10,7 @@
  *
  * On the fleet's runners `/tmp` is the container's overlay on a ZFS pool.
  * Measured on 2026-11-13, mux-magic's 922-shot capture dirtied 14.7 GB of
- * pool pages in 23 minutes; 160 of its shots dirtied 2.2 GB this way and
+ * pool pages in a 25-minute job; 160 of its shots dirtied 2.2 GB this way and
  * 3 MB with shared memory in `/dev/shm`. Shared memory never needs
  * to reach a disk. When the runner provides a `/dev/shm` with room, the
  * capture drops the flag and Chromium keeps it in RAM. The pixels do not
@@ -56,7 +56,7 @@ export const chooseSharedMemory = (availableBytes) => {
       (mebibytes == null
         ? "could not be read."
         : `has only ${mebibytes} MiB free.`) +
-      " Give the runner a /dev/shm of at least 1 GiB so the capture does not write its frames to disk.",
+      ` Give the runner a /dev/shm of at least ${MINIMUM_SHARED_MEMORY_BYTES / (1024 * 1024)} MiB so the capture does not write its frames to disk.`,
   }
 }
 

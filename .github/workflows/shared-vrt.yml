@@ -274,7 +274,9 @@ jobs:
           # downloaded browser survives a container rebuild. Each cache is
           # keyed by its own contents (package hashes, browser revision).
           cache_root="${RUNNER_TOOL_CACHE:-}"
-          if [ -z "$cache_root" ] || ! mkdir -p "$cache_root/pnpm/store" "$cache_root/ms-playwright" 2>/dev/null; then
+          if [ -z "$cache_root" ] \
+            || ! mkdir -p "$cache_root/pnpm/store" "$cache_root/ms-playwright" 2>/dev/null \
+            || [ ! -w "$cache_root/pnpm/store" ] || [ ! -w "$cache_root/ms-playwright" ]; then
             cache_root="$HOME/.cache"
             mkdir -p "$cache_root/pnpm/store" "$cache_root/ms-playwright"
           fi

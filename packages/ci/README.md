@@ -328,8 +328,12 @@ become accepted baselines automatically. Existing repositories need no new input
   every loaded resource passes through them. On the self-hosted runners `/tmp` is the
   container's overlay on a ZFS pool. `sharedMemory.js` drops the flag when `/dev/shm` has at
   least 512 MiB free, and both captures (`storybookCapture.js` and the docs site's
-  `vrtCapture.mjs`) print which one they used. A runner needs a `/dev/shm` of 1 GiB or more
-  for this; the GitHub runner apps have 2 GiB. Pixels do not change, because shared memory
+  `vrtCapture.mjs`) print which one they used. A runner needs a `/dev/shm` with at least
+  512 MiB free for this; the GitHub runner apps have 2 GiB. Shared memory in RAM cannot be written
+  out under memory pressure, so the runner also needs memory headroom: this repo's own
+  capture runs four pages at once, and it reached its runner's 8 GiB limit in both launch
+  modes on 2026-11-13. With the old launch it survived by writing pages to the pool and
+  timing out shots; with `/dev/shm` it was OOM-killed. That runner now has 12 GiB. Pixels do not change, because shared memory
   carries the same buffers either way. A repo's own `captureCommand` launches its own browser
   and does not get this.
   Measured on 2026-11-13 with the mux-magic Storybook, 160 shots in the runner image: the
@@ -340,4 +344,4 @@ become accepted baselines automatically. Existing repositories need no new input
   self-hosted GitHub runners that is `_work/_tool`, on the same volume as the workspace. The
   checkout's `git clean -ffdx` removes `node_modules` on every run. With the store on another
   filesystem, pnpm copied every package back in (515 MB for mux-magic); on the same one, it
-  hard-links them. The browser download also survives a container rebuild there.
+  links them (hard links or clones) instead of copying. The browser download also survives a container rebuild there.
