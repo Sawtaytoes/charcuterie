@@ -20,7 +20,10 @@ import {
   IMMUTABLE_CACHE_CONTROL,
   REVALIDATE_CACHE_CONTROL,
 } from "./cachePolicy.ts"
-import { createStaticHandler } from "./createStaticHandler.ts"
+import {
+  createStaticHandler,
+  getIsServerPath,
+} from "./createStaticHandler.ts"
 
 // Long enough that the compressed siblings come out smaller, so
 // the negotiation under test is the real one.
@@ -323,6 +326,184 @@ describe("SPA fallback", () => {
 
     expect(response.status).toBe(404)
   })
+})
+
+// Folio's document routes end in `.md`, because the URL is the
+// file's real path, so the extensionless rule cannot tell them from
+// a missing file. The app names what the server owns instead.
+describe("SPA fallback with serverPathPrefixes", () => {
+  let routedApp: Hono
+
+  beforeAll(() => {
+    routedApp = new Hono()
+    routedApp.get("/api/items", (context) =>
+      context.json({ items: [] }),
+    )
+    routedApp.use(
+      "*",
+      createStaticHandler({
+        rootDir,
+        serverPathPrefixes: ["/api", "/health/"],
+      }),
+    )
+    routedApp.notFound((context) =>
+      context.json({ error: "not found" }, 404),
+    )
+  })
+
+  test("a client route with an extension gets the shell", async () => {
+    const response = await routedApp.request(
+      "/workspace~agentic/AGENTS.md",
+    )
+
+    expect(response.status).toBe(200)
+    expect(await response.text()).toBe(INDEX_SOURCE)
+    expect(response.headers.get("cache-control")).toBe(
+      REVALIDATE_CACHE_CONTROL,
+    )
+    expect(response.headers.get("etag")).toBeTruthy()
+  })
+
+  test("an extensionless client route still gets the shell", async () => {
+    const response = await routedApp.request("/errors")
+
+    expect(response.status).toBe(200)
+    expect(await response.text()).toBe(INDEX_SOURCE)
+  })
+
+  test("a HEAD request for a client route gets the shell's headers", async () => {
+    const response = await routedApp.request(
+      "/workspace~agentic/AGENTS.md",
+      { method: "HEAD" },
+    )
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get("content-type")).toContain(
+      "text/html",
+    )
+  })
+
+  test("a POST to a client route is not answered with the shell", async () => {
+    const response = await routedApp.request("/errors", {
+      method: "POST",
+    })
+
+    expect(response.status).toBe(404)
+  })
+
+  // An API 404 that answers 200 with HTML hands the client markup
+  // where it expected JSON, and the error names neither the route
+  // nor the cause.
+  test("a miss under a server prefix falls through to the app's 404", async () => {
+    const response = await routedApp.request("/api/nope")
+
+    expect(response.status).toBe(404)
+    expect(await response.json()).toEqual({
+      error: "not found",
+    })
+  })
+
+  test("the server prefix itself falls through", async () => {
+    const response = await routedApp.request("/api")
+
+    expect(response.status).toBe(404)
+  })
+
+  test("a trailing slash on a prefix still matches the bare path", async () => {
+    const response = await routedApp.request("/health")
+
+    expect(response.status).toBe(404)
+  })
+
+  test("a prefix matches on a segment boundary", async () => {
+    const response = await routedApp.request("/apiary")
+
+    expect(response.status).toBe(200)
+    expect(await response.text()).toBe(INDEX_SOURCE)
+  })
+
+  test("a server route still answers", async () => {
+    const response = await routedApp.request("/api/items")
+
+    expect(await response.json()).toEqual({ items: [] })
+  })
+
+  test("a missing hashed asset is a 404, never the shell", async () => {
+    const withExtension = await routedApp.request(
+      "/assets/gone-12345678.js",
+    )
+    const withoutExtension =
+      await routedApp.request("/assets/gone")
+
+    expect(withExtension.status).toBe(404)
+    expect(withoutExtension.status).toBe(404)
+  })
+
+  test("a real file is still served as itself", async () => {
+    const response = await routedApp.request(
+      "/command-descriptions.js",
+    )
+
+    expect(await response.text()).toBe(
+      "window.commandDescriptions = {}",
+    )
+  })
+
+  test("an encoded traversal is refused and leaks nothing", async () => {
+    const response = await routedApp.request(
+      "/assets/..%2f..%2f..%2fetc%2fpasswd",
+    )
+
+    expect(await response.text()).not.toContain("root:")
+  })
+
+  test("the build marker is still served", async () => {
+    const response = await routedApp.request(
+      "/__charcuterie/deployment",
+    )
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get("content-type")).toContain(
+      "application/json",
+    )
+  })
+
+  test("is ignored when the fallback is off", async () => {
+    const assetOnly = new Hono()
+    assetOnly.use(
+      "*",
+      createStaticHandler({
+        hasSpaFallback: false,
+        rootDir,
+        serverPathPrefixes: ["/api"],
+      }),
+    )
+
+    const response = await assetOnly.request("/errors")
+
+    expect(response.status).toBe(404)
+  })
+})
+
+describe("getIsServerPath", () => {
+  test.each([
+    ["/api", true],
+    ["/api/", true],
+    ["/api/items", true],
+    ["/apiary", false],
+    ["/", false],
+    ["/docs/api", false],
+  ])(
+    "%s is a server path: %s",
+    (pathname, isServerPath) => {
+      expect(
+        getIsServerPath({
+          pathname,
+          serverPathPrefixes: ["/api"],
+        }),
+      ).toBe(isServerPath)
+    },
+  )
 })
 
 // A mount whose URL prefix is not a real directory: board-games

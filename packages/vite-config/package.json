@@ -1,7 +1,7 @@
 {
   "name": "@charcuterie/vite-config",
   "version": "1.1.0",
-  "description": "A shared Vite config factory for the Charcuterie fleet \u2014 call createViteConfig(overrides) and add your own plugins.",
+  "description": "A shared Vite config factory for the Charcuterie fleet \u2014 call createViteConfig(overrides) and add your own plugins. Ships the first-paint plugin at ./first-paint.",
   "license": "MIT",
   "type": "module",
   "main": "./src/index.js",
@@ -10,6 +10,10 @@
     ".": {
       "types": "./src/index.d.ts",
       "default": "./src/index.js"
+    },
+    "./first-paint": {
+      "types": "./src/firstPaint.d.ts",
+      "default": "./src/firstPaint.js"
     },
     "./*": "./src/*"
   },
@@ -23,6 +27,9 @@
   "scripts": {
     "test": "vitest",
     "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@charcuterie/tokens": "workspace:*"
   },
   "peerDependencies": {
     "vite": ">=5"
