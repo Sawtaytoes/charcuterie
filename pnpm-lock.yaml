@@ -328,6 +328,9 @@ importers:
         specifier: ^19.2.8
         version: 19.2.8(react@19.2.8)
     devDependencies:
+      '@charcuterie/ci':
+        specifier: workspace:*
+        version: link:../ci
       '@charcuterie/vitest-config':
         specifier: workspace:^
         version: link:../vitest-config

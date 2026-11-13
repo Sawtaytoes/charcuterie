@@ -267,6 +267,19 @@ jobs:
       - name: Prepare the toolchain
         run: |
           set -euo pipefail
+          # Caches live in the runner's tool cache when it has one. On the
+          # self-hosted GitHub runners that is `_work/_tool`, on the same
+          # persistent volume as the workspace: pnpm then hard-links packages
+          # into `node_modules` instead of copying every file, and a
+          # downloaded browser survives a container rebuild. Each cache is
+          # keyed by its own contents (package hashes, browser revision).
+          cache_root="${RUNNER_TOOL_CACHE:-}"
+          if [ -z "$cache_root" ] || ! mkdir -p "$cache_root/pnpm/store" "$cache_root/ms-playwright" 2>/dev/null; then
+            cache_root="$HOME/.cache"
+            mkdir -p "$cache_root/pnpm/store" "$cache_root/ms-playwright"
+          fi
+          echo "VRT_PNPM_STORE_DIR=$cache_root/pnpm/store" >> "$GITHUB_ENV"
+          echo "VRT_CACHE_BROWSERS_PATH=$cache_root/ms-playwright" >> "$GITHUB_ENV"
           mkdir -p "$HOME/.local/bin"
           corepack enable --install-directory "$HOME/.local/bin" yarn
           # pnpm 12 ships native entrypoints older Corepack cannot launch.
@@ -289,7 +302,7 @@ jobs:
           # them at a directory the job can write unless that one is writable.
           if [ -z "${PLAYWRIGHT_BROWSERS_PATH:-}" ] || [ ! -w "${PLAYWRIGHT_BROWSERS_PATH}" ]; then
             echo "VRT_IMAGE_BROWSERS_PATH=${PLAYWRIGHT_BROWSERS_PATH:-}" >> "$GITHUB_ENV"
-            echo "PLAYWRIGHT_BROWSERS_PATH=$HOME/.cache/ms-playwright" >> "$GITHUB_ENV"
+            echo "PLAYWRIGHT_BROWSERS_PATH=$cache_root/ms-playwright" >> "$GITHUB_ENV"
           else
             echo "VRT_IMAGE_BROWSERS_PATH=${PLAYWRIGHT_BROWSERS_PATH}" >> "$GITHUB_ENV"
           fi
@@ -297,7 +310,7 @@ jobs:
       - name: Install the capture and compare tools
         run: |
           set -euo pipefail
-          pnpm --dir "$VRT_TOOLS" install --frozen-lockfile --store-dir "$HOME/.cache/pnpm/store"
+          pnpm --dir "$VRT_TOOLS" install --frozen-lockfile --store-dir "$VRT_PNPM_STORE_DIR"
 
           # Reuse the image's baked browser when it is the revision the pinned
           # Playwright wants — the job container on Forgejo starts empty every
@@ -308,9 +321,9 @@ jobs:
             echo "Using the image's chromium_headless_shell-$revision."
             echo "VRT_BROWSERS_PATH=$VRT_IMAGE_BROWSERS_PATH" >> "$GITHUB_ENV"
           else
-            PLAYWRIGHT_BROWSERS_PATH="$HOME/.cache/ms-playwright" \
+            PLAYWRIGHT_BROWSERS_PATH="$VRT_CACHE_BROWSERS_PATH" \
               node "$VRT_TOOLS/node_modules/playwright/cli.js" install chromium
-            echo "VRT_BROWSERS_PATH=$HOME/.cache/ms-playwright" >> "$GITHUB_ENV"
+            echo "VRT_BROWSERS_PATH=$VRT_CACHE_BROWSERS_PATH" >> "$GITHUB_ENV"
           fi
 
       - name: Clear the shots directory
