@@ -318,26 +318,24 @@ jobs:
           hash -r
           test "$(pnpm --version)" = 12.9.1
           # The base image pins PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers, which
-          # is root-owned — the non-root runner can't write there. Install the
-          # browser under HOME instead (persists on the runner-home volume, so
-          # it's downloaded once and reused across runs).
-          echo "PLAYWRIGHT_BROWSERS_PATH=$HOME/.cache/ms-playwright" >> "$GITHUB_ENV"
-      - name: Locate the pnpm store
-        id: pnpm-store
-        run: |
-          store_path="$(pnpm store path --store-dir "$HOME/.cache/pnpm/store")"
-          echo "path=$store_path" >> "$GITHUB_OUTPUT"
-      - uses: actions/cache@v5
-        with:
-          path: ${{ steps.pnpm-store.outputs.path }}
-          key: ${{ runner.os }}-node26-pnpm12-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: ${{ runner.os }}-node26-pnpm12-
+          # is root-owned — the non-root runner can't write there. Keep the
+          # browser and the pnpm store in the runner's tool cache instead:
+          # `_work/_tool` is on the runner-home volume beside the workspace, so
+          # both persist across container rebuilds and pnpm links (hard links or clones)
+          # packages into node_modules instead of copying them. ($HOME is the
+          # container overlay, not that volume.) A GitHub cache restore is not
+          # used here: on this persistent runner it re-extracted the whole
+          # store on every run.
+          cache_root="${RUNNER_TOOL_CACHE:-$HOME/.cache}"
+          mkdir -p "$cache_root/pnpm/store" "$cache_root/ms-playwright"
+          echo "PLAYWRIGHT_BROWSERS_PATH=$cache_root/ms-playwright" >> "$GITHUB_ENV"
+          echo "VRT_PNPM_STORE_DIR=$cache_root/pnpm/store" >> "$GITHUB_ENV"
       - uses: actions/cache@v5
         with:
           path: .turbo
           key: ${{ runner.os }}-node26-turbo2-${{ github.sha }}
           restore-keys: ${{ runner.os }}-node26-turbo2-
-      - run: pnpm install --frozen-lockfile --store-dir "$HOME/.cache/pnpm/store"
+      - run: pnpm install --frozen-lockfile --store-dir "$VRT_PNPM_STORE_DIR"
       - name: Select a complete published baseline
         working-directory: packages/docs
         env:

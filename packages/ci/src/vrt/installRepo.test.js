@@ -29,6 +29,7 @@ describe("shared workflow package-manager setup", () => {
     expect(
       repoInstallCommand(
         fixture("pnpm@12.9.1", "yarn.lock"),
+        {},
       ),
     ).toEqual([
       "pnpm",
@@ -42,6 +43,20 @@ describe("shared workflow package-manager setup", () => {
         fixture("yarn@4.14.1", "pnpm-lock.yaml"),
       ),
     ).toEqual(["yarn", "install", "--immutable"])
+  })
+  it("uses the workflow's pnpm store when it names one", () => {
+    expect(
+      repoInstallCommand(
+        fixture("pnpm@12.9.1", "pnpm-lock.yaml"),
+        { VRT_PNPM_STORE_DIR: "/runner/_tool/pnpm/store" },
+      ),
+    ).toEqual([
+      "pnpm",
+      "install",
+      "--frozen-lockfile",
+      "--store-dir",
+      "/runner/_tool/pnpm/store",
+    ])
   })
   it("keeps npm callers frozen", () => {
     expect(

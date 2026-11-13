@@ -40,6 +40,10 @@ import { createReadStream } from "node:fs"
 import { mkdir, readFile, rm, stat } from "node:fs/promises"
 import { createServer } from "node:http"
 import { extname, join, normalize } from "node:path"
+import {
+  chooseSharedMemory,
+  readAvailableSharedMemory,
+} from "@charcuterie/ci/vrt/sharedMemory.js"
 import { FREEZE_MOTION_CSS } from "@charcuterie/storybook-config/testing"
 
 import { chromium } from "playwright"
@@ -154,7 +158,17 @@ console.log(
     `(concurrency ${CONCURRENCY})`,
 )
 
-const browser = await chromium.launch()
+// Shared memory goes to `/dev/shm` when the runner gives it room, not to
+// temp files on the runner's disk. See `packages/ci/src/vrt/sharedMemory.js`.
+const sharedMemory = chooseSharedMemory(
+  await readAvailableSharedMemory(),
+)
+
+console.log(sharedMemory.message)
+
+const browser = await chromium.launch({
+  ignoreDefaultArgs: sharedMemory.ignoreDefaultArgs,
+})
 
 // Kill motion and the text caret everywhere, so a mid-animation
 // frame or a blinking cursor can never be the pixel that differs.

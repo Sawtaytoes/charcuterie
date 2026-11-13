@@ -3,7 +3,17 @@ import { existsSync, readFileSync } from "node:fs"
 import { homedir } from "node:os"
 import { join } from "node:path"
 
-export function repoInstallCommand(directory) {
+/**
+ * The shared workflow sets `VRT_PNPM_STORE_DIR` to a store on the same
+ * filesystem as the workspace, so pnpm links (hard links or clones) each package into
+ * `node_modules`. A store on another filesystem makes pnpm copy every file:
+ * 515 MB for mux-magic on each run, measured on 2026-11-13, because the
+ * checkout's `git clean -ffdx` removes `node_modules` every time.
+ */
+export function repoInstallCommand(
+  directory,
+  env = process.env,
+) {
   const manifest = `${directory}/package.json`
   const manager = existsSync(manifest)
     ? JSON.parse(
@@ -19,7 +29,8 @@ export function repoInstallCommand(directory) {
       "install",
       "--frozen-lockfile",
       "--store-dir",
-      join(homedir(), ".cache", "pnpm", "store"),
+      env.VRT_PNPM_STORE_DIR ||
+        join(homedir(), ".cache", "pnpm", "store"),
     ]
   }
   if (

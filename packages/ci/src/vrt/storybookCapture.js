@@ -63,6 +63,10 @@ import {
   storyUrl,
 } from "./captureOptions.js"
 import { FREEZE_MOTION_CSS } from "./freezeMotion.js"
+import {
+  chooseSharedMemory,
+  readAvailableSharedMemory,
+} from "./sharedMemory.js"
 
 /** @type {Record<string, string>} */
 const MIME = {
@@ -249,8 +253,18 @@ export const captureStorybooks = async (argv, env) => {
   // available, so turning it on fails to launch as a normal user just as
   // it always fails as root. It is stated here so nobody "hardens" it into
   // a broken capture.
+  //
+  // Shared memory goes to `/dev/shm` when the runner gives it room, not to
+  // temp files on the runner's disk. See `sharedMemory.js`.
+  const sharedMemory = chooseSharedMemory(
+    await readAvailableSharedMemory(),
+  )
+
+  console.log(sharedMemory.message)
+
   const browser = await chromium.launch({
     chromiumSandbox: false,
+    ignoreDefaultArgs: sharedMemory.ignoreDefaultArgs,
   })
 
   /** @type {{ fileName: string, message: string }[]} */
