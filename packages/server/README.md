@@ -99,7 +99,12 @@ app.use(
     isEmptyHostListWritable: process.env.NODE_ENV !== "production",
   }),
 )
-app.use("/api/*", createBodyLimit({ maxBytes: 64 * 1024 }))
+// One limit per write route, each sized for that route.
+app.post(
+  "/api/items",
+  createBodyLimit({ maxBytes: 64 * 1024 }),
+  createItem,
+)
 app.post(
   "/api/photos",
   createBodyLimit({ maxBytes: 30 * MB }),
@@ -133,8 +138,8 @@ can open a connection to the port can still write.
 already in memory when it runs. The middleware refuses a request with `Content-Length` from
 the header alone, and counts a chunked request as it streams, so a route never reads more
 than `maxBytes` of body. Parsing can still allocate a small multiple of that, so size each
-route's limit for that route. A route that needs a larger limit than an `/api/*` default must be
-registered on a path the default does not cover, because both limits run.
+route's limit for that route. Do not add an `/api/*` default limit in front of per-route ones: both run, so the smaller
+one wins, and a 30 MB upload under a 64 KB default is refused at 64 KB.
 
 ## MQTT cmd/resp
 
