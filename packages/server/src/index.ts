@@ -1,5 +1,7 @@
 /**
- * `@charcuterie/server` — the fleet's Hono static-asset handler.
+ * `@charcuterie/server` — the fleet's Hono static-asset handler,
+ * and the same-origin write guard and body limit every app's API
+ * mounts in front of its routes.
  *
  * The build-time counterpart lives at `@charcuterie/server/vite`,
  * kept behind its own entry point so a server never resolves Vite.
@@ -24,3 +26,13 @@ export {
   type DeploymentHandlerOptions,
   type DeploymentInfo,
 } from "./deployment.ts"
+export {
+  type BodyLimitOptions,
+  createBodyLimit,
+  createWriteGuard,
+  getIsAllowedHost,
+  judgeWriteRequest,
+  parseHostList,
+  type WriteGuardOptions,
+  type WriteGuardVerdict,
+} from "./writeGuard.ts"

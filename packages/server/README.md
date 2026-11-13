@@ -73,6 +73,74 @@ button. The static shell already sends `Cache-Control: no-cache`, so the reload 
 new shell and its new immutable asset URLs. Set both `deploymentPath` and
 `deploymentEventsPath` to `false` only for an asset-only origin with no browser client.
 
+## Refuse cross-site writes, and limit request bodies
+
+Most fleet apps have no login, so any web page the owner opens could otherwise write to
+them: a `text/plain` `no-cors` POST needs no preflight, and Hono's `c.req.json()` parses it
+anyway. DNS rebinding makes a hostile page same-origin with the app. `createWriteGuard`
+closes both paths. `createBodyLimit` caps how much of a request body a route can read.
+
+```ts
+import {
+  createBodyLimit,
+  createWriteGuard,
+  parseHostList,
+} from "@charcuterie/server"
+
+const MB = 1024 * 1024
+
+app.use(
+  "/api/*",
+  createWriteGuard({
+    allowedHosts: parseHostList(process.env.MYAPP_ALLOWED_HOSTS),
+    allowedOrigins: parseHostList(process.env.MYAPP_ALLOWED_ORIGINS),
+    clientHeader: "x-myapp-client",
+    hostSettingName: "MYAPP_ALLOWED_HOSTS",
+    isEmptyHostListWritable: process.env.NODE_ENV !== "production",
+  }),
+)
+// One limit per write route, each sized for that route.
+app.post(
+  "/api/items",
+  createBodyLimit({ maxBytes: 64 * 1024 }),
+  createItem,
+)
+app.post(
+  "/api/photos",
+  createBodyLimit({ maxBytes: 30 * MB }),
+  uploadPhoto,
+)
+```
+
+The guard, in order:
+
+- **`Host`**: loopback on any port, or an entry of `allowedHosts` (`app.example.com` matches
+  any port; `192.0.2.10:3013` matches that port only). With a list, any other host gets
+  `421`, reads included. With an **empty** list, reads pass and writes from a non-loopback
+  host get `421` that names `hostSettingName`, unless `isEmptyHostListWritable` is set.
+- **On `POST`, `PUT`, `PATCH`, and `DELETE`**: an `Origin`, when present, must be the
+  request's own host or an `allowedOrigins` entry (`null` is refused). A `Sec-Fetch-Site`,
+  when present, must be `same-origin` or `none`, unless the `Origin` is listed.
+- **The body**: JSON (`application/json`, or `application/<x>+json`), or the
+  `clientHeader` for a deliberate non-JSON body such as a multipart upload. Your own
+  client sends that header on its upload `fetch`. A bodiless `PUT`, `PATCH`, or `DELETE`
+  passes. A bodiless `POST` needs the header, a JSON `Content-Type`, a matching `Origin`,
+  or `Sec-Fetch-Site: same-origin`.
+
+Every refusal is `{ error }` JSON. `curl` with a JSON body, scripts, and Home Assistant send
+no `Origin` and no `Sec-Fetch-*`, so they pass. `judgeWriteRequest` is the same decision as a
+pure function, for an app that is not on Hono. This is **not** authentication: anything that
+can open a connection to the port can still write.
+
+`createBodyLimit({ maxBytes, message? })` wraps `hono/body-limit` and answers `413` with
+`{ error }`. Mount it on the route, **ahead of** the handler. A size check after
+`await c.req.arrayBuffer()` or `c.req.parseBody()` is not a limit: the whole body is
+already in memory when it runs. The middleware refuses a request with `Content-Length` from
+the header alone, and counts a chunked request as it streams, so a route never reads more
+than `maxBytes` of body. Parsing can still allocate a small multiple of that, so size each
+route's limit for that route. Do not add an `/api/*` default limit in front of per-route ones: both run, so the smaller
+one wins, and a 30 MB upload under a 64 KB default is refused at 64 KB.
+
 ## MQTT cmd/resp
 
 Node-only. Import `@charcuterie/server/mqtt`, not the main barrel, and add `mqtt` as a

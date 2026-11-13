@@ -139,6 +139,82 @@ export const getIndicatorOffset = (
   )
 }
 
+/**
+ * Swallows the one synthetic `click` that a finished drag produces.
+ *
+ * Swallowed in the **capture** phase, so it consumes the click this
+ * gesture produced before the handle's own listener sees it. A
+ * `hasDragged` flag on the card would be the same idea with a
+ * lifetime nobody owns.
+ *
+ * The blocker must not outlive that click, and a drag does not
+ * always produce one: a touch that travelled is not a tap, and a
+ * `pointerup` outside the handle without pointer capture lands its
+ * click on an ancestor or nowhere. So it also disarms on the next
+ * `pointerdown` or `keydown` (a new gesture has begun, and the old
+ * one's click would already have arrived) and after a short timer
+ * (for a click with no gesture in front of it, such as a screen
+ * reader's activation).
+ *
+ * And it swallows only a click that could be the gesture's own: one
+ * on the handle (where pointer capture sends it), or on an ancestor
+ * of the handle (where a `pointerup` that left the handle without
+ * capture sends it). A click on any other control passes, so a
+ * bystander is never the one that pays.
+ */
+const CLICK_BLOCK_MS = 400
+
+const blockNextClick = (handle: Element) => {
+  const swallow = (clickEvent: MouseEvent) => {
+    const { target } = clickEvent
+
+    if (
+      !(target instanceof Node) ||
+      !target.contains(handle)
+    ) {
+      return
+    }
+
+    clickEvent.preventDefault()
+
+    clickEvent.stopPropagation()
+
+    disarm()
+  }
+
+  const timer = globalThis.setTimeout(() => {
+    disarm()
+  }, CLICK_BLOCK_MS)
+
+  function disarm() {
+    globalThis.clearTimeout(timer)
+
+    globalThis.removeEventListener("click", swallow, {
+      capture: true,
+    })
+
+    globalThis.removeEventListener("pointerdown", disarm, {
+      capture: true,
+    })
+
+    globalThis.removeEventListener("keydown", disarm, {
+      capture: true,
+    })
+  }
+
+  globalThis.addEventListener("click", swallow, {
+    capture: true,
+  })
+
+  globalThis.addEventListener("pointerdown", disarm, {
+    capture: true,
+  })
+
+  globalThis.addEventListener("keydown", disarm, {
+    capture: true,
+  })
+}
+
 export const useBoardDrag = ({
   itemSelector = "[data-board-card]",
   onDrop,
@@ -194,6 +270,16 @@ export const useBoardDrag = ({
    * cannot close over `drag` itself.
    */
   const dragRef = useRef<BoardDragState | null>(null)
+
+  /**
+   * Removes the listeners of the gesture in progress, if there is
+   * one. Kept in a ref so an unmount can call it: the pointer
+   * listeners live on `globalThis`, and a component that unmounts
+   * mid-drag (a route change, a lane that closes) would otherwise
+   * leave them there, and the next `pointerup` anywhere on the page
+   * would commit a drop for a board that no longer exists.
+   */
+  const stopGestureRef = useRef<(() => void) | null>(null)
 
   const setDragState = useCallback(
     (next: BoardDragState | null) => {
@@ -330,7 +416,7 @@ export const useBoardDrag = ({
         })
       }
 
-      const finish = (isCommitted: boolean) => {
+      const stopGesture = () => {
         globalThis.removeEventListener(
           "pointermove",
           onPointerMove,
@@ -342,6 +428,14 @@ export const useBoardDrag = ({
           "pointercancel",
           onCancel,
         )
+
+        if (stopGestureRef.current === stopGesture) {
+          stopGestureRef.current = null
+        }
+      }
+
+      const finish = (isCommitted: boolean) => {
+        stopGesture()
 
         const live = dragRef.current
 
@@ -358,20 +452,14 @@ export const useBoardDrag = ({
          * every completed drag lands the card and then opens a menu
          * on top of it.
          *
-         * Swallowed in the **capture** phase and `once`, so it
-         * consumes exactly the synthetic click this gesture
-         * produced and nothing after it. A `hasDragged` flag on the
-         * card would be the same idea with a lifetime nobody owns.
+         * Only a `pointerup` gets the blocker. A `pointercancel`
+         * produces no `click` at all — the browser took the
+         * gesture — so a blocker installed there waits for the
+         * next REAL click, anywhere on the page, and eats it.
          */
-        globalThis.addEventListener(
-          "click",
-          (clickEvent) => {
-            clickEvent.preventDefault()
-
-            clickEvent.stopPropagation()
-          },
-          { capture: true, once: true },
-        )
+        if (isCommitted) {
+          blockNextClick(handle)
+        }
 
         if (isCommitted && live.target) {
           onDrop(origin, live.target)
@@ -384,9 +472,27 @@ export const useBoardDrag = ({
         }
       }
 
-      const onCancel = () => {
-        finish(false)
+      const onCancel = (cancelEvent: PointerEvent) => {
+        if (
+          cancelEvent.pointerId === pointerEvent.pointerId
+        ) {
+          finish(false)
+        }
       }
+
+      // A second press while a gesture is live (another finger, or
+      // a pointer whose `pointerup` never arrived) replaces the
+      // first gesture rather than stacking listeners beside it. Its
+      // drag state goes with it: otherwise this press, released
+      // without moving, would drop ITS card on the first gesture's
+      // target.
+      if (stopGestureRef.current) {
+        stopGestureRef.current()
+
+        setDragState(null)
+      }
+
+      stopGestureRef.current = stopGesture
 
       globalThis.addEventListener(
         "pointermove",
@@ -408,6 +514,13 @@ export const useBoardDrag = ({
    * component unmounts mid-drag — which is exactly what a route
    * change during a drag does.
    */
+  useEffect(
+    () => () => {
+      stopGestureRef.current?.()
+    },
+    [],
+  )
+
   useEffect(() => {
     const onKeyDown = (keyEvent: KeyboardEvent) => {
       if (keyEvent.key === "Escape" && dragRef.current) {
