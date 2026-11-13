@@ -1,7 +1,7 @@
 {
   "name": "@charcuterie/vite-config",
-  "version": "1.1.0",
-  "description": "A shared Vite config factory for the Charcuterie fleet \u2014 call createViteConfig(overrides) and add your own plugins. Ships the first-paint plugin at ./first-paint.",
+  "version": "1.2.0",
+  "description": "A shared Vite config factory for the Charcuterie fleet — call createViteConfig(overrides) and add your own plugins. Ships the first-paint plugin at ./first-paint.",
   "license": "MIT",
   "type": "module",
   "main": "./src/index.js",
