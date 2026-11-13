@@ -25,6 +25,29 @@ import {
  */
 const HAS_EXTENSION_REGEX = /\.[^/]+$/
 
+/**
+ * Whether a request path belongs to the server rather than to the
+ * SPA. Matches on a segment boundary, so `/api` owns `/api` and
+ * `/api/items` but not `/apiary`. A trailing slash on a prefix is
+ * ignored, so `"/api"` and `"/api/"` mean the same thing.
+ */
+export const getIsServerPath = ({
+  pathname,
+  serverPathPrefixes,
+}: {
+  pathname: string
+  serverPathPrefixes: readonly string[]
+}): boolean =>
+  serverPathPrefixes.some((serverPathPrefix) => {
+    const prefix = serverPathPrefix.replace(/\/+$/, "")
+
+    return (
+      prefix === "" ||
+      pathname === prefix ||
+      pathname.startsWith(`${prefix}/`)
+    )
+  })
+
 export type StaticHandlerOptions = {
   /**
    * Absolute path to the built SPA directory (Vite's `outDir`).
@@ -51,6 +74,31 @@ export type StaticHandlerOptions = {
    * server that is only an asset origin.
    */
   hasSpaFallback?: boolean
+
+  /**
+   * The request-path prefixes the **server** owns, such as
+   * `["/api", "/health"]`. Setting it widens the SPA fallback:
+   * every GET or HEAD that matches no file gets the shell, **even
+   * a path with an extension**, unless it falls under one of these
+   * prefixes or under `immutablePathPrefixes`.
+   *
+   * Use it when a client route can end in an extension. Folio's
+   * document routes end in `.md`, because the URL is the file's
+   * real path, so the extensionless rule would 404 the first
+   * reload of every deep link.
+   *
+   * The width of the list is the whole trick. Too narrow, and a
+   * missing API route answers `200` with HTML where the client
+   * expected JSON. Too wide, and a real client route is swallowed.
+   * A miss under a listed prefix falls through to the next handler,
+   * so the app's own 404 answers it. A miss under
+   * `immutablePathPrefixes` falls through too: a missing hashed
+   * asset is a 404, never the shell.
+   *
+   * Matches on a segment boundary (see `getIsServerPath`).
+   * Ignored when `hasSpaFallback` is `false`.
+   */
+  serverPathPrefixes?: readonly string[]
 
   /**
    * Map the request path to a path under `rootDir` before the lookup.
@@ -138,6 +186,7 @@ export const createStaticHandler = ({
   index = "index.html",
   rewriteRequestPath,
   rootDir,
+  serverPathPrefixes,
 }: StaticHandlerOptions): MiddlewareHandler => {
   const deploymentHandler =
     !hasSpaFallback ||
@@ -166,6 +215,22 @@ export const createStaticHandler = ({
   })
 
   const addEtag = etag()
+
+  // Which misses get the shell. Without `serverPathPrefixes`, only
+  // an extensionless path: `/errors` is a route, `/gone.js` is a
+  // missing file. With it, anything the server and the hashed
+  // assets do not own.
+  const getIsShellPath = (path: string): boolean =>
+    serverPathPrefixes === undefined
+      ? !HAS_EXTENSION_REGEX.test(path)
+      : !getIsServerPath({
+          pathname: path,
+          serverPathPrefixes,
+        }) &&
+        !getIsImmutablePath({
+          immutablePathPrefixes,
+          pathname: path,
+        })
 
   return async (context, next) => {
     if (deploymentHandler) {
@@ -215,9 +280,7 @@ export const createStaticHandler = ({
 
     const response =
       (await serveFile(context, recordMiss)) ??
-      (hasMissed &&
-      hasSpaFallback &&
-      !HAS_EXTENSION_REGEX.test(path)
+      (hasMissed && hasSpaFallback && getIsShellPath(path)
         ? await serveIndex(context, recordMiss)
         : undefined)
 

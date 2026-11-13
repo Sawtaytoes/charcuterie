@@ -24,6 +24,44 @@ target with different overrides.
 `vite` is a peer dependency — the app owns the Vite version; Renovate bumps this
 package's range fleet-wide when the shared defaults change.
 
+## The first-paint plugin
+
+A themed SPA needs `<html data-scheme>` set, and its canvas painted, before the first frame.
+Otherwise a dark app opens with a full-page white flash while the token stylesheet loads.
+Only an inline script in `<head>` runs that early, so this plugin injects the
+`@charcuterie/tokens` first-paint script at the top of `<head>`, ahead of every
+stylesheet, in dev and in the build:
+
+```ts
+// vite.config.ts
+import { createViteConfig } from "@charcuterie/vite-config"
+import { createFirstPaintPlugin } from "@charcuterie/vite-config/first-paint"
+import react from "@vitejs/plugin-react"
+
+export default createViteConfig({
+  plugins: [createFirstPaintPlugin(), react()],
+})
+```
+
+It has its own entry point, so an Electron renderer or a library build that imports only
+the base never resolves `@charcuterie/tokens`.
+
+Both options are optional:
+
+| Option | Default | |
+| --- | --- | --- |
+| `variant` | `daylight` | The variant whose surface colours paint the canvas. `daylight` is what the unqualified `[data-scheme]` rule resolves to, so a document with no `data-variant` matches it. Pass the variant your `index.html` declares. |
+| `storageKey` | `DEFAULT_COLOR_SCHEME_STORAGE_KEY` | The `localStorage` key for the stored scheme. It must match the key the runtime `useColorScheme` reads, or the two disagree by one flash. |
+
+The colours come from the variant object, never pasted hexes. Docket once shipped a pasted
+copy with `daylight`'s colours under a `data-variant="hairline"` document, so the canvas
+painted cool and snapped warm the instant the stylesheet landed.
+`buildFirstPaintScriptBody(options)` returns the same script without its `<script>`
+wrapper, for a test that runs it.
+
+Eight apps carried their own copy of this plugin before it moved here, and the copies had
+already drifted.
+
 ## The `index.html` guard
 
 The base ships **one plugin**, `charcuterie:no-shadowed-injection-anchors`, and it is not

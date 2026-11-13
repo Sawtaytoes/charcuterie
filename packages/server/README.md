@@ -311,6 +311,7 @@ of stale caching.
 | `immutablePathPrefixes` | `["/assets/"]` | Request-path prefixes that may be cached forever. |
 | `index` | `"index.html"` | The SPA shell, relative to `rootDir`. |
 | `hasSpaFallback` | `true` | Serve `index` for extensionless paths that match no file. Turn off for a pure asset origin. |
+| `serverPathPrefixes` | — | The prefixes the server owns, such as `["/api", "/health"]`. Widens the fallback to every GET or HEAD miss outside these prefixes and `immutablePathPrefixes`, extension or not. |
 | `rewriteRequestPath` | — | Map the request path onto `rootDir` before the lookup, for a mount whose URL prefix is not a real directory. |
 
 ### Mounting a directory that lives somewhere else
@@ -331,6 +332,42 @@ The cache bucket is still decided on the **request** path, not the rewritten one
 bytes live on disk; caching is about what the browser was promised. The SPA fallback is
 unaffected: `index` resolves against `rootDir` directly, so a rewrite cannot misdirect the
 shell.
+
+### Client routes that end in an extension
+
+The default fallback serves the shell only for an **extensionless** miss, because that is
+how it tells a client route (`/errors`) from a missing file (`/gone.js`). A docs viewer
+breaks that rule: Folio's document routes end in `.md`, because the URL is the file's real
+path, so the first reload of any deep link would 404.
+
+Name the prefixes the server owns instead, and the fallback serves the shell for every
+other GET or HEAD miss:
+
+```ts
+// Every path the server answers. A client route must not be here.
+const SERVER_PATH_PREFIXES = ["/api", "/health"]
+
+app.route("/api", apiApp)
+app.use(
+  "*",
+  createStaticHandler({
+    rootDir: webDistDir,
+    serverPathPrefixes: SERVER_PATH_PREFIXES,
+  }),
+)
+```
+
+The width of that list is the whole trick. Too narrow, and a missing API route answers
+`200` with HTML where the client expected JSON. Too wide, and a real client route is
+swallowed. A miss under a listed prefix falls through to the app's own 404, and so does a
+miss under `immutablePathPrefixes`: a missing hashed asset stays a 404, never the shell
+that produces `Unexpected token '<'`. Prefixes match on a segment boundary, so `/api` owns
+`/api/items` and not `/apiary`. `getIsServerPath` is the same test, exported for an app
+that needs it elsewhere.
+
+This replaces the hand-written second handler that Folio, Foyer, and Plinth each carried:
+a `createStaticHandler` with `rewriteRequestPath: () => "/index.html"` behind an
+`app.get("*")` that skipped the server's own prefixes.
 
 `precompressAssets()` takes `algorithms` (default `["br", "gz"]`) and `thresholdBytes`
 (default `1024`). `zst` is supported but near-pointless as a third: the handler prefers

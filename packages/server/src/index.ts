@@ -17,6 +17,7 @@ export {
 } from "./cachePolicy.ts"
 export {
   createStaticHandler,
+  getIsServerPath,
   type StaticHandlerOptions,
 } from "./createStaticHandler.ts"
 export {
