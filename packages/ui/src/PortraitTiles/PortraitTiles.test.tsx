@@ -1,4 +1,6 @@
 import { composeStories } from "@storybook/react"
+import type { ReactNode } from "react"
+import { useLayoutEffect, useState } from "react"
 import { createRoot, hydrateRoot } from "react-dom/client"
 import { renderToString } from "react-dom/server"
 import { expect, userEvent, waitFor } from "storybook/test"
@@ -298,6 +300,100 @@ test("a picture that failed before hydration still falls back to the initials", 
     })
 
     await expect(host).toHaveTextContent("B")
+  } finally {
+    root.unmount()
+
+    host.remove()
+  }
+})
+
+/** Two animation frames, as in `mountStory`: a barrier, not a clock. */
+const settleFrames = () =>
+  new Promise<void>((resolve) => {
+    globalThis.requestAnimationFrame(() => {
+      globalThis.requestAnimationFrame(() => {
+        resolve()
+      })
+    })
+  })
+
+const OTHER_WORKING_PICTURE = `data:image/svg+xml;utf8,${encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" fill="#6F2F4E"/></svg>',
+)}`
+
+/**
+ * Shows the first picture, and swaps to the second in a layout
+ * effect — in the same commit that hydrates it, so before the
+ * browser can finish decoding the first. `isBack` swaps back.
+ */
+const SwitchingPicture = ({
+  isBack,
+}: {
+  isBack: boolean
+}): ReactNode => {
+  const [hasSwapped, setHasSwapped] = useState(false)
+
+  useLayoutEffect(() => {
+    setHasSwapped(true)
+  }, [])
+
+  return (
+    <PortraitAvatar
+      className=""
+      imageSrc={
+        hasSwapped && !isBack
+          ? OTHER_WORKING_PICTURE
+          : WORKING_PICTURE
+      }
+      initials="B"
+    />
+  )
+}
+
+/**
+ * The check that catches a failure from before hydration asks
+ * `decode()`, and `decode()` also rejects when a newer `src`
+ * supersedes the request. That rejection is not a failure. Read as
+ * one, it marked the first picture dead, and the tile showed the
+ * letter when it came back to that picture.
+ */
+test("a picture that a new one superseded is not marked as failed", async () => {
+  const host = document.createElement("div")
+
+  document.body.append(host)
+
+  host.innerHTML = renderToString(
+    <SwitchingPicture isBack={false} />,
+  )
+
+  // Loaded before hydration, so the ref's check runs `decode()`.
+  await waitForImagesToFinish(host)
+
+  const root = hydrateRoot(
+    host,
+    <SwitchingPicture isBack={false} />,
+  )
+
+  try {
+    await waitFor(async () => {
+      await expect(
+        host.querySelector("img"),
+      ).toHaveAttribute("src", OTHER_WORKING_PICTURE)
+    })
+
+    // The second picture has loaded, the first one's decode has been
+    // superseded, and React has committed whatever that caused.
+    await waitForImagesToFinish(host)
+
+    await settleFrames()
+
+    root.render(<SwitchingPicture isBack />)
+
+    await waitFor(async () => {
+      await expect(
+        host.querySelector("img"),
+      ).toHaveAttribute("src", WORKING_PICTURE)
+    })
   } finally {
     root.unmount()
 

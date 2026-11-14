@@ -35,6 +35,14 @@ import { useCallback, useState } from "react"
  * the answer again: it rejects for a broken image and resolves for a
  * loaded one. An image still loading is not `complete`, and its answer
  * arrives through `onError` as usual.
+ *
+ * ⚠️ `decode()` **also rejects when a newer `src` supersedes it**, with
+ * the same `EncodingError` a broken image gets. So a rejection counts
+ * only while this ref is still the one attached — React runs the
+ * cleanup below when the ref detaches or `src` changes — and only
+ * while the element still shows that `src` and has finished with it.
+ * Without the guard, a picture that was swapped out mid-decode was
+ * marked dead, and coming back to it showed the initials.
  */
 export const useImageFailure = (
   src: string | undefined,
@@ -59,9 +67,21 @@ export const useImageFailure = (
         return
       }
 
+      let isAttached = true
+
       image.decode().catch(() => {
-        setFailedSrc(src)
+        if (
+          isAttached &&
+          image.complete &&
+          image.getAttribute("src") === src
+        ) {
+          setFailedSrc(src)
+        }
       })
+
+      return () => {
+        isAttached = false
+      }
     },
     [src],
   )
