@@ -5,6 +5,7 @@ import { test } from "vitest"
 import { expectNoAxeViolations } from "../expectNoAxeViolations.testHelpers.ts"
 import { mountStory } from "../mountStory.testHelpers.ts"
 import { expectAgentDrivable } from "../testing/index.ts"
+import { finishCodeMirrorParsing } from "./finishParsing.testHelpers.ts"
 import * as stories from "./MarkdownView.stories.tsx"
 
 const {
@@ -17,6 +18,26 @@ const {
 } = composeStories(stories)
 
 /**
+ * `mountStory`, then every CodeMirror document in it parsed to the
+ * end, so the decorations each test reads are drawn before it reads
+ * them — see `finishCodeMirrorParsing` for why that is not already
+ * true on a loaded runner.
+ *
+ * The `findBy` and `waitFor` calls below predate this barrier and
+ * stay. After it they resolve on their first look; the ones that
+ * follow a tick still wait on the round trip through the consumer.
+ */
+const mountParsed = async (
+  story: Parameters<typeof mountStory>[0],
+): ReturnType<typeof mountStory> => {
+  const mounted = await mountStory(story)
+
+  finishCodeMirrorParsing(mounted.canvasElement)
+
+  return mounted
+}
+
+/**
  * The gap this component was built to close, as a red/green fact.
  *
  * `isReadOnly` on either editor leaves nine disabled buttons in a
@@ -26,7 +47,7 @@ const {
  * there is the fix.
  */
 test("there is no toolbar, not a hidden one", async () => {
-  const { canvas } = await mountStory(Playground)
+  const { canvas } = await mountParsed(Playground)
 
   await expect(canvas.queryAllByRole("toolbar")).toEqual([])
 
@@ -47,7 +68,7 @@ test("there is no toolbar, not a hidden one", async () => {
  * asserted together.
  */
 test("it is an article whose headings are headings", async () => {
-  const { canvas } = await mountStory(Playground)
+  const { canvas } = await mountParsed(Playground)
 
   const article = expectAgentDrivable(canvas, {
     name: "Description",
@@ -87,7 +108,7 @@ test("it is an article whose headings are headings", async () => {
  * the same task boxes, the same autolink.
  */
 test("it renders what the editor renders", async () => {
-  const { canvas } = await mountStory(SameAsTheEditor)
+  const { canvas } = await mountParsed(SameAsTheEditor)
 
   // ⚠️ WAIT FOR THE COUNT, not for "a table".
   //
@@ -158,7 +179,7 @@ test("it renders what the editor renders", async () => {
  * copy and open.
  */
 test("a link is a real anchor in the tab order", async () => {
-  const { canvas } = await mountStory(Interactive)
+  const { canvas } = await mountParsed(Interactive)
 
   // Markdown decorations arrive after the editor's asynchronous parse.
   // Wait for the link before checking its accessibility and keyboard behavior.
@@ -203,7 +224,7 @@ test("a link is a real anchor in the tab order", async () => {
  * on the editors.
  */
 test("a checkbox is inert until a consumer says where the tick goes", async () => {
-  const { canvas } = await mountStory(AllStates)
+  const { canvas } = await mountParsed(AllStates)
 
   const inert = await canvas.findByRole("checkbox", {
     name: "Photograph the current cabling",
@@ -240,7 +261,7 @@ test("a checkbox is inert until a consumer says where the tick goes", async () =
  */
 test("hostile markdown renders as characters, not as behaviour", async () => {
   const { canvas, canvasElement } =
-    await mountStory(HostileMarkdown)
+    await mountParsed(HostileMarkdown)
 
   // `findAllBy`: the links are CodeMirror decorations, drawn after the
   // first paint — the same race as the headings test above.
@@ -298,7 +319,7 @@ test("hostile markdown renders as characters, not as behaviour", async () => {
  * else noticing.
  */
 test("the text can be selected", async () => {
-  const { canvas } = await mountStory(Playground)
+  const { canvas } = await mountParsed(Playground)
 
   const article = canvas.getByRole("article")
 
@@ -336,7 +357,7 @@ test("the text can be selected", async () => {
  * renders.
  */
 test("inline markup in link text does not drop the document to raw source", async () => {
-  const { canvas } = await mountStory(NestedLinkText)
+  const { canvas } = await mountParsed(NestedLinkText)
 
   // The canary. This heading has nothing to do with links, and it
   // is what stopped rendering when the plugin died.
@@ -375,7 +396,7 @@ test.each([
 ])(
   "link text through %s is a reachable anchor",
   async (_case, name) => {
-    const { canvas } = await mountStory(NestedLinkText)
+    const { canvas } = await mountParsed(NestedLinkText)
 
     // CodeMirror finishes its viewport decorations on a scheduled frame.
     // Wait for the accessible anchor rather than assuming mount means paint.
@@ -402,7 +423,7 @@ test.each([
  * survives a change to the base font size.
  */
 test("the document is set at prose leading", async () => {
-  const { canvas } = await mountStory(Playground)
+  const { canvas } = await mountParsed(Playground)
 
   const article = canvas.getByRole("article")
 
@@ -421,7 +442,7 @@ test("the document is set at prose leading", async () => {
  * backticks comes out as a wall of emphasis nobody asked for.
  */
 test("a code span is smaller than the prose it sits in", async () => {
-  const { canvas } = await mountStory(Playground)
+  const { canvas } = await mountParsed(Playground)
 
   const article = canvas.getByRole("article")
 
