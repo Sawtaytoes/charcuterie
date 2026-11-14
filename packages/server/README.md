@@ -165,6 +165,14 @@ mqtt.handleCommand("sync", async (payload) => {
 // board-game-picker/cmd/sync  →  board-game-picker/resp/sync
 ```
 
+`<base>/status` is retained, and the connection's last will sets it to `{ online: false }`
+when the app drops off the broker. **Every reconnect puts the status back**: the service
+republishes the last retained status the app published, or `{ online: true }` if it
+published none, including a status the app published while it was disconnected. `mqtt`
+resubscribes `cmd/+` on its own. `reconnectPeriodMs` sets the wait between attempts
+(default 5000). `createMqttService.broker.test.ts` proves the round trip with the real
+client against a broker on a socket.
+
 TLS defaults on when the port is `8883` (`mqtt.octen.dev`). Pass `isTls` to override.
 `truenas-mqtt`'s `trigger`/`status` tree is a legacy special case — new apps use
 `cmd`/`resp`. This does **not** belong in `@charcuterie/streams` (browser, push-only).
@@ -405,12 +413,19 @@ serveStatic({ root, onFound: (_p, c) => c.header("Cache-Control", "immutable") }
 // → response has no cache-control header at all
 ```
 
-Set headers in a middleware *before* `serveStatic`, which is what this package does.
+Set headers on the Response that `serveStatic` returns, which is what this package does.
+Do not set them on the context before the lookup either: a miss then carries them into the
+app's next handler, and the app's 404 for a missing hashed asset goes out as `immutable`.
 
 ## Peer dependencies
 
-`hono` and `@hono/node-server` are required peers — the app owns the versions. `vite` is
-an **optional** peer needed only by the `/vite` entry point, so a server never resolves
-Vite and a build never resolves Hono. `mqtt` is an **optional** peer needed only by the
+`hono` and `@hono/node-server` are required peers — the app owns the versions. **Vite is
+not a dependency of any kind**, not even an optional peer. The `/vite` entry point writes
+out the slice of Vite's `Plugin` it fills in, instead of importing it, and the app's
+`vite.config.ts` checks it against the real one. An optional peer was not enough: pnpm links
+an optional peer to the workspace's own Vite and records it in the lockfile, so a
+`pnpm install --prod` of an app's server installed Vite, Rolldown, and their native
+binaries, 25 to 30 MB the server never loads. A test fails if `vite` returns to
+`package.json` or to a non-test import. `mqtt` is an **optional** peer needed only by the
 `/mqtt` entry point, so a static-only app never resolves a broker client. The `/http`
 entry point has **no dependencies at all** — not even Hono.

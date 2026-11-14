@@ -1,5 +1,3 @@
-import type { Plugin } from "vite"
-
 import {
   type CompressionAlgorithm,
   compressDirectory,
@@ -8,6 +6,40 @@ import {
 
 const formatKilobytes = (bytes: number) =>
   `${(bytes / 1_024).toFixed(1)} kB`
+
+/**
+ * The part of Vite's `Plugin` this plugin fills in, written out here
+ * rather than imported from `vite`.
+ *
+ * **This keeps Vite out of every app's production image.** While
+ * this file imported `Plugin`, the package declared `vite` as an
+ * optional peer, and pnpm links an optional peer to the workspace's
+ * own Vite and records it in the package's lockfile snapshot. A
+ * `pnpm install --prod` of the app's server then installed Vite,
+ * Rolldown, and their native binaries, 25 to 30 MB that the server
+ * never loads. With no `vite` import, the package declares no Vite
+ * dependency of any kind.
+ *
+ * The app's `vite.config.ts` still checks this against Vite's real
+ * `Plugin` where it passes the plugin to `plugins`, and
+ * `precompressAssets.test.ts` checks it here against the Vite in
+ * this package's dev dependencies.
+ */
+export type PrecompressAssetsPlugin = {
+  apply: "build"
+  enforce: "post"
+  name: string
+  configResolved: (config: {
+    build: { outDir: string }
+    logLevel?: string
+  }) => void
+  // Vite names this boolean `sequential`. A `Record` writes Vite's
+  // key without declaring a type property the `is`/`has` rule owns.
+  writeBundle: {
+    order: "post"
+    handler: () => Promise<void>
+  } & Record<"sequential", true>
+}
 
 /**
  * Emit `.br` and `.gz` siblings for the build output, so
@@ -44,7 +76,7 @@ export const precompressAssets = ({
 }: {
   algorithms?: readonly CompressionAlgorithm[]
   thresholdBytes?: number
-} = {}): Plugin => {
+} = {}): PrecompressAssetsPlugin => {
   let outputDirectory = ""
   let isSilent = false
 

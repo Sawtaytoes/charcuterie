@@ -75,6 +75,11 @@ export type CreateMqttServiceOptions = {
   client?: MqttClientLike
   connect?: MqttConnect
   connectTimeoutMs?: number
+  /**
+   * Wait between reconnect attempts after the connection drops.
+   * Defaults to 5000.
+   */
+  reconnectPeriodMs?: number
 }
 
 export type MqttService = {
@@ -96,6 +101,7 @@ export type MqttService = {
 }
 
 const DEFAULT_CONNECT_TIMEOUT_MS = 20_000
+const DEFAULT_RECONNECT_PERIOD_MS = 5_000
 const ALREADY_RUNNING = {
   ok: false,
   reason: "already-running",
@@ -229,12 +235,22 @@ export async function createMqttService(
     })
   }
 
+  // The retained status the broker should hold while this app is
+  // up. Kept so a reconnect can put it back: the broker replaced it
+  // with the last will, `{ online: false }`, when the connection
+  // dropped, and nothing else would ever set it back.
+  let retainedStatus: unknown = { online: true }
+
   const publishStatus = (
     payload: unknown,
     statusOptions: { isRetained?: boolean } = {},
   ): void => {
+    const isRetained = statusOptions.isRetained ?? true
+    if (isRetained) {
+      retainedStatus = payload
+    }
     publish(statusTopic(base), payload, {
-      isRetained: statusOptions.isRetained ?? true,
+      isRetained,
       qos: 1,
     })
   }
@@ -265,8 +281,17 @@ export async function createMqttService(
   )
 
   if (client.isConnected) {
-    publishStatus({ online: true })
+    publishStatus(retainedStatus)
   }
+
+  // `connect` fires on every successful reconnect, too. The first
+  // connect has already happened by now (`connectClient` waits for
+  // it), so this runs only for a later one, or for the first connect
+  // of an injected client that was not connected yet. `mqtt`
+  // resubscribes `cmd/+` by itself.
+  client.on("connect", (() => {
+    publishStatus(retainedStatus)
+  }) as (...args: never[]) => void)
 
   return {
     close: () => {
@@ -303,7 +328,9 @@ async function connectClient(
     password: options.password,
     port,
     protocol: isTls ? "mqtts" : "mqtt",
-    reconnectPeriod: 5000,
+    reconnectPeriod:
+      options.reconnectPeriodMs ??
+      DEFAULT_RECONNECT_PERIOD_MS,
     username: options.username,
   })
 
