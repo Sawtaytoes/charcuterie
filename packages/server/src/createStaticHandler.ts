@@ -12,47 +12,13 @@ import {
   DEFAULT_DEPLOYMENT_EVENTS_PATH,
   DEFAULT_DEPLOYMENT_PATH,
 } from "./deployment.ts"
-
-/**
- * A path ending in `.something`. Used to tell a missing **asset**
- * from a missing **route**: `/errors` is a client route and gets the
- * SPA shell, `/assets/gone.js` is a real 404.
- *
- * Serving `index.html` for a missing `.js` is how an app produces
- * `Uncaught SyntaxError: Unexpected token '<'` — the browser is
- * handed HTML where it asked for a script, and the error names
- * neither the file nor the server.
- */
-const HAS_EXTENSION_REGEX = /\.[^/]+$/
+import { getIsShellPath } from "./paths/shellPath.ts"
 
 /** The methods a static file answers. Everything else falls through. */
 const READ_METHODS: ReadonlySet<string> = new Set([
   "GET",
   "HEAD",
 ])
-
-/**
- * Whether a request path belongs to the server rather than to the
- * SPA. Matches on a segment boundary, so `/api` owns `/api` and
- * `/api/items` but not `/apiary`. A trailing slash on a prefix is
- * ignored, so `"/api"` and `"/api/"` mean the same thing.
- */
-export const getIsServerPath = ({
-  pathname,
-  serverPathPrefixes,
-}: {
-  pathname: string
-  serverPathPrefixes: readonly string[]
-}): boolean =>
-  serverPathPrefixes.some((serverPathPrefix) => {
-    const prefix = serverPathPrefix.replace(/\/+$/, "")
-
-    return (
-      prefix === "" ||
-      pathname === prefix ||
-      pathname.startsWith(`${prefix}/`)
-    )
-  })
 
 export type StaticHandlerOptions = {
   /**
@@ -102,7 +68,9 @@ export type StaticHandlerOptions = {
    * asset is a 404, never the shell.
    *
    * Matches on a segment boundary (see `getIsServerPath`).
-   * Ignored when `hasSpaFallback` is `false`.
+   * Ignored when `hasSpaFallback` is `false`. `getIsShellPath`
+   * from `@charcuterie/server/paths` is this same rule, for a
+   * server that is not Hono.
    */
   serverPathPrefixes?: readonly string[]
 
@@ -222,22 +190,6 @@ export const createStaticHandler = ({
 
   const addEtag = etag()
 
-  // Which misses get the shell. Without `serverPathPrefixes`, only
-  // an extensionless path: `/errors` is a route, `/gone.js` is a
-  // missing file. With it, anything the server and the hashed
-  // assets do not own.
-  const getIsShellPath = (path: string): boolean =>
-    serverPathPrefixes === undefined
-      ? !HAS_EXTENSION_REGEX.test(path)
-      : !getIsServerPath({
-          pathname: path,
-          serverPathPrefixes,
-        }) &&
-        !getIsImmutablePath({
-          immutablePathPrefixes,
-          pathname: path,
-        })
-
   return async (context, next) => {
     // Reads only. `@hono/node-server` 1.x answers any method with
     // the file, so a POST to `/index.html` got a 200 and the shell
@@ -282,7 +234,13 @@ export const createStaticHandler = ({
 
     const response =
       (await serveFile(context, recordMiss)) ??
-      (hasMissed && hasSpaFallback && getIsShellPath(path)
+      (hasMissed &&
+      hasSpaFallback &&
+      getIsShellPath({
+        immutablePathPrefixes,
+        pathname: path,
+        serverPathPrefixes,
+      })
         ? await serveIndex(context, recordMiss)
         : undefined)
 

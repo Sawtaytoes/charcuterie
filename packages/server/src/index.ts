@@ -6,6 +6,10 @@
  * The build-time counterpart lives at `@charcuterie/server/vite`.
  * It imports nothing from Vite, so the package declares no Vite
  * dependency and a server's production install never installs it.
+ *
+ * The static handler's path rules alone live at
+ * `@charcuterie/server/paths`, which loads no framework, for a
+ * server that is not Hono.
  */
 
 export {
@@ -18,7 +22,6 @@ export {
 } from "./cachePolicy.ts"
 export {
   createStaticHandler,
-  getIsServerPath,
   type StaticHandlerOptions,
 } from "./createStaticHandler.ts"
 export {
@@ -28,6 +31,10 @@ export {
   type DeploymentHandlerOptions,
   type DeploymentInfo,
 } from "./deployment.ts"
+export {
+  getIsServerPath,
+  getIsShellPath,
+} from "./paths/shellPath.ts"
 export {
   type BodyLimitOptions,
   createBodyLimit,

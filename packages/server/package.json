@@ -27,6 +27,11 @@
       "types": "./dist/vite/index.d.ts",
       "default": "./dist/vite/index.js"
     },
+    "./paths": {
+      "source": "./src/paths/index.ts",
+      "types": "./dist/paths/index.d.ts",
+      "default": "./dist/paths/index.js"
+    },
     "./mqtt": {
       "source": "./src/mqtt/index.ts",
       "types": "./dist/mqtt/index.d.ts",
