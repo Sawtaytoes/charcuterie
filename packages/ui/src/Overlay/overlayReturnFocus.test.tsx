@@ -3,7 +3,7 @@ import type { Root } from "react-dom/client"
 import { createRoot } from "react-dom/client"
 import { expect, userEvent, waitFor } from "storybook/test"
 import { afterEach, beforeEach, test } from "vitest"
-
+import { finishMotion } from "../motion.testHelpers.ts"
 import {
   DeleteRowWithConfirm,
   MenuThenModal,
@@ -128,13 +128,13 @@ test("a modal opened from a menu item returns focus to the menu's trigger, once 
   })
 
   // The menu has finished leaving, so the item that opened the modal
-  // is gone from the page.
-  await waitFor(
-    () => {
-      expect(item.isConnected).toBe(false)
-    },
-    { timeout: 5_000 },
-  )
+  // is gone from the page. Ended here rather than waited for: the
+  // test is about focus after the exit, not about how long it takes.
+  finishMotion(document.body)
+
+  await waitFor(() => {
+    expect(item.isConnected).toBe(false)
+  })
 
   await userEvent.keyboard("{Escape}")
 
@@ -165,12 +165,11 @@ test("a modal that replaced another returns focus to the first one's opener", as
   })
 
   // The first modal has finished leaving, and "Next" with it.
-  await waitFor(
-    () => {
-      expect(next.isConnected).toBe(false)
-    },
-    { timeout: 5_000 },
-  )
+  finishMotion(document.body)
+
+  await waitFor(() => {
+    expect(next.isConnected).toBe(false)
+  })
 
   await userEvent.keyboard("{Escape}")
 
@@ -208,12 +207,11 @@ test("a modal that opened while nothing had focus leaves focus where it was when
 
   await userEvent.keyboard("{Escape}")
 
-  await waitFor(
-    () => {
-      expect(getButton("Inside timer")).toBeUndefined()
-    },
-    { timeout: 5_000 },
-  )
+  finishMotion(document.body)
+
+  await waitFor(() => {
+    expect(getButton("Inside timer")).toBeUndefined()
+  })
 
   expect(search).not.toHaveFocus()
 })

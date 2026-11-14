@@ -14,6 +14,10 @@ import { test } from "vitest"
 import { userEvent as browserUserEvent } from "vitest/browser"
 
 import { expectNoAxeViolations } from "../expectNoAxeViolations.testHelpers.ts"
+import {
+  finishMotion,
+  HELD_MOTION,
+} from "../motion.testHelpers.ts"
 import { mountStory } from "../mountStory.testHelpers.ts"
 import { expectAgentDrivable } from "../testing/index.ts"
 import meta, * as stories from "./GroupedList.stories.tsx"
@@ -851,9 +855,10 @@ test("a group an action creates enters, and a group it empties leaves with its l
 
   const host = document.createElement("div")
 
-  // Long enough that a loaded host cannot finish the exit first.
-  host.style.setProperty("--duration-fast", "600ms")
-  host.style.setProperty("--duration-normal", "600ms")
+  // Held, so the exit cannot finish first however busy the host is;
+  // see `HELD_MOTION`.
+  host.style.setProperty("--duration-fast", HELD_MOTION)
+  host.style.setProperty("--duration-normal", HELD_MOTION)
 
   document.body.append(host)
 
@@ -912,12 +917,11 @@ test("a group an action creates enters, and a group it empties leaves with its l
     expect(leaving?.textContent).toContain("Book")
 
     // …and gone once it has.
-    await waitFor(
-      () => {
-        expect(groupOf("Reading")).toBeUndefined()
-      },
-      { timeout: 5_000 },
-    )
+    finishMotion(leaving as HTMLElement)
+
+    await waitFor(() => {
+      expect(groupOf("Reading")).toBeUndefined()
+    })
   } finally {
     root.unmount()
 
@@ -938,8 +942,8 @@ const mountUnfrozen = () => {
 
   const host = document.createElement("div")
 
-  host.style.setProperty("--duration-fast", "600ms")
-  host.style.setProperty("--duration-normal", "600ms")
+  host.style.setProperty("--duration-fast", HELD_MOTION)
+  host.style.setProperty("--duration-normal", HELD_MOTION)
 
   document.body.append(host)
 
@@ -1049,12 +1053,13 @@ test("a group below one whose row has finished leaving slides up instead of jump
     // The leaving row still holds its space, so nothing has moved yet.
     expect(group.style.transition).toBe("")
 
-    await waitFor(
-      () => {
-        expect(leaving.isConnected).toBe(false)
-      },
-      { timeout: 5_000 },
-    )
+    // Only the leaving row's motion ends; the slide it starts is held,
+    // so it is still in flight when the next line reads it.
+    finishMotion(leaving)
+
+    await waitFor(() => {
+      expect(leaving.isConnected).toBe(false)
+    })
 
     // Its gap closed, and the group below is sliding up into it.
     expect(group.style.transition).toContain("translate")

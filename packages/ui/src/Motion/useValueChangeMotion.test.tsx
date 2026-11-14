@@ -5,6 +5,10 @@ import { createRoot } from "react-dom/client"
 import { expect, userEvent, waitFor } from "storybook/test"
 import { afterEach, beforeEach, test } from "vitest"
 
+import {
+  finishMotion,
+  HELD_MOTION,
+} from "../motion.testHelpers.ts"
 import { useValueChangeMotion } from "./useValueChangeMotion.ts"
 
 /**
@@ -39,9 +43,9 @@ afterEach(() => {
 const mount = (node: ReactNode) => {
   const host = document.createElement("div")
 
-  // Long enough that a loaded host cannot finish a pop between two
-  // lines of a test.
-  host.style.setProperty("--duration-slow", "600ms")
+  // Held, so no pop can end between two lines of a test however long
+  // a click takes; see `HELD_MOTION`.
+  host.style.setProperty("--duration-slow", HELD_MOTION)
 
   document.body.append(host)
 
@@ -122,10 +126,9 @@ test("the pop class comes off when the pop ends", async () => {
 
   expect(output).toHaveClass("charcuterie-value-changed")
 
-  await waitFor(
-    () => {
-      expect(output.className).toBe("")
-    },
-    { timeout: 5_000 },
-  )
+  finishMotion(output)
+
+  await waitFor(() => {
+    expect(output.className).toBe("")
+  })
 })
