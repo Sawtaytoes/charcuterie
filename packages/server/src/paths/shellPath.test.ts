@@ -99,6 +99,11 @@ describe("the paths entry loads no framework", () => {
   // `import "y"`, each across lines.
   const importRegex =
     /(?:^|\n)\s*(?:import|export)\b(?:[^"';]*?\bfrom)?\s*["']([^"']+)["']/g
+  // `import("y")` and `require("y")` with a literal specifier.
+  const dynamicImportRegex =
+    /\b(?:import|require)\s*\(\s*["'`]([^"'`]+)["'`]/g
+  // Any dynamic import or require at all, literal or computed.
+  const anyDynamicImportRegex = /\b(?:import|require)\s*\(/g
 
   const collectSpecifiers = async (
     file: string,
@@ -108,9 +113,22 @@ describe("the paths entry loads no framework", () => {
     seen.add(file)
 
     const source = await readFile(file, "utf8")
-    const specifiers = [
-      ...source.matchAll(importRegex),
+    const dynamicSpecifiers = [
+      ...source.matchAll(dynamicImportRegex),
     ].map((match) => match[1] ?? "")
+
+    // A computed specifier cannot be followed, so it is refused.
+    expect(
+      [...source.matchAll(anyDynamicImportRegex)].length,
+      `${file} has a dynamic import with a computed specifier`,
+    ).toBe(dynamicSpecifiers.length)
+
+    const specifiers = [
+      ...[...source.matchAll(importRegex)].map(
+        (match) => match[1] ?? "",
+      ),
+      ...dynamicSpecifiers,
+    ]
     const nested = await Promise.all(
       specifiers
         .filter((specifier) => specifier.startsWith("."))
