@@ -80,7 +80,8 @@ test("an unassigned avatar renders nothing at all", async () => {
  * because nobody writes the `onError` until they see it.
  */
 test("a photo that fails falls back to the initials", async () => {
-  const { canvas, canvasElement } = await mountStory(AllStates)
+  const { canvas, canvasElement } =
+    await mountStory(AllStates)
 
   const broken = expectAgentDrivable(canvas, {
     name: "Kit Sandoval",
