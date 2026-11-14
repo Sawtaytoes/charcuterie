@@ -5,6 +5,10 @@ import { createRoot } from "react-dom/client"
 import { expect, userEvent, waitFor } from "storybook/test"
 import { afterEach, beforeEach, test } from "vitest"
 
+import {
+  finishMotion,
+  HELD_MOTION,
+} from "../motion.testHelpers.ts"
 import { useListMotion } from "./useListMotion.ts"
 
 /**
@@ -32,15 +36,6 @@ afterEach(() => {
     document.head.append(frozenStyle)
   }
 })
-
-/**
- * Long enough that a loaded test host cannot finish an exit or a
- * slide between two lines of a test. The tokens are inherited, so
- * setting them on the host slows every motion inside it.
- */
-const SLOW_MOTION = "600ms"
-
-const MOTION_TIMEOUT = { timeout: 5_000 }
 
 const unfreeze = () => {
   frozenStyle?.remove()
@@ -181,7 +176,10 @@ const mount = (node: ReactNode) => {
     "--duration-normal",
     "--duration-slow",
   ]) {
-    host.style.setProperty(token, SLOW_MOTION)
+    // Held, so no motion can end between two lines of a test however
+    // long a click takes; see `HELD_MOTION`. The tokens are inherited,
+    // so setting them on the host holds every motion inside it.
+    host.style.setProperty(token, HELD_MOTION)
   }
 
   document.body.append(host)
@@ -247,9 +245,11 @@ test("a removed item stays, inert, at its index until its exit ends", async () =
   expect(alpha).toHaveAttribute("aria-hidden", "true")
   expect(host.querySelector("li")).toBe(alpha)
 
+  finishMotion(host)
+
   await waitFor(() => {
     expect(alpha.isConnected).toBe(false)
-  }, MOTION_TIMEOUT)
+  })
 })
 
 test("with motion frozen, a removed item is gone in the same commit", async () => {
@@ -285,9 +285,11 @@ test("a reorder slides each moved item from where it was", async () => {
   // element sits away from its laid-out place.
   expect(alpha.style.transition).toContain("translate")
 
+  finishMotion(host)
+
   await waitFor(() => {
     expect(alpha.style.transition).toBe("")
-  }, MOTION_TIMEOUT)
+  })
 })
 
 test("an added item loses its enter class when it has entered, so showing the list again does not replay it", async () => {
@@ -311,9 +313,11 @@ test("an added item loses its enter class when it has entered, so showing the li
     return found as HTMLElement
   })
 
+  finishMotion(host)
+
   await waitFor(() => {
     expect(delta).not.toHaveClass("charcuterie-item-enter")
-  }, MOTION_TIMEOUT)
+  })
 
   // Hidden and shown again, with a style flush at each step, which is
   // what restarts a CSS animation still named on the element.
@@ -444,9 +448,11 @@ test("two items removed one after the other keep their order while they leave", 
     "Delta",
   ])
 
+  finishMotion(host)
+
   await waitFor(() => {
     expect(shownOrder(host)).toEqual(["Alpha", "Delta"])
-  }, MOTION_TIMEOUT)
+  })
 })
 
 test("a leaving item that a reorder moves slides from where it was, instead of jumping", async () => {
@@ -503,7 +509,7 @@ test("an item that moves while it is still entering slides from where it is show
 
   const topBefore = delta.getBoundingClientRect().top
 
-  // Still entering (the motion is 600ms here), and moved to the top.
+  // Still entering (the motion is held here), and moved to the top.
   await userEvent.click(getButton(host, "Reverse"))
 
   expect(shownOrder(host)[0]).toBe("Delta")
