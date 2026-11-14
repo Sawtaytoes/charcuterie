@@ -14,6 +14,7 @@ import {
   describe,
   expect,
   test,
+  vi,
 } from "vitest"
 
 import {
@@ -217,6 +218,57 @@ describe("deployment marker", () => {
     expect(new TextDecoder().decode(first?.value)).toMatch(
       /^event: deployment\ndata: {"buildId":"[a-f0-9]{64}"}\n\n$/,
     )
+  })
+
+  test("a HEAD request gets the SSE headers and starts no heartbeat", async () => {
+    // Hono answers HEAD by running the GET handler and discarding
+    // its body unread, so a stream started here is never cancelled.
+    const setIntervalSpy = vi.spyOn(
+      globalThis,
+      "setInterval",
+    )
+    try {
+      const response = await app.request(
+        "/__charcuterie/deployment/events",
+        { method: "HEAD" },
+      )
+
+      expect(response.status).toBe(200)
+      expect(
+        response.headers.get("content-type"),
+      ).toContain("text/event-stream")
+      expect(response.body).toBeNull()
+      expect(setIntervalSpy).not.toHaveBeenCalled()
+    } finally {
+      setIntervalSpy.mockRestore()
+    }
+  })
+
+  test("closing an SSE stream clears its heartbeat", async () => {
+    const setIntervalSpy = vi.spyOn(
+      globalThis,
+      "setInterval",
+    )
+    const clearIntervalSpy = vi.spyOn(
+      globalThis,
+      "clearInterval",
+    )
+    try {
+      const response = await request(
+        "/__charcuterie/deployment/events",
+      )
+      const reader = response.body?.getReader()
+      await reader?.read()
+      await reader?.cancel()
+
+      expect(setIntervalSpy).toHaveBeenCalledTimes(1)
+      expect(clearIntervalSpy).toHaveBeenCalledWith(
+        setIntervalSpy.mock.results[0]?.value,
+      )
+    } finally {
+      setIntervalSpy.mockRestore()
+      clearIntervalSpy.mockRestore()
+    }
   })
 
   test("can turn deployment endpoints off for an asset-only origin", async () => {
