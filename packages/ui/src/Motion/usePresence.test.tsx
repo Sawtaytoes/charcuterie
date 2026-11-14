@@ -5,6 +5,10 @@ import { afterEach, beforeEach, test } from "vitest"
 import * as accordionStories from "../Accordion/Accordion.stories.tsx"
 import * as menuStories from "../Menu/Menu.stories.tsx"
 import * as modalStories from "../Modal/Modal.stories.tsx"
+import {
+  finishMotion,
+  HELD_MOTION,
+} from "../motion.testHelpers.ts"
 import { mountStory } from "../mountStory.testHelpers.ts"
 import { getAnimationLengthMs } from "./usePresence.ts"
 
@@ -23,8 +27,20 @@ const { Playground: AccordionPlayground } = composeStories(
  * is what keeps every other overlay test synchronous. These tests are
  * about the motion itself, so they lift the freeze for their own
  * duration and put it back after.
+ *
+ * And they **hold** it: every duration token is an hour on `<body>`,
+ * which the canvas and the portalled overlays both inherit from, so
+ * no enter or exit can end between two lines of a test however long
+ * a click takes (see `HELD_MOTION`). A test that needs one over ends
+ * it with `finishMotion`.
  */
 const FREEZE_ID = "charcuterie-freeze-motion"
+
+const DURATION_TOKENS = [
+  "--duration-fast",
+  "--duration-normal",
+  "--duration-slow",
+]
 
 let frozenStyle: HTMLElement | null = null
 
@@ -32,17 +48,35 @@ beforeEach(() => {
   frozenStyle = document.getElementById(FREEZE_ID)
 
   frozenStyle?.remove()
+
+  for (const token of DURATION_TOKENS) {
+    document.body.style.setProperty(token, HELD_MOTION)
+  }
 })
 
 afterEach(() => {
+  for (const token of DURATION_TOKENS) {
+    document.body.style.removeProperty(token)
+  }
+
   if (frozenStyle !== null) {
     document.head.append(frozenStyle)
   }
 })
 
-const SLOW_EXIT = "1500ms"
-
-const MOTION_TIMEOUT = { timeout: 5_000 }
+/**
+ * Two animation frames: whatever the last event scheduled, React has
+ * committed. A barrier tied to the browser's own frames, as in
+ * `mountStory`, rather than a millisecond count.
+ */
+const settleFrames = () =>
+  new Promise<void>((resolve) => {
+    globalThis.requestAnimationFrame(() => {
+      globalThis.requestAnimationFrame(() => {
+        resolve()
+      })
+    })
+  })
 
 test("the animation length is the longest delay plus duration, and zero with no animation", () => {
   const element = document.createElement("div")
@@ -76,10 +110,6 @@ test("a closing modal stays in the page, closed to everything but the eye, until
 
   expect(modal).toHaveClass("charcuterie-overlay-enter")
 
-  // Long enough that a loaded host cannot finish the exit between two
-  // lines of this test. The inline longhand beats the class's.
-  modal.style.animationDuration = SLOW_EXIT
-
   await userEvent.keyboard("{Escape}")
 
   // Already gone to a role query, the keyboard, and the pointer…
@@ -95,9 +125,11 @@ test("a closing modal stays in the page, closed to everything but the eye, until
   // But still painted, until the exit animation finishes.
   expect(modal.isConnected).toBe(true)
 
+  finishMotion(modal)
+
   await waitFor(() => {
     expect(modal.isConnected).toBe(false)
-  }, MOTION_TIMEOUT)
+  })
 })
 
 test("a modal re-opened during its exit stays open", async () => {
@@ -110,8 +142,6 @@ test("a modal re-opened during its exit stays open", async () => {
   await userEvent.click(trigger)
 
   const modal = body.getByRole("dialog")
-
-  modal.style.animationDuration = SLOW_EXIT
 
   await userEvent.keyboard("{Escape}")
 
@@ -127,21 +157,41 @@ test("a modal re-opened during its exit stays open", async () => {
 
   expect(modal).toHaveClass("charcuterie-overlay-enter")
 
-  await new Promise((resolve) => {
-    globalThis.setTimeout(resolve, 400)
+  // The re-open's own enter ends, which is the `animationend` an
+  // abandoned exit listener would mistake for its own. The listener
+  // here is added after the hook's, so it runs after any handler the
+  // hook still has; two frames then let React commit what it did.
+  const enterEnded = new Promise((resolve) => {
+    modal.addEventListener("animationend", resolve, {
+      once: true,
+    })
   })
+
+  finishMotion(modal)
+
+  await enterEnded
+
+  await settleFrames()
 
   expect(modal.isConnected).toBe(true)
 
-  // Closed again, and gone, so its focus manager has let go of the
-  // page before the next test mounts into it.
-  modal.style.animationDuration = ""
-
+  // Closed again. This exit has to run in full: an abandoned exit
+  // listener that heard the enter end has already marked the modal
+  // done, and it would vanish here at once, with no exit at all.
+  // (`isMounted` is `isVisible || isShown`, so while it was open the
+  // assertion above could not see that.)
   await userEvent.keyboard("{Escape}")
+
+  expect(modal.isConnected).toBe(true)
+  expect(modal).toHaveClass("charcuterie-overlay-exit")
+
+  // And gone, so its focus manager has let go of the page before the
+  // next test mounts into it.
+  finishMotion(modal)
 
   await waitFor(() => {
     expect(modal.isConnected).toBe(false)
-  }, MOTION_TIMEOUT)
+  })
 })
 
 test("an anchored menu grows out of its trigger and leaves with motion", async () => {
@@ -154,16 +204,16 @@ test("an anchored menu grows out of its trigger and leaves with motion", async (
   expect(menu).toHaveClass("charcuterie-overlay-enter")
   expect(menu.style.transformOrigin).not.toBe("")
 
-  menu.style.animationDuration = SLOW_EXIT
-
   await userEvent.keyboard("{Escape}")
 
   expect(body.queryByRole("menu")).toBeNull()
   expect(menu).toHaveClass("charcuterie-overlay-exit")
 
+  finishMotion(menu)
+
   await waitFor(() => {
     expect(menu.isConnected).toBe(false)
-  }, MOTION_TIMEOUT)
+  })
 })
 
 test("an accordion section stays shown while it collapses, then hides", async () => {
@@ -182,8 +232,6 @@ test("an accordion section stays shown while it collapses, then hides", async ()
   expect(panel).not.toBeNull()
   expect(panel).not.toHaveAttribute("hidden")
 
-  panel?.style.setProperty("animation-duration", SLOW_EXIT)
-
   await userEvent.click(firstHeader)
 
   // `interpolate-size` is Chromium's, which is what this suite runs.
@@ -191,9 +239,11 @@ test("an accordion section stays shown while it collapses, then hides", async ()
   expect(panel).not.toHaveAttribute("hidden")
   expect(panel).toHaveAttribute("inert")
 
+  finishMotion(panel as HTMLElement)
+
   await waitFor(() => {
     expect(panel).toHaveAttribute("hidden")
-  }, MOTION_TIMEOUT)
+  })
 })
 
 test("an accordion section drops its open class when it has opened", async () => {
@@ -213,11 +263,13 @@ test("an accordion section drops its open class when it has opened", async () =>
 
   // Off once it has opened, so showing an ancestor again does not
   // replay it, and its `overflow: clip` no longer clips the content.
+  finishMotion(panel)
+
   await waitFor(() => {
     expect(panel).not.toHaveClass(
       "charcuterie-disclosure-enter",
     )
-  }, MOTION_TIMEOUT)
+  })
 
   expect(panel).not.toHaveAttribute("hidden")
 })

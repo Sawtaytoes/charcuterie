@@ -1,11 +1,15 @@
 import { composeStories } from "@storybook/react"
+import { hydrateRoot } from "react-dom/client"
+import { renderToString } from "react-dom/server"
 import { expect, waitFor } from "storybook/test"
 import { test } from "vitest"
 
 import { expectNoAxeViolations } from "../expectNoAxeViolations.testHelpers.ts"
 import { mountStory } from "../mountStory.testHelpers.ts"
 import { expectAgentDrivable } from "../testing/index.ts"
+import { waitForImagesToFinish } from "../waitForImages.testHelpers.ts"
 import * as stories from "./Avatar.stories.tsx"
+import { Avatar } from "./Avatar.tsx"
 
 const { AllStates, AllVariants, Playground, InAList } =
   composeStories(stories)
@@ -79,12 +83,19 @@ test("an unassigned avatar renders nothing at all", async () => {
  * because nobody writes the `onError` until they see it.
  */
 test("a photo that fails falls back to the initials", async () => {
-  const { canvas } = await mountStory(AllStates)
+  const { canvas, canvasElement } =
+    await mountStory(AllStates)
 
   const broken = expectAgentDrivable(canvas, {
     name: "Kit Sandoval",
     role: "img",
   })
+
+  // Wait for the browser's answer about each photo, not for a clock:
+  // the 404 comes back from the dev server whenever it gets to it,
+  // and on a shared CI runner that was later than `waitFor`'s 1 s.
+  // What is left after it is the component's own re-render.
+  await waitForImagesToFinish(canvasElement)
 
   await waitFor(async () => {
     await expect(broken.querySelector("img")).toBeNull()
@@ -107,6 +118,48 @@ test("a photo that fails falls back to the initials", async () => {
     "alt",
     "",
   )
+})
+
+/**
+ * The same promise for a server render, where `onError` alone cannot
+ * keep it. The browser loads a server-rendered photo while it parses
+ * the HTML, so a 404 can land before `hydrateRoot` attaches the
+ * listener, and React does not set `src` again to repeat it. Without
+ * the check `useImageFailure` makes when React attaches its ref, the
+ * broken-image glyph stays for good.
+ */
+test("a photo that failed before hydration still falls back to the initials", async () => {
+  const avatar = (
+    <Avatar
+      imageUrl="/charcuterie-missing-portrait.png"
+      name="Kit Sandoval"
+    />
+  )
+
+  const host = document.createElement("div")
+
+  document.body.append(host)
+
+  host.innerHTML = renderToString(avatar)
+
+  // The photo has failed, and nothing was listening yet.
+  await waitForImagesToFinish(host)
+
+  await expect(host.querySelector("img")).not.toBeNull()
+
+  const root = hydrateRoot(host, avatar)
+
+  try {
+    await waitFor(async () => {
+      await expect(host.querySelector("img")).toBeNull()
+    })
+
+    await expect(host).toHaveTextContent("KS")
+  } finally {
+    root.unmount()
+
+    host.remove()
+  }
 })
 
 /**

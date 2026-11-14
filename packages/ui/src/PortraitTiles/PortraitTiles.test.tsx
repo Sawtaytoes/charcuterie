@@ -1,10 +1,16 @@
 import { composeStories } from "@storybook/react"
+import type { ReactNode } from "react"
+import { useLayoutEffect, useState } from "react"
+import { createRoot, hydrateRoot } from "react-dom/client"
+import { renderToString } from "react-dom/server"
 import { expect, userEvent, waitFor } from "storybook/test"
 import { test } from "vitest"
 
 import { expectNoAxeViolations } from "../expectNoAxeViolations.testHelpers.ts"
 import { mountStory } from "../mountStory.testHelpers.ts"
 import { expectAgentDrivable } from "../testing/index.ts"
+import { waitForImagesToFinish } from "../waitForImages.testHelpers.ts"
+import { PortraitAvatar } from "./PortraitAvatar.tsx"
 import * as stories from "./PortraitTiles.stories.tsx"
 
 const {
@@ -104,23 +110,23 @@ test("a picture that fails to load falls back to the initials", async () => {
     role: "group",
   })
 
-  // A real 404 over the network, not a mocked error event, so it gets
-  // longer than `waitFor`'s 1 s default: with four browser windows
-  // sharing a CI runner the failure arrived after it.
-  await waitFor(
-    async () => {
-      const broken = Array.from(
-        group.querySelectorAll<HTMLImageElement>("img"),
-      ).find((one) =>
-        one.src.includes("charcuterie-missing-portrait"),
-      )
+  // A real 404 over the network, not a mocked error event, so the
+  // wait is for the browser's answer rather than for a clock. With
+  // four browser windows sharing a CI runner the 404 arrived after
+  // `waitFor`'s 1 s default, and a longer clock only moves the line.
+  await waitForImagesToFinish(group)
 
-      // Gone from the DOM entirely, replaced by the letter — not left
-      // in place with a broken-image glyph in it.
-      await expect(broken).toBeUndefined()
-    },
-    { timeout: 5000 },
-  )
+  await waitFor(async () => {
+    const broken = Array.from(
+      group.querySelectorAll<HTMLImageElement>("img"),
+    ).find((one) =>
+      one.src.includes("charcuterie-missing-portrait"),
+    )
+
+    // Gone from the DOM entirely, replaced by the letter — not left
+    // in place with a broken-image glyph in it.
+    await expect(broken).toBeUndefined()
+  })
 
   const bailey = expectAgentDrivable(canvas, {
     name: "Bailey 860 points",
@@ -199,6 +205,202 @@ test("a fixed layout skips the query", async () => {
  * satisfies every check that the element rendered — which is exactly
  * how a token name that did not exist shipped in Docket.
  */
+const MISSING_PICTURE = "/charcuterie-missing-portrait.png"
+
+/** A picture that loads with no network and no fixture file. */
+const WORKING_PICTURE = `data:image/svg+xml;utf8,${encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" fill="#2F6F4E"/></svg>',
+)}`
+
+/**
+ * A failure belongs to the URL that failed, not to the tile. An
+ * expired signed URL is replaced by a fresh one, and the tile has to
+ * try it: it used to keep a boolean, and showed the letter for the
+ * rest of its life.
+ */
+test("a tile whose picture failed tries the next one it is given", async () => {
+  const host = document.createElement("div")
+
+  document.body.append(host)
+
+  const root = createRoot(host)
+
+  const renderPicture = (imageSrc: string) => {
+    root.render(
+      <PortraitAvatar
+        className=""
+        imageSrc={imageSrc}
+        initials="B"
+      />,
+    )
+  }
+
+  try {
+    renderPicture(MISSING_PICTURE)
+
+    await waitFor(async () => {
+      await expect(host.querySelector("img")).not.toBeNull()
+    })
+
+    await waitForImagesToFinish(host)
+
+    await waitFor(async () => {
+      await expect(host.querySelector("img")).toBeNull()
+    })
+
+    renderPicture(WORKING_PICTURE)
+
+    await waitFor(async () => {
+      await expect(host.querySelector("img")).not.toBeNull()
+    })
+
+    // It loaded, and it stays a picture.
+    await waitForImagesToFinish(host)
+
+    await expect(host.querySelector("img")).toHaveAttribute(
+      "src",
+      WORKING_PICTURE,
+    )
+  } finally {
+    root.unmount()
+
+    host.remove()
+  }
+})
+
+/**
+ * As for `Avatar`: a server-rendered picture can fail before
+ * `hydrateRoot` attaches `onError`, and React does not repeat the
+ * request, so the check has to happen when the ref is attached.
+ */
+test("a picture that failed before hydration still falls back to the initials", async () => {
+  const picture = (
+    <PortraitAvatar
+      className=""
+      imageSrc={MISSING_PICTURE}
+      initials="B"
+    />
+  )
+
+  const host = document.createElement("div")
+
+  document.body.append(host)
+
+  host.innerHTML = renderToString(picture)
+
+  await waitForImagesToFinish(host)
+
+  await expect(host.querySelector("img")).not.toBeNull()
+
+  const root = hydrateRoot(host, picture)
+
+  try {
+    await waitFor(async () => {
+      await expect(host.querySelector("img")).toBeNull()
+    })
+
+    await expect(host).toHaveTextContent("B")
+  } finally {
+    root.unmount()
+
+    host.remove()
+  }
+})
+
+/** Two animation frames, as in `mountStory`: a barrier, not a clock. */
+const settleFrames = () =>
+  new Promise<void>((resolve) => {
+    globalThis.requestAnimationFrame(() => {
+      globalThis.requestAnimationFrame(() => {
+        resolve()
+      })
+    })
+  })
+
+const OTHER_WORKING_PICTURE = `data:image/svg+xml;utf8,${encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" fill="#6F2F4E"/></svg>',
+)}`
+
+/**
+ * Shows the first picture, and swaps to the second in a layout
+ * effect — in the same commit that hydrates it, so before the
+ * browser can finish decoding the first. `isBack` swaps back.
+ */
+const SwitchingPicture = ({
+  isBack,
+}: {
+  isBack: boolean
+}): ReactNode => {
+  const [hasSwapped, setHasSwapped] = useState(false)
+
+  useLayoutEffect(() => {
+    setHasSwapped(true)
+  }, [])
+
+  return (
+    <PortraitAvatar
+      className=""
+      imageSrc={
+        hasSwapped && !isBack
+          ? OTHER_WORKING_PICTURE
+          : WORKING_PICTURE
+      }
+      initials="B"
+    />
+  )
+}
+
+/**
+ * The check that catches a failure from before hydration asks
+ * `decode()`, and `decode()` also rejects when a newer `src`
+ * supersedes the request. That rejection is not a failure. Read as
+ * one, it marked the first picture dead, and the tile showed the
+ * letter when it came back to that picture.
+ */
+test("a picture that a new one superseded is not marked as failed", async () => {
+  const host = document.createElement("div")
+
+  document.body.append(host)
+
+  host.innerHTML = renderToString(
+    <SwitchingPicture isBack={false} />,
+  )
+
+  // Loaded before hydration, so the ref's check runs `decode()`.
+  await waitForImagesToFinish(host)
+
+  const root = hydrateRoot(
+    host,
+    <SwitchingPicture isBack={false} />,
+  )
+
+  try {
+    await waitFor(async () => {
+      await expect(
+        host.querySelector("img"),
+      ).toHaveAttribute("src", OTHER_WORKING_PICTURE)
+    })
+
+    // The second picture has loaded, the first one's decode has been
+    // superseded, and React has committed whatever that caused.
+    await waitForImagesToFinish(host)
+
+    await settleFrames()
+
+    root.render(<SwitchingPicture isBack />)
+
+    await waitFor(async () => {
+      await expect(
+        host.querySelector("img"),
+      ).toHaveAttribute("src", WORKING_PICTURE)
+    })
+  } finally {
+    root.unmount()
+
+    host.remove()
+  }
+})
+
 test("each portrait wears a different hue, and a named one holds it", async () => {
   const { canvas } = await mountStory(Playground)
 

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react"
-import { useState } from "react"
+
+import { useImageFailure } from "../useImageFailure.ts"
 
 /**
  * The face, and the one piece of this component that holds state.
@@ -10,6 +11,11 @@ import { useState } from "react"
  * gives for a 404, a wrong content type, or a file the user's
  * network stripped — so the fallback the caller already supplied for
  * "no picture" covers "no picture *today*" as well.
+ *
+ * The failure is keyed by URL, so a tile whose photo failed tries
+ * again when the caller passes a new one, and a photo that failed
+ * before a server render hydrated is noticed too — see
+ * `useImageFailure`.
  *
  * Its own component because the state is per portrait. Hoisting it
  * to a `Record<string, boolean>` in the set would re-render every
@@ -24,7 +30,8 @@ export const PortraitAvatar = ({
   imageSrc: string | undefined
   initials: ReactNode
 }): ReactNode => {
-  const [isImageBroken, setIsImageBroken] = useState(false)
+  const { hasFailed: isImageBroken, imageProps } =
+    useImageFailure(imageSrc)
 
   if (imageSrc === undefined || isImageBroken) {
     return (
@@ -36,13 +43,11 @@ export const PortraitAvatar = ({
 
   return (
     <img
+      {...imageProps}
       // The name is beside it, inside the same tile, so an alt here
       // is the name announced twice.
       alt=""
       className={className}
-      onError={() => {
-        setIsImageBroken(true)
-      }}
       src={imageSrc}
     />
   )
