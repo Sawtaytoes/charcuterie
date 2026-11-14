@@ -335,7 +335,11 @@ become accepted baselines automatically. Existing repositories need no new input
   modes on 2026-11-13. With the old launch it survived by writing pages to the pool and
   timing out shots; with `/dev/shm` it was OOM-killed. That runner now has 12 GiB. Pixels do not change, because shared memory
   carries the same buffers either way. A repo's own `captureCommand` launches its own browser
-  and does not get this.
+  and gets this only when it asks: import `$VRT_TOOLS/sharedMemory.js` (the step runs with
+  `VRT_TOOLS` set), call `chooseSharedMemory(await readAvailableSharedMemory())`, print its
+  `message`, and pass its `ignoreDefaultArgs` to `chromium.launch` (or to
+  `@vitest/browser-playwright`'s `launchOptions`). image-viewer, CastKit, and rip-deck do this;
+  queuepilot keeps a typed copy of the same rule.
   Measured on 2026-11-13 with the mux-magic Storybook, 160 shots in the runner image: the
   old launch dirtied 2.2 GB of pool pages, and the new one 3 MB. The shots matched as
   closely as two runs of the old launch match each other.
@@ -345,3 +349,18 @@ become accepted baselines automatically. Existing repositories need no new input
   checkout's `git clean -ffdx` removes `node_modules` on every run. With the store on another
   filesystem, pnpm copied every package back in (515 MB for mux-magic); on the same one, it
   links them (hard links or clones) instead of copying. The browser download also survives a container rebuild there.
+  A caller's own `setupCommand` should pass `--store-dir "$VRT_PNPM_STORE_DIR"` for the same reason.
+- **The tool cache is pruned by the job's last step** (`pruneToolCache.js`), at most once a
+  day (`VRT_TOOL_CACHE_PRUNE_HOURS`, default 24), or at once when the pnpm store and browsers
+  together exceed `VRT_TOOL_CACHE_MAX_GIB` (default 5). It runs while this job's `node_modules`
+  still exist, so "in use" means "used by this job": `pnpm store prune` removes every package no
+  registered project still uses, and a browser directory that no live Playwright link in
+  `.links/` names is removed. A stamp file, `.vrt-tool-cache-pruned`, in the cache root records
+  the last prune. A later job downloads again whatever it needs. A failure only warns.
+- ⚠️ **Playwright's own browser cleanup ran at the wrong time.** Every `playwright install`
+  removes the browsers no installed package still needs. In this workflow the tools' install
+  runs after the checkout's `git clean` has removed the repo's `node_modules`, so it removed the
+  repo's own browser, and a capture that installs its own Playwright's browser downloaded it
+  again on every run (rip-deck's `chromium_headless_shell-1234`, measured on 2026-11-13). The
+  workflow sets `PLAYWRIGHT_SKIP_BROWSER_GC=1` for the whole job and leaves the cleanup to the
+  prune step.
