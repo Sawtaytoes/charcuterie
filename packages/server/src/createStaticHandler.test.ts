@@ -214,6 +214,45 @@ describe("cache headers on a miss", () => {
     )
   })
 
+  // Reading `c.res` makes Hono build a Response on the context, and
+  // Hono merges that Response's headers over the handler's.
+  test("a hit wins over a policy on a Response an earlier middleware built", async () => {
+    const withResponse = new Hono()
+    withResponse.use("*", async (context, next) => {
+      context.header("Cache-Control", "private, no-store")
+      void context.res
+      await next()
+    })
+    withResponse.use("*", createStaticHandler({ rootDir }))
+    withResponse.notFound((context) =>
+      context.json({ error: "not found" }, 404),
+    )
+
+    const asset = await withResponse.request(
+      "/assets/index-D7e1J0tu.js",
+    )
+    const shell = await withResponse.request("/index.html")
+    const route = await withResponse.request("/errors")
+    const missing = await withResponse.request(
+      "/assets/gone-12345678.js",
+    )
+
+    expect(asset.headers.get("cache-control")).toBe(
+      IMMUTABLE_CACHE_CONTROL,
+    )
+    expect(shell.headers.get("cache-control")).toBe(
+      REVALIDATE_CACHE_CONTROL,
+    )
+    expect(route.headers.get("cache-control")).toBe(
+      REVALIDATE_CACHE_CONTROL,
+    )
+    expect(await route.text()).toBe(INDEX_SOURCE)
+    expect(missing.status).toBe(404)
+    expect(missing.headers.get("cache-control")).toBe(
+      "private, no-store",
+    )
+  })
+
   test("a server route behind the handler keeps its own headers", async () => {
     const routed = new Hono()
     routed.use("*", createStaticHandler({ rootDir }))

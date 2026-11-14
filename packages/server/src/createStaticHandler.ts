@@ -297,13 +297,17 @@ export const createStaticHandler = ({
     // `/assets/*.js` went out as `immutable` and a browser kept that
     // 404 for a year. `serveStatic` builds its Response with mutable
     // headers, and `etag` below keeps `Cache-Control` on its 304.
-    response.headers.set(
-      "Cache-Control",
-      resolveCacheControl({
-        immutablePathPrefixes,
-        pathname: path,
-      }),
-    )
+    //
+    // Set on the context too, now that there is a hit. A middleware
+    // that read `c.res` before `next()` has materialised a Response
+    // on the context, and Hono merges that one's headers over the
+    // one returned here, so its `Cache-Control` would otherwise win.
+    const cacheControl = resolveCacheControl({
+      immutablePathPrefixes,
+      pathname: path,
+    })
+    response.headers.set("Cache-Control", cacheControl)
+    context.header("Cache-Control", cacheControl)
 
     if (isImmutable) {
       return response
