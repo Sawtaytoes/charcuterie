@@ -527,6 +527,21 @@ describe("SPA fallback", () => {
     expect(response.status).toBe(404)
   })
 
+  // The bucket follows the request path, so the shell served here
+  // would go out `immutable` and a browser would keep it for a year.
+  test.each(["/assets/gone", "/assets/"])(
+    "the extensionless miss %s under the hashed prefix is a 404, not an immutable shell",
+    async (path) => {
+      const response = await request(path)
+
+      expect(response.status).toBe(404)
+      expect(await response.text()).not.toBe(INDEX_SOURCE)
+      expect(
+        response.headers.get("cache-control"),
+      ).toBeNull()
+    },
+  )
+
   // Hono normalises `/../../etc/passwd` to `/etc/passwd` before any
   // handler sees it, so the only traversal that reaches us is a
   // percent-encoded one. `serveStatic` decodes, then refuses it.
