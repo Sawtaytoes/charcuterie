@@ -167,6 +167,187 @@ describe("cache headers", () => {
   })
 })
 
+// A miss falls through to the app's own handler, and the app's 404
+// must not carry a promise the handler made for a file it never
+// found. A cached `immutable` 404 for a hashed URL keeps a browser
+// from ever fetching the asset once it exists.
+describe("cache headers on a miss", () => {
+  test("a missing hashed asset's 404 is not immutable", async () => {
+    const response = await request(
+      "/assets/gone-12345678.js",
+    )
+
+    expect(response.status).toBe(404)
+    expect(response.headers.get("cache-control")).toBe(null)
+  })
+
+  test("a missing asset outside the hashed prefix carries no policy either", async () => {
+    const response = await request("/gone-12345678.js")
+
+    expect(response.status).toBe(404)
+    expect(response.headers.get("cache-control")).toBe(null)
+  })
+
+  test("a miss keeps a Cache-Control the app set before the handler", async () => {
+    const withPolicy = new Hono()
+    withPolicy.use("*", async (context, next) => {
+      context.header("Cache-Control", "private, no-store")
+      await next()
+    })
+    withPolicy.use("*", createStaticHandler({ rootDir }))
+    withPolicy.notFound((context) =>
+      context.json({ error: "not found" }, 404),
+    )
+
+    const missing = await withPolicy.request(
+      "/assets/gone-12345678.js",
+    )
+    const found = await withPolicy.request(
+      "/assets/index-D7e1J0tu.js",
+    )
+
+    expect(missing.status).toBe(404)
+    expect(missing.headers.get("cache-control")).toBe(
+      "private, no-store",
+    )
+    expect(found.headers.get("cache-control")).toBe(
+      IMMUTABLE_CACHE_CONTROL,
+    )
+  })
+
+  // Reading `c.res` makes Hono build a Response on the context, and
+  // Hono merges that Response's headers over the handler's.
+  test("a hit wins over a policy on a Response an earlier middleware built", async () => {
+    const withResponse = new Hono()
+    withResponse.use("*", async (context, next) => {
+      context.header("Cache-Control", "private, no-store")
+      void context.res
+      await next()
+    })
+    withResponse.use("*", createStaticHandler({ rootDir }))
+    withResponse.notFound((context) =>
+      context.json({ error: "not found" }, 404),
+    )
+
+    const asset = await withResponse.request(
+      "/assets/index-D7e1J0tu.js",
+    )
+    const shell = await withResponse.request("/index.html")
+    const route = await withResponse.request("/errors")
+    const missing = await withResponse.request(
+      "/assets/gone-12345678.js",
+    )
+
+    expect(asset.headers.get("cache-control")).toBe(
+      IMMUTABLE_CACHE_CONTROL,
+    )
+    expect(shell.headers.get("cache-control")).toBe(
+      REVALIDATE_CACHE_CONTROL,
+    )
+    expect(route.headers.get("cache-control")).toBe(
+      REVALIDATE_CACHE_CONTROL,
+    )
+    expect(await route.text()).toBe(INDEX_SOURCE)
+    expect(missing.status).toBe(404)
+    expect(missing.headers.get("cache-control")).toBe(
+      "private, no-store",
+    )
+  })
+
+  test("a server route behind the handler keeps its own headers", async () => {
+    const routed = new Hono()
+    routed.use("*", createStaticHandler({ rootDir }))
+    routed.get("/assets/generated.json", (context) =>
+      context.json({ isGenerated: true }),
+    )
+
+    const response = await routed.request(
+      "/assets/generated.json",
+    )
+
+    expect(await response.json()).toEqual({
+      isGenerated: true,
+    })
+    expect(response.headers.get("cache-control")).toBe(null)
+  })
+})
+
+// The handler is for reads. A write that reaches it belongs to the
+// app: serving a file or the shell in answer to a POST tells the
+// client its write succeeded.
+describe("methods", () => {
+  const buildMethodApp = () => {
+    const methodApp = new Hono()
+    methodApp.use("*", createStaticHandler({ rootDir }))
+    methodApp.post("/assets/index-D7e1J0tu.js", (context) =>
+      context.text("app write", 201),
+    )
+    methodApp.notFound((context) =>
+      context.json({ error: "not found" }, 404),
+    )
+    return methodApp
+  }
+
+  test.each(["POST", "PUT", "PATCH", "DELETE", "OPTIONS"])(
+    "%s to a real file falls through to the app",
+    async (method) => {
+      const response = await buildMethodApp().request(
+        "/assets/index-D7e1J0tu.js",
+        { method },
+      )
+
+      expect(await response.text()).not.toBe(BUNDLE_SOURCE)
+      expect(response.headers.get("cache-control")).toBe(
+        null,
+      )
+    },
+  )
+
+  test("POST to a real file reaches the app's own route", async () => {
+    const response = await buildMethodApp().request(
+      "/assets/index-D7e1J0tu.js",
+      { method: "POST" },
+    )
+
+    expect(response.status).toBe(201)
+    expect(await response.text()).toBe("app write")
+  })
+
+  test.each(["POST", "PUT", "DELETE"])(
+    "%s to a client route is not answered with the shell",
+    async (method) => {
+      const response = await buildMethodApp().request(
+        "/errors",
+        { method },
+      )
+
+      expect(response.status).toBe(404)
+      expect(await response.text()).not.toBe(INDEX_SOURCE)
+    },
+  )
+
+  test("POST to the build marker falls through", async () => {
+    const response = await buildMethodApp().request(
+      "/__charcuterie/deployment",
+      { method: "POST" },
+    )
+
+    expect(response.status).toBe(404)
+  })
+
+  test("HEAD to a real file still answers", async () => {
+    const response = await buildMethodApp().request(
+      "/assets/index-D7e1J0tu.js",
+      { method: "HEAD" },
+    )
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get("cache-control")).toBe(
+      IMMUTABLE_CACHE_CONTROL,
+    )
+  })
+})
+
 describe("deployment marker", () => {
   test("falls through when the build output does not exist yet", async () => {
     const missingOutput = new Hono()

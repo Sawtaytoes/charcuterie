@@ -25,6 +25,12 @@ import {
  */
 const HAS_EXTENSION_REGEX = /\.[^/]+$/
 
+/** The methods a static file answers. Everything else falls through. */
+const READ_METHODS: ReadonlySet<string> = new Set([
+  "GET",
+  "HEAD",
+])
+
 /**
  * Whether a request path belongs to the server rather than to the
  * SPA. Matches on a segment boundary, so `/api` owns `/api` and
@@ -233,6 +239,14 @@ export const createStaticHandler = ({
         })
 
   return async (context, next) => {
+    // Reads only. `@hono/node-server` 1.x answers any method with
+    // the file, so a POST to `/index.html` got a 200 and the shell
+    // and a client was told its write had worked. A write belongs to
+    // the app, and the app's own route, 404, or 405 answers it.
+    if (!READ_METHODS.has(context.req.method)) {
+      return next()
+    }
+
     if (deploymentHandler) {
       let hasFallenThrough = false
       const continueToStatic = async () => {
@@ -257,18 +271,6 @@ export const createStaticHandler = ({
       pathname: path,
     })
 
-    // Set before delegating: `c.header()` writes into the prepared
-    // headers that `serveStatic`'s `c.body()` builds the response
-    // from. After the fact is too late — the Response has already
-    // copied them.
-    context.header(
-      "Cache-Control",
-      resolveCacheControl({
-        immutablePathPrefixes,
-        pathname: path,
-      }),
-    )
-
     // `serveStatic` signals "no such file" by calling `next()`
     // rather than returning. Handing it our own `next` keeps that
     // signal local instead of letting it fall through the whole
@@ -287,6 +289,25 @@ export const createStaticHandler = ({
     if (!response) {
       return next()
     }
+
+    // Set on the Response this handler is returning, and only once
+    // there is one. Setting it on the context before the lookup put
+    // it into the prepared headers that every later handler's
+    // response is built from, so the app's 404 for a missing
+    // `/assets/*.js` went out as `immutable` and a browser kept that
+    // 404 for a year. `serveStatic` builds its Response with mutable
+    // headers, and `etag` below keeps `Cache-Control` on its 304.
+    //
+    // Set on the context too, now that there is a hit. A middleware
+    // that read `c.res` before `next()` has materialised a Response
+    // on the context, and Hono merges that one's headers over the
+    // one returned here, so its `Cache-Control` would otherwise win.
+    const cacheControl = resolveCacheControl({
+      immutablePathPrefixes,
+      pathname: path,
+    })
+    response.headers.set("Cache-Control", cacheControl)
+    context.header("Cache-Control", cacheControl)
 
     if (isImmutable) {
       return response

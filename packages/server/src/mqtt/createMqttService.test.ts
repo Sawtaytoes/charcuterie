@@ -13,22 +13,23 @@ type Published = {
   topic: string
 }
 
-function createFakeClient(): MqttClientLike & {
+type FakeClient = MqttClientLike & {
   emit: (topic: string, payload?: unknown) => void
+  /** Drop the connection, then reconnect as `mqtt` does. */
+  reconnect: () => void
   published: Published[]
   subscriptions: string[]
-} {
+}
+
+function createFakeClient(): FakeClient {
+  const onConnect: Array<() => void> = []
   let onMessage:
     | ((topic: string, payload: Buffer) => void)
     | undefined
   const published: Published[] = []
   const subscriptions: string[] = []
 
-  const client: MqttClientLike & {
-    emit: (topic: string, payload?: unknown) => void
-    published: Published[]
-    subscriptions: string[]
-  } = {
+  const client: FakeClient = {
     isConnected: true,
     emit(topic, payload = {}) {
       const raw =
@@ -46,6 +47,15 @@ function createFakeClient(): MqttClientLike & {
           topic: string,
           payload: Buffer,
         ) => void
+      }
+      if (event === "connect") {
+        onConnect.push(callback as () => void)
+      }
+    },
+    reconnect() {
+      client.isConnected = true
+      for (const callback of onConnect) {
+        callback()
       }
     },
     publish(topic, payload, opts) {
@@ -83,6 +93,58 @@ describe("createMqttService", () => {
     expect(client.subscriptions).toEqual([
       "board-game-picker/cmd/+",
     ])
+    expect(client.published).toEqual([
+      {
+        isRetained: true,
+        payload: JSON.stringify({ online: true }),
+        qos: 1,
+        topic: "board-game-picker/status",
+      },
+    ])
+  })
+
+  // The broker replaces the retained status with the last will when
+  // the connection drops. `createMqttService.broker.test.ts` shows
+  // that against a real client and broker.
+  test("puts the retained status back when the client reconnects", async () => {
+    const client = createFakeClient()
+    const mqtt = await createMqttService({
+      base: "board-game-picker",
+      client,
+    })
+    mqtt.publishStatus({ online: true, version: "1.2.3" })
+    mqtt.publishStatus(
+      { progress: 0.5 },
+      { isRetained: false },
+    )
+
+    client.isConnected = false
+    mqtt.publishStatus({ online: true, version: "1.2.4" })
+    client.reconnect()
+
+    expect(client.published.at(-1)).toEqual({
+      isRetained: true,
+      payload: JSON.stringify({
+        online: true,
+        version: "1.2.4",
+      }),
+      qos: 1,
+      topic: "board-game-picker/status",
+    })
+  })
+
+  test("announces online on the first connect of an injected client", async () => {
+    const client = createFakeClient()
+    client.isConnected = false
+    await createMqttService({
+      base: "board-game-picker",
+      client,
+    })
+
+    expect(client.published).toEqual([])
+
+    client.reconnect()
+
     expect(client.published).toEqual([
       {
         isRetained: true,

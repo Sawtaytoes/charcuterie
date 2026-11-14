@@ -47,14 +47,10 @@
   "peerDependencies": {
     "@hono/node-server": ">=1.13",
     "hono": ">=4",
-    "mqtt": ">=5",
-    "vite": ">=5"
+    "mqtt": ">=5"
   },
   "peerDependenciesMeta": {
     "mqtt": {
-      "optional": true
-    },
-    "vite": {
       "optional": true
     }
   },
@@ -63,6 +59,7 @@
     "@types/node": "^25.6.2",
     "hono": "^4.13.11",
     "mqtt": "^5.15.2",
+    "mqtt-packet": "^9.0.2",
     "typescript": "^6.0.3",
     "vite": "^8.1.6",
     "vitest": "^4.1.12"

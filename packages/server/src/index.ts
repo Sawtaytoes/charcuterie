@@ -3,8 +3,9 @@
  * and the same-origin write guard and body limit every app's API
  * mounts in front of its routes.
  *
- * The build-time counterpart lives at `@charcuterie/server/vite`,
- * kept behind its own entry point so a server never resolves Vite.
+ * The build-time counterpart lives at `@charcuterie/server/vite`.
+ * It imports nothing from Vite, so the package declares no Vite
+ * dependency and a server's production install never installs it.
  */
 
 export {
