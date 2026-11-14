@@ -1,5 +1,33 @@
 # @charcuterie/server
 
+## 0.8.0
+
+### Minor Changes
+
+- 4f403b8: `createMqttService` sets `<base>/status` back after a reconnect. The broker replaced the
+  retained status with the last will, `{ online: false }`, when the connection dropped, and
+  nothing published it again, so Home Assistant showed the app offline until it restarted. On
+  every reconnect the service now republishes the last retained status the app published, or
+  `{ online: true }`. A status published while the client was disconnected is kept and
+  published on the reconnect. The new `reconnectPeriodMs` option sets the wait between
+  attempts (default 5000).
+- 4f403b8: `@charcuterie/server` no longer names Vite as a dependency of any kind. `vite` was an
+  optional peer for the `/vite` entry point, and pnpm links an optional peer to the
+  workspace's own Vite and records it in the lockfile, so a `pnpm install --prod` of an app's
+  server installed Vite, Rolldown, and their native binaries, about 20 to 30 MB the server
+  never loads. `precompressAssets()` now returns its own `PrecompressAssetsPlugin` type, which
+  the app's `vite.config.ts` still checks against Vite's `Plugin`. The import path and the
+  plugin are unchanged, so an app's dev server and build need no change. After the upgrade, an
+  app can delete any Dockerfile step that removed Vite from the runtime image by hand.
+- 4f403b8: `createStaticHandler` serves only `GET` and `HEAD`. Any other method falls through to the
+  app, so a `POST` to a real file or a client route reaches the app's own route, 404, or 405
+  instead of a `200` with the file or the shell. `@hono/node-server` 1.x answered every method
+  with the file. `createDeploymentHandler` does the same for its two endpoints.
+
+  The handler now sets `Cache-Control` only on the response it serves. Before, a miss carried
+  the header into the app's next handler, so the app's 404 for a missing `/assets/*.js` went
+  out as `public, max-age=31536000, immutable`. A miss now leaves the app's own headers alone.
+
 ## 0.7.1
 
 ### Patch Changes
