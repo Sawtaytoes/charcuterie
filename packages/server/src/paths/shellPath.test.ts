@@ -32,10 +32,27 @@ describe("getIsShellPath without serverPathPrefixes", () => {
     ["/errors", true],
     ["/bay/3", true],
     ["/assets/gone.js", false],
+    ["/assets/gone", false],
+    ["/assets/", false],
     ["/gone.js", false],
     ["/docs/readme.md", false],
   ])("%s gets the shell: %s", (pathname, isShellPath) => {
     expect(getIsShellPath({ pathname })).toBe(isShellPath)
+  })
+
+  test("an extensionless path under a custom immutable prefix is not the shell", () => {
+    expect(
+      getIsShellPath({
+        immutablePathPrefixes: ["/manage/assets/"],
+        pathname: "/manage/assets/gone",
+      }),
+    ).toBe(false)
+    expect(
+      getIsShellPath({
+        immutablePathPrefixes: ["/manage/assets/"],
+        pathname: "/manage/views",
+      }),
+    ).toBe(true)
   })
 })
 

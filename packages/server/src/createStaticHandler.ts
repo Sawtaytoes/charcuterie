@@ -33,7 +33,9 @@ export type StaticHandlerOptions = {
   /**
    * Request-path prefixes whose contents are content-hashed and may
    * be cached forever. Defaults to `["/assets/"]`, Vite's
-   * `build.assetsDir`.
+   * `build.assetsDir`. A miss under one of these is never the SPA
+   * shell, with or without `serverPathPrefixes`: it falls through
+   * to the app's 404.
    */
   immutablePathPrefixes?: readonly string[]
 
