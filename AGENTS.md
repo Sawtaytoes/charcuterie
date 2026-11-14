@@ -83,7 +83,9 @@ pnpm install
 pnpm build          # every package, topological
 pnpm test           # vitest: node + ui-dom (chromium) + storybook (chromium)
 pnpm typecheck
-pnpm lint           # biome --write --unsafe, then eslint --fix
+pnpm lint           # biome --write --unsafe, then eslint --fix; a warning fails both
+pnpm lint:biome     # check mode, as CI runs it: biome check --error-on-warnings
+pnpm lint:eslint    # check mode, as CI runs it: eslint . --max-warnings 0
 pnpm check:contrast # WCAG 2.2 AA, with numbers
 
 pnpm build:storybook && pnpm smoke:storybook
