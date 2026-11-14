@@ -21,10 +21,7 @@ import {
   IMMUTABLE_CACHE_CONTROL,
   REVALIDATE_CACHE_CONTROL,
 } from "./cachePolicy.ts"
-import {
-  createStaticHandler,
-  getIsServerPath,
-} from "./createStaticHandler.ts"
+import { createStaticHandler } from "./createStaticHandler.ts"
 
 // Long enough that the compressed siblings come out smaller, so
 // the negotiation under test is the real one.
@@ -716,27 +713,6 @@ describe("SPA fallback with serverPathPrefixes", () => {
 
     expect(response.status).toBe(404)
   })
-})
-
-describe("getIsServerPath", () => {
-  test.each([
-    ["/api", true],
-    ["/api/", true],
-    ["/api/items", true],
-    ["/apiary", false],
-    ["/", false],
-    ["/docs/api", false],
-  ])(
-    "%s is a server path: %s",
-    (pathname, isServerPath) => {
-      expect(
-        getIsServerPath({
-          pathname,
-          serverPathPrefixes: ["/api"],
-        }),
-      ).toBe(isServerPath)
-    },
-  )
 })
 
 // A mount whose URL prefix is not a real directory: board-games

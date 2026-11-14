@@ -4,7 +4,9 @@ The fleet's Node server kit: **precompressed bytes, honest cache headers, and
 one 304 where it helps**, plus MQTT `cmd/*` / `resp/*` for talking to Home Assistant.
 The Vite plugin that produces the compressed bytes lives beside the static handler
 because the two halves are one contract and shipping them apart is how they drift.
-MQTT is a separate subpath so a static-only app never resolves `mqtt`.
+MQTT is a separate subpath so a static-only app never resolves `mqtt`, and the SPA
+fallback's path rules are a separate subpath, `@charcuterie/server/paths`, so a server
+that is not Hono can share them.
 
 ## Why this exists
 
@@ -372,6 +374,26 @@ miss under `immutablePathPrefixes`: a missing hashed asset stays a 404, never th
 that produces `Unexpected token '<'`. Prefixes match on a segment boundary, so `/api` owns
 `/api/items` and not `/apiary`. `getIsServerPath` is the same test, exported for an app
 that needs it elsewhere.
+
+### The same rule on a server that is not Hono
+
+`getIsShellPath` is the rule the handler applies to a GET or HEAD that matched no file.
+Import it from `@charcuterie/server/paths`, which loads no framework, when the server is
+plain `node:http` and serves its own bytes:
+
+```ts
+import { getIsShellPath } from "@charcuterie/server/paths"
+
+const body =
+  readAsset(pathname) ??
+  (getIsShellPath({ pathname, serverPathPrefixes: SERVER_PATH_PREFIXES })
+    ? readIndexHtml()
+    : null)
+```
+
+It takes the same `serverPathPrefixes` and `immutablePathPrefixes` as the handler and
+answers the same way: without `serverPathPrefixes`, only an extensionless path gets the
+shell. The method check stays with the caller. Only a read gets the shell.
 
 This replaces the hand-written second handler that Folio, Foyer, and Plinth each carried:
 a `createStaticHandler` with `rewriteRequestPath: () => "/index.html"` behind an
