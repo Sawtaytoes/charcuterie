@@ -335,7 +335,11 @@ become accepted baselines automatically. Existing repositories need no new input
   modes on 2026-11-13. With the old launch it survived by writing pages to the pool and
   timing out shots; with `/dev/shm` it was OOM-killed. That runner now has 12 GiB. Pixels do not change, because shared memory
   carries the same buffers either way. A repo's own `captureCommand` launches its own browser
-  and does not get this.
+  and gets this only when it asks: import `$VRT_TOOLS/sharedMemory.js` (the step runs with
+  `VRT_TOOLS` set), call `chooseSharedMemory(await readAvailableSharedMemory())`, print its
+  `message`, and pass its `ignoreDefaultArgs` to `chromium.launch` (or to
+  `@vitest/browser-playwright`'s `launchOptions`). image-viewer, CastKit, and rip-deck do this;
+  queuepilot keeps a typed copy of the same rule.
   Measured on 2026-11-13 with the mux-magic Storybook, 160 shots in the runner image: the
   old launch dirtied 2.2 GB of pool pages, and the new one 3 MB. The shots matched as
   closely as two runs of the old launch match each other.
@@ -345,3 +349,25 @@ become accepted baselines automatically. Existing repositories need no new input
   checkout's `git clean -ffdx` removes `node_modules` on every run. With the store on another
   filesystem, pnpm copied every package back in (515 MB for mux-magic); on the same one, it
   links them (hard links or clones) instead of copying. The browser download also survives a container rebuild there.
+  A caller's own `setupCommand` should pass `--store-dir "$VRT_PNPM_STORE_DIR"` for the same reason.
+- **The tool cache is bounded by the job's last step** (`pruneToolCache.js`), which runs while
+  this job's `node_modules` still exist. Every job, a browser directory that no live Playwright
+  link in `.links/` names is removed. The pnpm store is removed whole once it is
+  `VRT_PNPM_STORE_MAX_DAYS` old (default 7, counted from the first job that saw it, in
+  `.vrt-pnpm-store-since`) or larger than `VRT_PNPM_STORE_MAX_GIB` (default 4); the next job
+  downloads what it needs. The store is renewed only when the cache root is
+  `$RUNNER_TOOL_CACHE`, never in the `$HOME/.cache` fallback, which can be a person's own store.
+  Nothing in the job runs after the step. It runs only when the steps before it succeeded, so
+  a failed job (a picture change included) leaves the cache for the next job. A failure only
+  warns.
+- ⚠️ **`pnpm store prune` is not usable here.** On 2026-11-13 pnpm 12.9.1 removed 428 of 428
+  packages from a store that a rip-deck install had just filled, run from the workspace root and
+  from outside it, so a daily prune would have emptied the store every day. The store is renewed
+  by age instead.
+- ⚠️ **Playwright's own browser cleanup ran at the wrong time.** Every `playwright install`
+  removes the browsers no installed package still needs. In this workflow the tools' install
+  runs after the checkout's `git clean` has removed the repo's `node_modules`, so it removed the
+  repo's own browser, and a capture that installs its own Playwright's browser downloaded it
+  again on every run (rip-deck's `chromium_headless_shell-1234`, measured on 2026-11-13). The
+  workflow sets `PLAYWRIGHT_SKIP_BROWSER_GC=1` for the whole job and leaves the cleanup to the
+  prune step.
