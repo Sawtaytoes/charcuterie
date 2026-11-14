@@ -175,10 +175,18 @@ test("a modal re-opened during its exit stays open", async () => {
 
   expect(modal.isConnected).toBe(true)
 
-  // Closed again, and gone, so its focus manager has let go of the
-  // page before the next test mounts into it.
+  // Closed again. This exit has to run in full: an abandoned exit
+  // listener that heard the enter end has already marked the modal
+  // done, and it would vanish here at once, with no exit at all.
+  // (`isMounted` is `isVisible || isShown`, so while it was open the
+  // assertion above could not see that.)
   await userEvent.keyboard("{Escape}")
 
+  expect(modal.isConnected).toBe(true)
+  expect(modal).toHaveClass("charcuterie-overlay-exit")
+
+  // And gone, so its focus manager has let go of the page before the
+  // next test mounts into it.
   finishMotion(modal)
 
   await waitFor(() => {
