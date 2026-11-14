@@ -56,6 +56,9 @@ export default defineConfig({
       // imported module", which names Vite's cache rather than the
       // dependency that was missing from this list.
       "react-router",
+      // The image-failure hydration tests render on the "server" in
+      // the browser; discovered mid-run, it would reload the page.
+      "react-dom/server",
     ],
   },
   test: {

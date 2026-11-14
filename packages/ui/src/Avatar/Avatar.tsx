@@ -4,11 +4,11 @@ import type {
   ComponentPropsWithRef,
   ReactNode,
 } from "react"
-import { useState } from "react"
 
 import { CATEGORICAL_APPEARANCE_CLASS } from "../categoricalStyles.ts"
 import type { IntentAppearance } from "../intentStyles.ts"
 import { toClassName } from "../toClassName.ts"
+import { useImageFailure } from "../useImageFailure.ts"
 
 export type AvatarSize = keyof typeof AVATAR_SIZE_CLASS
 
@@ -203,22 +203,12 @@ export const Avatar = ({
   ...spanProps
 }: AvatarProps): ReactNode => {
   /**
-   * The URL that failed, rather than a `hasFailed` boolean.
-   *
-   * A boolean has to be *reset* when `imageUrl` changes, which is an
-   * effect syncing a prop into state — the shape this library
-   * refuses everywhere else
-   * ([decision](../../../docs/decisions/2026-07-29-logic-hooks-are-uncontrolled.md)).
-   * Storing the URL makes the comparison below derive the answer, so
-   * a second photo gets its own attempt and a re-render never
-   * resurrects a dead one.
+   * Keyed by the URL that failed, so a second photo gets its own
+   * attempt, and it also notices a photo that failed before a
+   * server render hydrated — see `useImageFailure`.
    */
-  const [failedImageUrl, setFailedImageUrl] = useState<
-    string | undefined
-  >(undefined)
-
-  const hasImageError =
-    imageUrl !== undefined && failedImageUrl === imageUrl
+  const { hasFailed: hasImageError, imageProps } =
+    useImageFailure(imageUrl)
 
   const trimmedName = name?.trim()
 
@@ -253,11 +243,9 @@ export const Avatar = ({
         // accessible name, and a second copy on the image is how an
         // avatar gets announced twice.
         <img
+          {...imageProps}
           alt=""
           className="size-full object-cover"
-          onError={() => {
-            setFailedImageUrl(imageUrl)
-          }}
           src={imageUrl}
         />
       ) : (

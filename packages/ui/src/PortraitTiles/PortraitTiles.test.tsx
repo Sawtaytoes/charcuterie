@@ -1,4 +1,6 @@
 import { composeStories } from "@storybook/react"
+import { createRoot, hydrateRoot } from "react-dom/client"
+import { renderToString } from "react-dom/server"
 import { expect, userEvent, waitFor } from "storybook/test"
 import { test } from "vitest"
 
@@ -6,6 +8,7 @@ import { expectNoAxeViolations } from "../expectNoAxeViolations.testHelpers.ts"
 import { mountStory } from "../mountStory.testHelpers.ts"
 import { expectAgentDrivable } from "../testing/index.ts"
 import { waitForImagesToFinish } from "../waitForImages.testHelpers.ts"
+import { PortraitAvatar } from "./PortraitAvatar.tsx"
 import * as stories from "./PortraitTiles.stories.tsx"
 
 const {
@@ -200,6 +203,108 @@ test("a fixed layout skips the query", async () => {
  * satisfies every check that the element rendered — which is exactly
  * how a token name that did not exist shipped in Docket.
  */
+const MISSING_PICTURE = "/charcuterie-missing-portrait.png"
+
+/** A picture that loads with no network and no fixture file. */
+const WORKING_PICTURE = `data:image/svg+xml;utf8,${encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" fill="#2F6F4E"/></svg>',
+)}`
+
+/**
+ * A failure belongs to the URL that failed, not to the tile. An
+ * expired signed URL is replaced by a fresh one, and the tile has to
+ * try it: it used to keep a boolean, and showed the letter for the
+ * rest of its life.
+ */
+test("a tile whose picture failed tries the next one it is given", async () => {
+  const host = document.createElement("div")
+
+  document.body.append(host)
+
+  const root = createRoot(host)
+
+  const renderPicture = (imageSrc: string) => {
+    root.render(
+      <PortraitAvatar
+        className=""
+        imageSrc={imageSrc}
+        initials="B"
+      />,
+    )
+  }
+
+  try {
+    renderPicture(MISSING_PICTURE)
+
+    await waitFor(async () => {
+      await expect(host.querySelector("img")).not.toBeNull()
+    })
+
+    await waitForImagesToFinish(host)
+
+    await waitFor(async () => {
+      await expect(host.querySelector("img")).toBeNull()
+    })
+
+    renderPicture(WORKING_PICTURE)
+
+    await waitFor(async () => {
+      await expect(host.querySelector("img")).not.toBeNull()
+    })
+
+    // It loaded, and it stays a picture.
+    await waitForImagesToFinish(host)
+
+    await expect(host.querySelector("img")).toHaveAttribute(
+      "src",
+      WORKING_PICTURE,
+    )
+  } finally {
+    root.unmount()
+
+    host.remove()
+  }
+})
+
+/**
+ * As for `Avatar`: a server-rendered picture can fail before
+ * `hydrateRoot` attaches `onError`, and React does not repeat the
+ * request, so the check has to happen when the ref is attached.
+ */
+test("a picture that failed before hydration still falls back to the initials", async () => {
+  const picture = (
+    <PortraitAvatar
+      className=""
+      imageSrc={MISSING_PICTURE}
+      initials="B"
+    />
+  )
+
+  const host = document.createElement("div")
+
+  document.body.append(host)
+
+  host.innerHTML = renderToString(picture)
+
+  await waitForImagesToFinish(host)
+
+  await expect(host.querySelector("img")).not.toBeNull()
+
+  const root = hydrateRoot(host, picture)
+
+  try {
+    await waitFor(async () => {
+      await expect(host.querySelector("img")).toBeNull()
+    })
+
+    await expect(host).toHaveTextContent("B")
+  } finally {
+    root.unmount()
+
+    host.remove()
+  }
+})
+
 test("each portrait wears a different hue, and a named one holds it", async () => {
   const { canvas } = await mountStory(Playground)
 
