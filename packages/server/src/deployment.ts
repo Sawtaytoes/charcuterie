@@ -98,19 +98,33 @@ export const createDeploymentHandler = ({
       return next()
     }
 
+    // Hono answers HEAD by running this GET handler and discarding
+    // the body unread, so nothing would ever cancel a stream started
+    // here, and its heartbeat would run for the life of the process.
+    if (context.req.method === "HEAD") {
+      return context.body(null, 200, SSE_HEADERS)
+    }
+
     let heartbeat:
       | ReturnType<typeof setInterval>
       | undefined
+    const stopHeartbeat = () => {
+      if (heartbeat) {
+        globalThis.clearInterval(heartbeat)
+        heartbeat = undefined
+      }
+    }
     const stream = new ReadableStream<Uint8Array>({
-      cancel: () => {
-        if (heartbeat) {
-          globalThis.clearInterval(heartbeat)
-        }
-      },
+      cancel: stopHeartbeat,
       start: (controller) => {
         controller.enqueue(encodedEvent)
         heartbeat = globalThis.setInterval(() => {
-          controller.enqueue(encodedHeartbeat)
+          try {
+            controller.enqueue(encodedHeartbeat)
+          } catch {
+            // The stream closed or errored without a cancel.
+            stopHeartbeat()
+          }
         }, 15_000)
       },
     })
