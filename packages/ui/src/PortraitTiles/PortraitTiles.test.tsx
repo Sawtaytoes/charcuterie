@@ -5,6 +5,7 @@ import { test } from "vitest"
 import { expectNoAxeViolations } from "../expectNoAxeViolations.testHelpers.ts"
 import { mountStory } from "../mountStory.testHelpers.ts"
 import { expectAgentDrivable } from "../testing/index.ts"
+import { waitForImagesToFinish } from "../waitForImages.testHelpers.ts"
 import * as stories from "./PortraitTiles.stories.tsx"
 
 const {
@@ -104,23 +105,23 @@ test("a picture that fails to load falls back to the initials", async () => {
     role: "group",
   })
 
-  // A real 404 over the network, not a mocked error event, so it gets
-  // longer than `waitFor`'s 1 s default: with four browser windows
-  // sharing a CI runner the failure arrived after it.
-  await waitFor(
-    async () => {
-      const broken = Array.from(
-        group.querySelectorAll<HTMLImageElement>("img"),
-      ).find((one) =>
-        one.src.includes("charcuterie-missing-portrait"),
-      )
+  // A real 404 over the network, not a mocked error event, so the
+  // wait is for the browser's answer rather than for a clock. With
+  // four browser windows sharing a CI runner the 404 arrived after
+  // `waitFor`'s 1 s default, and a longer clock only moves the line.
+  await waitForImagesToFinish(group)
 
-      // Gone from the DOM entirely, replaced by the letter — not left
-      // in place with a broken-image glyph in it.
-      await expect(broken).toBeUndefined()
-    },
-    { timeout: 5000 },
-  )
+  await waitFor(async () => {
+    const broken = Array.from(
+      group.querySelectorAll<HTMLImageElement>("img"),
+    ).find((one) =>
+      one.src.includes("charcuterie-missing-portrait"),
+    )
+
+    // Gone from the DOM entirely, replaced by the letter — not left
+    // in place with a broken-image glyph in it.
+    await expect(broken).toBeUndefined()
+  })
 
   const bailey = expectAgentDrivable(canvas, {
     name: "Bailey 860 points",

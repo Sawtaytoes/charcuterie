@@ -5,6 +5,7 @@ import { test } from "vitest"
 import { expectNoAxeViolations } from "../expectNoAxeViolations.testHelpers.ts"
 import { mountStory } from "../mountStory.testHelpers.ts"
 import { expectAgentDrivable } from "../testing/index.ts"
+import { waitForImagesToFinish } from "../waitForImages.testHelpers.ts"
 import * as stories from "./Avatar.stories.tsx"
 
 const { AllStates, AllVariants, Playground, InAList } =
@@ -79,12 +80,18 @@ test("an unassigned avatar renders nothing at all", async () => {
  * because nobody writes the `onError` until they see it.
  */
 test("a photo that fails falls back to the initials", async () => {
-  const { canvas } = await mountStory(AllStates)
+  const { canvas, canvasElement } = await mountStory(AllStates)
 
   const broken = expectAgentDrivable(canvas, {
     name: "Kit Sandoval",
     role: "img",
   })
+
+  // Wait for the browser's answer about each photo, not for a clock:
+  // the 404 comes back from the dev server whenever it gets to it,
+  // and on a shared CI runner that was later than `waitFor`'s 1 s.
+  // What is left after it is the component's own re-render.
+  await waitForImagesToFinish(canvasElement)
 
   await waitFor(async () => {
     await expect(broken.querySelector("img")).toBeNull()
