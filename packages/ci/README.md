@@ -355,9 +355,12 @@ become accepted baselines automatically. Existing repositories need no new input
   link in `.links/` names is removed. The pnpm store is removed whole once it is
   `VRT_PNPM_STORE_MAX_DAYS` old (default 7, counted from the first job that saw it, in
   `.vrt-pnpm-store-since`) or larger than `VRT_PNPM_STORE_MAX_GIB` (default 4); the next job
-  downloads what it needs. `node_modules` is unaffected: its files are clones or copies. A
-  failure only warns.
-- ⚠️ **`pnpm store prune` is not usable here.** On 2026-11-14 pnpm 12.9.1 removed 428 of 428
+  downloads what it needs. The store is renewed only when the cache root is
+  `$RUNNER_TOOL_CACHE`, never in the `$HOME/.cache` fallback, which can be a person's own store.
+  Nothing in the job runs after the step. It runs only when the steps before it succeeded, so
+  a failed job (a picture change included) leaves the cache for the next job. A failure only
+  warns.
+- ⚠️ **`pnpm store prune` is not usable here.** On 2026-11-13 pnpm 12.9.1 removed 428 of 428
   packages from a store that a rip-deck install had just filled, run from the workspace root and
   from outside it, so a daily prune would have emptied the store every day. The store is renewed
   by age instead.

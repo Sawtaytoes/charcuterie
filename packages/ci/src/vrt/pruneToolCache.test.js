@@ -272,6 +272,7 @@ describe("main", () => {
       env: {
         VRT_CACHE_BROWSERS_PATH: browsersPath,
         VRT_PNPM_STORE_DIR: storePath,
+        RUNNER_TOOL_CACHE: root,
         VRT_TOOL_CACHE_ROOT: root,
       },
       root,
@@ -324,6 +325,25 @@ describe("main", () => {
     main(env, now)
 
     expect(existsSync(storePath)).toBe(true)
+  })
+
+  it("keeps a store outside $RUNNER_TOOL_CACHE", () => {
+    const { browsersPath, env, root, storePath } = setUp()
+    const now = Date.now()
+    const stamp = join(root, STORE_STAMP_NAME)
+    writeFileSync(stamp, "")
+    utimesSync(
+      stamp,
+      new Date(now - 8 * 24 * HOUR),
+      new Date(now - 8 * 24 * HOUR),
+    )
+
+    main({ ...env, RUNNER_TOOL_CACHE: undefined }, now)
+
+    expect(existsSync(storePath)).toBe(true)
+    expect(
+      existsSync(join(browsersPath, "ffmpeg-1011")),
+    ).toBe(false)
   })
 
   it("does nothing when the cache paths are not set", () => {

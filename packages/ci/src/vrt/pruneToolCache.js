@@ -18,12 +18,15 @@
  *   `VRT_PNPM_STORE_MAX_GIB` (default 4); the next job downloads what it
  *   needs into a new one. `pnpm store prune` is not used: pnpm 12.9.1 removed
  *   every package of a freshly installed rip-deck workspace (428 of 428,
- *   reproduced on 2026-11-14), so it would empty the store on each run. The
+ *   reproduced on 2026-11-13), so it would empty the store on each run. The
  *   age counts from the first job that saw the store
- *   (`.vrt-pnpm-store-since` in the cache root).
+ *   (`.vrt-pnpm-store-since` in the cache root). The store is only renewed
+ *   when the cache root is `$RUNNER_TOOL_CACHE`; the workflow's fallback,
+ *   `$HOME/.cache`, can hold a person's own pnpm store.
  *
- * `node_modules` is unaffected by either: its files are clones or copies of
- * the store's. A failure prints a warning and never fails the job.
+ * Nothing in the job runs after this step. It runs only when the steps
+ * before it succeeded, so a failed job leaves the cache for the next one. A
+ * failure here prints a warning and never fails the job.
  */
 
 import {
@@ -37,6 +40,7 @@ import {
   writeFileSync,
 } from "node:fs"
 import { join } from "node:path"
+import { fileURLToPath } from "node:url"
 
 export const STORE_STAMP_NAME = ".vrt-pnpm-store-since"
 export const DEFAULT_STORE_MAX_DAYS = 7
@@ -253,6 +257,15 @@ export const main = (
         : ", none unused."),
   )
 
+  if (
+    !env.RUNNER_TOOL_CACHE ||
+    root !== env.RUNNER_TOOL_CACHE
+  ) {
+    console.log(
+      "[vrt] pnpm store kept: the cache root is not $RUNNER_TOOL_CACHE, so it may be a person's own store.",
+    )
+    return
+  }
   const stampPath = join(root, STORE_STAMP_NAME)
   if (!existsSync(storePath)) {
     rmSync(stampPath, { force: true })
@@ -292,7 +305,7 @@ export const main = (
   )
 }
 
-if (process.argv[1] === new URL(import.meta.url).pathname) {
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
   try {
     main()
   } catch (error) {

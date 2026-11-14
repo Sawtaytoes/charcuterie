@@ -424,7 +424,9 @@ jobs:
       # Last, while this job's `node_modules` (the repo's and the tools')
       # still say what is in use: browsers no installed Playwright needs are
       # removed, and the pnpm store is renewed once it is 7 days old or over
-      # 4 GiB (`pruneToolCache.js`). A failure only warns.
+      # 4 GiB (`pruneToolCache.js`). It runs only after a successful job: after
+      # a failed install, broken links would make every browser look unused.
+      # A failure only warns.
       - name: Prune the tool cache
         continue-on-error: true
         run: node "$VRT_TOOLS/pruneToolCache.js"
