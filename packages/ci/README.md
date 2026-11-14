@@ -350,13 +350,17 @@ become accepted baselines automatically. Existing repositories need no new input
   filesystem, pnpm copied every package back in (515 MB for mux-magic); on the same one, it
   links them (hard links or clones) instead of copying. The browser download also survives a container rebuild there.
   A caller's own `setupCommand` should pass `--store-dir "$VRT_PNPM_STORE_DIR"` for the same reason.
-- **The tool cache is pruned by the job's last step** (`pruneToolCache.js`), at most once a
-  day (`VRT_TOOL_CACHE_PRUNE_HOURS`, default 24), or at once when the pnpm store and browsers
-  together exceed `VRT_TOOL_CACHE_MAX_GIB` (default 5). It runs while this job's `node_modules`
-  still exist, so "in use" means "used by this job": `pnpm store prune` removes every package no
-  registered project still uses, and a browser directory that no live Playwright link in
-  `.links/` names is removed. A stamp file, `.vrt-tool-cache-pruned`, in the cache root records
-  the last prune. A later job downloads again whatever it needs. A failure only warns.
+- **The tool cache is bounded by the job's last step** (`pruneToolCache.js`), which runs while
+  this job's `node_modules` still exist. Every job, a browser directory that no live Playwright
+  link in `.links/` names is removed. The pnpm store is removed whole once it is
+  `VRT_PNPM_STORE_MAX_DAYS` old (default 7, counted from the first job that saw it, in
+  `.vrt-pnpm-store-since`) or larger than `VRT_PNPM_STORE_MAX_GIB` (default 4); the next job
+  downloads what it needs. `node_modules` is unaffected: its files are clones or copies. A
+  failure only warns.
+- ⚠️ **`pnpm store prune` is not usable here.** On 2026-11-14 pnpm 12.9.1 removed 428 of 428
+  packages from a store that a rip-deck install had just filled, run from the workspace root and
+  from outside it, so a daily prune would have emptied the store every day. The store is renewed
+  by age instead.
 - ⚠️ **Playwright's own browser cleanup ran at the wrong time.** Every `playwright install`
   removes the browsers no installed package still needs. In this workflow the tools' install
   runs after the checkout's `git clean` has removed the repo's `node_modules`, so it removed the

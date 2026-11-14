@@ -15,11 +15,11 @@ import { afterEach, describe, expect, it } from "vitest"
 import {
   browserDirectoriesFor,
   isBrowserDirectoryName,
-  isPruneDue,
+  isStoreRenewalDue,
   main,
   planBrowserRemoval,
   pruneBrowsers,
-  STAMP_NAME,
+  STORE_STAMP_NAME,
 } from "./pruneToolCache.js"
 
 const GIB = 1024 * 1024 * 1024
@@ -132,38 +132,44 @@ describe("planBrowserRemoval", () => {
   })
 })
 
-describe("isPruneDue", () => {
+describe("isStoreRenewalDue", () => {
+  const DAY = 24 * HOUR
   const base = {
-    maxBytes: 5 * GIB,
-    now: 100 * HOUR,
-    pruneHours: 24,
-    totalBytes: GIB,
+    maxBytes: 4 * GIB,
+    maxDays: 7,
+    now: 100 * DAY,
+    storeBytes: GIB,
   }
 
-  it("is due with no earlier prune", () => {
+  it("keeps a store younger than the limit", () => {
     expect(
-      isPruneDue({ ...base, stampTime: null }).isDue,
-    ).toBe(true)
-  })
-
-  it("waits until the interval has passed", () => {
-    expect(
-      isPruneDue({ ...base, stampTime: 90 * HOUR }).isDue,
+      isStoreRenewalDue({ ...base, sinceTime: 95 * DAY })
+        .isDue,
     ).toBe(false)
     expect(
-      isPruneDue({ ...base, stampTime: 76 * HOUR }).isDue,
-    ).toBe(true)
+      isStoreRenewalDue({ ...base, sinceTime: null }).isDue,
+    ).toBe(false)
   })
 
-  it("is due at once when the caches are over the size bound", () => {
-    const due = isPruneDue({
+  it("renews a store at the age limit", () => {
+    const due = isStoreRenewalDue({
       ...base,
-      stampTime: 99 * HOUR,
-      totalBytes: 6 * GIB,
+      sinceTime: 93 * DAY,
     })
 
     expect(due.isDue).toBe(true)
-    expect(due.reason).toContain("over 5.00 GiB")
+    expect(due.reason).toBe("it is 7 days old")
+  })
+
+  it("renews a store over the size bound at once", () => {
+    const due = isStoreRenewalDue({
+      ...base,
+      sinceTime: 99 * DAY,
+      storeBytes: 5 * GIB,
+    })
+
+    expect(due.isDue).toBe(true)
+    expect(due.reason).toContain("over 4.00 GiB")
   })
 })
 
@@ -254,47 +260,70 @@ describe("main", () => {
   const setUp = () => {
     const root = makeTemporaryDirectory()
     const browsersPath = join(root, "ms-playwright")
+    const storePath = join(root, "pnpm", "store")
     makeBrowsers(browsersPath, ["ffmpeg-1011"])
     mkdirSync(join(browsersPath, ".links"))
+    mkdirSync(join(storePath, "v11", "files"), {
+      recursive: true,
+    })
+    writeFileSync(join(storePath, "v11", "files", "a"), "x")
     return {
       browsersPath,
       env: {
         VRT_CACHE_BROWSERS_PATH: browsersPath,
-        // Absent, so the test never runs pnpm.
-        VRT_PNPM_STORE_DIR: join(root, "pnpm", "store"),
+        VRT_PNPM_STORE_DIR: storePath,
         VRT_TOOL_CACHE_ROOT: root,
-        VRT_TOOLS: root,
       },
       root,
+      storePath,
     }
   }
 
-  it("prunes and records the time when due", () => {
-    const { browsersPath, env, root } = setUp()
+  it("removes unused browsers and starts the store's age", () => {
+    const { browsersPath, env, root, storePath } = setUp()
 
     main(env, Date.now())
 
     expect(
       existsSync(join(browsersPath, "ffmpeg-1011")),
     ).toBe(false)
-    expect(existsSync(join(root, STAMP_NAME))).toBe(true)
+    expect(existsSync(storePath)).toBe(true)
+    expect(existsSync(join(root, STORE_STAMP_NAME))).toBe(
+      true,
+    )
   })
 
-  it("skips a prune inside the interval", () => {
-    const { browsersPath, env, root } = setUp()
-    writeFileSync(join(root, STAMP_NAME), "")
+  it("removes a store that has reached its age", () => {
+    const { env, root, storePath } = setUp()
     const now = Date.now()
+    const stamp = join(root, STORE_STAMP_NAME)
+    writeFileSync(stamp, "")
     utimesSync(
-      join(root, STAMP_NAME),
+      stamp,
+      new Date(now - 8 * 24 * HOUR),
+      new Date(now - 8 * 24 * HOUR),
+    )
+
+    main(env, now)
+
+    expect(existsSync(storePath)).toBe(false)
+    expect(existsSync(stamp)).toBe(false)
+  })
+
+  it("keeps a younger store", () => {
+    const { env, root, storePath } = setUp()
+    const now = Date.now()
+    const stamp = join(root, STORE_STAMP_NAME)
+    writeFileSync(stamp, "")
+    utimesSync(
+      stamp,
       new Date(now - HOUR),
       new Date(now - HOUR),
     )
 
     main(env, now)
 
-    expect(
-      existsSync(join(browsersPath, "ffmpeg-1011")),
-    ).toBe(true)
+    expect(existsSync(storePath)).toBe(true)
   })
 
   it("does nothing when the cache paths are not set", () => {

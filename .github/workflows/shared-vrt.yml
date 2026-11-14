@@ -422,9 +422,9 @@ jobs:
         run: node "$VRT_TOOLS/reportStatus.js"
 
       # Last, while this job's `node_modules` (the repo's and the tools')
-      # still say what is in use. At most once a day, or at once over 5 GiB:
-      # `pnpm store prune` removes packages no project uses, and browsers no
-      # installed Playwright needs are removed. A failure only warns.
+      # still say what is in use: browsers no installed Playwright needs are
+      # removed, and the pnpm store is renewed once it is 7 days old or over
+      # 4 GiB (`pruneToolCache.js`). A failure only warns.
       - name: Prune the tool cache
         continue-on-error: true
         run: node "$VRT_TOOLS/pruneToolCache.js"

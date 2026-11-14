@@ -4,26 +4,28 @@
  * runners). Both persist between jobs and would otherwise only grow.
  *
  * It runs as the job's last step, while this job's `node_modules` (the repo's
- * and the tools') still exist, so "in use" means "used by this job":
+ * and the tools') still exist.
  *
- * - **pnpm:** `pnpm store prune` marks every package a registered project's
- *   `node_modules` still uses and removes the rest. The packages a later job
- *   needs again are downloaded again.
- * - **Browsers:** Playwright records each installing package in
+ * - **Browsers, every job:** Playwright records each installing package in
  *   `.links/`. A browser directory that no live link's `browsers.json` names
  *   is removed. Playwright does the same on every `playwright install`, but
  *   at the start of a job, after `git clean` has removed the repo's
  *   `node_modules`, so it deleted the repo's own browser and the capture
  *   downloaded it again on every run. The workflow therefore sets
  *   `PLAYWRIGHT_SKIP_BROWSER_GC=1` and leaves the collection to this step.
+ * - **pnpm, by age or size:** the whole store is removed once it is
+ *   `VRT_PNPM_STORE_MAX_DAYS` old (default 7) or larger than
+ *   `VRT_PNPM_STORE_MAX_GIB` (default 4); the next job downloads what it
+ *   needs into a new one. `pnpm store prune` is not used: pnpm 12.9.1 removed
+ *   every package of a freshly installed rip-deck workspace (428 of 428,
+ *   reproduced on 2026-11-14), so it would empty the store on each run. The
+ *   age counts from the first job that saw the store
+ *   (`.vrt-pnpm-store-since` in the cache root).
  *
- * A prune runs at most once per `VRT_TOOL_CACHE_PRUNE_HOURS` (default 24),
- * or at once when the two caches together exceed `VRT_TOOL_CACHE_MAX_GIB`
- * (default 5). A stamp file in the cache root records the last prune. A
- * failure prints a warning and never fails the job.
+ * `node_modules` is unaffected by either: its files are clones or copies of
+ * the store's. A failure prints a warning and never fails the job.
  */
 
-import { spawnSync } from "node:child_process"
 import {
   existsSync,
   lstatSync,
@@ -36,9 +38,9 @@ import {
 } from "node:fs"
 import { join } from "node:path"
 
-export const STAMP_NAME = ".vrt-tool-cache-pruned"
-export const DEFAULT_PRUNE_HOURS = 24
-export const DEFAULT_MAX_GIB = 5
+export const STORE_STAMP_NAME = ".vrt-pnpm-store-since"
+export const DEFAULT_STORE_MAX_DAYS = 7
+export const DEFAULT_STORE_MAX_GIB = 4
 
 const GIB = 1024 * 1024 * 1024
 
@@ -97,38 +99,33 @@ export const planBrowserRemoval = (entries, used) =>
     .sort()
 
 /**
- * @param {{ stampTime: number | null, now: number, totalBytes: number, pruneHours: number, maxBytes: number }} state
+ * @param {{ sinceTime: number | null, now: number, storeBytes: number, maxDays: number, maxBytes: number }} state
  * @returns {{ isDue: boolean, reason: string }}
  */
-export const isPruneDue = ({
-  stampTime,
+export const isStoreRenewalDue = ({
+  sinceTime,
   now,
-  totalBytes,
-  pruneHours,
+  storeBytes,
+  maxDays,
   maxBytes,
 }) => {
-  if (totalBytes > maxBytes) {
+  if (storeBytes > maxBytes) {
     return {
       isDue: true,
-      reason: `the caches hold ${formatGib(totalBytes)} GiB, over ${formatGib(maxBytes)} GiB`,
+      reason: `it holds ${formatGib(storeBytes)} GiB, over ${formatGib(maxBytes)} GiB`,
     }
   }
-  if (stampTime == null) {
+  const days =
+    sinceTime == null ? 0 : (now - sinceTime) / 86_400_000
+  if (days >= maxDays) {
     return {
       isDue: true,
-      reason: "no earlier prune is recorded",
-    }
-  }
-  const hours = (now - stampTime) / 3_600_000
-  if (hours >= pruneHours) {
-    return {
-      isDue: true,
-      reason: `the last prune was ${Math.floor(hours)} hours ago`,
+      reason: `it is ${Math.floor(days)} days old`,
     }
   }
   return {
     isDue: false,
-    reason: `the last prune was ${Math.floor(hours)} hours ago, under ${pruneHours}`,
+    reason: `${formatGib(storeBytes)} GiB, ${Math.floor(days)} of ${maxDays} days`,
   }
 }
 
@@ -233,24 +230,6 @@ export const pruneBrowsers = (browsersPath) => {
   return doomed
 }
 
-export const prunePnpmStore = (storePath, toolsPath) => {
-  if (!existsSync(storePath)) {
-    return
-  }
-  // From the tools' directory: pnpm 12 refuses to run in a project whose
-  // `packageManager` names another manager.
-  const result = spawnSync(
-    "pnpm",
-    ["store", "prune", "--store-dir", storePath],
-    { cwd: toolsPath, stdio: "inherit" },
-  )
-  if (result.status !== 0) {
-    throw new Error(
-      `pnpm store prune exited with ${result.status ?? result.signal ?? result.error}`,
-    )
-  }
-}
-
 export const main = (
   env = process.env,
   now = Date.now(),
@@ -258,56 +237,58 @@ export const main = (
   const root = env.VRT_TOOL_CACHE_ROOT
   const storePath = env.VRT_PNPM_STORE_DIR
   const browsersPath = env.VRT_CACHE_BROWSERS_PATH
-  const toolsPath = env.VRT_TOOLS
-  if (!root || !storePath || !browsersPath || !toolsPath) {
+  if (!root || !storePath || !browsersPath) {
     console.log(
       "[vrt] Tool cache prune skipped: the cache paths are not set.",
     )
     return
   }
-  const stampPath = join(root, STAMP_NAME)
-  const before = {
-    browsers: treeBytes(browsersPath),
-    store: treeBytes(storePath),
-  }
-  const due = isPruneDue({
-    maxBytes:
-      numberFromEnv(
-        env.VRT_TOOL_CACHE_MAX_GIB,
-        DEFAULT_MAX_GIB,
-      ) * GIB,
-    now,
-    pruneHours: numberFromEnv(
-      env.VRT_TOOL_CACHE_PRUNE_HOURS,
-      DEFAULT_PRUNE_HOURS,
-    ),
-    stampTime: readStampTime(stampPath),
-    totalBytes: before.browsers + before.store,
-  })
-  if (!due.isDue) {
-    console.log(
-      `[vrt] Tool cache prune skipped: ${due.reason}. pnpm store ${formatGib(before.store)} GiB, browsers ${formatGib(before.browsers)} GiB.`,
-    )
+
+  const browsersBefore = treeBytes(browsersPath)
+  const removed = pruneBrowsers(browsersPath)
+  console.log(
+    `[vrt] Browsers: ${formatGib(browsersBefore)} -> ${formatGib(treeBytes(browsersPath))} GiB` +
+      (removed.length
+        ? `, removed ${removed.join(", ")}.`
+        : ", none unused."),
+  )
+
+  const stampPath = join(root, STORE_STAMP_NAME)
+  if (!existsSync(storePath)) {
+    rmSync(stampPath, { force: true })
     return
   }
-  console.log(
-    `[vrt] Pruning the tool cache: ${due.reason}.`,
-  )
-  prunePnpmStore(storePath, toolsPath)
-  const removed = pruneBrowsers(browsersPath)
-  writeFileSync(
-    stampPath,
-    `${new Date(now).toISOString()}\n`,
-  )
-  const after = {
-    browsers: treeBytes(browsersPath),
-    store: treeBytes(storePath),
+  let sinceTime = readStampTime(stampPath)
+  if (sinceTime == null) {
+    writeFileSync(
+      stampPath,
+      `${new Date(now).toISOString()}\n`,
+    )
+    sinceTime = now
   }
+  const storeBytes = treeBytes(storePath)
+  const due = isStoreRenewalDue({
+    maxBytes:
+      numberFromEnv(
+        env.VRT_PNPM_STORE_MAX_GIB,
+        DEFAULT_STORE_MAX_GIB,
+      ) * GIB,
+    maxDays: numberFromEnv(
+      env.VRT_PNPM_STORE_MAX_DAYS,
+      DEFAULT_STORE_MAX_DAYS,
+    ),
+    now,
+    sinceTime,
+    storeBytes,
+  })
+  if (!due.isDue) {
+    console.log(`[vrt] pnpm store kept: ${due.reason}.`)
+    return
+  }
+  rmSync(storePath, { force: true, recursive: true })
+  rmSync(stampPath, { force: true })
   console.log(
-    `[vrt] Tool cache pruned: pnpm store ${formatGib(before.store)} -> ${formatGib(after.store)} GiB, browsers ${formatGib(before.browsers)} -> ${formatGib(after.browsers)} GiB` +
-      (removed.length
-        ? ` (removed ${removed.join(", ")}).`
-        : "."),
+    `[vrt] pnpm store removed, because ${due.reason}. The next job downloads what it needs.`,
   )
 }
 
