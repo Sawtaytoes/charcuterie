@@ -84,7 +84,11 @@ export const createDeploymentHandler = ({
   )
 
   return async (context, next) => {
-    if (!deploymentInfo) {
+    if (
+      !deploymentInfo ||
+      (context.req.method !== "GET" &&
+        context.req.method !== "HEAD")
+    ) {
       return next()
     }
 
