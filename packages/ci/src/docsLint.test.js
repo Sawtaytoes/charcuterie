@@ -62,6 +62,25 @@ describe("lintDecisionRecord", () => {
     ).toEqual([])
   })
 
+  it("ignores the topic index without accepting arbitrary non-record names", () => {
+    expect(
+      lintDecisionRecord(
+        "docs/decisions/by-topic.md",
+        "# Decisions by topic\n\n## Audio\n",
+        null,
+      ),
+    ).toEqual([])
+    expect(
+      rulesOf(
+        lintDecisionRecord(
+          "docs/decisions/other-index.md",
+          "# Another index\n",
+          null,
+        ),
+      ),
+    ).toContain("file-name")
+  })
+
   it("accepts the early un-bolded header style", () => {
     expect(
       rulesOf(
