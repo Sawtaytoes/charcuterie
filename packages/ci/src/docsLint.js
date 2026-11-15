@@ -106,7 +106,7 @@ export const lintDecisionRecord = (
     problems.push({ filePath, rule, message })
   }
 
-  // `README.md` is the index and `TEMPLATE.md` is the blank a record is
+  // `README.md` and `by-topic.md` are indexes; `TEMPLATE.md` is the blank a record is
   // copied FROM. Neither is a record, and neither can satisfy the rules
   // below: the template's name carries no date and its first line is a
   // placeholder. Every repo in the fleet keeps a template beside its
@@ -114,6 +114,7 @@ export const lintDecisionRecord = (
   // which is how it was found.
   if (
     fileName === "README.md" ||
+    fileName === "by-topic.md" ||
     fileName === "TEMPLATE.md"
   ) {
     return problems
