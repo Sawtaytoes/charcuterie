@@ -45,15 +45,27 @@ sanitizer, this package, and every consumer.
 ```tsx
 import "@charcuterie/email-viewer/styles.css"
 import {
+  type EmailAttachment,
   EmailAttachmentList,
+  type EmailDocument,
   EmailImageNotice,
+  type EmailImageSafety,
   EmailViewer,
   hasImageSafetyWarning,
   shouldLoadRemoteImages,
 } from "@charcuterie/email-viewer"
 
-// Mount one MessageView per message: <MessageView key={body.itemId} body={body} … />
-const MessageView = ({ body, subject, attachments }) => {
+type MessageViewProps = {
+  // Your app's own stable id for the message. The viewer's types carry none.
+  messageId: string
+  body: EmailDocument & EmailImageSafety
+  subject: string
+  attachments: EmailAttachment[]
+}
+
+// Mount one per message, keyed by your id, so one message's "Load images" press
+// never carries over to the next: <MessageView key={messageId} messageId={messageId} … />
+const MessageView = ({ body, subject, attachments }: MessageViewProps) => {
   // Keep only the reader's own "Load images" press, for this message.
   const [isLoadPressed, setIsLoadPressed] = useState(false)
   // Work the permission out on every render, from the body you have now. Sender trust
@@ -86,8 +98,8 @@ const MessageView = ({ body, subject, attachments }) => {
 
 Do not compute the permission once in a `useState` initializer. A later read of the same
 message, after its sender's trust changed, would then keep the old answer. Key the
-component by the message, so a new message never inherits another one's "Load images"
-press.
+component by your own message id, so a new message never inherits another one's "Load
+images" press.
 
 The viewer is `flex-1` inside a flex column: give its parent a height. Its markup is
 Tailwind, so the consumer's stylesheet must also scan this package:
