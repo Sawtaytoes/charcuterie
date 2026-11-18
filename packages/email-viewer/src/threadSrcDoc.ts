@@ -164,7 +164,7 @@ const preview = (message: ThreadFrameMessage): string => {
   )
 }
 
-/** "Sam Ferris", else the address, else something honest. */
+/** "Sam Sample", else the address, else something honest. */
 const senderName = (message: ThreadFrameMessage): string =>
   message.isMine
     ? "You"

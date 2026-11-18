@@ -19,7 +19,7 @@ const message = (
   patch: Partial<ThreadFrameMessage> = {},
 ): ThreadFrameMessage => ({
   key: "m1",
-  fromName: "Sam Ferris",
+  fromName: "Sam Sample",
   fromAddr: "sam@driveworks.example",
   date: "2026-03-02T09:00:00Z",
   html: "<p>Short one.</p>",

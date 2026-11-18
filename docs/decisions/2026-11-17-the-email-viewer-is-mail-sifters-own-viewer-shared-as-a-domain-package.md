@@ -75,11 +75,12 @@ nothing.
 **A Forgejo archive, because npm cannot take a new package without a manual step.**
 `docs/npm-publishing.md` records that a brand-new package's first publish needs an
 automation token and a web-UI step by hand. `model-viewer` already ships this way, and
-`plinth` and `hot-plate-3d` install it by URL.
+its consumers install it by URL.
 
 ## Evidence
 
-- Mail Sifter's sources moved byte for byte except imports and one broken relative link:
+- Mail Sifter's sources moved byte for byte except imports, one broken relative link, and
+  one sample sender name in a test and a comment, which became an invented one:
   `emailSrcDoc.ts`, `emailThreadSrcDoc.ts`, `markEmoji.ts` and `readerImages.ts`, with their
   tests, which pass here unchanged, including the two observer-hash tests.
 - `EmailViewer.test.tsx` mounts the stories in all four windows. It checks the sandbox, the

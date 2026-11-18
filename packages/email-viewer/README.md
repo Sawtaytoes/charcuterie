@@ -83,12 +83,15 @@ Tailwind, so the consumer's stylesheet must also scan this package:
 ## Release
 
 This package is **not published to npm** (a new npm package needs a manual first publish).
-It ships as a versioned archive in Forgejo's generic package registry, the same way
-`@charcuterie/model-viewer` does, and a consumer depends on it by URL:
+It ships as a versioned archive in a Forgejo generic package registry, the same way
+`@charcuterie/model-viewer` does, and a consumer depends on it by URL. With an example
+registry host and owner:
 
 ```json
-"@charcuterie/email-viewer": "https://forgejo.octen.dev/api/packages/sawtaytoes/generic/email-viewer/0.1.0/email-viewer.tar.gz"
+"@charcuterie/email-viewer": "https://git.example.com/api/packages/<owner>/generic/email-viewer/0.1.0/email-viewer.tar.gz"
 ```
+
+Each consumer's own repository records the registry it actually uses.
 
 From a clean, committed checkout of the released commit:
 
@@ -101,5 +104,5 @@ cd packages/email-viewer
 
 The archive holds `dist`, this README, the license, a manifest with no workspace
 dependencies, and `SOURCE_COMMIT`. Upload it with a `PUT` to
-`/api/packages/sawtaytoes/generic/email-viewer/<version>/email-viewer.tar.gz`, then
+`/api/packages/<owner>/generic/email-viewer/<version>/email-viewer.tar.gz` on the registry, then
 download it again and compare the SHA-256 before a consumer pins it.
