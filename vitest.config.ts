@@ -24,6 +24,7 @@ export default defineConfig({
       "packages/playwright-config/vitest.config.ts",
       "packages/server/vitest.config.ts",
       "packages/model-viewer/vitest.config.ts",
+      "packages/email-viewer/vitest.config.ts",
       "packages/storybook-config/vitest.config.ts",
       "packages/ui/vitest.config.ts",
       "packages/docs/vitest.storybook.config.ts",

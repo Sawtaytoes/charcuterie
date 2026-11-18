@@ -68,6 +68,10 @@ export default defineConfig({
     name: "ui-dom",
     include: [
       join(import.meta.dirname, "../ui/src/**/*.test.tsx"),
+      join(
+        import.meta.dirname,
+        "../email-viewer/src/**/*.test.tsx",
+      ),
     ],
     setupFiles: [
       join(import.meta.dirname, "vitest.ui.setup.ts"),

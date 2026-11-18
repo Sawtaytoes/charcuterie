@@ -1,0 +1,31 @@
+/*
+ * The viewer's one animation: the bar that says a delivered message is
+ * still painting. Import it once, beside `@charcuterie/ui/styles.css`.
+ *
+ * The component markup is Tailwind; the consumer's stylesheet must also
+ * `@source` this package's `dist`, or none of its utilities exist.
+ */
+@keyframes charcuterie-email-indeterminate {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(400%);
+  }
+}
+
+.charcuterie-email-indeterminate {
+  animation: charcuterie-email-indeterminate 1.4s
+    var(--easing-standard, ease-in-out) infinite;
+}
+
+/*
+ * Kept visible and static: it reports that work is happening, so removing
+ * it would say the opposite of the truth.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .charcuterie-email-indeterminate {
+    animation: none;
+    width: 100%;
+  }
+}
