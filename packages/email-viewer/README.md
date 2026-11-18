@@ -52,25 +52,42 @@ import {
   shouldLoadRemoteImages,
 } from "@charcuterie/email-viewer"
 
-const [hasLoadedImages, setHasLoadedImages] = useState(() => shouldLoadRemoteImages(body))
+// Mount one MessageView per message: <MessageView key={body.itemId} body={body} … />
+const MessageView = ({ body, subject, attachments }) => {
+  // Keep only the reader's own "Load images" press, for this message.
+  const [isLoadPressed, setIsLoadPressed] = useState(false)
+  // Work the permission out on every render, from the body you have now. Sender trust
+  // can change while the message stays open, and the next read must change what loads.
+  const hasLoadedImages =
+    body.remoteImageCount > 0 && (isLoadPressed || shouldLoadRemoteImages(body))
 
-<div className="flex min-h-0 flex-1 flex-col">
-  {body.remoteImageCount > 0 && !hasLoadedImages && hasImageSafetyWarning(body) ? (
-    <EmailImageNotice
-      remoteImageCount={body.remoteImageCount}
-      onLoadImages={() => setHasLoadedImages(true)}
-    />
-  ) : null}
-  <EmailViewer
-    message={body}
-    hasLoadedImages={hasLoadedImages}
-    isScaledToFit
-    title={`Message body: ${subject}`}
-    masthead={<h2>{subject}</h2>}
-  />
-</div>
-<EmailAttachmentList attachments={attachments} icon={<Paperclip />} />
+  return (
+    <>
+      <div className="flex min-h-0 flex-1 flex-col">
+        {body.remoteImageCount > 0 && !hasLoadedImages && hasImageSafetyWarning(body) ? (
+          <EmailImageNotice
+            remoteImageCount={body.remoteImageCount}
+            onLoadImages={() => setIsLoadPressed(true)}
+          />
+        ) : null}
+        <EmailViewer
+          message={body}
+          hasLoadedImages={hasLoadedImages}
+          isScaledToFit
+          title={`Message body: ${subject}`}
+          masthead={<h2>{subject}</h2>}
+        />
+      </div>
+      <EmailAttachmentList attachments={attachments} icon={<Paperclip />} />
+    </>
+  )
+}
 ```
+
+Do not compute the permission once in a `useState` initializer. A later read of the same
+message, after its sender's trust changed, would then keep the old answer. Key the
+component by the message, so a new message never inherits another one's "Load images"
+press.
 
 The viewer is `flex-1` inside a flex column: give its parent a height. Its markup is
 Tailwind, so the consumer's stylesheet must also scan this package:
