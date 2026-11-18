@@ -44,6 +44,9 @@ sanitizer, this package, and every consumer.
 
 ```tsx
 import "@charcuterie/email-viewer/styles.css"
+import { useState } from "react"
+// Any icon component works; this example uses lucide-react.
+import { Paperclip } from "lucide-react"
 import {
   type EmailAttachment,
   EmailAttachmentList,
