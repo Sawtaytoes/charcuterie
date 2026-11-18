@@ -23,6 +23,11 @@ const config: StorybookConfig = {
     // host; nothing about the components lives here.
     "../../ui/src/**/*.mdx",
     "../../ui/src/**/*.stories.tsx",
+    // The domain packages that render a React component keep their
+    // stories beside it too. Each one's root in the sidebar is set by a
+    // decision record, not by this glob.
+    "../../email-viewer/src/**/*.mdx",
+    "../../email-viewer/src/**/*.stories.tsx",
   ],
   addons: [
     // `@storybook/addon-docs`, wired for GFM tables — shared, because

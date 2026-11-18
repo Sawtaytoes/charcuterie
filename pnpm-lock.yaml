@@ -312,6 +312,9 @@ importers:
 
   packages/docs:
     dependencies:
+      '@charcuterie/email-viewer':
+        specifier: workspace:*
+        version: link:../email-viewer
       '@charcuterie/storybook-config':
         specifier: workspace:*
         version: link:../storybook-config
@@ -400,6 +403,42 @@ importers:
       vite:
         specifier: ^8.1.6
         version: 8.3.6(@types/node@25.9.5)(esbuild@0.28.1)(jiti@2.7.0)
+      vitest:
+        specifier: ^4.1.12
+        version: 4.1.12(@types/node@25.9.5)(@vitest/browser-playwright@4.1.12)(@vitest/ui@4.1.12)(esbuild@0.28.1)(jiti@2.7.0)
+
+  packages/email-viewer:
+    devDependencies:
+      '@charcuterie/ui':
+        specifier: workspace:*
+        version: link:../ui
+      '@storybook/addon-docs':
+        specifier: ^10.6.2
+        version: 10.6.6(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(storybook@10.6.6(@types/react@19.2.17)(prettier@2.8.8)(react@19.2.8))
+      '@storybook/react':
+        specifier: ^10.6.2
+        version: 10.6.6(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(storybook@10.6.6(@types/react@19.2.17)(prettier@2.8.8)(react@19.2.8))(supports-color@7.2.0)(typescript@6.0.3)
+      '@types/node':
+        specifier: ^25.6.2
+        version: 25.9.5
+      '@types/react':
+        specifier: ^19.2.14
+        version: 19.2.17
+      '@types/react-dom':
+        specifier: ^19.2.3
+        version: 19.2.3(@types/react@19.2.17)
+      react:
+        specifier: ^19.2.8
+        version: 19.2.8
+      react-dom:
+        specifier: ^19.2.8
+        version: 19.2.8(react@19.2.8)
+      storybook:
+        specifier: ^10.6.2
+        version: 10.6.6(@types/react@19.2.17)(prettier@2.8.8)(react@19.2.8)
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
       vitest:
         specifier: ^4.1.12
         version: 4.1.12(@types/node@25.9.5)(@vitest/browser-playwright@4.1.12)(@vitest/ui@4.1.12)(esbuild@0.28.1)(jiti@2.7.0)

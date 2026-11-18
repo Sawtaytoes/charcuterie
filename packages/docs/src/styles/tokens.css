@@ -31,6 +31,7 @@
  * would render unstyled with no error. `tailwindCandidates.test.ts`
  * is the second line of defence; this is the first. */
 @source "../../../ui/src";
+@source "../../../email-viewer/src";
 
 @layer base {
   body {

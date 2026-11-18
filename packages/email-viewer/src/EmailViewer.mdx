@@ -1,0 +1,63 @@
+import { Canvas, Controls, Meta } from "@storybook/addon-docs/blocks";
+
+import * as EmailViewerStories from "./EmailViewer.stories";
+
+<Meta of={EmailViewerStories} />
+
+# EmailViewer
+
+Mail Sifter's email viewer, moved here so every app that shows Mail Sifter's mail renders it
+the same way. Starchart's focus window is the second consumer: it shows an email with the
+owning app's own viewer instead of a copy of it.
+
+<Canvas of={EmailViewerStories.Newsletter} />
+
+## The walls
+
+The HTML is **already sanitized** by Mail Sifter's server (`sanitize-html` plus its link and
+image annotator). The viewer never sanitizes, and must never be handed HTML that did not
+come through that sanitizer. It is the second and third wall:
+
+- a sandboxed `<iframe>` with **no `allow-same-origin`**, so the message has an opaque origin;
+- a `<meta>` policy of `default-src 'none'`, where the only script allowed is one
+  app-authored scroll observer, approved by its SHA-256 hash;
+- `referrerpolicy="no-referrer"` on the frame and inside the document.
+
+## Images
+
+`hasLoadedImages` is the parent's decision, never the viewer's. `shouldLoadRemoteImages` is
+Mail Sifter's policy: ordinary mail loads its remote images, and mail with a link warning
+keeps them parked unless the sender is trusted. When images load, the policy widens exactly
+one directive, `img-src`, to `data: https: http:` — the browser then fetches each image
+from the sender's own server, which tells the sender the mail was opened. Inline `cid:`
+images arrive as `data:` URLs and render either way.
+
+Render `EmailImageNotice` **above** the viewer for warned mail, never inside it.
+
+<Canvas of={EmailViewerStories.WarnedMail} />
+
+## It fits its container
+
+The frame measures its own width, not the window's, so a docked drawer or a narrow panel
+gets a message scaled to fit (`isScaledToFit`) rather than a sideways scrollbar.
+
+<Canvas of={EmailViewerStories.ScaledToFit} />
+
+## The masthead
+
+App chrome — a subject, a sender row — goes in `masthead`. It stays in the app's document,
+out of reach of email CSS; the frame reserves its measured height and slides it away as the
+message scrolls.
+
+## Attachments
+
+`EmailAttachmentList` renders **nothing** when `attachments` is absent or empty, so an app
+whose source does not send attachment data yet passes what it has. Without `onDownload` the
+rows are a plain list; with it, each row is a button that runs the app's own signed request.
+Its columns come from its container: one, then two from `cq-md`, then three from `cq-xl`.
+
+<Canvas of={EmailViewerStories.Attachments} />
+
+## Props
+
+<Controls />

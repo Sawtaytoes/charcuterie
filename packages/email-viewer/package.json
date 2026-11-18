@@ -1,0 +1,52 @@
+{
+  "name": "@charcuterie/email-viewer",
+  "version": "0.1.0",
+  "description": "Mail Sifter's email viewer: a sandboxed, container-fitting frame for sanitized mail, its image policy, and its attachment list.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./styles.css": "./dist/styles.css"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && node scripts/copyStyles.ts",
+    "prepack": "pnpm build",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "@charcuterie/ui": ">=4.28.2",
+    "react": ">=19",
+    "react-dom": ">=19"
+  },
+  "devDependencies": {
+    "@charcuterie/ui": "workspace:*",
+    "@storybook/addon-docs": "^10.6.2",
+    "@storybook/react": "^10.6.2",
+    "@types/node": "^25.6.2",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "storybook": "^10.6.2",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.12"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Sawtaytoes/charcuterie.git",
+    "directory": "packages/email-viewer"
+  }
+}

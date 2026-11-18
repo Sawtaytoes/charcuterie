@@ -32,6 +32,7 @@ export default defineConfig(
   createReactRules({
     files: [
       "packages/docs/**/*.tsx",
+      "packages/email-viewer/**/*.tsx",
       "packages/ui/**/*.tsx",
     ],
   }),
@@ -42,6 +43,7 @@ export default defineConfig(
   createLogicalPropertiesRules({
     files: [
       "packages/docs/**/*.tsx",
+      "packages/email-viewer/**/*.tsx",
       "packages/ui/**/*.tsx",
     ],
   }),

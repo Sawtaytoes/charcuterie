@@ -13,6 +13,10 @@ Charcuterie publishes **six** packages to npm under the `@charcuterie` scope:
 
 `@charcuterie/docs` (the Storybook host) is `private` and never publishes.
 
+`@charcuterie/model-viewer` and `@charcuterie/email-viewer` are not on npm either: each ships
+as a versioned archive in Forgejo's generic package registry, built by its own `release.sh`,
+and consumers install it by URL. Neither is in the deploy loop below.
+
 **A brand-new package's first publish is manual** — npm OIDC trusted publishing
 cannot be configured for a package that does not exist yet, so the name has to be
 claimed and its first version pushed by hand once, then trusted publishing wired
