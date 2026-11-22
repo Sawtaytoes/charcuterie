@@ -1528,11 +1528,15 @@ export const readSources = (project) => {
       return { ...here(false), isTooDeep: true }
     }
 
-    if (
-      importedName === "*" ||
-      !codeFile.test(absolutePath)
-    ) {
+    if (importedName === "*") {
       return here(true)
+    }
+
+    // A JSON or CSS file declares no names the checker can read. The
+    // caller hashes it whole when a named chain ends here, and an
+    // `export *` probe moves on to the next statement.
+    if (!codeFile.test(absolutePath)) {
+      return here(false)
     }
 
     // A path can pass through one file twice under different names.

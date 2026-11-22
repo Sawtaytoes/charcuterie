@@ -2077,6 +2077,26 @@ describe("changes found by the twelfth review", () => {
     expect(code).toContain("../fixture/a.ts › z")
   })
 
+  test("an export * of a JSON file does not hide the export * that has the name", async () => {
+    const { code } = await reachedThroughBarrel({
+      "../fixture/index.ts":
+        'export * from "./data.json"\nexport * from "./real.ts"\n',
+      "../fixture/data.json": '{ "other": 1 }\n',
+      "../fixture/real.ts":
+        "export const check = () => 1\n",
+    })
+
+    expect(code).toContain("../fixture/real.ts › check")
+
+    const named = await reachedThroughBarrel({
+      "../fixture/index.ts":
+        'export { default as check } from "./data.json"\n',
+      "../fixture/data.json": '{ "other": 1 }\n',
+    })
+
+    expect(named.code).toContain("../fixture/data.json")
+  })
+
   test("still resolves an exact package.json or index file", async () => {
     const root = await makeProject({
       "lamp.feature": feature,
