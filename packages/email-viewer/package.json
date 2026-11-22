@@ -27,7 +27,7 @@
     "typecheck": "tsc --noEmit"
   },
   "peerDependencies": {
-    "@charcuterie/ui": ">=4.28.2",
+    "@charcuterie/ui": ">=4.28.4",
     "react": ">=19",
     "react-dom": ">=19"
   },

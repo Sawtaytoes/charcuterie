@@ -1,5 +1,11 @@
 # @charcuterie/ci
 
+## 0.1.12
+
+### Patch Changes
+
+- 66f9993: Treat the decision topic index as an index, so editing it does not fail decision-record lint.
+
 ## 0.1.11
 
 ### Patch Changes
