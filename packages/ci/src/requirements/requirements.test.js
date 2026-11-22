@@ -2345,6 +2345,46 @@ describe("changes found by the review of PR 440", () => {
       analysis.problems.map((problem) => problem.rule),
     ).toEqual(["malformed-json"])
   })
+
+  test("reports a malformed workspace package.json instead of crashing", async () => {
+    const root = await makeProject({
+      "requirements.config.json": JSON.stringify({
+        ...config,
+        packages: { "@acme/kit": "../kit" },
+      }),
+      "lamp.feature": feature,
+      "helpers/lamp.ts": helpers,
+      "steps/lamp.steps.ts": `import { kit } from "@acme/kit"\n${steps.replace(
+        "expectOn(world, name)",
+        "expectOn(world, name)\n  void kit",
+      )}`,
+      "../kit/package.json": "{ not json\n",
+      "../kit/index.ts": "export const kit = 1\n",
+    })
+    const analysis = await analyzeProject(root)
+
+    expect(
+      analysis.problems.map((problem) => problem.rule),
+    ).toContain("malformed-json")
+  })
+
+  test("reads a JSON file that starts with a byte-order mark", async () => {
+    const analysis = await analyzeWith(
+      {
+        "../fixture/index.ts":
+          'export * from "./bom.json"\n',
+        "../fixture/bom.json": '\uFEFF{ "check": 1 }\n',
+      },
+      'import { check } from "../../fixture/index.ts"',
+      "void check",
+    )
+
+    expect(analysis.problems).toEqual([])
+    expect(
+      buildLock(analysis, await readLock(analysis))
+        .requirements["REQ-T-1"]?.code,
+    ).toContain("../fixture/bom.json")
+  })
 })
 
 describe("registration", () => {

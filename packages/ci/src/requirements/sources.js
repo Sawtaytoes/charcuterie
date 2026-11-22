@@ -69,6 +69,15 @@ const normalizeCss = (text) =>
     .trim()
 
 /**
+ * `JSON.parse` after dropping a byte-order mark, which Vite accepts.
+ *
+ * @param {string} text
+ * @returns {any}
+ */
+const parseJson = (text) =>
+  JSON.parse(text.replace(/^\uFEFF/, ""))
+
+/**
  * Only the fields that decide which code runs. A release bumps
  * `version` in every package.json; that must not mark requirements
  * changed, or every release would stale the lock on master.
@@ -77,7 +86,7 @@ const normalizeCss = (text) =>
  * @param {string} text
  */
 const packageManifestText = (text) => {
-  const manifest = JSON.parse(text)
+  const manifest = parseJson(text)
 
   return JSON.stringify(
     [
@@ -358,7 +367,7 @@ const jsonObjectAt = (absolutePath) => {
   }
 
   try {
-    const parsed = JSON.parse(
+    const parsed = parseJson(
       readFileSync(absolutePath, "utf8"),
     )
 
@@ -1332,9 +1341,18 @@ export const readSources = (project) => {
       return null
     }
 
-    const manifest = JSON.parse(
-      readFileSync(manifestPath, "utf8"),
-    )
+    /** @type {any} */
+    let manifest
+
+    try {
+      manifest = parseJson(
+        readFileSync(manifestPath, "utf8"),
+      )
+    } catch {
+      reportMalformedJson(toKey(manifestPath))
+
+      return null
+    }
     /** @type {unknown} */
     let entry =
       typeof manifest.exports === "string" &&
@@ -1416,10 +1434,25 @@ export const readSources = (project) => {
   const toKey = (absolutePath) =>
     relative(root, absolutePath).split("\\").join("/")
 
-  /**
-   * @param {string} absolutePath
-   * @param {boolean} isExternal
-   */
+  /** @type {Set<string>} */
+  const reportedMalformed = new Set()
+
+  /** @param {string} key */
+  const reportMalformedJson = (key) => {
+    if (reportedMalformed.has(key)) {
+      return
+    }
+
+    reportedMalformed.add(key)
+    problems.push({
+      file: key,
+      line: 1,
+      column: 1,
+      rule: "malformed-json",
+      message: `${key} is not valid JSON, so Vite cannot load it. Fix the file.`,
+    })
+  }
+
   /**
    * A JSON file's hash ignores formatting. Vite cannot load malformed
    * JSON, so that is reported instead of crashing the checker.
@@ -1433,21 +1466,19 @@ export const readSources = (project) => {
       return hashText(
         absolutePath.endsWith("/package.json")
           ? packageManifestText(text)
-          : JSON.stringify(JSON.parse(text)),
+          : JSON.stringify(parseJson(text)),
       )
     } catch {
-      problems.push({
-        file: key,
-        line: 1,
-        column: 1,
-        rule: "malformed-json",
-        message: `${key} is not valid JSON, so Vite cannot load it. Fix the file.`,
-      })
+      reportMalformedJson(key)
 
       return hashText(text)
     }
   }
 
+  /**
+   * @param {string} absolutePath
+   * @param {boolean} isExternal
+   */
   const addWholeFile = (absolutePath, isExternal) => {
     const key = toKey(absolutePath)
 
@@ -2177,7 +2208,12 @@ export const readSources = (project) => {
     }
 
     if (!codeFile.test(target)) {
-      reached.add(addWholeFile(target, true))
+      reached.add(
+        addWholeFile(
+          target,
+          toKey(target).startsWith(".."),
+        ),
+      )
 
       return
     }
@@ -2316,7 +2352,12 @@ export const readSources = (project) => {
     }
 
     if (!codeFile.test(target)) {
-      reached.add(addWholeFile(target, true))
+      reached.add(
+        addWholeFile(
+          target,
+          toKey(target).startsWith(".."),
+        ),
+      )
 
       return
     }
@@ -2377,7 +2418,12 @@ export const readSources = (project) => {
     }
 
     if (!codeFile.test(target)) {
-      reached.add(addWholeFile(target, true))
+      reached.add(
+        addWholeFile(
+          target,
+          toKey(target).startsWith(".."),
+        ),
+      )
 
       return
     }
