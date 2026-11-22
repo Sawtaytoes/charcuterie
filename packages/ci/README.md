@@ -3,13 +3,15 @@
 CI checks shared across the fleet, and the home for **lint configuration that no repo can
 install**.
 
-Two things live here:
+Four things live here:
 
 1. `charcuterie-docs-lint` — a linter for decision records, so `docs/decisions/` follows the
    same template in every repo.
 2. `configs/ruff.toml` and `configs/clang-format.yml` — the fleet's shared Python and C++
    configuration, read by `shared-native-lint.yml`.
-3. `src/vrt/` — the visual-regression tools `shared-vrt.yml` runs: a Storybook capture, the
+3. `charcuterie-requirements` — the static checker for Gherkin requirements. See
+   [Gherkin requirements](#gherkin-requirements--charcuterie-requirements) below.
+4. `src/vrt/` — the visual-regression tools `shared-vrt.yml` runs: a Storybook capture, the
    reg-suit config writer, and the status reporter. See
    [Visual regression](#visual-regression--shared-vrtyml) below.
 
@@ -102,6 +104,40 @@ supposed to be edited after the fact; it is superseded instead.
 
 Both header styles are accepted — `- **Status:** Accepted` and the early bare
 `Status: Accepted` — because the point is that the field is findable, not that it is bold.
+
+## Gherkin requirements — `charcuterie-requirements`
+
+A checker for a directory of QuickPickle `.feature` files and the TypeScript that binds
+their steps. It reads both without running them: features through `@cucumber/gherkin`,
+the parser QuickPickle uses, and steps through the TypeScript parser. It needs no browser
+and finishes in about a second.
+
+```sh
+charcuterie-requirements check --root packages/docs/requirements
+charcuterie-requirements which button.feature:41 --root …   # definition + every file it reaches
+charcuterie-requirements lock --root …                      # after an intended change
+charcuterie-requirements lock --retire REQ-UI-5 --reason "…" --root …
+charcuterie-requirements diff --base origin/master --summary --root …
+```
+
+The root must hold `requirements.config.json`; the checker refuses to run without one. It
+sets `idPrefix`, the source and helper globs, `stepModule`, `stepFiles` (which must equal
+the `import.meta.glob` in `entry`), `runtime` (files every scenario passes through, hashed
+whole; a literal path may point outside the root), `subjects` (the code under test, never
+hashed; `!` excludes), `allowedTags`, and `command` (how messages name the CLI). It also
+holds the generated `requirements.lock.json`. The lock lists each requirement's steps,
+tags, and every code unit they reach, so a weakened helper is reported as a changed
+requirement. `diff` exits non-zero when a requirement or a retirement entry from the base
+commit is gone, or a retired ID returns. It reads the base lock through the base commit's own config and
+rejects a lock in the wrong shape. The lock is a static tripwire, not a proof: it follows
+code by name without running it. Steps must be literal
+Cucumber expressions registered through the repo's own `stepModule` wrapper, because a
+pattern built at runtime cannot be traced. The full rule list and the reasons are in
+Charcuterie's [`docs/gherkin-requirements.md`](../../docs/gherkin-requirements.md).
+
+**The fleet does not use `gherkin-lint`.** Version 4.2.4, released in December 2023, uses
+the Gherkin 9 parser, and 23 of its 31 rules skip scenarios inside a `Rule` block,
+including `required-tags`.
 
 ## Python and C++ — `shared-native-lint.yml`
 

@@ -1,0 +1,39 @@
+{
+  "idPrefix": "REQ-UI-",
+  "features": ["**/*.feature"],
+  "sources": ["**/*.ts"],
+  "exclude": [
+    "**/*.test.ts",
+    "**/*.test.js",
+    "**/node_modules/**"
+  ],
+  "helpers": ["helpers/**/*.ts"],
+  "stepModule": "support/steps.ts",
+  "stepFiles": ["steps/*.steps.ts"],
+  "entry": "index.ts",
+  "runtime": [
+    "index.ts",
+    "support/**/*.ts",
+    "requirements.config.json",
+    "../vitest.requirements.shared.ts",
+    "../vitest.requirements.config.ts",
+    "../vitest.requirements-responsive.config.ts",
+    "../vitest.ui.setup.ts",
+    "../../storybook-config/package.json",
+    "../../vitest-config/package.json"
+  ],
+  "subjects": [
+    "../../ui/src/**/*.tsx",
+    "../../ui/src/**/*Styles.ts",
+    "!../../ui/src/**/*.stories.tsx",
+    "!../../ui/src/**/*.storyHelpers.tsx"
+  ],
+  "allowedTags": ["@responsive", "@todo"],
+  "pendingTags": ["@todo"],
+  "lock": "requirements.lock.json",
+  "command": "pnpm requirements:",
+  "packages": {
+    "@charcuterie/storybook-config": "../../storybook-config",
+    "@charcuterie/vitest-config": "../../vitest-config"
+  }
+}

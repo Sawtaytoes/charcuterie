@@ -24,16 +24,22 @@
     "typecheck": "tsc --noEmit"
   },
   "bin": {
-    "charcuterie-docs-lint": "./src/cli/docsLint.js"
+    "charcuterie-docs-lint": "./src/cli/docsLint.js",
+    "charcuterie-requirements": "./src/cli/requirements.js"
   },
   "devDependencies": {
     "@types/node": "^25.6.2",
-    "typescript": "^6.0.3",
     "vitest": "^4.1.12"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Sawtaytoes/charcuterie.git",
     "directory": "packages/ci"
+  },
+  "dependencies": {
+    "@cucumber/cucumber-expressions": "^18.1.0",
+    "@cucumber/gherkin": "^32.2.0",
+    "@cucumber/messages": "^27.2.0",
+    "typescript": "^6.0.3"
   }
 }
