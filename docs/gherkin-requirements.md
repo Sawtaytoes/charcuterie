@@ -118,7 +118,11 @@ doc strings, its tags, and every code unit those steps reach:
   the `Playground` story and `expectAgentDrivable`;
 - the runtime every scenario passes through, hashed as whole files: `index.ts`,
   `support/` (the World, the step wrapper, and the parameter types), the requirements
-  config, the Vitest requirement configs, and `vitest.ui.setup.ts`.
+  config, the Vitest requirement configs, `vitest.ui.setup.ts`, and the
+  `storybook-config` and `vitest-config` packages they import; plus whatever those
+  runtime files import by relative path, such as `.storybook/preview.tsx`;
+- the top-level code of every step file, because `index.ts` loads them all for every
+  scenario. A step file must define at least one step; setup code goes in `support/`.
 
 If you change any of them, the lock becomes stale and `requirements:check` fails, naming
 each requirement and the code that changed. This catches a weakened assertion even when no
@@ -143,14 +147,18 @@ nor follows them. A story change does change it, for the requirements that use t
 The lock is a tripwire, not a proof. It reads code by name without running it, and each
 review of it has found new ways around it. Reading the lock diff and the job summary in
 review is still the final check. A top-level statement that runs code, such as an
-initializer that calls a function or assigns a value, joins its module's `‹module›` unit,
-so editing it marks every requirement that loads the module. A lazy or conditional
+initializer that calls a function or assigns a value, joins its module's `‹module›` unit.
+Editing it marks every requirement that reaches that module, and every requirement when
+the module is a step file. A side-effect import (`import "./patch.ts"`) is followed, and a
+relative import the checker cannot resolve is an error. A lazy or conditional
 `import.meta.glob` is rejected. A lock in the wrong shape fails, and CI finds the base
 commit's lock through the base commit's own config.
 
-What the lock does not see: npm package versions (the pnpm lockfile covers those), the root
-`vitest.config.ts` and the CI workflow (code review covers those), and code reached only
-through dynamic property access. The walker matches names, not bindings, so it can also
+What the lock does not see: npm package versions (the pnpm lockfile covers those);
+workspace packages other than the two listed in `runtime`, imported by package name; the
+root `vitest.config.ts` and the CI workflow (code review covers those); a move of the whole
+requirements directory, which also changes `--root` in `package.json`; and code reached
+only through dynamic property access, `eval`, or an aliased step function. The walker matches names, not bindings, so it can also
 list a same-named function that a step does not really call; that errs toward reporting a
 change.
 

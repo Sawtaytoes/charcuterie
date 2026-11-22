@@ -14,10 +14,13 @@
     "../vitest.requirements.shared.ts",
     "../vitest.requirements.config.ts",
     "../vitest.requirements-responsive.config.ts",
-    "../vitest.ui.setup.ts"
+    "../vitest.ui.setup.ts",
+    "../../storybook-config/src/**/*.{ts,tsx}",
+    "../../vitest-config/src/**/*.ts"
   ],
   "subjects": [
     "../../ui/src/**/*.tsx",
+    "../../ui/src/**/*Styles.ts",
     "!../../ui/src/**/*.stories.tsx",
     "!../../ui/src/**/*.storyHelpers.tsx"
   ],

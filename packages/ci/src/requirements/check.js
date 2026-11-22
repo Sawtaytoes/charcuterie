@@ -84,8 +84,6 @@ export const analyzeProject = async (rootDirectory) => {
 
   const sources = readSources(project)
 
-  problems.push(...sources.problems)
-
   const registry = new ParameterTypeRegistry()
 
   for (const parameterType of sources.parameterTypes) {
@@ -489,6 +487,9 @@ export const analyzeProject = async (rootDirectory) => {
   }
 
   problems.push(...sources.unreachedHelpers())
+  // Last: walking every definition (above) can report an import it
+  // could not follow.
+  problems.push(...sources.problems)
 
   const pending = documents.flatMap((document) =>
     document.scenarios.filter((scenario) =>

@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto"
-import { existsSync, readFileSync } from "node:fs"
+import { existsSync, readFileSync, statSync } from "node:fs"
 import {
   dirname,
   join,
@@ -161,16 +161,24 @@ const resolveRelative = (fromFile, specifier) => {
   }
 
   const base = resolve(dirname(fromFile), specifier)
+  // TypeScript lets `./weak.js` name `weak.ts`.
+  const withoutJs = base.replace(/\.[cm]?jsx?$/, "")
   const candidates = [
     base,
     `${base}.ts`,
     `${base}.tsx`,
+    `${withoutJs}.ts`,
+    `${withoutJs}.tsx`,
     join(base, "index.ts"),
+    join(base, "index.tsx"),
   ]
 
   return (
-    candidates.find((candidate) => existsSync(candidate)) ??
-    null
+    candidates.find(
+      (candidate) =>
+        existsSync(candidate) &&
+        statSync(candidate).isFile(),
+    ) ?? null
   )
 }
 
@@ -892,7 +900,7 @@ export const readSources = (project) => {
    * that turn step text into arguments. Every requirement reaches
    * these, so weakening the wrapper changes every requirement.
    */
-  const runtimeKeys = [
+  const wholeRuntimeKeys = [
     ...new Set([
       ...project.runtimeFiles,
       config.stepModule,
@@ -1158,7 +1166,85 @@ export const readSources = (project) => {
     for (const statement of statements) {
       if (!ts.isImportDeclaration(statement)) {
         walk(module, statement, reached)
+      } else if (
+        !statement.importClause &&
+        ts.isStringLiteral(statement.moduleSpecifier)
+      ) {
+        // `import "./patch.ts"` runs that module for its effects.
+        followSideEffectImport(
+          module,
+          statement.moduleSpecifier.text,
+          reached,
+        )
       }
+    }
+  }
+
+  /** @type {Set<string>} */
+  const reportedUnresolved = new Set()
+
+  /**
+   * @param {SourceModule} module
+   * @param {string} specifier
+   */
+  const reportUnresolved = (module, specifier) => {
+    const key = `${module.file}|${specifier}`
+
+    if (reportedUnresolved.has(key)) {
+      return
+    }
+
+    reportedUnresolved.add(key)
+    problems.push({
+      file: module.file,
+      line: 1,
+      column: 1,
+      rule: "unresolved-import",
+      message: `"${specifier}" does not resolve to a file the checker can read, so the lock cannot follow it. Import the file by its path.`,
+    })
+  }
+
+  /**
+   * @param {SourceModule} module
+   * @param {string} specifier
+   * @param {Set<string>} reached
+   */
+  const followSideEffectImport = (
+    module,
+    specifier,
+    reached,
+  ) => {
+    if (!specifier.startsWith(".")) {
+      return
+    }
+
+    const target = resolveRelative(
+      module.absolutePath,
+      specifier,
+    )
+
+    if (!target) {
+      reportUnresolved(module, specifier)
+
+      return
+    }
+
+    if (target === stepModulePath || isSubject(target)) {
+      return
+    }
+
+    if (!/\.tsx?$/.test(target)) {
+      reached.add(addWholeFile(target, true))
+
+      return
+    }
+
+    const targetModule = moduleAt(target)
+
+    enterModule(targetModule, reached)
+
+    for (const name of targetModule.declarations.keys()) {
+      reachIdentifier(targetModule, name, reached)
     }
   }
 
@@ -1192,6 +1278,12 @@ export const readSources = (project) => {
       module.absolutePath,
       imported.specifier,
     )
+
+    if (!target && imported.specifier.startsWith(".")) {
+      reportUnresolved(module, imported.specifier)
+
+      return
+    }
 
     // A bare package import is recorded by the importing module's
     // ‹module› unit, which hashes its import statements.
@@ -1347,6 +1439,86 @@ export const readSources = (project) => {
     }
 
     return unused
+  }
+
+  /**
+   * Code every scenario loads, beyond the whole-file runtime units:
+   * each step file's top-level code, which `index.ts` runs for every
+   * scenario whether or not its steps are used, and whatever the
+   * runtime TypeScript files import by relative path, such as the
+   * Storybook preview behind `vitest.ui.setup.ts`.
+   *
+   * @type {Set<string>}
+   */
+  const loadedEverywhere = new Set(wholeRuntimeKeys)
+
+  for (const file of project.stepFiles) {
+    enterModule(
+      moduleAt(resolve(root, file)),
+      loadedEverywhere,
+    )
+  }
+
+  for (const file of [
+    ...project.runtimeFiles,
+    config.stepModule,
+  ]) {
+    const absolutePath = resolve(root, file)
+
+    if (
+      !/\.tsx?$/.test(absolutePath) ||
+      !existsSync(absolutePath)
+    ) {
+      continue
+    }
+
+    const runtimeModule = moduleAt(absolutePath)
+
+    for (const [
+      localName,
+      imported,
+    ] of runtimeModule.imports) {
+      if (imported.specifier.startsWith(".")) {
+        reachIdentifier(
+          runtimeModule,
+          localName,
+          loadedEverywhere,
+        )
+      }
+    }
+
+    for (const statement of runtimeModule.moduleStatements) {
+      if (
+        ts.isImportDeclaration(statement) &&
+        !statement.importClause &&
+        ts.isStringLiteral(statement.moduleSpecifier)
+      ) {
+        followSideEffectImport(
+          runtimeModule,
+          statement.moduleSpecifier.text,
+          loadedEverywhere,
+        )
+      }
+    }
+  }
+
+  const runtimeKeys = [...loadedEverywhere].sort()
+
+  for (const file of project.stepFiles) {
+    if (
+      !definitions.some(
+        (definition) => definition.file === file,
+      )
+    ) {
+      problems.push({
+        file,
+        line: 1,
+        column: 1,
+        rule: "step-file-without-steps",
+        message:
+          "A step file must define at least one step. Setup code that runs for every scenario belongs in the runtime files (support/), where the lock hashes it for every requirement.",
+      })
+    }
   }
 
   return {

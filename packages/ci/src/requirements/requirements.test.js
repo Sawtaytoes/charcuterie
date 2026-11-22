@@ -937,6 +937,144 @@ describe("changes found by the third review", () => {
   })
 })
 
+describe("changes found by the fourth review", () => {
+  /** @param {Record<string, string>} files */
+  const lockedLamp = async (files = {}) => {
+    const root = await makeProject({
+      "lamp.feature": feature,
+      "helpers/lamp.ts": helpers,
+      "steps/lamp.steps.ts": steps,
+      ...files,
+    })
+    const analysis = await analyzeProject(root)
+
+    expect(analysis.problems).toEqual([])
+    await writeLock(
+      analysis,
+      buildLock(analysis, await readLock(analysis)),
+    )
+
+    return root
+  }
+
+  /** @param {string} root */
+  const resultOf = async (root) => {
+    const analysis = await analyzeProject(root)
+    const locked = await readLock(analysis)
+
+    return {
+      rules: analysis.problems.map(
+        (problem) => problem.rule,
+      ),
+      details: describeChanges(
+        locked,
+        buildLock(analysis, locked),
+      ).flatMap((change) =>
+        change.details.map(
+          (detail) => `${change.id} ${detail}`,
+        ),
+      ),
+    }
+  }
+
+  test("rejects a step file with no steps, which would run for every scenario unhashed", async () => {
+    const root = await makeProject({
+      "lamp.feature": feature,
+      "helpers/lamp.ts": helpers,
+      "steps/lamp.steps.ts": steps,
+      "steps/setup.steps.ts":
+        'import { expect } from "vitest"\n\nexpect.extend({})\n',
+    })
+
+    expect((await resultOf(root)).rules).toEqual([
+      "step-file-without-steps",
+    ])
+  })
+
+  test("a patch in one step file changes requirements that use none of its steps", async () => {
+    const other = `import { Given } from "../support/steps.ts"
+
+/** A switch. */
+Given("a switch", () => {})
+`
+    const root = await lockedLamp({
+      "switch.feature": `Feature: Switch
+
+  @REQ-T-2
+  Scenario: A switch exists
+    Given a switch
+`,
+      "steps/switch.steps.ts": other,
+    })
+
+    await writeFile(
+      join(root, "steps/switch.steps.ts"),
+      `${other}\nMath.random = () => 0\n`,
+    )
+
+    expect((await resultOf(root)).details).toContain(
+      "REQ-T-1 code changed: steps/switch.steps.ts › ‹module›",
+    )
+  })
+
+  test("follows the relative imports of runtime files, and side-effect imports", async () => {
+    const root = await lockedLamp({
+      "requirements.config.json": JSON.stringify({
+        ...config,
+        runtime: [
+          "index.ts",
+          "support/**/*.ts",
+          "../setup.ts",
+        ],
+      }),
+      "../setup.ts":
+        'import preview from "./preview.ts"\nimport "./patch.ts"\n\nvoid preview\n',
+      "../preview.ts": "export default { a11y: true }\n",
+      "../patch.ts": "export const patched = 1\n",
+    })
+
+    await writeFile(
+      join(root, "../preview.ts"),
+      "export default { a11y: false }\n",
+    )
+    await writeFile(
+      join(root, "../patch.ts"),
+      "export const patched = 2\n",
+    )
+
+    expect((await resultOf(root)).details).toEqual(
+      expect.arrayContaining([
+        "REQ-T-1 code changed: ../preview.ts › default",
+        "REQ-T-1 code changed: ../patch.ts › patched",
+      ]),
+    )
+  })
+
+  test("reports a relative import it cannot follow, and resolves .js to .ts", async () => {
+    const root = await makeProject({
+      "lamp.feature": feature,
+      "helpers/lamp.ts": helpers,
+      "steps/lamp.steps.ts": steps
+        .replace(
+          '"../helpers/lamp.ts"',
+          '"../helpers/lamp.js"',
+        )
+        .replace(
+          'import { Given, Then, When } from "../support/steps.ts"',
+          'import { Given, Then, When } from "../support/steps.ts"\nimport { kit } from "../helpers"\n',
+        )
+        .replace(
+          "(world, name: string) => {})",
+          "(world, name: string) => { void kit })",
+        ),
+    })
+
+    expect((await resultOf(root)).rules).toEqual([
+      "unresolved-import",
+    ])
+  })
+})
+
 describe("registration", () => {
   test("rejects a step file the setup file never loads", async () => {
     const root = await makeProject({
