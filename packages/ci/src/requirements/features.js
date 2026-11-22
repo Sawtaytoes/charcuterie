@@ -77,17 +77,22 @@ const toTags = (tags) =>
  * @param {{ dataTable?: { rows: readonly { cells: readonly { value: string }[] }[] }, docString?: { content: string, mediaType?: string } } | undefined} argument
  */
 export const argumentText = (argument) => {
+  // JSON keeps cell boundaries: `| a | b |` and `| a \| b |` differ.
   if (argument?.dataTable) {
-    return argument.dataTable.rows
-      .map(
-        (row) =>
-          `| ${row.cells.map((cell) => cell.value).join(" | ")} |`,
-      )
-      .join("\n")
+    return JSON.stringify({
+      dataTable: argument.dataTable.rows.map((row) =>
+        row.cells.map((cell) => cell.value),
+      ),
+    })
   }
 
   if (argument?.docString) {
-    return `"""${argument.docString.mediaType ?? ""}\n${argument.docString.content}\n"""`
+    return JSON.stringify({
+      docString: {
+        mediaType: argument.docString.mediaType ?? "",
+        content: argument.docString.content,
+      },
+    })
   }
 
   return ""

@@ -7,7 +7,10 @@ import {
   analyzeProject,
   formatProblems,
 } from "../requirements/check.js"
-import { commandFor } from "../requirements/config.js"
+import {
+  commandFor,
+  configFileName,
+} from "../requirements/config.js"
 import {
   baseProblems,
   buildLock,
@@ -15,6 +18,7 @@ import {
   emptyLock,
   formatChangesMarkdown,
   lockProblems,
+  parseLock,
   readLock,
   writeLock,
 } from "../requirements/lock.js"
@@ -27,19 +31,30 @@ import {
 const run = promisify(execFile)
 
 /**
- * The lock at `base`. A base commit with no lock file means every
- * requirement is new; anything else that goes wrong — an unknown
- * ref, a malformed lock — is an error, never an empty base, because
- * an empty base would report every requirement as merely "added".
+ * The lock at `base`, found through the base commit's OWN config, so
+ * renaming the lock in a pull request cannot hide the base ledger.
+ * Only a base with no requirements config at all predates the ledger
+ * and counts as empty; anything else that goes wrong — an unknown
+ * ref, a config without its lock, a malformed lock — is an error,
+ * because an empty base would report every requirement as "added".
  *
- * @param {string} cwd
+ * @param {string} cwd the requirements root
  * @param {string} base
- * @param {string} lockFile
  * @returns {Promise<import("../requirements/lock.js").RequirementsLock>}
  */
-const readBaseLock = async (cwd, base, lockFile) => {
+const readBaseLock = async (cwd, base) => {
   const git = (/** @type {string[]} */ args) =>
     run("git", args, { cwd, maxBuffer: 64 * 1024 * 1024 })
+  /** @param {string} path */
+  const existsAtBase = async (path) => {
+    try {
+      await git(["cat-file", "-e", `${base}:./${path}`])
+
+      return true
+    } catch {
+      return false
+    }
+  }
 
   try {
     await git([
@@ -54,10 +69,34 @@ const readBaseLock = async (cwd, base, lockFile) => {
     )
   }
 
-  try {
-    await git(["cat-file", "-e", `${base}:./${lockFile}`])
-  } catch {
+  if (!(await existsAtBase(configFileName))) {
     return emptyLock()
+  }
+
+  const { stdout: configText } = await git([
+    "show",
+    `${base}:./${configFileName}`,
+  ])
+  /** @type {{ lock?: unknown }} */
+  let baseConfig
+
+  try {
+    baseConfig = JSON.parse(configText)
+  } catch (error) {
+    throw new Error(
+      `${configFileName} at ${base} is not valid JSON: ${error instanceof Error ? error.message : String(error)}`,
+    )
+  }
+
+  const lockFile =
+    typeof baseConfig.lock === "string"
+      ? baseConfig.lock
+      : "requirements.lock.json"
+
+  if (!(await existsAtBase(lockFile))) {
+    throw new Error(
+      `${base} has ${configFileName} but no ${lockFile}. A base with a requirements config always has its lock.`,
+    )
   }
 
   const { stdout } = await git([
@@ -65,13 +104,7 @@ const readBaseLock = async (cwd, base, lockFile) => {
     `${base}:./${lockFile}`,
   ])
 
-  try {
-    return JSON.parse(stdout)
-  } catch (error) {
-    throw new Error(
-      `The lock at ${base} is not valid JSON: ${error instanceof Error ? error.message : String(error)}`,
-    )
-  }
+  return parseLock(stdout, `${lockFile} at ${base}`)
 }
 
 const usage = `charcuterie-requirements <command> [--root <dir>]
@@ -271,7 +304,6 @@ const main = async () => {
     const before = await readBaseLock(
       analysis.project.root,
       base,
-      analysis.project.config.lock,
     )
     const head = buildLock(analysis, locked)
     const problems = baseProblems(

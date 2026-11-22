@@ -205,6 +205,81 @@ const declaresName = (sourceFile, name) =>
  * }} SourceModule
  */
 
+const effectfulOperators = new Set([
+  ts.SyntaxKind.EqualsToken,
+  ts.SyntaxKind.PlusEqualsToken,
+  ts.SyntaxKind.MinusEqualsToken,
+  ts.SyntaxKind.AsteriskEqualsToken,
+  ts.SyntaxKind.AsteriskAsteriskEqualsToken,
+  ts.SyntaxKind.SlashEqualsToken,
+  ts.SyntaxKind.PercentEqualsToken,
+  ts.SyntaxKind.LessThanLessThanEqualsToken,
+  ts.SyntaxKind.GreaterThanGreaterThanEqualsToken,
+  ts.SyntaxKind
+    .GreaterThanGreaterThanGreaterThanEqualsToken,
+  ts.SyntaxKind.AmpersandEqualsToken,
+  ts.SyntaxKind.BarEqualsToken,
+  ts.SyntaxKind.CaretEqualsToken,
+  ts.SyntaxKind.AmpersandAmpersandEqualsToken,
+  ts.SyntaxKind.BarBarEqualsToken,
+  ts.SyntaxKind.QuestionQuestionEqualsToken,
+])
+
+/**
+ * True when evaluating `node` runs no code of its own: literals,
+ * object and array literals, functions (their bodies run later),
+ * and property reads. A call, `new`, an assignment, `delete`, or an
+ * increment makes it effectful. Errs toward effectful.
+ *
+ * @param {ts.Node} node
+ * @returns {boolean}
+ */
+const isInert = (node) => {
+  if (
+    ts.isArrowFunction(node) ||
+    ts.isFunctionExpression(node)
+  ) {
+    return true
+  }
+
+  if (
+    ts.isCallExpression(node) ||
+    ts.isNewExpression(node) ||
+    ts.isTaggedTemplateExpression(node) ||
+    ts.isDeleteExpression(node) ||
+    ts.isAwaitExpression(node) ||
+    ts.isYieldExpression(node) ||
+    ts.isClassExpression(node) ||
+    ts.isPostfixUnaryExpression(node) ||
+    (ts.isPrefixUnaryExpression(node) &&
+      (node.operator === ts.SyntaxKind.PlusPlusToken ||
+        node.operator === ts.SyntaxKind.MinusMinusToken)) ||
+    (ts.isBinaryExpression(node) &&
+      effectfulOperators.has(node.operatorToken.kind))
+  ) {
+    return false
+  }
+
+  if (
+    ts.isMethodDeclaration(node) ||
+    ts.isGetAccessorDeclaration(node) ||
+    ts.isSetAccessorDeclaration(node)
+  ) {
+    return true
+  }
+
+  /** @type {boolean} */
+  let inert = true
+
+  ts.forEachChild(node, (child) => {
+    if (inert && !isInert(child)) {
+      inert = false
+    }
+  })
+
+  return inert
+}
+
 /**
  * @param {string} root absolute
  * @param {string} absolutePath
@@ -252,7 +327,10 @@ const readModule = (root, absolutePath) => {
 
       const isTypeOnly = Boolean(clause?.isTypeOnly)
 
-      moduleStatements.push(statement)
+      // `import type` is erased; it cannot change what runs.
+      if (!isTypeOnly) {
+        moduleStatements.push(statement)
+      }
 
       if (clause?.name) {
         imports.set(clause.name.text, {
@@ -307,6 +385,20 @@ const readModule = (root, absolutePath) => {
     ) {
       declarations.set("default", statement)
     } else if (ts.isVariableStatement(statement)) {
+      // An initializer that runs code, or a destructuring the walker
+      // cannot name, runs when the module loads whether or not a step
+      // uses the binding — so it also joins the ‹module› unit.
+      if (
+        statement.declarationList.declarations.some(
+          (declaration) =>
+            !ts.isIdentifier(declaration.name) ||
+            (declaration.initializer &&
+              !isInert(declaration.initializer)),
+        )
+      ) {
+        moduleStatements.push(statement)
+      }
+
       for (const declaration of statement.declarationList
         .declarations) {
         if (ts.isIdentifier(declaration.name)) {
@@ -325,6 +417,23 @@ const readModule = (root, absolutePath) => {
       statement.name
     ) {
       declarations.set(statement.name.text, statement)
+
+      if (
+        statement.members.some(
+          (member) =>
+            ts.isClassStaticBlockDeclaration(member) ||
+            (ts.isPropertyDeclaration(member) &&
+              (ts.getModifiers(member) ?? []).some(
+                (modifier) =>
+                  modifier.kind ===
+                  ts.SyntaxKind.StaticKeyword,
+              ) &&
+              member.initializer &&
+              !isInert(member.initializer)),
+        )
+      ) {
+        moduleStatements.push(statement)
+      }
 
       if (isExported(statement)) {
         exported.add(statement.name.text)
@@ -482,7 +591,32 @@ export const readSources = (project) => {
         node.expression.getText(entry.sourceFile) ===
           "import.meta.glob"
       ) {
-        const [patterns] = node.arguments
+        const [patterns, options] = node.arguments
+        const isEager =
+          options &&
+          ts.isObjectLiteralExpression(options) &&
+          options.properties.some(
+            (property) =>
+              ts.isPropertyAssignment(property) &&
+              ts.isIdentifier(property.name) &&
+              property.name.text === "eager" &&
+              property.initializer.kind ===
+                ts.SyntaxKind.TrueKeyword,
+          )
+        const isStatement =
+          ts.isExpressionStatement(node.parent) &&
+          node.parent.parent === entry.sourceFile
+
+        if (!isEager || !isStatement) {
+          problems.push({
+            file: entry.file,
+            ...lineOf(entry.sourceFile, node),
+            rule: "registration-mismatch",
+            message:
+              'Register step files with one top-level `import.meta.glob("…", { eager: true })` statement. A lazy or conditional glob never imports them, so their steps would not run.',
+          })
+        }
+
         const literals =
           patterns && ts.isArrayLiteralExpression(patterns)
             ? patterns.elements
@@ -1147,6 +1281,7 @@ export const readSources = (project) => {
         isExternal: false,
         isHelper: false,
       })
+      enterModule(module, reached)
       walk(module, node, reached)
     }
 

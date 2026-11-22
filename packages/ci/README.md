@@ -128,7 +128,9 @@ hashed; `!` excludes), `allowedTags`, and `command` (how messages name the CLI).
 holds the generated `requirements.lock.json`. The lock lists each requirement's steps,
 tags, and every code unit they reach, so a weakened helper is reported as a changed
 requirement. `diff` exits non-zero when a requirement or a retirement entry from the base
-commit is gone, or a retired ID returns. Steps must be literal
+commit is gone, or a retired ID returns. It reads the base lock through the base commit's own config and
+rejects a lock in the wrong shape. The lock is a static tripwire, not a proof: it follows
+code by name without running it. Steps must be literal
 Cucumber expressions registered through the repo's own `stepModule` wrapper, because a
 pattern built at runtime cannot be traced. The full rule list and the reasons are in
 Charcuterie's [`docs/gherkin-requirements.md`](../../docs/gherkin-requirements.md).

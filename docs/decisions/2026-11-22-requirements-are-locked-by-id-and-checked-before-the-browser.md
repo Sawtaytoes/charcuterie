@@ -25,7 +25,9 @@ checker replaces third-party Gherkin linters; the fleet does not use `gherkin-li
    the code that changed. Comments and formatting do not count as changes. On a pull
    request, CI also compares the lock with the base commit and fails if a requirement or a
    retirement entry disappears or a retired ID returns. The lock does not cover package
-   versions, the root Vitest config, or the CI workflow.
+   versions, the root Vitest config, or the CI workflow. It reads code statically, by
+   name, so it is a tripwire for agents, not a proof; review of the lock diff stays the
+   final check.
 2. **Lock-down tags.** Each Scenario has exactly one `@REQ-UI-<n>` tag, unique in the
    repo by number, so `REQ-UI-7` and `REQ-UI-007` are the same ID. A removed requirement must be retired with a reason
    (`pnpm requirements:lock --retire <ID> --reason "…"`), and a retired ID is never

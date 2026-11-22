@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process"
 import {
   mkdir,
   mkdtemp,
@@ -5,7 +6,7 @@ import {
   writeFile,
 } from "node:fs/promises"
 import { tmpdir } from "node:os"
-import { dirname, join } from "node:path"
+import { dirname, join, resolve } from "node:path"
 
 import { afterEach, describe, expect, test } from "vitest"
 
@@ -16,6 +17,7 @@ import {
   buildLock,
   describeChanges,
   lockProblems,
+  parseLock,
   readLock,
   writeLock,
 } from "./lock.js"
@@ -636,7 +638,7 @@ defineParameterType({ name: "lamp", regexp: /desk|floor/, transformer: (name: st
     )
 
     expect((await changesOf(root)).details).toContain(
-      "REQ-T-1 code changed: helpers/lamp.ts › ‹module›",
+      "REQ-T-1 now reaches: helpers/lamp.ts › ‹module›",
     )
   })
 
@@ -723,6 +725,215 @@ export const Floor = { args: { name: "Floor" } }
     expect((await changesOf(root)).details).toContain(
       "REQ-T-1 code changed: ../ui/Lamp.stories.tsx › Desk",
     )
+  })
+})
+
+describe("changes found by the third review", () => {
+  /** @param {Record<string, string>} files */
+  const lockedLamp = async (files = {}) => {
+    const root = await makeProject({
+      "lamp.feature": feature,
+      "helpers/lamp.ts": helpers,
+      "steps/lamp.steps.ts": steps,
+      ...files,
+    })
+    const analysis = await analyzeProject(root)
+
+    expect(analysis.problems).toEqual([])
+    await writeLock(
+      analysis,
+      buildLock(analysis, await readLock(analysis)),
+    )
+
+    return root
+  }
+
+  /** @param {string} root */
+  const detailsOf = async (root) => {
+    const analysis = await analyzeProject(root)
+    const locked = await readLock(analysis)
+
+    return describeChanges(
+      locked,
+      buildLock(analysis, locked),
+    ).flatMap((change) =>
+      change.details.map(
+        (detail) => `${change.id} ${detail}`,
+      ),
+    )
+  }
+
+  test("an unused initializer that runs code changes the lock; an erased type import does not", async () => {
+    const root = await lockedLamp()
+
+    await writeFile(
+      join(root, "steps/lamp.steps.ts"),
+      `import type { World } from "../support/world.ts"\n${steps}`,
+    )
+
+    expect(await detailsOf(root)).toEqual([])
+
+    await writeFile(
+      join(root, "steps/lamp.steps.ts"),
+      `${steps}\nconst unused = (globalThis.lampName = "Floor")\n`,
+    )
+
+    expect(await detailsOf(root)).toContain(
+      "REQ-T-1 code changed: steps/lamp.steps.ts › ‹module›",
+    )
+
+    await writeFile(
+      join(root, "steps/lamp.steps.ts"),
+      `${steps}\nconst { unused } = { unused: 1 }\n`,
+    )
+
+    expect(await detailsOf(root)).toContain(
+      "REQ-T-1 code changed: steps/lamp.steps.ts › ‹module›",
+    )
+  })
+
+  test("keeps data-table cell boundaries", async () => {
+    const table = (row) =>
+      feature.replace(
+        '      Then "Desk" is on',
+        `      Then "Desk" is on\n        ${row}`,
+      )
+    const root = await lockedLamp({
+      "lamp.feature": table("| a | b |"),
+    })
+
+    await writeFile(
+      join(root, "lamp.feature"),
+      table("| a \\| b |"),
+    )
+
+    expect(await detailsOf(root)).toContain(
+      "REQ-T-1 spec: the steps or examples changed",
+    )
+  })
+
+  test("names a renamed Rule or Feature", async () => {
+    const root = await lockedLamp()
+
+    await writeFile(
+      join(root, "lamp.feature"),
+      feature
+        .replace(
+          "Rule: A lamp does",
+          "Rule: A lamp mostly does",
+        )
+        .replace("Feature: Lamp", "Feature: Light"),
+    )
+
+    expect(await detailsOf(root)).toEqual([
+      'REQ-T-1 rule: "A lamp does what its switch says" -> "A lamp mostly does what its switch says"',
+      'REQ-T-1 feature heading: "Lamp" -> "Light"',
+    ])
+  })
+
+  test("rejects a lazy step glob", async () => {
+    const root = await makeProject({
+      "lamp.feature": feature,
+      "helpers/lamp.ts": helpers,
+      "steps/lamp.steps.ts": steps,
+      "index.ts": `import.meta.glob("./steps/*.steps.ts", { eager: false })\n`,
+    })
+
+    expect(await rulesOf(root)).toEqual([
+      "registration-mismatch",
+    ])
+  })
+
+  test("refuses a lock in the wrong shape", () => {
+    expect(() => parseLock("{}", "lock")).toThrow(
+      "malformed",
+    )
+    expect(() =>
+      parseLock(
+        JSON.stringify({
+          version: 1,
+          requirements: {},
+          code: {},
+          retired: { "REQ-T-1": null },
+        }),
+        "lock",
+      ),
+    ).toThrow(
+      "retired REQ-T-1 needs a scenario and a reason",
+    )
+  })
+
+  test("diff reads the base lock through the base commit's own config", async () => {
+    const root = await lockedLamp()
+    const cli = resolve(
+      import.meta.dirname,
+      "../cli/requirements.js",
+    )
+    const git = (/** @type {string[]} */ ...args) =>
+      execFileSync("git", args, {
+        cwd: root,
+        stdio: "pipe",
+      })
+
+    git("init", "-q")
+    git(
+      "-c",
+      "user.name=t",
+      "-c",
+      "user.email=t@example.com",
+      "add",
+      ".",
+    )
+    git(
+      "-c",
+      "user.name=t",
+      "-c",
+      "user.email=t@example.com",
+      "commit",
+      "-qm",
+      "base",
+    )
+
+    // Move the lock and drop the requirement without retiring it.
+    await writeFile(
+      join(root, "requirements.config.json"),
+      JSON.stringify({
+        ...config,
+        lock: "moved.lock.json",
+      }),
+    )
+    await writeFile(
+      join(root, "lamp.feature"),
+      feature.replaceAll("REQ-T-1", "REQ-T-2"),
+    )
+
+    let analysis = await analyzeProject(root)
+
+    await writeLock(
+      analysis,
+      buildLock(analysis, await readLock(analysis)),
+    )
+    analysis = await analyzeProject(root)
+    expect(
+      lockProblems(analysis, await readLock(analysis)),
+    ).toEqual([])
+
+    /** @type {string} */
+    let output = ""
+
+    try {
+      execFileSync(
+        process.execPath,
+        [cli, "diff", "--base", "HEAD", "--root", root],
+        { cwd: root, stdio: "pipe" },
+      )
+    } catch (error) {
+      output = String(
+        /** @type {{ stderr?: Buffer }} */ (error).stderr,
+      )
+    }
+
+    expect(output).toContain("removed-requirement")
   })
 })
 

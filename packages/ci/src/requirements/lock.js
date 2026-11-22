@@ -20,6 +20,7 @@ import { commandFor } from "./config.js"
  *
  * @typedef {{
  *   feature: string,
+ *   heading: string,
  *   rule?: string,
  *   scenario: string,
  *   status: "active" | "pending",
@@ -52,16 +53,15 @@ export const emptyLock = () => ({
  * @returns {Promise<RequirementsLock>}
  */
 export const readLock = async (analysis) => {
+  const file = join(
+    analysis.project.root,
+    analysis.project.config.lock,
+  )
+  /** @type {string} */
+  let text
+
   try {
-    return JSON.parse(
-      await readFile(
-        join(
-          analysis.project.root,
-          analysis.project.config.lock,
-        ),
-        "utf8",
-      ),
-    )
+    text = await readFile(file, "utf8")
   } catch (error) {
     if (
       error instanceof Error &&
@@ -73,6 +73,109 @@ export const readLock = async (analysis) => {
 
     throw error
   }
+
+  return parseLock(text, analysis.project.config.lock)
+}
+
+/**
+ * A lock edited by hand into another shape must fail loudly, not
+ * read as "nothing locked": `{}` or a `null` tombstone would
+ * otherwise pass every comparison.
+ *
+ * @param {string} text
+ * @param {string} source where it came from, for the message
+ * @returns {RequirementsLock}
+ */
+export const parseLock = (text, source) => {
+  /** @type {unknown} */
+  let value
+
+  try {
+    value = JSON.parse(text)
+  } catch (error) {
+    throw new Error(
+      `${source} is not valid JSON: ${error instanceof Error ? error.message : String(error)}`,
+    )
+  }
+
+  /** @type {string[]} */
+  const errors = []
+  /** @param {unknown} candidate */
+  const isRecord = (candidate) =>
+    typeof candidate === "object" &&
+    candidate !== null &&
+    !Array.isArray(candidate)
+  /** @param {unknown} candidate */
+  const isText = (candidate) =>
+    typeof candidate === "string" && candidate.trim() !== ""
+  const lock = /** @type {Record<string, unknown>} */ (
+    isRecord(value) ? value : {}
+  )
+
+  if (lock.version !== 1) {
+    errors.push("version must be 1")
+  }
+
+  for (const key of ["requirements", "code", "retired"]) {
+    if (!isRecord(lock[key])) {
+      errors.push(`"${key}" must be an object`)
+    }
+  }
+
+  for (const [id, entry] of Object.entries(
+    isRecord(lock.requirements)
+      ? /** @type {Record<string, unknown>} */ (
+          lock.requirements
+        )
+      : {},
+  )) {
+    const requirement =
+      /** @type {Record<string, unknown>} */ (
+        isRecord(entry) ? entry : {}
+      )
+
+    if (
+      !isText(requirement.feature) ||
+      !isText(requirement.scenario) ||
+      (requirement.status !== "active" &&
+        requirement.status !== "pending") ||
+      !Array.isArray(requirement.steps) ||
+      !Array.isArray(requirement.code)
+    ) {
+      errors.push(
+        `requirement ${id} needs feature, scenario, status, steps, and code`,
+      )
+    }
+  }
+
+  for (const [id, entry] of Object.entries(
+    isRecord(lock.retired)
+      ? /** @type {Record<string, unknown>} */ (
+          lock.retired
+        )
+      : {},
+  )) {
+    const retired = /** @type {Record<string, unknown>} */ (
+      isRecord(entry) ? entry : {}
+    )
+
+    if (
+      !isText(retired.scenario) ||
+      !isText(retired.reason)
+    ) {
+      errors.push(
+        `retired ${id} needs a scenario and a reason`,
+      )
+    }
+  }
+
+  if (errors.length > 0) {
+    throw new Error(
+      `${source} is malformed: ${errors.join("; ")}. Restore it from git; only the lock command writes it.`,
+    )
+  }
+
+  return /** @type {RequirementsLock} */ (value)
 }
 
 /**
@@ -151,6 +254,7 @@ export const buildLock = (analysis, previous) => {
 
       requirements[idTag.name.slice(1)] = {
         feature: document.file,
+        heading: document.name,
         ...(scenario.ruleName
           ? { rule: scenario.ruleName }
           : {}),
@@ -452,6 +556,18 @@ export const describeChanges = (before, after) => {
       )
     }
 
+    if ((old.rule ?? "") !== (current.rule ?? "")) {
+      details.push(
+        `rule: "${old.rule ?? ""}" -> "${current.rule ?? ""}"`,
+      )
+    }
+
+    if (old.heading !== current.heading) {
+      details.push(
+        `feature heading: "${old.heading ?? ""}" -> "${current.heading ?? ""}"`,
+      )
+    }
+
     if (old.feature !== current.feature) {
       details.push(
         `moved: ${old.feature} -> ${current.feature}`,
@@ -482,6 +598,13 @@ export const describeChanges = (before, after) => {
       if (!currentCode.has(key)) {
         details.push(`no longer reaches: ${key}`)
       }
+    }
+
+    if (
+      details.length === 0 &&
+      JSON.stringify(old) !== JSON.stringify(current)
+    ) {
+      details.push("entry changed")
     }
 
     if (details.length > 0) {

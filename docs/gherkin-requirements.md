@@ -140,6 +140,14 @@ Comments and formatting do not change the lock. The components under test do not
 it either: `subjects` in `requirements.config.json` names them, and the lock neither hashes
 nor follows them. A story change does change it, for the requirements that use that story.
 
+The lock is a tripwire, not a proof. It reads code by name without running it, and each
+review of it has found new ways around it. Reading the lock diff and the job summary in
+review is still the final check. A top-level statement that runs code, such as an
+initializer that calls a function or assigns a value, joins its module's `‹module›` unit,
+so editing it marks every requirement that loads the module. A lazy or conditional
+`import.meta.glob` is rejected. A lock in the wrong shape fails, and CI finds the base
+commit's lock through the base commit's own config.
+
 What the lock does not see: npm package versions (the pnpm lockfile covers those), the root
 `vitest.config.ts` and the CI workflow (code review covers those), and code reached only
 through dynamic property access. The walker matches names, not bindings, so it can also
