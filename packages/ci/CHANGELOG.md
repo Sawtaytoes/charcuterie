@@ -1,5 +1,20 @@
 # @charcuterie/ci
 
+## 0.2.0
+
+### Minor Changes
+
+- 1711ab0: Add `charcuterie-requirements`, a static checker for Gherkin requirements. It replaces `gherkin-lint`. It parses features with the same parser QuickPickle uses and reads step definitions from TypeScript source without running them. It fails on undefined, ambiguous, unused, and mis-keyworded steps, unused helpers, runner tags such as `@skip` and `@fails`, missing or reused requirement IDs, and a second `Examples` table. Its `requirements.lock.json` records the code behind every requirement, so a weakened assertion is reported as a requirement change. `which` traces a feature line to its definition and every file it reaches.
+
+### Patch Changes
+
+- 3e8238d: The requirements checker now follows a named re-export ahead of an `export *`, ignores
+  `export declare`, reports a re-export chain deeper than eight files, rejects a directory
+  import whose directory has a `package.json`, and requires each step definition's code to be
+  an inline function.
+- 41d5384: The requirements checker now hashes a JSON file whose top-level key an `export *` supplies, and falls back to any other non-code file an `export *` names when nothing else supplies the name.
+- 1bee054: The requirements checker reports malformed JSON, a workspace `package.json` included, as `malformed-json` instead of crashing. It reads JSON files that start with a byte-order mark, as Vite does. A re-export chain past eight hops that ends in a CSS `export *` now fails as `reexport-too-deep`.
+
 ## 0.1.12
 
 ### Patch Changes
