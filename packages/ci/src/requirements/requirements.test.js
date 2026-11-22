@@ -2097,6 +2097,33 @@ describe("changes found by the twelfth review", () => {
     expect(named.code).toContain("../fixture/data.json")
   })
 
+  test("hashes a JSON file whose key an export * supplies", async () => {
+    for (const order of [
+      'export * from "./data.json"\nexport * from "./other.ts"\n',
+      'export * from "./other.ts"\nexport * from "./data.json"\n',
+    ]) {
+      const { code } = await reachedThroughBarrel({
+        "../fixture/index.ts": order,
+        "../fixture/data.json": '{ "check": 1 }\n',
+        "../fixture/other.ts":
+          "export const other = () => 1\n",
+      })
+
+      expect(code).toContain("../fixture/data.json")
+    }
+  })
+
+  test("falls back to a CSS file an export * names when nothing else supplies the name", async () => {
+    const { code } = await reachedThroughBarrel({
+      "../fixture/index.ts":
+        'export * from "./styles.module.css"\n',
+      "../fixture/styles.module.css":
+        ".check { color: red; }\n",
+    })
+
+    expect(code).toContain("../fixture/styles.module.css")
+  })
+
   test("still resolves an exact package.json or index file", async () => {
     const root = await makeProject({
       "lamp.feature": feature,

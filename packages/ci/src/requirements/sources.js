@@ -333,6 +333,34 @@ const relativeCandidates = (fromFile, specifier) => {
   ].filter(isExistingFile)
 }
 
+/**
+ * True when a JSON file is an object with `name` as a top-level key,
+ * which Vite exports as a named export.
+ *
+ * @param {string} absolutePath
+ * @param {string} name
+ */
+const jsonDeclares = (absolutePath, name) => {
+  if (!absolutePath.endsWith(".json")) {
+    return false
+  }
+
+  try {
+    const parsed = JSON.parse(
+      readFileSync(absolutePath, "utf8"),
+    )
+
+    return (
+      typeof parsed === "object" &&
+      parsed !== null &&
+      !Array.isArray(parsed) &&
+      Object.hasOwn(parsed, name)
+    )
+  } catch {
+    return false
+  }
+}
+
 /** @param {ts.Node} statement */
 const isAmbient = (statement) =>
   ts.canHaveModifiers(statement) &&
@@ -1532,11 +1560,11 @@ export const readSources = (project) => {
       return here(true)
     }
 
-    // A JSON or CSS file declares no names the checker can read. The
-    // caller hashes it whole when a named chain ends here, and an
-    // `export *` probe moves on to the next statement.
+    // A JSON file declares its top-level keys; any other non-code
+    // file declares no names the checker can read. The caller hashes
+    // the file whole either way.
     if (!codeFile.test(absolutePath)) {
-      return here(false)
+      return here(jsonDeclares(absolutePath, importedName))
     }
 
     // A path can pass through one file twice under different names.
@@ -1630,7 +1658,10 @@ export const readSources = (project) => {
           tooDeep = { search: followed, hops: deeper }
         } else if (
           !followed.isTooDeep &&
-          followed.file !== target &&
+          // A non-code file may still supply the name, as a CSS
+          // module does, so it is the fallback when nothing else is.
+          (followed.file !== target ||
+            !codeFile.test(target)) &&
           !reachedElsewhere
         ) {
           reachedElsewhere = {
