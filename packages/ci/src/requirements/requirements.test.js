@@ -2284,6 +2284,69 @@ describe("changes found by the twelfth review", () => {
   })
 })
 
+describe("changes found by the review of PR 440", () => {
+  /**
+   * @param {Record<string, string>} fixture
+   * @param {string} importLine
+   * @param {string} call
+   */
+  const analyzeWith = async (fixture, importLine, call) => {
+    const root = await makeProject({
+      "lamp.feature": feature,
+      "helpers/lamp.ts": helpers,
+      "steps/lamp.steps.ts": `${importLine}\n${steps.replace(
+        "expectOn(world, name)",
+        `expectOn(world, name)\n  ${call}`,
+      )}`,
+      ...fixture,
+    })
+
+    return analyzeProject(root)
+  }
+
+  test("a too-deep chain that ends in a CSS export * still fails", async () => {
+    /** @type {Record<string, string>} */
+    const fixture = {
+      "../fixture/x.module.css": ".check { color: red; }\n",
+    }
+
+    for (let hop = 0; hop < 9; hop += 1) {
+      const from = hop === 0 ? "index" : `b${hop}`
+      const to =
+        hop === 8 ? "x.module.css" : `b${hop + 1}.ts`
+
+      fixture[`../fixture/${from}.ts`] =
+        `export * from "./${to}"\n`
+    }
+
+    const analysis = await analyzeWith(
+      fixture,
+      'import { check } from "../../fixture/index.ts"',
+      "void check",
+    )
+
+    expect(
+      analysis.problems.map((problem) => problem.rule),
+    ).toContain("reexport-too-deep")
+  })
+
+  test("reports malformed JSON behind a namespace import instead of crashing", async () => {
+    const analysis = await analyzeWith(
+      {
+        "../fixture/index.ts":
+          'export * from "./bad.json"\n',
+        "../fixture/bad.json": "{ not json\n",
+      },
+      'import * as data from "../../fixture/index.ts"',
+      "void data",
+    )
+
+    expect(
+      analysis.problems.map((problem) => problem.rule),
+    ).toEqual(["malformed-json"])
+  })
+})
+
 describe("registration", () => {
   test("rejects a step file the setup file never loads", async () => {
     const root = await makeProject({

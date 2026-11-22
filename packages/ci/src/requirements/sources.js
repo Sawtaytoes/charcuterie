@@ -1420,6 +1420,34 @@ export const readSources = (project) => {
    * @param {string} absolutePath
    * @param {boolean} isExternal
    */
+  /**
+   * A JSON file's hash ignores formatting. Vite cannot load malformed
+   * JSON, so that is reported instead of crashing the checker.
+   *
+   * @param {string} key
+   * @param {string} absolutePath
+   * @param {string} text
+   */
+  const jsonHash = (key, absolutePath, text) => {
+    try {
+      return hashText(
+        absolutePath.endsWith("/package.json")
+          ? packageManifestText(text)
+          : JSON.stringify(JSON.parse(text)),
+      )
+    } catch {
+      problems.push({
+        file: key,
+        line: 1,
+        column: 1,
+        rule: "malformed-json",
+        message: `${key} is not valid JSON, so Vite cannot load it. Fix the file.`,
+      })
+
+      return hashText(text)
+    }
+  }
+
   const addWholeFile = (absolutePath, isExternal) => {
     const key = toKey(absolutePath)
 
@@ -1437,13 +1465,11 @@ export const readSources = (project) => {
         line: 1,
         hash: sourceFile
           ? hashNode(sourceFile, sourceFile)
-          : absolutePath.endsWith("/package.json")
-            ? hashText(packageManifestText(text))
-            : absolutePath.endsWith(".json")
-              ? hashText(JSON.stringify(JSON.parse(text)))
-              : absolutePath.endsWith(".css")
-                ? hashText(normalizeCss(text))
-                : hashText(text),
+          : absolutePath.endsWith(".json")
+            ? jsonHash(key, absolutePath, text)
+            : absolutePath.endsWith(".css")
+              ? hashText(normalizeCss(text))
+              : hashText(text),
         isExternal,
         isHelper: false,
       })
@@ -1674,6 +1700,7 @@ export const readSources = (project) => {
         }
 
         if (
+          !followed.isTooDeep &&
           !codeFile.test(target) &&
           !target.endsWith(".json")
         ) {
@@ -1866,7 +1893,12 @@ export const readSources = (project) => {
 
       // A namespace holds every name a JSON or CSS file exports.
       if (!codeFile.test(target)) {
-        reached.add(addWholeFile(target, true))
+        reached.add(
+          addWholeFile(
+            target,
+            toKey(target).startsWith(".."),
+          ),
+        )
 
         continue
       }
