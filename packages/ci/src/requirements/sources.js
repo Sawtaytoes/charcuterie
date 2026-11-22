@@ -341,8 +341,20 @@ const relativeCandidates = (fromFile, specifier) => {
  * @param {string} name
  */
 const jsonDeclares = (absolutePath, name) => {
+  const parsed = jsonObjectAt(absolutePath)
+
+  return parsed !== null && Object.hasOwn(parsed, name)
+}
+
+/**
+ * The parsed object when the file is a JSON object; otherwise null.
+ *
+ * @param {string} absolutePath
+ * @returns {Record<string, unknown> | null}
+ */
+const jsonObjectAt = (absolutePath) => {
   if (!absolutePath.endsWith(".json")) {
-    return false
+    return null
   }
 
   try {
@@ -350,16 +362,19 @@ const jsonDeclares = (absolutePath, name) => {
       readFileSync(absolutePath, "utf8"),
     )
 
-    return (
-      typeof parsed === "object" &&
+    return typeof parsed === "object" &&
       parsed !== null &&
-      !Array.isArray(parsed) &&
-      Object.hasOwn(parsed, name)
-    )
+      !Array.isArray(parsed)
+      ? parsed
+      : null
   } catch {
-    return false
+    return null
   }
 }
+
+/** @param {string} absolutePath */
+const isJsonObject = (absolutePath) =>
+  jsonObjectAt(absolutePath) !== null
 
 /** @param {ts.Node} statement */
 const isAmbient = (statement) =>
@@ -1609,6 +1624,14 @@ export const readSources = (project) => {
      * @type {{ search: DeclarationSearch, hops: string[] } | null}
      */
     let reachedElsewhere = null
+    /**
+     * The first non-code `export *` target that may supply the name,
+     * as a CSS module can. A JSON object that lacks the key cannot.
+     * It is the last resort, after any code chain.
+     *
+     * @type {string | null}
+     */
+    let nonCodeFallback = null
 
     for (const statement of exportStatements) {
       if (
@@ -1652,16 +1675,21 @@ export const readSources = (project) => {
           return followed
         }
 
+        if (
+          !codeFile.test(target) &&
+          !isJsonObject(target) &&
+          !nonCodeFallback
+        ) {
+          nonCodeFallback = target
+        }
+
         // Another `export *` may still supply the name; report the
         // depth only if none does.
         if (followed.isTooDeep && !tooDeep) {
           tooDeep = { search: followed, hops: deeper }
         } else if (
           !followed.isTooDeep &&
-          // A non-code file may still supply the name, as a CSS
-          // module does, so it is the fallback when nothing else is.
-          (followed.file !== target ||
-            !codeFile.test(target)) &&
+          followed.file !== target &&
           !reachedElsewhere
         ) {
           reachedElsewhere = {
@@ -1721,6 +1749,17 @@ export const readSources = (project) => {
       hops.push(absolutePath, ...reachedElsewhere.hops)
 
       return reachedElsewhere.search
+    }
+
+    if (nonCodeFallback) {
+      hops.push(absolutePath)
+
+      return {
+        file: nonCodeFallback,
+        name: importedName,
+        isFound: false,
+        isTooDeep: false,
+      }
     }
 
     return here(false)
@@ -1805,10 +1844,16 @@ export const readSources = (project) => {
 
       if (
         !target ||
-        !codeFile.test(target) ||
         isSubject(target) ||
         target === stepModulePath
       ) {
+        continue
+      }
+
+      // A namespace holds every name a JSON or CSS file exports.
+      if (!codeFile.test(target)) {
+        reached.add(addWholeFile(target, true))
+
         continue
       }
 

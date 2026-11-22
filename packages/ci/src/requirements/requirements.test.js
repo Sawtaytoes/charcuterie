@@ -2124,6 +2124,61 @@ describe("changes found by the twelfth review", () => {
     expect(code).toContain("../fixture/styles.module.css")
   })
 
+  test("a non-code export * written first does not shadow a later chain", async () => {
+    for (const [first, mid, leaf] of [
+      [
+        "nope.json",
+        'export { default as check } from "./data.json"\n',
+        "data.json",
+      ],
+      [
+        "s.module.css",
+        'export { default as check } from "./data.json"\n',
+        "data.json",
+      ],
+      [
+        "nope.json",
+        'export { check } from "./b.module.css"\n',
+        "b.module.css",
+      ],
+    ]) {
+      const { code } = await reachedThroughBarrel({
+        "../fixture/index.ts": `export * from "./${first}"\nexport * from "./mid.ts"\n`,
+        "../fixture/nope.json": '{ "nope": 1 }\n',
+        "../fixture/s.module.css": ".s { color: red; }\n",
+        "../fixture/mid.ts": mid,
+        "../fixture/data.json": '{ "check": 1 }\n',
+        "../fixture/b.module.css":
+          ".check { color: red; }\n",
+      })
+
+      expect(code).toContain(`../fixture/${leaf}`)
+    }
+  })
+
+  test("a namespace import hashes a JSON file its barrel re-exports", async () => {
+    const root = await makeProject({
+      "lamp.feature": feature,
+      "helpers/lamp.ts": helpers,
+      "steps/lamp.steps.ts": `import * as data from "../../fixture/index.ts"\n${steps.replace(
+        "expectOn(world, name)",
+        "expectOn(world, name)\n  void data",
+      )}`,
+      "../fixture/index.ts":
+        'export * from "./data.json"\n',
+      "../fixture/data.json": '{ "check": 1 }\n',
+    })
+    const analysis = await analyzeProject(root)
+    const lock = buildLock(
+      analysis,
+      await readLock(analysis),
+    )
+
+    expect(lock.requirements["REQ-T-1"]?.code).toContain(
+      "../fixture/data.json",
+    )
+  })
+
   test("still resolves an exact package.json or index file", async () => {
     const root = await makeProject({
       "lamp.feature": feature,
