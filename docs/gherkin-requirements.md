@@ -135,10 +135,12 @@ English changed.
 **If you did not mean to change a requirement, revert the edit. Do not relock.** When the
 change is intended:
 
-1. Run `pnpm requirements:lock`. It prints the requirements that changed and why. For
-   example: `REQ-UI-002 changed, code changed: helpers/states.ts › expectDisabled`.
+1. Run `pnpm requirements:lock`. It prints the requirements that changed and why, as a
+   Markdown list. For example, `- **REQ-UI-002** changed: <scenario>`, followed by
+   `- code changed: helpers/states.ts › expectDisabled`.
 2. Copy that list into the pull request description. The lock's `digests` map has one
-   line per requirement ID, so the lock's own diff also names each changed requirement. The reviewer checks each listed ID
+   line per requirement ID. Each line hashes the whole entry: the spec, tags, status, and
+   code. So the lock's own diff also names each changed requirement. The reviewer checks each listed ID
    against the requirement it names. CI writes the same list to the job summary.
 3. To remove a requirement, delete its scenario and run
    `pnpm requirements:lock --retire REQ-UI-005 --reason "<why>"`. Its ID can never be
@@ -150,9 +152,11 @@ components under test do not change it either: `subjects` in `requirements.confi
 names them, and the lock neither hashes nor follows them. A story change does change it,
 for the requirements that use that story. Two known false positives remain. Storybook
 requires `storySort` inline in `.storybook/preview.tsx`, and the test runner imports that
-file, so reordering the sidebar marks every requirement. And a new import or re-export
-line in any module the scenarios load marks every requirement, because that module's top-level code
-runs for all of them. Relock for either and say so in the pull request.
+file, so reordering the sidebar marks every requirement. And a new, removed, or reordered
+import or re-export line in any module the scenarios load marks every requirement, because
+that module's top-level code runs for all of them. A type annotation inside a function
+also counts as code, so changing it marks the requirements that reach that function.
+Relock for any of these and say so in the pull request.
 
 The lock is a tripwire, not a proof. It reads code by name without running it, and each
 review of it has found new ways around it. Reading the lock diff and the job summary in
@@ -161,7 +165,8 @@ initializer that calls a function or assigns a value, joins its module's `‹mod
 Editing it marks every requirement that reaches that module, and every requirement when
 the module is a step file. A barrel's own top-level code counts when a name passes through it, and renamed,
 default, and namespace re-exports are followed to the code behind them. A dynamic
-`import()` must use a string literal, and is followed like a namespace import. Only the
+`import()` must use a string literal. It is followed like a namespace import, and the
+top-level code of every module its target imports counts, as for a static import. Only the
 setup file may call `import.meta.glob`, in any module the lock reaches. A
 side-effect import (`import "./patch.ts"`) is followed. Any relative import in a module the
 lock reaches must resolve, or the check fails. A lazy or conditional
@@ -170,7 +175,8 @@ commit's lock through the base commit's own config.
 
 What the lock does not see: npm package versions (the pnpm lockfile covers those);
 workspace packages not listed in `packages`, imported by name; the
-root `vitest.config.ts` and the CI workflow (code review covers those); a move of the whole
+root `vitest.config.ts`, `package.json` scripts, and the CI workflow (code review covers
+those); a Vitest setup file named only by a string path, unless it is listed in `runtime`; a move of the whole
 requirements directory, which also changes `--root` in `package.json`; and code reached
 only through dynamic property access, `eval`, or an aliased step function. The walker matches names, not bindings, so it can also
 list a same-named function that a step does not really call; that errs toward reporting a

@@ -297,7 +297,8 @@ export const buildLock = (analysis, previous) => {
   }
 
   // One line per requirement, keyed by its ID, so the lock's own git
-  // diff names each requirement whose code changed.
+  // diff names each requirement that changed in any way: its spec,
+  // tags, status, or code.
   /** @type {Record<string, string>} */
   const digests = {}
 
@@ -306,12 +307,13 @@ export const buildLock = (analysis, previous) => {
   )) {
     digests[id] = createHash("sha256")
       .update(
-        JSON.stringify(
-          requirement.code.map((key) => [
+        JSON.stringify({
+          ...requirement,
+          code: requirement.code.map((key) => [
             key,
             code[key] ?? "",
           ]),
-        ),
+        }),
       )
       .digest("hex")
       .slice(0, 16)

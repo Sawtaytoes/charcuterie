@@ -1597,6 +1597,113 @@ export const expectExact = (count: number) => {
   })
 })
 
+describe("changes found by the ninth review", () => {
+  const twoLamps = `${feature}
+    @REQ-T-2
+    Scenario: Turning another lamp on
+      Given a lamp named "Hall"
+      When I turn on "Hall"
+      Then "Hall" is on
+`
+
+  /**
+   * The digest lines that differ between two versions of the feature.
+   *
+   * @param {string} edited
+   */
+  const changedDigests = async (edited) => {
+    const root = await makeProject({
+      "lamp.feature": twoLamps,
+      "helpers/lamp.ts": helpers,
+      "steps/lamp.steps.ts": steps,
+    })
+    let analysis = await analyzeProject(root)
+    const before = buildLock(
+      analysis,
+      await readLock(analysis),
+    ).digests
+
+    await writeFile(join(root, "lamp.feature"), edited)
+    analysis = await analyzeProject(root)
+
+    const after = buildLock(
+      analysis,
+      await readLock(analysis),
+    ).digests
+
+    return Object.keys(after).filter(
+      (id) => after[id] !== before[id],
+    )
+  }
+
+  test("a steps-only change alters exactly one digest line", async () => {
+    expect(
+      await changedDigests(
+        // The same step definitions run, so only the text differs.
+        twoLamps.replace(
+          'Then "Hall" is on',
+          'Then "Porch" is on',
+        ),
+      ),
+    ).toEqual(["REQ-T-2"])
+  })
+
+  test("a tag-only change alters exactly one digest line", async () => {
+    expect(
+      await changedDigests(
+        twoLamps.replace(
+          "    @REQ-T-2\n",
+          "    @REQ-T-2 @todo\n",
+        ),
+      ),
+    ).toEqual(["REQ-T-2"])
+  })
+
+  test("a literal dynamic import enters the top-level code of what its target imports", async () => {
+    const root = await makeProject({
+      "lamp.feature": feature,
+      "helpers/lamp.ts": helpers,
+      "steps/lamp.steps.ts": steps.replace(
+        "expectOn(world, name)",
+        'expectOn(world, name)\n  void (await import("../../fixture/impl.ts")).check()',
+      ),
+      "../fixture/impl.ts":
+        'import { describe } from "./describe.ts"\n\nexport const check = () => describe()\n',
+      "../fixture/describe.ts":
+        'import { formatters } from "./formatters.ts"\n\nexport const describe = () => "lamp"\n\nexport const other = () => formatters\n',
+      "../fixture/formatters.ts":
+        "export const formatters = {}\n\nglobalThis.patched = false\n",
+    })
+    let analysis = await analyzeProject(root)
+
+    expect(analysis.problems).toEqual([])
+    await writeLock(
+      analysis,
+      buildLock(analysis, await readLock(analysis)),
+    )
+    await writeFile(
+      join(root, "../fixture/formatters.ts"),
+      "export const formatters = {}\n\nglobalThis.patched = true\n",
+    )
+    analysis = await analyzeProject(root)
+
+    const locked = await readLock(analysis)
+
+    expect(
+      describeChanges(
+        locked,
+        buildLock(analysis, locked),
+      ).flatMap((change) =>
+        change.details.map(
+          (detail) => `${change.id} ${detail}`,
+        ),
+      ),
+    ).toContain(
+      "REQ-T-1 code changed: ../fixture/formatters.ts › ‹module›",
+    )
+  })
+})
+
 describe("registration", () => {
   test("rejects a step file the setup file never loads", async () => {
     const root = await makeProject({

@@ -1707,7 +1707,45 @@ export const readSources = (project) => {
       return
     }
 
-    reachNamespace(moduleAt(target), reached)
+    const targetModule = moduleAt(target)
+
+    reachNamespace(targetModule, reached)
+    // Loading the target also runs the top-level code of every module
+    // it imports, used or not, as a static import does.
+    enterGraph(targetModule, reached, new Set())
+  }
+
+  /**
+   * A module's top-level code runs once it is imported, so entering a
+   * module enters every module it imports, transitively.
+   *
+   * @param {SourceModule} module
+   * @param {Set<string>} reached
+   * @param {Set<string>} visited
+   */
+  const enterGraph = (module, reached, visited) => {
+    if (visited.has(module.absolutePath)) {
+      return
+    }
+
+    visited.add(module.absolutePath)
+    enterModule(module, reached)
+
+    for (const specifier of edgesOf(module)) {
+      const target = resolveSpecifier(
+        module.absolutePath,
+        specifier,
+      )
+
+      if (
+        target &&
+        target !== stepModulePath &&
+        codeFile.test(target) &&
+        !isSubject(target)
+      ) {
+        enterGraph(moduleAt(target), reached, visited)
+      }
+    }
   }
 
   /** @type {Set<string>} */
@@ -1982,36 +2020,13 @@ export const readSources = (project) => {
   const enteredEverywhere = new Set()
 
   /**
-   * A module's top-level code runs once it is imported, so every
-   * module a step file or runtime file imports, transitively, runs
-   * for every scenario.
+   * Every module a step file or runtime file imports, transitively,
+   * runs for every scenario.
    *
    * @param {SourceModule} module
    */
-  const enterEverywhere = (module) => {
-    if (enteredEverywhere.has(module.absolutePath)) {
-      return
-    }
-
-    enteredEverywhere.add(module.absolutePath)
-    enterModule(module, loadedEverywhere)
-
-    for (const specifier of edgesOf(module)) {
-      const target = resolveSpecifier(
-        module.absolutePath,
-        specifier,
-      )
-
-      if (
-        target &&
-        target !== stepModulePath &&
-        codeFile.test(target) &&
-        !isSubject(target)
-      ) {
-        enterEverywhere(moduleAt(target))
-      }
-    }
-  }
+  const enterEverywhere = (module) =>
+    enterGraph(module, loadedEverywhere, enteredEverywhere)
 
   for (const file of project.stepFiles) {
     enterEverywhere(moduleAt(resolve(root, file)))

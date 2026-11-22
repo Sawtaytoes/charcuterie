@@ -722,12 +722,12 @@
     }
   },
   "digests": {
-    "REQ-UI-001": "738cea60f23a931e",
-    "REQ-UI-002": "5b0286d888d5a463",
-    "REQ-UI-003": "4df23d93eb3711e9",
-    "REQ-UI-004": "759fbba1e3add6bb",
-    "REQ-UI-005": "f014c9fcf8511411",
-    "REQ-UI-006": "4fc28835b50d57f2"
+    "REQ-UI-001": "d83cd294d5ebf6a5",
+    "REQ-UI-002": "2368f922056a1de3",
+    "REQ-UI-003": "8fb96a12a2649a26",
+    "REQ-UI-004": "d6c6fe06d01045ee",
+    "REQ-UI-005": "dd0ffee69881a870",
+    "REQ-UI-006": "1ccc4e3ef1456403"
   },
   "code": {
     "../../storybook-config/package.json": "d557f6849f5d3263",
