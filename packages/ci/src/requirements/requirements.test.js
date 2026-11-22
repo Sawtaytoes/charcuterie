@@ -2097,6 +2097,137 @@ describe("changes found by the twelfth review", () => {
     expect(named.code).toContain("../fixture/data.json")
   })
 
+  test("hashes a JSON file whose key an export * supplies", async () => {
+    for (const order of [
+      'export * from "./data.json"\nexport * from "./other.ts"\n',
+      'export * from "./other.ts"\nexport * from "./data.json"\n',
+    ]) {
+      const { code } = await reachedThroughBarrel({
+        "../fixture/index.ts": order,
+        "../fixture/data.json": '{ "check": 1 }\n',
+        "../fixture/other.ts":
+          "export const other = () => 1\n",
+      })
+
+      expect(code).toContain("../fixture/data.json")
+    }
+  })
+
+  test("falls back to a CSS file an export * names when nothing else supplies the name", async () => {
+    const { code } = await reachedThroughBarrel({
+      "../fixture/index.ts":
+        'export * from "./styles.module.css"\n',
+      "../fixture/styles.module.css":
+        ".check { color: red; }\n",
+    })
+
+    expect(code).toContain("../fixture/styles.module.css")
+  })
+
+  test("a non-code export * written first does not shadow a later chain", async () => {
+    for (const [first, mid, leaf] of [
+      [
+        "nope.json",
+        'export { default as check } from "./data.json"\n',
+        "data.json",
+      ],
+      [
+        "s.module.css",
+        'export { default as check } from "./data.json"\n',
+        "data.json",
+      ],
+      [
+        "nope.json",
+        'export { check } from "./b.module.css"\n',
+        "b.module.css",
+      ],
+    ]) {
+      const { code } = await reachedThroughBarrel({
+        "../fixture/index.ts": `export * from "./${first}"\nexport * from "./mid.ts"\n`,
+        "../fixture/nope.json": '{ "nope": 1 }\n',
+        "../fixture/s.module.css": ".s { color: red; }\n",
+        "../fixture/mid.ts": mid,
+        "../fixture/data.json": '{ "check": 1 }\n',
+        "../fixture/b.module.css":
+          ".check { color: red; }\n",
+      })
+
+      expect(code).toContain(`../fixture/${leaf}`)
+    }
+  })
+
+  test("a non-code fallback in a nested barrel does not shadow a later chain", async () => {
+    for (const [inner, mid, leaf] of [
+      [
+        'export * from "./s.module.css"\n',
+        'export { default as check } from "./data.json"\n',
+        "data.json",
+      ],
+      [
+        'export * from "./s.module.css"\n',
+        'export { check } from "./b.module.css"\n',
+        "b.module.css",
+      ],
+      [
+        'export * from "./arr.json"\n',
+        'export { default as check } from "./data.json"\n',
+        "data.json",
+      ],
+      [
+        'export * from "./s.module.css"\nexport * from "./index.ts"\n',
+        'export { default as check } from "./data.json"\n',
+        "data.json",
+      ],
+    ]) {
+      const { code } = await reachedThroughBarrel({
+        "../fixture/index.ts":
+          'export * from "./styles.ts"\nexport * from "./mid.ts"\n',
+        "../fixture/styles.ts": inner,
+        "../fixture/s.module.css": ".s { color: red; }\n",
+        "../fixture/arr.json": "[1]\n",
+        "../fixture/mid.ts": mid,
+        "../fixture/data.json": '{ "x": 1 }\n',
+        "../fixture/b.module.css":
+          ".check { color: red; }\n",
+      })
+
+      expect(code).toContain(`../fixture/${leaf}`)
+    }
+  })
+
+  test("an export * of malformed JSON does not crash the checker", async () => {
+    // Nothing supplies the name, so the barrel is hashed whole.
+    const { code } = await reachedThroughBarrel({
+      "../fixture/index.ts": 'export * from "./bad.json"\n',
+      "../fixture/bad.json": "{ not json\n",
+    })
+
+    expect(code).toContain("../fixture/index.ts")
+  })
+
+  test("a namespace import hashes a JSON file its barrel re-exports", async () => {
+    const root = await makeProject({
+      "lamp.feature": feature,
+      "helpers/lamp.ts": helpers,
+      "steps/lamp.steps.ts": `import * as data from "../../fixture/index.ts"\n${steps.replace(
+        "expectOn(world, name)",
+        "expectOn(world, name)\n  void data",
+      )}`,
+      "../fixture/index.ts":
+        'export * from "./data.json"\n',
+      "../fixture/data.json": '{ "check": 1 }\n',
+    })
+    const analysis = await analyzeProject(root)
+    const lock = buildLock(
+      analysis,
+      await readLock(analysis),
+    )
+
+    expect(lock.requirements["REQ-T-1"]?.code).toContain(
+      "../fixture/data.json",
+    )
+  })
+
   test("still resolves an exact package.json or index file", async () => {
     const root = await makeProject({
       "lamp.feature": feature,

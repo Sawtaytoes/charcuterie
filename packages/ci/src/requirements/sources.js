@@ -333,6 +333,45 @@ const relativeCandidates = (fromFile, specifier) => {
   ].filter(isExistingFile)
 }
 
+/**
+ * True when a JSON file is an object with `name` as a top-level key,
+ * which Vite exports as a named export.
+ *
+ * @param {string} absolutePath
+ * @param {string} name
+ */
+const jsonDeclares = (absolutePath, name) => {
+  const parsed = jsonObjectAt(absolutePath)
+
+  return parsed !== null && Object.hasOwn(parsed, name)
+}
+
+/**
+ * The parsed object when the file is a JSON object; otherwise null.
+ *
+ * @param {string} absolutePath
+ * @returns {Record<string, unknown> | null}
+ */
+const jsonObjectAt = (absolutePath) => {
+  if (!absolutePath.endsWith(".json")) {
+    return null
+  }
+
+  try {
+    const parsed = JSON.parse(
+      readFileSync(absolutePath, "utf8"),
+    )
+
+    return typeof parsed === "object" &&
+      parsed !== null &&
+      !Array.isArray(parsed)
+      ? parsed
+      : null
+  } catch {
+    return null
+  }
+}
+
 /** @param {ts.Node} statement */
 const isAmbient = (statement) =>
   ts.canHaveModifiers(statement) &&
@@ -1497,6 +1536,7 @@ export const readSources = (project) => {
    *   name: string,
    *   isFound: boolean,
    *   isTooDeep: boolean,
+   *   isFallback?: boolean,
    * }} DeclarationSearch
    */
 
@@ -1532,11 +1572,11 @@ export const readSources = (project) => {
       return here(true)
     }
 
-    // A JSON or CSS file declares no names the checker can read. The
-    // caller hashes it whole when a named chain ends here, and an
-    // `export *` probe moves on to the next statement.
+    // A JSON file declares its top-level keys; any other non-code
+    // file declares no names the checker can read. The caller hashes
+    // the file whole either way.
     if (!codeFile.test(absolutePath)) {
-      return here(false)
+      return here(jsonDeclares(absolutePath, importedName))
     }
 
     // A path can pass through one file twice under different names.
@@ -1581,6 +1621,15 @@ export const readSources = (project) => {
      * @type {{ search: DeclarationSearch, hops: string[] } | null}
      */
     let reachedElsewhere = null
+    /**
+     * The first non-code `export *` target, at any depth, that may
+     * supply the name, as a CSS module can. A JSON file cannot unless
+     * it has the key, which counts as found. It is the last resort,
+     * after any code chain.
+     *
+     * @type {{ search: DeclarationSearch, hops: string[] } | null}
+     */
+    let nonCodeFallback = null
 
     for (const statement of exportStatements) {
       if (
@@ -1622,6 +1671,35 @@ export const readSources = (project) => {
           hops.push(absolutePath, ...deeper)
 
           return followed
+        }
+
+        if (
+          !codeFile.test(target) &&
+          !target.endsWith(".json")
+        ) {
+          nonCodeFallback ??= {
+            search: {
+              file: target,
+              name: importedName,
+              isFound: false,
+              isTooDeep: false,
+              isFallback: true,
+            },
+            hops: [],
+          }
+
+          continue
+        }
+
+        // A deeper barrel fell back to a non-code file; that is still
+        // only a fallback here, behind any code chain.
+        if (followed.isFallback) {
+          nonCodeFallback ??= {
+            search: followed,
+            hops: deeper,
+          }
+
+          continue
         }
 
         // Another `export *` may still supply the name; report the
@@ -1690,6 +1768,12 @@ export const readSources = (project) => {
       hops.push(absolutePath, ...reachedElsewhere.hops)
 
       return reachedElsewhere.search
+    }
+
+    if (nonCodeFallback) {
+      hops.push(absolutePath, ...nonCodeFallback.hops)
+
+      return nonCodeFallback.search
     }
 
     return here(false)
@@ -1774,10 +1858,16 @@ export const readSources = (project) => {
 
       if (
         !target ||
-        !codeFile.test(target) ||
         isSubject(target) ||
         target === stepModulePath
       ) {
+        continue
+      }
+
+      // A namespace holds every name a JSON or CSS file exports.
+      if (!codeFile.test(target)) {
+        reached.add(addWholeFile(target, true))
+
         continue
       }
 

@@ -183,7 +183,7 @@ import must name one file: if `./queries` could load both `queries.js` and `quer
 the check fails, because Vite tries `.js` first. Root-absolute (`/…`) and `#` subpath
 imports are rejected, and so is a directory import whose directory has a `package.json`. A
 named re-export wins over `export *` wherever it is written, an `export declare` counts as
-nothing, and a name that passes through more than eight re-exports fails the check. A step
+nothing, a JSON file supplies its top-level keys to `export *` and is hashed whole, and a name that passes through more than eight re-exports fails the check. A step
 definition's code must be an inline function. Any relative import in a module the
 lock reaches must resolve, or the check fails. A lazy or conditional
 `import.meta.glob` is rejected. A lock in the wrong shape fails, and CI finds the base
