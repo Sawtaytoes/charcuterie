@@ -1760,7 +1760,7 @@ describe("changes found by the tenth review", () => {
 
     for (const line of [
       "export const patchedAt = patcher.now\n",
-      "export const patchedText = `${patcher}`\n",
+      `export const patchedText = \`\${patcher}\`\n`,
     ]) {
       expect(
         (
