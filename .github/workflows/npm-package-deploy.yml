@@ -10,6 +10,13 @@ on:
   # is retried without an empty commit.
   workflow_dispatch:
 
+# Turborepo sends anonymous usage telemetry to Vercel unless one of these is set.
+# Keep both on every workflow that runs `pnpm build` (decision:
+# 2026-11-22-turborepo-telemetry-stays-off-and-turbo-writes-no-agent-guidance).
+env:
+  TURBO_TELEMETRY_DISABLED: "1"
+  DO_NOT_TRACK: "1"
+
 jobs:
   publish:
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
