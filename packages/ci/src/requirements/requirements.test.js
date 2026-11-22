@@ -1704,6 +1704,101 @@ describe("changes found by the ninth review", () => {
   })
 })
 
+describe("changes found by the tenth review", () => {
+  /**
+   * Locks a clean project, applies `edits`, and lists each change.
+   *
+   * @param {Record<string, string>} edits
+   * @param {Record<string, string>} [extra]
+   */
+  const changesAfter = async (edits, extra = {}) => {
+    const root = await makeProject({
+      "lamp.feature": feature,
+      "helpers/lamp.ts": helpers,
+      "steps/lamp.steps.ts": steps,
+      ...extra,
+    })
+    let analysis = await analyzeProject(root)
+
+    expect(analysis.problems).toEqual([])
+    await writeLock(
+      analysis,
+      buildLock(analysis, await readLock(analysis)),
+    )
+
+    for (const [file, text] of Object.entries(edits)) {
+      await writeFile(join(root, file), text)
+    }
+
+    analysis = await analyzeProject(root)
+
+    const locked = await readLock(analysis)
+
+    return describeChanges(
+      locked,
+      buildLock(analysis, locked),
+    ).flatMap((change) =>
+      change.details.map(
+        (detail) => `${change.id} ${detail}`,
+      ),
+    )
+  }
+
+  test("a class whose extends clause runs code joins the module unit", async () => {
+    expect(
+      (
+        await changesAfter({
+          "helpers/lamp.ts": `${helpers}\nconst withPatch = () => Object\n\nexport class Patched extends withPatch() {}\n`,
+        })
+      ).join("\n"),
+    ).toContain("helpers/lamp.ts › ‹module›")
+  })
+
+  test("a getter read or a template with a value joins the module unit", async () => {
+    const patcher =
+      "const patcher = {\n  get now() {\n    return 1\n  },\n}\n"
+
+    for (const line of [
+      "export const patchedAt = patcher.now\n",
+      "export const patchedText = `${patcher}`\n",
+    ]) {
+      expect(
+        (
+          await changesAfter({
+            "helpers/lamp.ts": `${helpers}\n${patcher}\n${line}`,
+          })
+        ).join("\n"),
+      ).toContain("helpers/lamp.ts › ‹module›")
+    }
+  })
+
+  test("rejects a JSX pragma comment", async () => {
+    const root = await makeProject({
+      "lamp.feature": feature,
+      "helpers/lamp.ts": `/** @jsxImportSource ./fakeJsx */\n${helpers}`,
+      "steps/lamp.steps.ts": steps,
+    })
+
+    expect(await rulesOf(root)).toEqual(["jsx-pragma"])
+  })
+
+  test("follows an empty import list like a side-effect import", async () => {
+    expect(
+      await changesAfter(
+        {
+          "fixtures/patch.ts": "globalThis.patched = 2\n",
+        },
+        {
+          "helpers/lamp.ts": `import {} from "../fixtures/patch.ts"\n${helpers}`,
+          "fixtures/patch.ts": "globalThis.patched = 1\n",
+        },
+      ),
+    ).toContain(
+      "REQ-T-1 code changed: fixtures/patch.ts › ‹module›",
+    )
+  })
+})
+
 describe("registration", () => {
   test("rejects a step file the setup file never loads", async () => {
     const root = await makeProject({

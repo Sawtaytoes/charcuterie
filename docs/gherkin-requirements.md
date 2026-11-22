@@ -160,15 +160,20 @@ Relock for any of these and say so in the pull request.
 
 The lock is a tripwire, not a proof. It reads code by name without running it, and each
 review of it has found new ways around it. Reading the lock diff and the job summary in
-review is still the final check. A top-level statement that runs code, such as an
-initializer that calls a function or assigns a value, joins its module's `‹module›` unit.
+review is still the final check. A top-level statement that may run code joins its module's `‹module›` unit. That
+includes an initializer that calls a function, assigns a value, reads a property (a
+getter), or builds a template with a value (`toString`). It also includes a class with an
+`extends` expression, a decorator, a computed member name, or a static initializer. Only
+literals, names, functions, and object and array literals built from them stay out.
 Editing it marks every requirement that reaches that module, and every requirement when
 the module is a step file. A barrel's own top-level code counts when a name passes through it, and renamed,
 default, and namespace re-exports are followed to the code behind them. A dynamic
 `import()` must use a string literal. It is followed like a namespace import, and the
 top-level code of every module its target imports counts, as for a static import. Only the
 setup file may call `import.meta.glob`, in any module the lock reaches. A
-side-effect import (`import "./patch.ts"`) is followed. Any relative import in a module the
+side-effect import (`import "./patch.ts"`) is followed, and so is `import {} from` or an
+import of inline types only, which load the module the same way. A `@jsx` pragma comment
+is rejected, because it changes which module compiles the file's JSX. Any relative import in a module the
 lock reaches must resolve, or the check fails. A lazy or conditional
 `import.meta.glob` is rejected. A lock in the wrong shape fails, and CI finds the base
 commit's lock through the base commit's own config.
@@ -176,7 +181,9 @@ commit's lock through the base commit's own config.
 What the lock does not see: npm package versions (the pnpm lockfile covers those);
 workspace packages not listed in `packages`, imported by name; the
 root `vitest.config.ts`, `package.json` scripts, and the CI workflow (code review covers
-those); a Vitest setup file named only by a string path, unless it is listed in `runtime`; a move of the whole
+those); a Vitest setup file named only by a string path, unless it is listed in `runtime`;
+`tsconfig.json` files; files a CSS `@import` loads; the order of scenarios in a feature
+file; a move of the whole
 requirements directory, which also changes `--root` in `package.json`; and code reached
 only through dynamic property access, `eval`, or an aliased step function. The walker matches names, not bindings, so it can also
 list a same-named function that a step does not really call; that errs toward reporting a

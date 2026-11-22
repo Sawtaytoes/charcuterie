@@ -352,11 +352,31 @@ const effectfulOperators = new Set([
   ts.SyntaxKind.QuestionQuestionEqualsToken,
 ])
 
+/** @param {ts.Node} node */
+const isLiteral = (node) =>
+  ts.isStringLiteral(node) ||
+  ts.isNumericLiteral(node) ||
+  ts.isBigIntLiteral(node) ||
+  ts.isNoSubstitutionTemplateLiteral(node) ||
+  ts.isRegularExpressionLiteral(node) ||
+  node.kind === ts.SyntaxKind.TrueKeyword ||
+  node.kind === ts.SyntaxKind.FalseKeyword ||
+  node.kind === ts.SyntaxKind.NullKeyword
+
+const shortCircuitOperators = new Set([
+  ts.SyntaxKind.AmpersandAmpersandToken,
+  ts.SyntaxKind.BarBarToken,
+  ts.SyntaxKind.QuestionQuestionToken,
+  ts.SyntaxKind.CommaToken,
+])
+
 /**
- * True when evaluating `node` runs no code of its own: literals,
- * object and array literals, functions (their bodies run later),
- * and property reads. A call, `new`, an assignment, `delete`, or an
- * increment makes it effectful. Errs toward effectful.
+ * True when evaluating `node` cannot run code of its own: literals,
+ * names, functions (their bodies run later), and object and array
+ * literals built from those. Anything else counts as effectful,
+ * including a property read (a getter), a template with a value or
+ * arithmetic (`toString` and `valueOf`), and a spread (an iterator or
+ * getters). Errs toward effectful.
  *
  * @param {ts.Node} node
  * @returns {boolean}
@@ -364,48 +384,165 @@ const effectfulOperators = new Set([
 const isInert = (node) => {
   if (
     ts.isArrowFunction(node) ||
-    ts.isFunctionExpression(node)
+    ts.isFunctionExpression(node) ||
+    ts.isIdentifier(node) ||
+    isLiteral(node)
   ) {
     return true
   }
 
   if (
-    ts.isCallExpression(node) ||
-    ts.isNewExpression(node) ||
-    ts.isTaggedTemplateExpression(node) ||
-    ts.isDeleteExpression(node) ||
-    ts.isAwaitExpression(node) ||
-    ts.isYieldExpression(node) ||
-    ts.isClassExpression(node) ||
-    ts.isPostfixUnaryExpression(node) ||
-    (ts.isPrefixUnaryExpression(node) &&
-      (node.operator === ts.SyntaxKind.PlusPlusToken ||
-        node.operator === ts.SyntaxKind.MinusMinusToken)) ||
-    (ts.isBinaryExpression(node) &&
-      effectfulOperators.has(node.operatorToken.kind))
+    ts.isParenthesizedExpression(node) ||
+    ts.isAsExpression(node) ||
+    ts.isSatisfiesExpression(node) ||
+    ts.isTypeAssertionExpression(node) ||
+    ts.isNonNullExpression(node) ||
+    ts.isTypeOfExpression(node) ||
+    ts.isVoidExpression(node)
+  ) {
+    return isInert(node.expression)
+  }
+
+  if (ts.isPrefixUnaryExpression(node)) {
+    return node.operator === ts.SyntaxKind.ExclamationToken
+      ? isInert(node.operand)
+      : ts.isNumericLiteral(node.operand) ||
+          ts.isBigIntLiteral(node.operand)
+  }
+
+  if (ts.isConditionalExpression(node)) {
+    return (
+      isInert(node.condition) &&
+      isInert(node.whenTrue) &&
+      isInert(node.whenFalse)
+    )
+  }
+
+  if (ts.isBinaryExpression(node)) {
+    return (
+      shortCircuitOperators.has(node.operatorToken.kind) &&
+      isInert(node.left) &&
+      isInert(node.right)
+    )
+  }
+
+  if (ts.isArrayLiteralExpression(node)) {
+    return node.elements.every(
+      (element) =>
+        ts.isOmittedExpression(element) ||
+        (!ts.isSpreadElement(element) && isInert(element)),
+    )
+  }
+
+  if (ts.isObjectLiteralExpression(node)) {
+    return node.properties.every((property) => {
+      if (ts.isSpreadAssignment(property)) {
+        return false
+      }
+
+      if (
+        property.name &&
+        ts.isComputedPropertyName(property.name) &&
+        !isLiteral(property.name.expression)
+      ) {
+        return false
+      }
+
+      if (ts.isPropertyAssignment(property)) {
+        return isInert(property.initializer)
+      }
+
+      if (ts.isShorthandPropertyAssignment(property)) {
+        return !property.objectAssignmentInitializer
+      }
+
+      // Methods and accessors run only when called or read.
+      return true
+    })
+  }
+
+  return false
+}
+
+/**
+ * True when declaring the class runs code: an `extends` expression,
+ * a decorator, a computed member name, a static block, or a static
+ * initializer. Each runs when the module loads.
+ *
+ * @param {ts.ClassDeclaration} node
+ */
+const isEffectfulClass = (node) =>
+  (ts.getDecorators(node) ?? []).length > 0 ||
+  (node.heritageClauses ?? []).some(
+    (clause) =>
+      clause.token === ts.SyntaxKind.ExtendsKeyword &&
+      clause.types.some(
+        (type) => !isInert(type.expression),
+      ),
+  ) ||
+  node.members.some(
+    (member) =>
+      ts.isClassStaticBlockDeclaration(member) ||
+      (ts.canHaveDecorators(member) &&
+        (ts.getDecorators(member) ?? []).length > 0) ||
+      (member.name !== undefined &&
+        ts.isComputedPropertyName(member.name) &&
+        !isLiteral(member.name.expression)) ||
+      (ts.isPropertyDeclaration(member) &&
+        (ts.getModifiers(member) ?? []).some(
+          (modifier) =>
+            modifier.kind === ts.SyntaxKind.StaticKeyword,
+        ) &&
+        member.initializer !== undefined &&
+        !isInert(member.initializer)),
+  )
+
+/**
+ * `import "./x.ts"`, and also `import {} from "./x.ts"` or an import
+ * of types only through inline specifiers, which load the module for
+ * its effects all the same.
+ *
+ * @param {ts.Statement} statement
+ * @returns {statement is ts.ImportDeclaration & { moduleSpecifier: ts.StringLiteral }}
+ */
+const isSideEffectImport = (statement) => {
+  if (
+    !ts.isImportDeclaration(statement) ||
+    !ts.isStringLiteral(statement.moduleSpecifier)
   ) {
     return false
   }
 
-  if (
-    ts.isMethodDeclaration(node) ||
-    ts.isGetAccessorDeclaration(node) ||
-    ts.isSetAccessorDeclaration(node)
-  ) {
+  const clause = statement.importClause
+
+  if (!clause) {
     return true
   }
 
-  /** @type {boolean} */
-  let inert = true
+  if (clause.isTypeOnly || clause.name) {
+    return false
+  }
 
-  ts.forEachChild(node, (child) => {
-    if (inert && !isInert(child)) {
-      inert = false
-    }
-  })
+  const bindings = clause.namedBindings
 
-  return inert
+  return (
+    !bindings ||
+    (ts.isNamedImports(bindings) &&
+      bindings.elements.every(
+        (element) => element.isTypeOnly,
+      ))
+  )
 }
+
+/**
+ * A JSX pragma comment changes which module compiles the file's JSX.
+ *
+ * @param {ts.SourceFile} sourceFile
+ */
+const hasJsxPragma = (sourceFile) =>
+  /@jsx(?:ImportSource|Runtime|Frag)?\b/.test(
+    sourceFile.text,
+  )
 
 /**
  * @param {string} root absolute
@@ -549,20 +686,7 @@ const readModule = (root, absolutePath) => {
     ) {
       declarations.set(statement.name.text, statement)
 
-      if (
-        statement.members.some(
-          (member) =>
-            ts.isClassStaticBlockDeclaration(member) ||
-            (ts.isPropertyDeclaration(member) &&
-              (ts.getModifiers(member) ?? []).some(
-                (modifier) =>
-                  modifier.kind ===
-                  ts.SyntaxKind.StaticKeyword,
-              ) &&
-              member.initializer &&
-              !isInert(member.initializer)),
-        )
-      ) {
+      if (isEffectfulClass(statement)) {
         moduleStatements.push(statement)
       }
 
@@ -689,6 +813,17 @@ export const readSources = (project) => {
         column: 1,
         rule: "glob-outside-entry",
         message: `Only ${config.entry} may load files with import.meta.glob. A glob elsewhere loads files the lock cannot follow.`,
+      })
+    }
+
+    if (hasJsxPragma(module.sourceFile)) {
+      problems.push({
+        file: module.file,
+        line: 1,
+        column: 1,
+        rule: "jsx-pragma",
+        message:
+          "Remove the @jsx pragma comment. It changes which module compiles this file's JSX, and the lock cannot follow it.",
       })
     }
   }
@@ -1135,8 +1270,7 @@ export const readSources = (project) => {
       .filter((imported) => !imported.isTypeOnly)
       .map((imported) => imported.specifier),
     ...module.moduleStatements.flatMap((statement) =>
-      ((ts.isImportDeclaration(statement) &&
-        !statement.importClause) ||
+      (isSideEffectImport(statement) ||
         (ts.isExportDeclaration(statement) &&
           !statement.isTypeOnly)) &&
       statement.moduleSpecifier &&
@@ -1655,10 +1789,7 @@ export const readSources = (project) => {
     for (const statement of statements) {
       if (!ts.isImportDeclaration(statement)) {
         walk(module, statement, reached)
-      } else if (
-        !statement.importClause &&
-        ts.isStringLiteral(statement.moduleSpecifier)
-      ) {
+      } else if (isSideEffectImport(statement)) {
         // `import "./patch.ts"` runs that module for its effects.
         followSideEffectImport(
           module,
@@ -2063,11 +2194,7 @@ export const readSources = (project) => {
     }
 
     for (const statement of runtimeModule.moduleStatements) {
-      if (
-        ts.isImportDeclaration(statement) &&
-        !statement.importClause &&
-        ts.isStringLiteral(statement.moduleSpecifier)
-      ) {
+      if (isSideEffectImport(statement)) {
         followSideEffectImport(
           runtimeModule,
           statement.moduleSpecifier.text,
