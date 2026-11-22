@@ -59,18 +59,11 @@ Feature: Button
 
   Rule: A button responds the same way to a mouse and a keyboard
 
-    @REQ-UI-001
-    Scenario Outline: A keyboard user activates a button with <key>
+    @REQ-UI-006
+    Scenario: A mouse user activates a button
       Given the Button playground is open
-      When I press Tab
-      Then the button named "Start rip" has focus
-      When I press <key>
+      When I click the button named "Start rip"
       Then the button named "Start rip" has been activated 1 time
-
-      Examples:
-        | key   |
-        | Enter |
-        | Space |
 ```
 
 - **One behavior per scenario**, named after what it proves. Group scenarios under a
@@ -81,7 +74,14 @@ Feature: Button
   props, or test IDs. Find controls by role and name; `{role}` covers the common ARIA roles.
 - **Check the exact result.** "The status named "Loading…" is visible," not "a status is
   visible." "The button named X has been activated 1 time" counts only X's own handler.
-- **One `Examples` table per outline.** QuickPickle 1.11 runs only the first.
+- **Keep a sequence when the sequence is the requirement.** "Enter, then Space" on one
+  mounted button also proves the second activation works; two fresh outline rows do not.
+- **One `Examples` table per outline, with no tags on it.** QuickPickle 1.11 runs only the
+  first table and ignores Examples tags.
+- **Start with Given, When, or Then, and never write `*`.** A leading `And` or a `*` step
+  has no reliable type, so the keyword check cannot run.
+- **Keep `@` out of names.** Tags are part of the test title, and the window projects
+  select scenarios by them.
 - **Write each pattern as one string literal Cucumber expression.** Do not use a regular
   expression, a computed pattern, or a priority. These rules let the checker trace every
   step.
@@ -91,9 +91,12 @@ Feature: Button
 
 | Tag | Meaning |
 | --- | --- |
-| `@REQ-UI-<n>` | Required on every Scenario, exactly once. Never reused, even after retirement. Do not place it on a Feature, Rule, or Examples table. |
+| `@REQ-UI-<n>` | Required on every Scenario, exactly once. Take the next number above every active and retired ID; `REQ-UI-7` and `REQ-UI-007` are the same ID. Never reused, even after retirement. Do not place it on a Feature, Rule, or Examples table. |
 | `@responsive` | The scenario depends on window size. It runs in all four windows instead of `wide`. |
-| `@todo` | Written before the code exists. Reported as **pending**; it proves nothing until the tag is removed. |
+| `@todo` | Written before the code exists. Reported as **pending**; it proves nothing until the tag is removed. Never add it to a requirement that already passes; that switches the requirement off, which is a requirement change for the owner. |
+
+A tag on a Feature or Rule applies to every scenario under it, as QuickPickle runs them,
+and the lock records each scenario's tags, inherited ones included.
 
 The checker rejects every other tag. That includes `@skip`, `@wip`, `@fails`, `@failing`,
 `@should-fail`, `@soft`, `@softfail`, `@concurrent`, and `@sequential`. Each one can make a
@@ -106,24 +109,42 @@ one keyboard focus, and the same body cleanup, so concurrent scenarios would int
 
 ## The lock
 
-`requirements.lock.json` records each requirement's steps and every code unit those steps
-reach. That includes step definitions, helpers, World members, stories, and library
-assertions such as `expectAgentDrivable.ts`. If you change any of them, the lock becomes
-stale and `requirements:check` fails. This catches a weakened assertion even when no
+`requirements.lock.json` records each requirement's steps, including their data tables and
+doc strings, its tags, and every code unit those steps reach:
+
+- the step definitions, the helpers and World members they call, and each module's imports
+  and top-level statements;
+- the fixtures they import from outside this directory, one export at a time, such as
+  the `Playground` story and `expectAgentDrivable`;
+- the runtime every scenario passes through, hashed as whole files: `index.ts`,
+  `support/` (the World, the step wrapper, and the parameter types), the requirements
+  config, the Vitest requirement configs, and `vitest.ui.setup.ts`.
+
+If you change any of them, the lock becomes stale and `requirements:check` fails, naming
+each requirement and the code that changed. This catches a weakened assertion even when no
 English changed.
 
-When the change is intended:
+**If you did not mean to change a requirement, revert the edit. Do not relock.** When the
+change is intended:
 
 1. Run `pnpm requirements:lock`. It prints the requirements that changed and why. For
    example: `REQ-UI-002 changed, code changed: helpers/states.ts › expectDisabled`.
 2. Copy that list into the pull request description. The reviewer checks each listed ID
-   against the requirement it names.
+   against the requirement it names. CI writes the same list to the job summary.
 3. To remove a requirement, delete its scenario and run
    `pnpm requirements:lock --retire REQ-UI-005 --reason "<why>"`. Its ID can never be
-   reused.
+   reused. On a pull request, CI compares the lock with the base commit and fails if a
+   requirement or a retirement entry disappears, or if a retired ID comes back.
 
-Comments and formatting do not change the lock. A component change does not change it
-either, because the lock covers the test, not the code under test.
+Comments and formatting do not change the lock. The components under test do not change
+it either: `subjects` in `requirements.config.json` names them, and the lock neither hashes
+nor follows them. A story change does change it, for the requirements that use that story.
+
+What the lock does not see: npm package versions (the pnpm lockfile covers those), the root
+`vitest.config.ts` and the CI workflow (code review covers those), and code reached only
+through dynamic property access. The walker matches names, not bindings, so it can also
+list a same-named function that a step does not really call; that errs toward reporting a
+change.
 
 ## Reading a failure
 
@@ -139,7 +160,8 @@ Trace: pnpm requirements:which requirements/button.feature:41
 ```
 
 The first line names the requirement. The `Error:` line names the step and its feature
-line. The stack names the helper that failed. Run the `Trace:` command to list every file
+line. A step timeout comes from QuickPickle, outside the wrapper, so it has no
+`Step definition:` line; run `pnpm requirements:which` on its feature line. The stack names the helper that failed. Run the `Trace:` command to list every file
 that step reaches; open those files and no others. If the code is right and the
 requirement is wrong, change the scenario. That is a requirement change: ask the owner,
 and report it in the pull request.
@@ -160,7 +182,7 @@ The Button suite replaced `Button.test.tsx`
 | Requirement | Scenario | Checks |
 | --- | --- | --- |
 | `@REQ-UI-004` | A button can be identified by its role and name | The full `expectAgentDrivable` check: unique role and name, accessible subtree, no descendant test IDs, keyboard reachable. |
-| `@REQ-UI-001` | A keyboard user activates a button with Enter, then with Space | Tab focuses it; focus alone starts nothing; each key starts the action once. |
+| `@REQ-UI-001` | A keyboard user activates a button with Enter and then Space | The full `expectAgentDrivable` check; Tab focuses it; focus alone starts nothing; Enter starts the action once, and Space then starts it a second time on the same button. |
 | `@REQ-UI-006` | A mouse user activates a button | One click starts the action once. |
 | `@REQ-UI-002` | A disabled button ignores clicks, and Tab does not focus it | A click starts nothing; the control is natively disabled; Tab does not focus it. |
 | `@REQ-UI-003` | A busy button announces its state | The agent-drivability check; disabled; `aria-busy="true"`; a visible status named "Loading…". |

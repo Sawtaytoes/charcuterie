@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs"
 import { glob, readFile } from "node:fs/promises"
 import {
   join,
@@ -24,6 +25,11 @@ import {
  *   exclude: string[],
  *   helpers: string[],
  *   stepModule: string,
+ *   stepFiles: string[],
+ *   entry: string,
+ *   runtime: string[],
+ *   subjects: string[],
+ *   command: string,
  *   allowedTags: string[],
  *   pendingTags: string[],
  *   lock: string,
@@ -35,6 +41,8 @@ import {
  *   featureFiles: string[],
  *   sourceFiles: string[],
  *   helperFiles: Set<string>,
+ *   stepFiles: Set<string>,
+ *   runtimeFiles: string[],
  * }} RequirementsProject
  */
 
@@ -46,12 +54,39 @@ const defaults = {
   exclude: ["**/*.test.ts", "**/node_modules/**"],
   helpers: ["helpers/**/*.ts"],
   stepModule: "support/steps.ts",
+  // Must equal the `import.meta.glob` in `entry`; the check compares
+  // them, so a step file the runner never loads cannot count as a
+  // definition.
+  stepFiles: ["steps/*.steps.ts"],
+  entry: "index.ts",
+  // Code every scenario runs through: the setup file, the World, the
+  // step wrapper, and the parameter types. Each is hashed whole and
+  // reached by every requirement.
+  runtime: ["index.ts", "support/**/*.ts"],
+  // The code under test, which the lock neither hashes nor follows.
+  // A `!` pattern excludes, so stories can be fixtures while the
+  // components beside them are subjects.
+  subjects: [],
+  // How problem messages name the CLI.
+  command: "charcuterie-requirements",
   allowedTags: [],
   pendingTags: ["@todo"],
   lock: "requirements.lock.json",
 }
 
 export const configFileName = "requirements.config.json"
+
+/**
+ * A subcommand as the repo runs it: `charcuterie-requirements lock`,
+ * or `pnpm requirements:lock` when `command` ends with a colon.
+ *
+ * @param {RequirementsConfig} config
+ * @param {string} subcommand
+ */
+export const commandFor = (config, subcommand) =>
+  config.command.endsWith(":")
+    ? `${config.command}${subcommand}`
+    : `${config.command} ${subcommand}`
 
 /**
  * @param {string} root
@@ -64,6 +99,16 @@ const expand = async (root, patterns, exclude) => {
   const found = new Set()
 
   for (const pattern of patterns) {
+    // A literal path may point outside the root, such as the Vitest
+    // config that runs the features.
+    if (!/[*?[\]{}]/.test(pattern)) {
+      if (existsSync(join(root, pattern))) {
+        found.add(pattern.split("\\").join("/"))
+      }
+
+      continue
+    }
+
     for await (const match of glob(pattern, {
       cwd: root,
       exclude,
@@ -98,23 +143,36 @@ export const loadProject = async (rootDirectory) => {
     )
   } catch (error) {
     if (
-      !(error instanceof Error) ||
-      !("code" in error) ||
-      error.code !== "ENOENT"
+      error instanceof Error &&
+      "code" in error &&
+      error.code === "ENOENT"
     ) {
-      throw error
+      // Scanning a whole repository by mistake reports every tag in
+      // it as forbidden; refuse instead.
+      throw new Error(
+        `${join(root, configFileName)} does not exist. Pass --root <the requirements directory>.`,
+      )
     }
+
+    throw error
   }
 
   /** @type {RequirementsConfig} */
   const config = { ...defaults, ...written }
 
-  const [featureFiles, sourceFiles, helperFiles] =
-    await Promise.all([
-      expand(root, config.features, config.exclude),
-      expand(root, config.sources, config.exclude),
-      expand(root, config.helpers, config.exclude),
-    ])
+  const [
+    featureFiles,
+    sourceFiles,
+    helperFiles,
+    stepFiles,
+    runtimeFiles,
+  ] = await Promise.all([
+    expand(root, config.features, config.exclude),
+    expand(root, config.sources, config.exclude),
+    expand(root, config.helpers, config.exclude),
+    expand(root, config.stepFiles, config.exclude),
+    expand(root, config.runtime, config.exclude),
+  ])
 
   return {
     root,
@@ -122,6 +180,8 @@ export const loadProject = async (rootDirectory) => {
     featureFiles,
     sourceFiles,
     helperFiles: new Set(helperFiles),
+    stepFiles: new Set(stepFiles),
+    runtimeFiles,
   }
 }
 

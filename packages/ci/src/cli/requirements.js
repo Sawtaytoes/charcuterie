@@ -7,7 +7,9 @@ import {
   analyzeProject,
   formatProblems,
 } from "../requirements/check.js"
+import { commandFor } from "../requirements/config.js"
 import {
+  baseProblems,
   buildLock,
   describeChanges,
   emptyLock,
@@ -24,6 +26,54 @@ import {
 
 const run = promisify(execFile)
 
+/**
+ * The lock at `base`. A base commit with no lock file means every
+ * requirement is new; anything else that goes wrong — an unknown
+ * ref, a malformed lock — is an error, never an empty base, because
+ * an empty base would report every requirement as merely "added".
+ *
+ * @param {string} cwd
+ * @param {string} base
+ * @param {string} lockFile
+ * @returns {Promise<import("../requirements/lock.js").RequirementsLock>}
+ */
+const readBaseLock = async (cwd, base, lockFile) => {
+  const git = (/** @type {string[]} */ args) =>
+    run("git", args, { cwd, maxBuffer: 64 * 1024 * 1024 })
+
+  try {
+    await git([
+      "rev-parse",
+      "--verify",
+      "--quiet",
+      `${base}^{commit}`,
+    ])
+  } catch {
+    throw new Error(
+      `--base ${base} is not a commit here. Fetch it first (CI fetches the pull request's base SHA).`,
+    )
+  }
+
+  try {
+    await git(["cat-file", "-e", `${base}:./${lockFile}`])
+  } catch {
+    return emptyLock()
+  }
+
+  const { stdout } = await git([
+    "show",
+    `${base}:./${lockFile}`,
+  ])
+
+  try {
+    return JSON.parse(stdout)
+  } catch (error) {
+    throw new Error(
+      `The lock at ${base} is not valid JSON: ${error instanceof Error ? error.message : String(error)}`,
+    )
+  }
+}
+
 const usage = `charcuterie-requirements <command> [--root <dir>]
 
   check                      lint features and steps, and verify the lock (CI runs this)
@@ -34,8 +84,9 @@ const usage = `charcuterie-requirements <command> [--root <dir>]
                              <target>: file.feature:line, a requirement ID, or step text
   index [--json]             trace every step
   diff [--base <ref>]        list requirements that changed against a git ref
-                             (default origin/HEAD); --summary appends Markdown to
-                             $GITHUB_STEP_SUMMARY`
+                             (default origin/HEAD), and fail on a requirement or
+                             retirement dropped without a trace; --summary appends
+                             Markdown to $GITHUB_STEP_SUMMARY`
 
 /**
  * @param {string[]} args
@@ -107,7 +158,7 @@ const main = async () => {
     if (problems.length > 0) {
       console.error(formatProblems(problems))
       console.error(
-        `\n${problems.length} problem${problems.length === 1 ? "" : "s"}. Trace any step with \`charcuterie-requirements which <file.feature:line>\`.`,
+        `\n${problems.length} problem${problems.length === 1 ? "" : "s"}. Trace any step with \`${commandFor(analysis.project.config, "which")} <file.feature:line>\`.`,
       )
       process.exitCode = 1
 
@@ -134,6 +185,9 @@ const main = async () => {
 
   if (command === "lock") {
     const retire = options["--retire"]
+    // Taken before --retire edits the lock, so the printed changes
+    // include the retirement itself.
+    const before = structuredClone(locked)
 
     if (typeof retire === "string") {
       const reason = options["--reason"]
@@ -170,7 +224,7 @@ const main = async () => {
     }
 
     const next = buildLock(analysis, locked)
-    const changes = describeChanges(locked, next)
+    const changes = describeChanges(before, next)
 
     await writeLock(analysis, next)
     console.log(formatChangesMarkdown(changes))
@@ -214,30 +268,25 @@ const main = async () => {
       typeof options["--base"] === "string"
         ? options["--base"]
         : "origin/HEAD"
-    /** @type {import("../requirements/lock.js").RequirementsLock} */
-    let before = emptyLock()
-
-    try {
-      const { stdout } = await run(
-        "git",
-        [
-          "show",
-          `${base}:./${analysis.project.config.lock}`,
-        ],
-        {
-          cwd: analysis.project.root,
-          maxBuffer: 64 * 1024 * 1024,
-        },
-      )
-
-      before = JSON.parse(stdout)
-    } catch {
-      // No lock on the base branch: every requirement is new.
-    }
-
-    const markdown = formatChangesMarkdown(
-      describeChanges(before, buildLock(analysis, locked)),
+    const before = await readBaseLock(
+      analysis.project.root,
+      base,
+      analysis.project.config.lock,
     )
+    const head = buildLock(analysis, locked)
+    const problems = baseProblems(
+      before,
+      head,
+      analysis.project.config.lock,
+    )
+
+    const markdown = `${formatChangesMarkdown(
+      describeChanges(before, head),
+    )}${
+      problems.length > 0
+        ? `\n**Blocking:**\n\n${problems.map((problem) => `- ${problem.rule}: ${problem.message}`).join("\n")}\n`
+        : ""
+    }`
 
     console.log(markdown)
 
@@ -249,6 +298,11 @@ const main = async () => {
         process.env.GITHUB_STEP_SUMMARY,
         markdown,
       )
+    }
+
+    if (problems.length > 0) {
+      console.error(formatProblems(problems))
+      process.exitCode = 1
     }
 
     return

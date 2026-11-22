@@ -5,7 +5,24 @@
   "exclude": ["**/*.test.ts", "**/node_modules/**"],
   "helpers": ["helpers/**/*.ts"],
   "stepModule": "support/steps.ts",
+  "stepFiles": ["steps/*.steps.ts"],
+  "entry": "index.ts",
+  "runtime": [
+    "index.ts",
+    "support/**/*.ts",
+    "requirements.config.json",
+    "../vitest.requirements.shared.ts",
+    "../vitest.requirements.config.ts",
+    "../vitest.requirements-responsive.config.ts",
+    "../vitest.ui.setup.ts"
+  ],
+  "subjects": [
+    "../../ui/src/**/*.tsx",
+    "!../../ui/src/**/*.stories.tsx",
+    "!../../ui/src/**/*.storyHelpers.tsx"
+  ],
   "allowedTags": ["@responsive", "@todo"],
   "pendingTags": ["@todo"],
-  "lock": "requirements.lock.json"
+  "lock": "requirements.lock.json",
+  "command": "pnpm requirements:"
 }

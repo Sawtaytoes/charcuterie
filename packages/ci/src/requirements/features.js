@@ -27,6 +27,7 @@ import { IdGenerator } from "@cucumber/messages"
  *   line: number,
  *   keyword: string,
  *   text: string,
+ *   argument: string,
  *   type: "Context" | "Action" | "Outcome" | "Unknown",
  * }} FeatureStep
  *
@@ -38,6 +39,7 @@ import { IdGenerator } from "@cucumber/messages"
  *   ruleName: string,
  *   ownTags: { name: string, line: number }[],
  *   inheritedTags: { name: string, line: number }[],
+ *   tags: string[],
  *   examples: {
  *     line: number,
  *     tags: { name: string, line: number }[],
@@ -66,6 +68,30 @@ const toTags = (tags) =>
     name: tag.name,
     line: tag.location.line,
   }))
+
+/**
+ * A data table or doc string, as text. QuickPickle passes both to the
+ * step callback, so they are part of what a step proves: a changed
+ * table of expected values is a changed requirement.
+ *
+ * @param {{ dataTable?: { rows: readonly { cells: readonly { value: string }[] }[] }, docString?: { content: string, mediaType?: string } } | undefined} argument
+ */
+export const argumentText = (argument) => {
+  if (argument?.dataTable) {
+    return argument.dataTable.rows
+      .map(
+        (row) =>
+          `| ${row.cells.map((cell) => cell.value).join(" | ")} |`,
+      )
+      .join("\n")
+  }
+
+  if (argument?.docString) {
+    return `"""${argument.docString.mediaType ?? ""}\n${argument.docString.content}\n"""`
+  }
+
+  return ""
+}
 
 /**
  * @param {string} root
@@ -210,6 +236,17 @@ export const parseFeature = async (root, file) => {
         ruleName: context.ruleName,
         ownTags: toTags(scenario.tags),
         inheritedTags: context.inherited,
+        // What QuickPickle acts on: it applies Feature and Rule tags to
+        // every scenario under them, so an inherited `@todo` skips a
+        // scenario exactly as its own would.
+        tags: [
+          ...new Set(
+            [
+              ...context.inherited,
+              ...toTags(scenario.tags),
+            ].map((tag) => tag.name),
+          ),
+        ],
         examples: scenario.examples.map((examples) => ({
           line: examples.location.line,
           tags: toTags(examples.tags),
@@ -221,9 +258,18 @@ export const parseFeature = async (root, file) => {
             row.cells.map((cell) => cell.value),
           ),
         })),
-        templateSteps: scenario.steps.map(
-          (step) => `${step.keyword.trim()} ${step.text}`,
-        ),
+        templateSteps: scenario.steps.map((step) => {
+          const argument = argumentText({
+            ...(step.dataTable
+              ? { dataTable: step.dataTable }
+              : {}),
+            ...(step.docString
+              ? { docString: step.docString }
+              : {}),
+          })
+
+          return `${step.keyword.trim()} ${step.text}${argument ? `\n${argument}` : ""}`
+        }),
         pickles: pickles
           .filter((pickle) =>
             pickle.astNodeIds.includes(scenario.id),
@@ -246,6 +292,7 @@ export const parseFeature = async (root, file) => {
                 line: source.line,
                 keyword: source.keyword,
                 text: pickleStep.text,
+                argument: argumentText(pickleStep.argument),
                 type: /** @type {FeatureStep["type"]} */ (
                   pickleStep.type ?? "Unknown"
                 ),

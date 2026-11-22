@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-11-22
 - **Type:** Testing convention
-- **Supersedes:** [Button behavior tests are Gherkin scenarios](2026-10-14-button-behavior-tests-are-gherkin-scenarios.md), in part: the `world.ts` and `steps.ts` layout and the four-window run. The conversion itself and its coverage stand.
+- **Supersedes:** [Button behavior tests are Gherkin scenarios](2026-10-14-button-behavior-tests-are-gherkin-scenarios.md), in part: the `world.ts` and `steps.ts` layout. The conversion itself and its coverage stand.
 - **Superseded by:** —
 
 ## Decision
@@ -11,15 +11,23 @@
 Gherkin requirements have a ledger, a static checker, and a traced failure message. The
 checker replaces third-party Gherkin linters; the fleet does not use `gherkin-lint`.
 
-1. **The lock.** `requirements.lock.json` lists every requirement ID with its steps,
-   its examples, and every piece of code its steps reach. That code includes the step
-   definitions, the helper functions and World members they call, and the fixture and
-   library files they import, such as stories and `expectAgentDrivable.ts`. A change to
-   any of these makes the lock stale until `pnpm requirements:lock` rewrites it. The
-   rewrite and CI's job summary name each changed requirement ID and the code that
-   changed. Comments and formatting do not count as changes.
+1. **The lock.** `requirements.lock.json` lists every requirement ID with its steps
+   (data tables and doc strings included), its tags (inherited ones included), its
+   examples, and the code its steps reach. That code includes the step definitions; the
+   helper functions and World members they call; each module's imports and top-level
+   statements; each fixture export they import from outside the requirements directory,
+   such as a story or `expectAgentDrivable`; and, as whole files, the runtime every
+   scenario passes through (the setup file, the World, the step wrapper, the parameter
+   types, the requirements config, and the requirement Vitest configs). The components
+   under test, listed as `subjects` in the config, are neither hashed nor followed. A
+   change to any locked part makes the lock stale until `pnpm requirements:lock` rewrites
+   it. The check, the rewrite, and CI's job summary name each changed requirement ID and
+   the code that changed. Comments and formatting do not count as changes. On a pull
+   request, CI also compares the lock with the base commit and fails if a requirement or a
+   retirement entry disappears or a retired ID returns. The lock does not cover package
+   versions, the root Vitest config, or the CI workflow.
 2. **Lock-down tags.** Each Scenario has exactly one `@REQ-UI-<n>` tag, unique in the
-   repo. A removed requirement must be retired with a reason
+   repo by number, so `REQ-UI-7` and `REQ-UI-007` are the same ID. A removed requirement must be retired with a reason
    (`pnpm requirements:lock --retire <ID> --reason "…"`), and a retired ID is never
    reused. Tags that change how QuickPickle runs a scenario are rejected: `@skip`,
    `@wip`, `@fails`, `@failing`, `@should-fail`, `@soft`, `@softfail`, `@concurrent`,
@@ -28,7 +36,9 @@ checker replaces third-party Gherkin linters; the fleet does not use `gherkin-li
 3. **`pnpm requirements:check`** runs in the `lint` job without a browser. It reads
    the features with the parser QuickPickle uses and the step code with the TypeScript
    parser. It fails on undefined, ambiguous, or duplicate steps; a step whose keyword
-   does not match its definition; unused steps and unused helpers; a regular-expression,
+   does not match its definition; a leading `And` or a `*` step; a tag-like word in a name
+   or a tag on an `Examples` table; a step file the setup file does not load, or a hook
+   imported from QuickPickle outside the runtime files; unused steps and unused helpers; a regular-expression,
    computed, or prioritized pattern; a step imported straight from `quickpickle`;
    missing, duplicate, or misplaced IDs; and a stale lock. It also rejects a second
    `Examples` table, because QuickPickle 1.11 runs only the first

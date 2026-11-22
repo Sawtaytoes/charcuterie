@@ -78,6 +78,14 @@ describe("wrapStep", () => {
     expect(String(error)).toContain('Then("inner")')
     expect(String(error)).not.toContain('Then("outer")')
   })
+
+  test("names the definition when the World is wrong", async () => {
+    const run = wrapStep("Then", "the lamp is on", () => {})
+
+    await expect(run({ info: {} })).rejects.toThrow(
+      /setWorldConstructor\(RequirementsWorld\)[\s\S]*Step definition: Then\("the lamp is on"\)\nTrace: pnpm requirements:which "the lamp is on"$/,
+    )
+  })
 })
 
 describe("toRequirementsWorld", () => {

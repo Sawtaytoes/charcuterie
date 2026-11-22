@@ -1,6 +1,9 @@
 import { readFile, writeFile } from "node:fs/promises"
 import { join } from "node:path"
 
+import { canonicalId } from "./check.js"
+import { commandFor } from "./config.js"
+
 /**
  * The lock is the requirement ledger.
  *
@@ -20,6 +23,7 @@ import { join } from "node:path"
  *   rule?: string,
  *   scenario: string,
  *   status: "active" | "pending",
+ *   tags?: string[],
  *   steps: string[],
  *   examples?: string[][],
  *   code: string[],
@@ -115,6 +119,10 @@ export const buildLock = (analysis, previous) => {
         }
       }
 
+      for (const key of analysis.sources.runtimeKeys) {
+        code.add(key)
+      }
+
       for (const key of code) {
         reachedCode.add(key)
       }
@@ -129,10 +137,17 @@ export const buildLock = (analysis, previous) => {
                 scenario.templateSteps.length,
             ),
           )
-          .map((step) => `${step.keyword} ${step.text}`) ??
-        []
+          .map(
+            (step) =>
+              `${step.keyword} ${step.text}${step.argument ? `\n${step.argument}` : ""}`,
+          ) ?? []
 
       const [examples] = scenario.examples
+      // Every tag that changes how or where the scenario runs, such
+      // as `@responsive`, which moves it to the four-window project.
+      const tags = scenario.tags
+        .filter((tag) => !analysis.idPattern.test(tag))
+        .sort()
 
       requirements[idTag.name.slice(1)] = {
         feature: document.file,
@@ -140,11 +155,14 @@ export const buildLock = (analysis, previous) => {
           ? { rule: scenario.ruleName }
           : {}),
         scenario: scenario.name,
-        status: scenario.ownTags.some((tag) =>
-          pendingTags.has(tag.name),
+        // Inherited tags count: QuickPickle applies a Rule's `@todo`
+        // to every scenario under it.
+        status: scenario.tags.some((tag) =>
+          pendingTags.has(tag),
         )
           ? "pending"
           : "active",
+        ...(tags.length > 0 ? { tags } : {}),
         steps: [
           ...backgroundSteps,
           ...scenario.templateSteps,
@@ -209,6 +227,10 @@ export const writeLock = (analysis, lock) =>
  */
 export const lockProblems = (analysis, locked) => {
   const lockFile = analysis.project.config.lock
+  const command = commandFor(
+    analysis.project.config,
+    "lock",
+  )
   const expected = buildLock(analysis, locked)
   /** @type {import("./features.js").Problem[]} */
   const problems = []
@@ -220,22 +242,18 @@ export const lockProblems = (analysis, locked) => {
         line: 1,
         column: 1,
         rule: "removed-requirement",
-        message: `${id} ("${locked.requirements[id]?.scenario}") is in the lock but no scenario has it. If it was removed on purpose, run \`charcuterie-requirements lock --retire ${id} --reason "<why>"\` and say so in the pull request.`,
+        message: `${id} ("${locked.requirements[id]?.scenario}") is in the lock but no scenario has it. If it was removed on purpose, run \`${command} --retire ${id} --reason "<why>"\` and say so in the pull request. If not, restore the scenario.`,
       })
     }
   }
 
-  for (const id of Object.keys(expected.requirements)) {
-    if (id in (locked.retired ?? {})) {
-      problems.push({
-        file: lockFile,
-        line: 1,
-        column: 1,
-        rule: "retired-id",
-        message: `${id} was retired ("${locked.retired[id]?.reason}"). Give the new scenario a new ID.`,
-      })
-    }
-  }
+  problems.push(
+    ...retiredIdProblems(
+      lockFile,
+      Object.keys(expected.requirements),
+      locked.retired ?? {},
+    ),
+  )
 
   const removed = problems.some(
     (problem) => problem.rule === "removed-requirement",
@@ -252,9 +270,104 @@ export const lockProblems = (analysis, locked) => {
       line: 1,
       column: 1,
       rule: "stale-lock",
-      message: `The lock does not match the requirements. Changed: ${changes.map((change) => change.id).join(", ") || "lock metadata"}. Run \`charcuterie-requirements lock\` and list these IDs in the pull request.`,
+      message: `The lock does not match the requirements.\n${changes.map((change) => `    ${change.id} ${change.kind}: ${summarizeDetails(change.details) || change.scenario}`).join("\n") || "    lock metadata"}\n  If you meant to change these requirements, run \`${command}\` and list the IDs in the pull request. If you did not, revert the edit instead of relocking.`,
     })
   }
+
+  return problems
+}
+
+/**
+ * @param {string[]} details
+ */
+const summarizeDetails = (details) =>
+  details.length > 6
+    ? `${details.slice(0, 6).join("; ")}; and ${details.length - 6} more (run the lock command to see all)`
+    : details.join("; ")
+
+/**
+ * @param {string} lockFile
+ * @param {string[]} ids
+ * @param {RequirementsLock["retired"]} retired
+ */
+const retiredIdProblems = (lockFile, ids, retired) => {
+  const retiredById = new Map(
+    Object.entries(retired).map(([id, entry]) => [
+      canonicalId(id),
+      { id, entry },
+    ]),
+  )
+
+  return ids.flatMap((id) => {
+    const match = retiredById.get(canonicalId(id))
+
+    return match
+      ? [
+          {
+            file: lockFile,
+            line: 1,
+            column: 1,
+            rule: "retired-id",
+            message: `${id} reuses retired ${match.id} ("${match.entry.reason}"). Give the new scenario a new ID, above every active and retired one.`,
+          },
+        ]
+      : []
+  })
+}
+
+/**
+ * What only the base branch can prove: the PR's own lock can be edited
+ * by hand, so a deleted tombstone or a requirement dropped from both
+ * the features and the lock look clean on their own. CI runs this
+ * against the base commit and fails on any of these.
+ *
+ * @param {RequirementsLock} base
+ * @param {RequirementsLock} head
+ * @param {string} lockFile
+ */
+export const baseProblems = (base, head, lockFile) => {
+  /** @type {import("./features.js").Problem[]} */
+  const problems = []
+  const headRetired = head.retired ?? {}
+
+  for (const [id, entry] of Object.entries(
+    base.retired ?? {},
+  )) {
+    if (!(id in headRetired)) {
+      problems.push({
+        file: lockFile,
+        line: 1,
+        column: 1,
+        rule: "missing-tombstone",
+        message: `${id} ("${entry.scenario}") was retired on the base branch, and its entry is gone. Restore it; a retired ID stays retired.`,
+      })
+    }
+  }
+
+  for (const [id, entry] of Object.entries(
+    base.requirements ?? {},
+  )) {
+    if (
+      !(id in (head.requirements ?? {})) &&
+      !(id in headRetired)
+    ) {
+      problems.push({
+        file: lockFile,
+        line: 1,
+        column: 1,
+        rule: "removed-requirement",
+        message: `${id} ("${entry.scenario}") exists on the base branch and is gone without a retirement. Restore it, or retire it with a reason.`,
+      })
+    }
+  }
+
+  problems.push(
+    ...retiredIdProblems(
+      lockFile,
+      Object.keys(head.requirements ?? {}),
+      base.retired ?? {},
+    ),
+  )
 
   return problems
 }
@@ -330,6 +443,15 @@ export const describeChanges = (before, after) => {
       )
     }
 
+    if (
+      JSON.stringify(old.tags ?? []) !==
+      JSON.stringify(current.tags ?? [])
+    ) {
+      details.push(
+        `tags: ${(old.tags ?? []).join(" ") || "none"} -> ${(current.tags ?? []).join(" ") || "none"}`,
+      )
+    }
+
     if (old.feature !== current.feature) {
       details.push(
         `moved: ${old.feature} -> ${current.feature}`,
@@ -368,6 +490,19 @@ export const describeChanges = (before, after) => {
         kind: "changed",
         scenario: current.scenario,
         details,
+      })
+    }
+  }
+
+  for (const [id, entry] of Object.entries(
+    before.retired ?? {},
+  )) {
+    if (!(id in (after.retired ?? {}))) {
+      changes.push({
+        id,
+        kind: "removed",
+        scenario: entry.scenario,
+        details: ["its retirement entry was deleted"],
       })
     }
   }

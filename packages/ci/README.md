@@ -120,10 +120,15 @@ charcuterie-requirements lock --retire REQ-UI-5 --reason "…" --root …
 charcuterie-requirements diff --base origin/master --summary --root …
 ```
 
-The root holds `requirements.config.json`, which sets `idPrefix`, the source and helper
-globs, `stepModule`, and `allowedTags`. It also holds the generated
-`requirements.lock.json`. The lock lists each requirement's steps and every code unit they
-reach, so a weakened helper is reported as a changed requirement. Steps must be literal
+The root must hold `requirements.config.json`; the checker refuses to run without one. It
+sets `idPrefix`, the source and helper globs, `stepModule`, `stepFiles` (which must equal
+the `import.meta.glob` in `entry`), `runtime` (files every scenario passes through, hashed
+whole; a literal path may point outside the root), `subjects` (the code under test, never
+hashed; `!` excludes), `allowedTags`, and `command` (how messages name the CLI). It also
+holds the generated `requirements.lock.json`. The lock lists each requirement's steps,
+tags, and every code unit they reach, so a weakened helper is reported as a changed
+requirement. `diff` exits non-zero when a requirement or a retirement entry from the base
+commit is gone, or a retired ID returns. Steps must be literal
 Cucumber expressions registered through the repo's own `stepModule` wrapper, because a
 pattern built at runtime cannot be traced. The full rule list and the reasons are in
 Charcuterie's [`docs/gherkin-requirements.md`](../../docs/gherkin-requirements.md).

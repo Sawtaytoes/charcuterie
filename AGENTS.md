@@ -196,9 +196,11 @@ Button's fixtures are in `steps/button.steps.ts`, and the helpers they call are 
   A requirement change is the owner's call: ask, then list it in the pull request.
 - **`pnpm requirements:check` must pass.** It runs in seconds with no browser. It rejects
   undefined, ambiguous, and unused steps, runner tags such as `@skip` and `@fails`, and a
-  stale `requirements.lock.json`. The lock records the code behind every requirement, so
-  a weakened helper fails the check even when no English changed. After an intended
-  change, run `pnpm requirements:lock` and copy the IDs it prints into the pull request.
+  stale `requirements.lock.json`. The lock records the steps, tags, and code behind every
+  requirement, including the step wrapper and the Vitest configs, so a weakened helper
+  fails the check even when no English changed. If you did not mean to change a
+  requirement, revert; do not relock. After an intended change, run
+  `pnpm requirements:lock` and copy the IDs it prints into the pull request.
 - **To debug a failing step, run the `Trace:` command printed under the failure**, for
   example `pnpm requirements:which button.feature:41`. It names the definition and every
   file the step reaches.

@@ -26,6 +26,10 @@ import "./parameterTypes.ts"
  *   Step definition: Then("the {role} named {string} is disabled")
  *   Trace: pnpm requirements:which requirements/button.feature:25
  *
+ * A step timeout is raised by QuickPickle outside this callback, so it
+ * prints the step text and feature line without these two lines; run
+ * the trace on that line.
+ *
  * It also checks the World at the boundary. QuickPickle hands every
  * callback `any`; a missing `setWorldConstructor` would otherwise
  * surface as "cannot read properties of undefined" deep in a helper.
@@ -53,7 +57,11 @@ export const toRequirementsWorld = (
 const annotated = new WeakSet<Error>()
 
 /** `requirements/button.feature:25`, from the running Vitest task. */
-const featureLocation = (world: RequirementsWorld) => {
+const featureLocation = (world?: RequirementsWorld) => {
+  if (!world) {
+    return null
+  }
+
   const filePath = world.context?.task?.file?.filepath ?? ""
   const marker = filePath.lastIndexOf("/requirements/")
   const file =
@@ -73,7 +81,7 @@ export const annotateStepError = (
   }: {
     expression: string
     kind: StepKind
-    world: RequirementsWorld
+    world: RequirementsWorld | undefined
   },
 ) => {
   const failure =
@@ -111,9 +119,11 @@ export const wrapStep =
     run: StepRun<Parameters>,
   ) =>
   async (state: unknown, ...parameters: unknown[]) => {
-    const world = toRequirementsWorld(state)
+    // Inside the `try`, so a wrong World also names its definition.
+    let world: RequirementsWorld | undefined
 
     try {
+      world = toRequirementsWorld(state)
       await run(world, ...(parameters as Parameters))
     } catch (error) {
       throw annotateStepError(error, {

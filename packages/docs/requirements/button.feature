@@ -13,18 +13,16 @@ Feature: Button
   Rule: A button responds the same way to a mouse and a keyboard
 
     @REQ-UI-001
-    Scenario Outline: A keyboard user activates a button with <key>
+    Scenario: A keyboard user activates a button with Enter and then Space
       Given the Button playground is open
+      Then the button named "Start rip" is accessible by role and name
       When I press Tab
       Then the button named "Start rip" has focus
       And the button named "Start rip" has not been activated
-      When I press <key>
+      When I press Enter
       Then the button named "Start rip" has been activated 1 time
-
-      Examples:
-        | key   |
-        | Enter |
-        | Space |
+      When I press Space
+      Then the button named "Start rip" has been activated 2 times
 
     @REQ-UI-006
     Scenario: A mouse user activates a button

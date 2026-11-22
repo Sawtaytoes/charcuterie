@@ -10,7 +10,9 @@ import { dirname, join } from "node:path"
 import { afterEach, describe, expect, test } from "vitest"
 
 import { analyzeProject } from "./check.js"
+import { loadProject } from "./config.js"
 import {
+  baseProblems,
   buildLock,
   describeChanges,
   lockProblems,
@@ -61,6 +63,7 @@ const makeProject = async (files) => {
   const all = {
     "requirements.config.json": JSON.stringify(config),
     "support/steps.ts": wrapper,
+    "index.ts": `import.meta.glob("./steps/*.steps.ts", { eager: true })\n`,
     ...files,
   }
 
@@ -467,7 +470,7 @@ describe("the lock", () => {
     )
 
     expect(lock.requirements["REQ-T-1"]?.code).toContain(
-      "../shared/lamp.ts",
+      "../shared/lamp.ts › expectOn",
     )
   })
 
@@ -503,6 +506,367 @@ describe("the lock", () => {
         (problem) => problem.rule,
       ),
     ).toContain("retired-id")
+  })
+})
+
+/**
+ * Each test below plants an edit that once left the check clean while
+ * a requirement stopped running or proved less. Found by the
+ * independent reviews of the checker's first version.
+ */
+describe("changes that must not pass unnoticed", () => {
+  /** @param {Record<string, string>} files */
+  const lockedLamp = async (files = {}) => {
+    const root = await makeProject({
+      "lamp.feature": feature,
+      "helpers/lamp.ts": helpers,
+      "steps/lamp.steps.ts": steps,
+      ...files,
+    })
+    const analysis = await analyzeProject(root)
+
+    expect(analysis.problems).toEqual([])
+    await writeLock(
+      analysis,
+      buildLock(analysis, await readLock(analysis)),
+    )
+
+    return root
+  }
+
+  /** @param {string} root */
+  const changesOf = async (root) => {
+    const analysis = await analyzeProject(root)
+    const locked = await readLock(analysis)
+
+    return {
+      rules: lockProblems(analysis, locked).map(
+        (problem) => problem.rule,
+      ),
+      details: describeChanges(
+        locked,
+        buildLock(analysis, locked),
+      ).flatMap((change) =>
+        change.details.map(
+          (detail) => `${change.id} ${detail}`,
+        ),
+      ),
+      analysis,
+    }
+  }
+
+  test("an inherited @todo marks the requirement pending", async () => {
+    const root = await lockedLamp()
+
+    await writeFile(
+      join(root, "lamp.feature"),
+      feature.replace(
+        "  Rule: A lamp",
+        "  @todo\n  Rule: A lamp",
+      ),
+    )
+
+    const { rules, details, analysis } =
+      await changesOf(root)
+
+    expect(analysis.pending).toHaveLength(1)
+    expect(rules).toEqual(["stale-lock"])
+    expect(details).toContain(
+      "REQ-T-1 status: active -> pending",
+    )
+  })
+
+  test("adding @responsive changes the lock", async () => {
+    const root = await lockedLamp()
+
+    await writeFile(
+      join(root, "lamp.feature"),
+      feature.replace(
+        "    @REQ-T-1",
+        "    @REQ-T-1 @responsive",
+      ),
+    )
+
+    expect((await changesOf(root)).details).toContain(
+      "REQ-T-1 tags: none -> @responsive",
+    )
+  })
+
+  test("weakening the step wrapper changes every requirement", async () => {
+    const root = await lockedLamp()
+
+    await writeFile(
+      join(root, "support/steps.ts"),
+      wrapper.replace(
+        "export const Then = () => {}",
+        "export const Then = () => undefined",
+      ),
+    )
+
+    expect((await changesOf(root)).details).toContain(
+      "REQ-T-1 code changed: support/steps.ts",
+    )
+  })
+
+  test("changing a parameter type's transformer changes the lock", async () => {
+    const parameterTypes = `import { defineParameterType } from "quickpickle"
+
+defineParameterType({ name: "lamp", regexp: /desk|floor/, transformer: (name: string) => name })
+`
+    const root = await lockedLamp({
+      "support/parameterTypes.ts": parameterTypes,
+    })
+
+    await writeFile(
+      join(root, "support/parameterTypes.ts"),
+      parameterTypes.replace("=> name", '=> "desk"'),
+    )
+
+    expect((await changesOf(root)).details).toContain(
+      "REQ-T-1 code changed: support/parameterTypes.ts",
+    )
+  })
+
+  test("a module-level patch in a helper file changes the lock", async () => {
+    const root = await lockedLamp()
+
+    await writeFile(
+      join(root, "helpers/lamp.ts"),
+      `${helpers}\nMath.random = () => 0\n`,
+    )
+
+    expect((await changesOf(root)).details).toContain(
+      "REQ-T-1 code changed: helpers/lamp.ts › ‹module›",
+    )
+  })
+
+  test("a changed data table changes the lock", async () => {
+    const withTable = feature.replace(
+      '      Then "Desk" is on',
+      '      Then "Desk" is on\n        | brightness |\n        | 100        |',
+    )
+    const root = await lockedLamp({
+      "lamp.feature": withTable,
+    })
+
+    await writeFile(
+      join(root, "lamp.feature"),
+      withTable.replace("100       ", "1         "),
+    )
+
+    expect((await changesOf(root)).details).toContain(
+      "REQ-T-1 spec: the steps or examples changed",
+    )
+  })
+
+  test("a fixture outside the root is hashed per export, and a subject is not hashed", async () => {
+    const fixture = `import { Lamp } from "./Lamp.tsx"
+
+export default { component: Lamp }
+
+export const Desk = { args: { name: "Desk" } }
+
+export const Floor = { args: { name: "Floor" } }
+`
+    const root = await lockedLamp({
+      "requirements.config.json": JSON.stringify({
+        ...config,
+        subjects: ["../ui/*.tsx", "!../ui/*.stories.tsx"],
+      }),
+      "../ui/Lamp.stories.tsx": fixture,
+      "../ui/Lamp.tsx": "export const Lamp = () => null\n",
+      "steps/lamp.steps.ts": steps
+        .replace(
+          'import { Given, Then, When } from "../support/steps.ts"',
+          'import { Given, Then, When } from "../support/steps.ts"\nimport meta, { Desk } from "../../ui/Lamp.stories.tsx"',
+        )
+        .replace(
+          "(world, name: string) => {})",
+          "(world, name: string) => { void meta; void Desk })",
+        ),
+    })
+    const { analysis } = await changesOf(root)
+    const code = buildLock(
+      analysis,
+      await readLock(analysis),
+    ).requirements["REQ-T-1"]?.code
+
+    expect(code).toEqual(
+      expect.arrayContaining([
+        "../ui/Lamp.stories.tsx › Desk",
+        "../ui/Lamp.stories.tsx › default",
+      ]),
+    )
+    expect(code?.some((key) => key.includes("Floor"))).toBe(
+      false,
+    )
+    expect(
+      code?.some((key) => key.startsWith("../ui/Lamp.tsx")),
+    ).toBe(false)
+
+    await writeFile(
+      join(root, "../ui/Lamp.stories.tsx"),
+      fixture.replace('"Floor"', '"Ceiling"'),
+    )
+    await writeFile(
+      join(root, "../ui/Lamp.tsx"),
+      "export const Lamp = () => undefined\n",
+    )
+
+    expect((await changesOf(root)).rules).toEqual([])
+
+    await writeFile(
+      join(root, "../ui/Lamp.stories.tsx"),
+      fixture.replace('"Desk" }', '"Lamp" }'),
+    )
+
+    expect((await changesOf(root)).details).toContain(
+      "REQ-T-1 code changed: ../ui/Lamp.stories.tsx › Desk",
+    )
+  })
+})
+
+describe("registration", () => {
+  test("rejects a step file the setup file never loads", async () => {
+    const root = await makeProject({
+      "lamp.feature": feature,
+      "helpers/lamp.ts": helpers,
+      "steps/lamp.steps.ts": steps,
+      "extra/more.ts": `import { Then } from "../support/steps.ts"\n\nThen("{string} is bright", () => {})\n`,
+    })
+
+    expect(await rulesOf(root)).toEqual([
+      "step-outside-step-files",
+    ])
+  })
+
+  test("rejects a setup file whose glob differs from the config", async () => {
+    const root = await makeProject({
+      "lamp.feature": feature,
+      "helpers/lamp.ts": helpers,
+      "steps/lamp.steps.ts": steps,
+      "index.ts": `import.meta.glob("./steps/lamp.steps.ts", { eager: true })\n`,
+    })
+
+    expect(await rulesOf(root)).toEqual([
+      "registration-mismatch",
+    ])
+  })
+
+  test("rejects a hook or a namespace import from quickpickle outside the runtime files", async () => {
+    const root = await makeProject({
+      "lamp.feature": feature,
+      "helpers/lamp.ts": helpers,
+      "steps/lamp.steps.ts": `import { AfterStep } from "quickpickle"\nimport type { QuickPickleWorld } from "quickpickle"\n${steps}\nAfterStep(() => {})\n`,
+    })
+
+    expect(await rulesOf(root)).toEqual([
+      "quickpickle-outside-runtime",
+    ])
+  })
+
+  test("refuses to run without a config, instead of scanning a whole repository", async () => {
+    const root = await makeProject({})
+
+    await rm(join(root, "requirements.config.json"))
+
+    await expect(loadProject(root)).rejects.toThrow(
+      "Pass --root",
+    )
+  })
+})
+
+describe("names and keywords", () => {
+  test("rejects a tag-like word in a name, an Examples tag, a leading And, and a * step", async () => {
+    const root = await makeProject({
+      "lamp.feature": `Feature: Lamp
+
+  Scenario Outline: Turning a lamp on @responsive
+    And a lamp named "<name>"
+    * I turn on "<name>"
+    Then "<name>" is on
+
+    @todo
+    Examples:
+      | name |
+      | Desk |
+`.replace(
+        "  Scenario Outline",
+        "  @REQ-T-1\n  Scenario Outline",
+      ),
+      "helpers/lamp.ts": helpers,
+      "steps/lamp.steps.ts": steps,
+    })
+
+    expect((await rulesOf(root)).sort()).toEqual([
+      "examples-tag",
+      "leading-conjunction",
+      "star-keyword",
+      "tag-in-name",
+    ])
+  })
+
+  test("treats a zero-padded ID as the same requirement", async () => {
+    const root = await makeProject({
+      "lamp.feature": `${feature}
+    @REQ-T-01
+    Scenario: Turning a lamp on twice
+      Given a lamp named "Desk"
+      When I turn on "Desk"
+      Then "Desk" is on
+`,
+      "helpers/lamp.ts": helpers,
+      "steps/lamp.steps.ts": steps,
+    })
+
+    expect(await rulesOf(root)).toEqual(["duplicate-id"])
+  })
+})
+
+describe("against the base branch", () => {
+  const entry = {
+    feature: "lamp.feature",
+    scenario: "Turning a lamp on",
+    status: /** @type {const} */ ("active"),
+    steps: [],
+    code: [],
+  }
+
+  test("fails when a tombstone is deleted, a requirement vanishes, or a retired ID returns padded", () => {
+    const base = {
+      version: /** @type {const} */ (1),
+      requirements: { "REQ-T-2": entry },
+      code: {},
+      retired: {
+        "REQ-T-1": { scenario: "Old", reason: "replaced" },
+      },
+    }
+    const head = {
+      version: /** @type {const} */ (1),
+      requirements: { "REQ-T-01": entry },
+      code: {},
+      retired: {},
+    }
+
+    expect(
+      baseProblems(base, head, "requirements.lock.json")
+        .map((problem) => problem.rule)
+        .sort(),
+    ).toEqual([
+      "missing-tombstone",
+      "removed-requirement",
+      "retired-id",
+    ])
+    expect(
+      describeChanges(base, head).map(
+        (change) => `${change.id} ${change.kind}`,
+      ),
+    ).toEqual(
+      expect.arrayContaining([
+        "REQ-T-1 removed",
+        "REQ-T-2 removed",
+      ]),
+    )
   })
 })
 

@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-11-22
 - **Type:** Testing convention
-- **Supersedes:** [Every browser test runs in four named windows](2026-10-04-every-browser-test-runs-in-four-named-windows.md), in part: Gherkin requirement scenarios only. Every other browser test still runs in all four windows.
+- **Supersedes:** [Every browser test runs in four named windows](2026-10-04-every-browser-test-runs-in-four-named-windows.md), in part: Gherkin requirement scenarios only. Every other browser test still runs in all four windows. Also [Button behavior tests are Gherkin scenarios](2026-10-14-button-behavior-tests-are-gherkin-scenarios.md), in part: its four-window run.
 - **Superseded by:** —
 
 ## Decision

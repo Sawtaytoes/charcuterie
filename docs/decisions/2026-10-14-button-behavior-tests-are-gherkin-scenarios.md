@@ -4,7 +4,7 @@
 - **Date:** 2026-10-14
 - **Type:** Testing convention
 - **Supersedes:** [Stories are demos; the DOM tests are `*.test.tsx`](2026-07-30-stories-are-demos-tests-are-tests.md) (Button test location and format only)
-- **Superseded by:** [Requirements are locked by ID and checked before the browser runs](2026-11-22-requirements-are-locked-by-id-and-checked-before-the-browser.md), in part (file layout and four-window run); [Requirement scenarios run in one window unless tagged responsive](2026-11-22-requirement-scenarios-run-in-one-window-unless-tagged-responsive.md)
+- **Superseded by:** [Requirements are locked by ID and checked before the browser runs](2026-11-22-requirements-are-locked-by-id-and-checked-before-the-browser.md), in part (file layout); [Requirement scenarios run in one window unless tagged responsive](2026-11-22-requirement-scenarios-run-in-one-window-unless-tagged-responsive.md), in part (four-window run)
 
 ## Decision
 

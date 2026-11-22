@@ -29,6 +29,15 @@ const runnerTags = new Set([
   "@sequential",
 ])
 
+/**
+ * `REQ-UI-7` and `REQ-UI-007` are one requirement. Compare IDs by
+ * number, so padding cannot revive a retired ID or hide a duplicate.
+ *
+ * @param {string} id
+ */
+export const canonicalId = (id) =>
+  id.replace(/\d+$/, (digits) => String(Number(digits)))
+
 /** @type {Record<string, "Given" | "When" | "Then">} */
 const kindForType = {
   Context: "Given",
@@ -206,6 +215,8 @@ export const analyzeProject = async (rootDirectory) => {
 
     /** @type {Map<string, number>} */
     const names = new Map()
+    /** @type {Set<string>} */
+    const reportedNames = new Set()
 
     for (const scenario of document.scenarios) {
       const scenarioIds = scenario.ownTags.filter((tag) =>
@@ -234,7 +245,7 @@ export const analyzeProject = async (rootDirectory) => {
 
       for (const tag of scenarioIds) {
         const id = tag.name.slice(1)
-        const seen = ids.get(id)
+        const seen = ids.get(canonicalId(id))
 
         if (seen) {
           problems.push({
@@ -245,7 +256,7 @@ export const analyzeProject = async (rootDirectory) => {
             message: `${id} already names the scenario at ${seen.file}:${seen.line}.`,
           })
         } else {
-          ids.set(id, {
+          ids.set(canonicalId(id), {
             file: document.file,
             line: scenario.line,
           })
@@ -292,6 +303,43 @@ export const analyzeProject = async (rootDirectory) => {
         names.set(scenario.name, scenario.line)
       }
 
+      const [firstStep = ""] = scenario.templateSteps
+
+      if (/^(And|But|\*)\s/.test(firstStep)) {
+        problems.push({
+          file: document.file,
+          line:
+            scenario.pickles[0]?.steps[
+              scenario.pickles[0].steps.length -
+                scenario.templateSteps.length
+            ]?.line ?? scenario.line,
+          column: 1,
+          rule: "leading-conjunction",
+          message: `Start the scenario with Given, When, or Then, not "${firstStep.split(" ")[0]}". QuickPickle and the Cucumber compiler can read a leading conjunction as different step types.`,
+        })
+      }
+
+      for (const name of new Set([
+        document.name,
+        scenario.ruleName,
+        scenario.name,
+        ...scenario.pickles.map((pickle) => pickle.name),
+      ])) {
+        if (
+          /(^|\s)@\S/.test(name) &&
+          !reportedNames.has(name)
+        ) {
+          reportedNames.add(name)
+          problems.push({
+            file: document.file,
+            line: scenario.line,
+            column: 1,
+            rule: "tag-in-name",
+            message: `"${name}" contains a tag-like word. QuickPickle puts tags in the test title, and the window projects select scenarios by those tags, so a name must not look like one.`,
+          })
+        }
+      }
+
       if (scenario.templateSteps.length === 0) {
         problems.push({
           file: document.file,
@@ -316,11 +364,13 @@ export const analyzeProject = async (rootDirectory) => {
 
       for (const examples of scenario.examples) {
         for (const tag of examples.tags) {
-          checkPlainTag(
-            tag,
-            document.file,
-            "Examples table",
-          )
+          problems.push({
+            file: document.file,
+            line: tag.line,
+            column: 1,
+            rule: "examples-tag",
+            message: `Move ${tag.name} to the Scenario Outline. QuickPickle does not schedule by Examples tags, so a tag here would look like it applies without doing so.`,
+          })
         }
 
         if (examples.rows.length === 0) {
@@ -352,7 +402,19 @@ export const analyzeProject = async (rootDirectory) => {
       }
 
       /** @type {Set<string>} */
-      const reportedLines = new Set()
+      const reported = new Set()
+
+      /** @param {Problem} problem */
+      const reportOnce = (problem) => {
+        // An outline step yields one pickle step per row; say each
+        // distinct problem once, but never hide a different one.
+        const key = `${problem.line}|${problem.rule}|${problem.message}`
+
+        if (!reported.has(key)) {
+          reported.add(key)
+          problems.push(problem)
+        }
+      }
 
       for (const pickle of scenario.pickles) {
         for (const step of pickle.steps) {
@@ -364,17 +426,19 @@ export const analyzeProject = async (rootDirectory) => {
             usedDefinitions.add(match.key)
           }
 
-          // An outline step yields one pickle step per row; say so once.
-          const lineKey = `${step.line}:${matches.length}`
-
-          if (reportedLines.has(lineKey)) {
-            continue
+          if (step.keyword === "*") {
+            reportOnce({
+              file: document.file,
+              line: step.line,
+              column: 1,
+              rule: "star-keyword",
+              message:
+                "Write Given, When, Then, And, or But instead of *. A * step has no type, so the keyword check cannot run on it.",
+            })
           }
 
-          reportedLines.add(lineKey)
-
           if (matches.length === 0) {
-            problems.push({
+            reportOnce({
               file: document.file,
               line: step.line,
               column: 1,
@@ -382,7 +446,7 @@ export const analyzeProject = async (rootDirectory) => {
               message: `No step definition matches "${step.text}".`,
             })
           } else if (matches.length > 1) {
-            problems.push({
+            reportOnce({
               file: document.file,
               line: step.line,
               column: 1,
@@ -398,7 +462,7 @@ export const analyzeProject = async (rootDirectory) => {
               expected &&
               match.kind !== expected
             ) {
-              problems.push({
+              reportOnce({
                 file: document.file,
                 line: step.line,
                 column: 1,
@@ -428,9 +492,7 @@ export const analyzeProject = async (rootDirectory) => {
 
   const pending = documents.flatMap((document) =>
     document.scenarios.filter((scenario) =>
-      scenario.ownTags.some((tag) =>
-        pendingTags.has(tag.name),
-      ),
+      scenario.tags.some((tag) => pendingTags.has(tag)),
     ),
   )
 

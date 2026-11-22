@@ -1,6 +1,12 @@
 import { createHash } from "node:crypto"
 import { existsSync, readFileSync } from "node:fs"
-import { dirname, join, relative, resolve } from "node:path"
+import {
+  dirname,
+  join,
+  matchesGlob,
+  relative,
+  resolve,
+} from "node:path"
 
 import ts from "typescript"
 
@@ -191,7 +197,8 @@ const declaresName = (sourceFile, name) =>
  *   absolutePath: string,
  *   file: string,
  *   sourceFile: ts.SourceFile,
- *   imports: Map<string, { specifier: string, importedName: string }>,
+ *   imports: Map<string, { specifier: string, importedName: string, isTypeOnly: boolean }>,
+ *   moduleStatements: ts.Node[],
  *   declarations: Map<string, ts.Node>,
  *   exported: Set<string>,
  *   methods: Map<string, ts.Node>,
@@ -216,6 +223,16 @@ const readModule = (root, absolutePath) => {
   const exported = new Set()
   /** @type {SourceModule["methods"]} */
   const methods = new Map()
+  /** @type {ts.Node[]} */
+  const moduleStatements = []
+
+  /** @param {ts.Node} node */
+  const isDefaultExport = (node) =>
+    ts.canHaveModifiers(node) &&
+    (ts.getModifiers(node) ?? []).some(
+      (modifier) =>
+        modifier.kind === ts.SyntaxKind.DefaultKeyword,
+    )
 
   /** @param {ts.Node} node */
   const isExported = (node) =>
@@ -233,10 +250,15 @@ const readModule = (root, absolutePath) => {
       const specifier = statement.moduleSpecifier.text
       const clause = statement.importClause
 
+      const isTypeOnly = Boolean(clause?.isTypeOnly)
+
+      moduleStatements.push(statement)
+
       if (clause?.name) {
         imports.set(clause.name.text, {
           specifier,
           importedName: "default",
+          isTypeOnly,
         })
       }
 
@@ -251,6 +273,7 @@ const readModule = (root, absolutePath) => {
             importedName: (
               element.propertyName ?? element.name
             ).text,
+            isTypeOnly: isTypeOnly || element.isTypeOnly,
           })
         }
       }
@@ -262,6 +285,7 @@ const readModule = (root, absolutePath) => {
         imports.set(clause.namedBindings.name.text, {
           specifier,
           importedName: "*",
+          isTypeOnly,
         })
       }
     } else if (
@@ -273,6 +297,15 @@ const readModule = (root, absolutePath) => {
       if (isExported(statement)) {
         exported.add(statement.name.text)
       }
+
+      if (isDefaultExport(statement)) {
+        declarations.set("default", statement)
+      }
+    } else if (
+      ts.isExportAssignment(statement) &&
+      !statement.isExportEquals
+    ) {
+      declarations.set("default", statement)
     } else if (ts.isVariableStatement(statement)) {
       for (const declaration of statement.declarationList
         .declarations) {
@@ -297,6 +330,10 @@ const readModule = (root, absolutePath) => {
         exported.add(statement.name.text)
       }
 
+      if (isDefaultExport(statement)) {
+        declarations.set("default", statement)
+      }
+
       for (const member of statement.members) {
         if (
           (ts.isMethodDeclaration(member) ||
@@ -316,7 +353,14 @@ const readModule = (root, absolutePath) => {
     ) {
       // Types prove nothing at runtime; they never reach a hash.
     } else if (ts.isExportDeclaration(statement)) {
-      // Re-exports are resolved through the importing side.
+      // Re-exports are resolved through the importing side, and
+      // hashed with the module's other top-level statements.
+      moduleStatements.push(statement)
+    } else {
+      // A top-level call such as `userEvent.click = …` or
+      // `AfterStep(…)` runs when the module loads, whatever a step
+      // calls, so it is part of every requirement that loads it.
+      moduleStatements.push(statement)
     }
   }
 
@@ -327,6 +371,7 @@ const readModule = (root, absolutePath) => {
       .join("/"),
     sourceFile,
     imports,
+    moduleStatements,
     declarations,
     exported,
     methods,
@@ -349,6 +394,10 @@ export const readSources = (project) => {
   /** @type {Map<string, ts.Node>} step key -> call */
   const definitionNodes = new Map()
   const stepModulePath = resolve(root, config.stepModule)
+  const runtimeFiles = new Set([
+    ...project.runtimeFiles,
+    config.stepModule,
+  ])
 
   for (const file of project.sourceFiles) {
     const absolutePath = resolve(root, file)
@@ -374,9 +423,125 @@ export const readSources = (project) => {
     return created
   }
 
+  for (const module of modules.values()) {
+    if (module.absolutePath === stepModulePath) {
+      continue
+    }
+
+    for (const [localName, imported] of module.imports) {
+      const position = lineOf(
+        module.sourceFile,
+        module.sourceFile,
+      )
+
+      if (
+        imported.specifier === "quickpickle" &&
+        !imported.isTypeOnly &&
+        !runtimeFiles.has(module.file)
+      ) {
+        problems.push({
+          file: module.file,
+          ...position,
+          rule: stepKinds.has(imported.importedName)
+            ? "direct-quickpickle-step"
+            : "quickpickle-outside-runtime",
+          message: stepKinds.has(imported.importedName)
+            ? `Import ${imported.importedName} from ${config.stepModule}, not "quickpickle". The wrapper is what names a definition when its step fails, and the lock hashes it.`
+            : `\`${localName}\` comes from "quickpickle" outside the runtime files (${config.runtime.join(", ")}). A hook or World change here would alter every scenario without changing the lock. Move it into a runtime file; type-only imports are fine.`,
+        })
+      }
+
+      if (
+        imported.importedName === "*" &&
+        resolveRelative(
+          module.absolutePath,
+          imported.specifier,
+        ) === stepModulePath
+      ) {
+        problems.push({
+          file: module.file,
+          ...position,
+          rule: "namespace-step-import",
+          message: `Import Given, When, and Then from ${config.stepModule} by name. The checker reads only named step calls, so \`${localName}.Then(…)\` would run without being checked.`,
+        })
+      }
+    }
+  }
+
+  const entryPath = resolve(root, config.entry)
+
+  if (existsSync(entryPath)) {
+    const entry = moduleAt(entryPath)
+    /** @type {Set<string>} */
+    const registered = new Set()
+
+    /** @param {ts.Node} node */
+    const findGlobs = (node) => {
+      if (
+        ts.isCallExpression(node) &&
+        node.expression.getText(entry.sourceFile) ===
+          "import.meta.glob"
+      ) {
+        const [patterns] = node.arguments
+        const literals =
+          patterns && ts.isArrayLiteralExpression(patterns)
+            ? patterns.elements
+            : patterns
+              ? [patterns]
+              : []
+
+        for (const literal of literals) {
+          if (ts.isStringLiteralLike(literal)) {
+            registered.add(
+              literal.text.replace(/^\.\//, ""),
+            )
+          } else {
+            problems.push({
+              file: entry.file,
+              ...lineOf(entry.sourceFile, literal),
+              rule: "registration-mismatch",
+              message:
+                'Write the step-file glob as a string literal, so the checker can compare it with requirements.config.json "stepFiles".',
+            })
+          }
+        }
+      }
+
+      ts.forEachChild(node, findGlobs)
+    }
+
+    findGlobs(entry.sourceFile)
+
+    const configured = new Set(config.stepFiles)
+
+    if (
+      registered.size !== configured.size ||
+      [...registered].some(
+        (pattern) => !configured.has(pattern),
+      )
+    ) {
+      problems.push({
+        file: entry.file,
+        line: 1,
+        column: 1,
+        rule: "registration-mismatch",
+        message: `${config.entry} loads ${[...registered].join(", ") || "no step files"}, but requirements.config.json "stepFiles" is ${config.stepFiles.join(", ")}. Make them equal, so the checker reads exactly the steps the runner registers.`,
+      })
+    }
+  } else {
+    problems.push({
+      file: config.entry,
+      line: 1,
+      column: 1,
+      rule: "registration-mismatch",
+      message: `The setup file ${config.entry} does not exist. Set requirements.config.json "entry" to the file that registers the step files.`,
+    })
+  }
+
   for (const module of [...modules.values()]) {
     const isStepModule =
       module.absolutePath === stepModulePath
+    const isStepFile = project.stepFiles.has(module.file)
 
     /** @param {ts.Node} node */
     const visit = (node) => {
@@ -399,11 +564,16 @@ export const readSources = (project) => {
           )
 
           if (imported.specifier === "quickpickle") {
+            // Reported once, at the import, above.
+          } else if (
+            target === stepModulePath &&
+            !isStepFile
+          ) {
             problems.push({
               file: module.file,
               ...position,
-              rule: "direct-quickpickle-step",
-              message: `Import ${imported.importedName} from ${config.stepModule}, not "quickpickle". The wrapper is what names this definition when its step fails.`,
+              rule: "step-outside-step-files",
+              message: `${config.entry} never loads this file, so this ${imported.importedName} would not run. Move it into a file matching ${config.stepFiles.join(", ")}.`,
             })
           } else if (target === stepModulePath) {
             const [expressionNode, , priority] =
@@ -544,6 +714,60 @@ export const readSources = (project) => {
   const units = new Map()
   /** @type {Map<string, Set<string>>} */
   const reachCache = new Map()
+  const definitionCalls = new Set(definitionNodes.values())
+
+  /** @param {string} absolutePath */
+  const toKey = (absolutePath) =>
+    relative(root, absolutePath).split("\\").join("/")
+
+  /**
+   * @param {string} absolutePath
+   * @param {boolean} isExternal
+   */
+  const addWholeFile = (absolutePath, isExternal) => {
+    const key = toKey(absolutePath)
+
+    if (!units.has(key)) {
+      const text = readFileSync(absolutePath, "utf8")
+      const sourceFile = /\.[cm]?[jt]sx?$/.test(
+        absolutePath,
+      )
+        ? parseSource(absolutePath, text)
+        : null
+
+      units.set(key, {
+        key,
+        file: key,
+        line: 1,
+        hash: sourceFile
+          ? hashNode(sourceFile, sourceFile)
+          : absolutePath.endsWith(".json")
+            ? hashText(JSON.stringify(JSON.parse(text)))
+            : hashText(text),
+        isExternal,
+        isHelper: false,
+      })
+    }
+
+    return key
+  }
+
+  /**
+   * Code every scenario passes through, whatever its steps: the
+   * setup file, the World, the step wrapper, and the parameter types
+   * that turn step text into arguments. Every requirement reaches
+   * these, so weakening the wrapper changes every requirement.
+   */
+  const runtimeKeys = [
+    ...new Set([
+      ...project.runtimeFiles,
+      config.stepModule,
+      ...parameterTypes.map((type) => type.file),
+    ]),
+  ]
+    .filter((file) => existsSync(resolve(root, file)))
+    .map((file) => addWholeFile(resolve(root, file), false))
+    .sort()
 
   /** @type {Map<string, { module: SourceModule, node: ts.Node }[]>} */
   const methodsByName = new Map()
@@ -573,7 +797,7 @@ export const readSources = (project) => {
         file: module.file,
         line: lineOf(module.sourceFile, node).line,
         hash: hashNode(node, module.sourceFile),
-        isExternal: false,
+        isExternal: module.file.startsWith(".."),
         isHelper: project.helperFiles.has(module.file),
       })
     }
@@ -670,38 +894,6 @@ export const readSources = (project) => {
   }
 
   /**
-   * @param {string} importedPath
-   * @param {string} importedName
-   */
-  const addExternal = (importedPath, importedName) => {
-    const absolutePath = declaringFile(
-      importedPath,
-      importedName,
-    )
-    const key = relative(root, absolutePath)
-      .split("\\")
-      .join("/")
-
-    if (!units.has(key)) {
-      const sourceFile = parseSource(
-        absolutePath,
-        readFileSync(absolutePath, "utf8"),
-      )
-
-      units.set(key, {
-        key,
-        file: key,
-        line: 1,
-        hash: hashNode(sourceFile, sourceFile),
-        isExternal: true,
-        isHelper: false,
-      })
-    }
-
-    return key
-  }
-
-  /**
    * @param {SourceModule} module
    * @param {ts.Node} node
    * @param {Set<string>} reached
@@ -750,6 +942,93 @@ export const readSources = (project) => {
   }
 
   /**
+   * The code under test is the boundary: a component change is what
+   * the scenarios exist to catch, not a change to what they prove. A
+   * path matching `subjects` (a `!` pattern excludes) is neither
+   * hashed nor followed.
+   *
+   * @param {string} absolutePath
+   */
+  const isSubject = (absolutePath) => {
+    const key = toKey(absolutePath)
+    const positives = config.subjects.filter(
+      (pattern) => !pattern.startsWith("!"),
+    )
+    const negatives = config.subjects
+      .filter((pattern) => pattern.startsWith("!"))
+      .map((pattern) => pattern.slice(1))
+
+    return (
+      positives.some((pattern) =>
+        matchesGlob(key, pattern),
+      ) &&
+      !negatives.some((pattern) =>
+        matchesGlob(key, pattern),
+      )
+    )
+  }
+
+  /**
+   * A module's imports and top-level statements that are not
+   * declarations, as one unit. They run when the module loads, so a
+   * changed import or a patch such as `userEvent.click = …` changes
+   * every requirement that reaches the module.
+   *
+   * @param {SourceModule} module
+   * @param {Set<string>} reached
+   */
+  const enterModule = (module, reached) => {
+    // A step definition is a top-level call too, but it is its own
+    // unit; folding it in would tie every step in a file to the rest.
+    const statements = module.moduleStatements.filter(
+      (statement) =>
+        !(
+          ts.isExpressionStatement(statement) &&
+          definitionCalls.has(statement.expression)
+        ),
+    )
+
+    if (statements.length === 0) {
+      return
+    }
+
+    const key = `${module.file} › ‹module›`
+
+    if (reached.has(key)) {
+      return
+    }
+
+    if (!units.has(key)) {
+      units.set(key, {
+        key,
+        file: module.file,
+        line: 1,
+        hash: hashText(
+          statements
+            .map((statement) =>
+              printer.printNode(
+                ts.EmitHint.Unspecified,
+                statement,
+                module.sourceFile,
+              ),
+            )
+            .join("\n"),
+        ),
+        isExternal: module.file.startsWith(".."),
+        isHelper: false,
+      })
+    }
+
+    reached.add(key)
+
+    for (const statement of statements) {
+      if (!ts.isImportDeclaration(statement)) {
+        walk(module, statement, reached)
+      }
+    }
+  }
+
+  /**
    * @param {SourceModule} module
    * @param {string} name
    * @param {Set<string>} reached
@@ -762,6 +1041,7 @@ export const readSources = (project) => {
 
       if (!reached.has(key)) {
         reached.add(key)
+        enterModule(module, reached)
         walk(module, local, reached)
       }
 
@@ -770,7 +1050,7 @@ export const readSources = (project) => {
 
     const imported = module.imports.get(name)
 
-    if (!imported) {
+    if (!imported || imported.isTypeOnly) {
       return
     }
 
@@ -779,25 +1059,27 @@ export const readSources = (project) => {
       imported.specifier,
     )
 
+    // A bare package import is recorded by the importing module's
+    // ‹module› unit, which hashes its import statements.
     if (!target || target === stepModulePath) {
       return
     }
 
-    const isInsideRoot = !relative(root, target).startsWith(
-      "..",
-    )
-
-    if (!isInsideRoot || !/\.tsx?$/.test(target)) {
-      const key = addExternal(target, imported.importedName)
-
-      reached.add(key)
+    if (!/\.tsx?$/.test(target)) {
+      reached.add(addWholeFile(target, true))
 
       return
     }
 
-    const targetModule = moduleAt(target)
-
     if (imported.importedName === "*") {
+      if (isSubject(target)) {
+        return
+      }
+
+      const targetModule = moduleAt(target)
+
+      enterModule(targetModule, reached)
+
       for (const exportedName of targetModule.exported) {
         reachIdentifier(targetModule, exportedName, reached)
       }
@@ -805,10 +1087,36 @@ export const readSources = (project) => {
       return
     }
 
-    reachIdentifier(
-      targetModule,
+    const declaring = declaringFile(
+      target,
       imported.importedName,
-      reached,
+    )
+
+    if (isSubject(declaring)) {
+      return
+    }
+
+    const targetModule = moduleAt(declaring)
+
+    if (
+      targetModule.declarations.has(imported.importedName)
+    ) {
+      reachIdentifier(
+        targetModule,
+        imported.importedName,
+        reached,
+      )
+
+      return
+    }
+
+    // `export * as`, or another form the walker does not follow:
+    // hash the whole file rather than nothing.
+    reached.add(
+      addWholeFile(
+        declaring,
+        targetModule.file.startsWith(".."),
+      ),
     )
   }
 
@@ -911,6 +1219,7 @@ export const readSources = (project) => {
     parameterTypes,
     problems,
     reachOf,
+    runtimeKeys,
     units,
     unreachedHelpers,
   }
