@@ -2156,6 +2156,55 @@ describe("changes found by the twelfth review", () => {
     }
   })
 
+  test("a non-code fallback in a nested barrel does not shadow a later chain", async () => {
+    for (const [inner, mid, leaf] of [
+      [
+        'export * from "./s.module.css"\n',
+        'export { default as check } from "./data.json"\n',
+        "data.json",
+      ],
+      [
+        'export * from "./s.module.css"\n',
+        'export { check } from "./b.module.css"\n',
+        "b.module.css",
+      ],
+      [
+        'export * from "./arr.json"\n',
+        'export { default as check } from "./data.json"\n',
+        "data.json",
+      ],
+      [
+        'export * from "./s.module.css"\nexport * from "./index.ts"\n',
+        'export { default as check } from "./data.json"\n',
+        "data.json",
+      ],
+    ]) {
+      const { code } = await reachedThroughBarrel({
+        "../fixture/index.ts":
+          'export * from "./styles.ts"\nexport * from "./mid.ts"\n',
+        "../fixture/styles.ts": inner,
+        "../fixture/s.module.css": ".s { color: red; }\n",
+        "../fixture/arr.json": "[1]\n",
+        "../fixture/mid.ts": mid,
+        "../fixture/data.json": '{ "x": 1 }\n',
+        "../fixture/b.module.css":
+          ".check { color: red; }\n",
+      })
+
+      expect(code).toContain(`../fixture/${leaf}`)
+    }
+  })
+
+  test("an export * of malformed JSON does not crash the checker", async () => {
+    // Nothing supplies the name, so the barrel is hashed whole.
+    const { code } = await reachedThroughBarrel({
+      "../fixture/index.ts": 'export * from "./bad.json"\n',
+      "../fixture/bad.json": "{ not json\n",
+    })
+
+    expect(code).toContain("../fixture/index.ts")
+  })
+
   test("a namespace import hashes a JSON file its barrel re-exports", async () => {
     const root = await makeProject({
       "lamp.feature": feature,

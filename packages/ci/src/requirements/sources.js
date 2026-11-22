@@ -372,10 +372,6 @@ const jsonObjectAt = (absolutePath) => {
   }
 }
 
-/** @param {string} absolutePath */
-const isJsonObject = (absolutePath) =>
-  jsonObjectAt(absolutePath) !== null
-
 /** @param {ts.Node} statement */
 const isAmbient = (statement) =>
   ts.canHaveModifiers(statement) &&
@@ -1540,6 +1536,7 @@ export const readSources = (project) => {
    *   name: string,
    *   isFound: boolean,
    *   isTooDeep: boolean,
+   *   isFallback?: boolean,
    * }} DeclarationSearch
    */
 
@@ -1625,11 +1622,12 @@ export const readSources = (project) => {
      */
     let reachedElsewhere = null
     /**
-     * The first non-code `export *` target that may supply the name,
-     * as a CSS module can. A JSON object that lacks the key cannot.
-     * It is the last resort, after any code chain.
+     * The first non-code `export *` target, at any depth, that may
+     * supply the name, as a CSS module can. A JSON file cannot unless
+     * it has the key, which counts as found. It is the last resort,
+     * after any code chain.
      *
-     * @type {string | null}
+     * @type {{ search: DeclarationSearch, hops: string[] } | null}
      */
     let nonCodeFallback = null
 
@@ -1677,10 +1675,31 @@ export const readSources = (project) => {
 
         if (
           !codeFile.test(target) &&
-          !isJsonObject(target) &&
-          !nonCodeFallback
+          !target.endsWith(".json")
         ) {
-          nonCodeFallback = target
+          nonCodeFallback ??= {
+            search: {
+              file: target,
+              name: importedName,
+              isFound: false,
+              isTooDeep: false,
+              isFallback: true,
+            },
+            hops: [],
+          }
+
+          continue
+        }
+
+        // A deeper barrel fell back to a non-code file; that is still
+        // only a fallback here, behind any code chain.
+        if (followed.isFallback) {
+          nonCodeFallback ??= {
+            search: followed,
+            hops: deeper,
+          }
+
+          continue
         }
 
         // Another `export *` may still supply the name; report the
@@ -1752,14 +1771,9 @@ export const readSources = (project) => {
     }
 
     if (nonCodeFallback) {
-      hops.push(absolutePath)
+      hops.push(absolutePath, ...nonCodeFallback.hops)
 
-      return {
-        file: nonCodeFallback,
-        name: importedName,
-        isFound: false,
-        isTooDeep: false,
-      }
+      return nonCodeFallback.search
     }
 
     return here(false)
