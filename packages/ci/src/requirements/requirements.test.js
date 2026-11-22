@@ -1387,6 +1387,144 @@ Given("a switch", () => {})
   })
 })
 
+describe("changes found by the seventh review", () => {
+  const limit = "export default () => 0\n"
+  const counter = `import allowed from "./limit.ts"
+
+export const expectExact = (count: number) => {
+  if (count > allowed()) throw new Error("too many")
+}
+`
+
+  /**
+   * A fixture outside the root that re-exports a helper in one of
+   * three forms; the helper calls a third file.
+   *
+   * @param {string} barrel
+   * @param {string} importLine
+   * @param {string} call
+   */
+  const throughBarrel = async (
+    barrel,
+    importLine,
+    call,
+  ) => {
+    const root = await makeProject({
+      "lamp.feature": feature,
+      "helpers/lamp.ts": helpers,
+      "steps/lamp.steps.ts": `${importLine}\n${steps.replace(
+        "expectOn(world, name)",
+        `expectOn(world, name)\n  ${call}`,
+      )}`,
+      "../fixture/index.ts": barrel,
+      "../fixture/expectExact.ts": counter,
+      "../fixture/limit.ts": limit,
+    })
+    let analysis = await analyzeProject(root)
+
+    expect(analysis.problems).toEqual([])
+    await writeLock(
+      analysis,
+      buildLock(analysis, await readLock(analysis)),
+    )
+
+    await writeFile(
+      join(root, "../fixture/limit.ts"),
+      "export default () => Number.POSITIVE_INFINITY\n",
+    )
+    analysis = await analyzeProject(root)
+
+    const locked = await readLock(analysis)
+
+    return describeChanges(
+      locked,
+      buildLock(analysis, locked),
+    ).flatMap((change) =>
+      change.details.map(
+        (detail) => `${change.id} ${detail}`,
+      ),
+    )
+  }
+
+  test("follows a renamed re-export to the code it calls", async () => {
+    expect(
+      await throughBarrel(
+        'export { expectExact as expectCount } from "./expectExact.ts"\n',
+        'import { expectCount } from "../../fixture/index.ts"',
+        "expectCount(1)",
+      ),
+    ).toContain(
+      "REQ-T-1 code changed: ../fixture/limit.ts › default",
+    )
+  })
+
+  test("follows a re-exported default", async () => {
+    expect(
+      await throughBarrel(
+        'export { default } from "./limit.ts"\n',
+        'import allowed from "../../fixture/index.ts"',
+        "allowed()",
+      ),
+    ).toContain(
+      "REQ-T-1 code changed: ../fixture/limit.ts › default",
+    )
+  })
+
+  test("follows a namespace re-export", async () => {
+    expect(
+      await throughBarrel(
+        'export * as counts from "./expectExact.ts"\n',
+        'import { counts } from "../../fixture/index.ts"',
+        "counts.expectExact(1)",
+      ),
+    ).toContain(
+      "REQ-T-1 code changed: ../fixture/limit.ts › default",
+    )
+  })
+
+  test("follows a literal dynamic import, and rejects a computed one", async () => {
+    expect(
+      await throughBarrel(
+        "export {}\n",
+        "",
+        'await import("../../fixture/limit.ts")',
+      ),
+    ).toContain(
+      "REQ-T-1 code changed: ../fixture/limit.ts › default",
+    )
+
+    const root = await makeProject({
+      "lamp.feature": feature,
+      "helpers/lamp.ts": `${helpers}\nexport const load = (path: string) => import(path)\n`,
+      "steps/lamp.steps.ts": steps
+        .replace(
+          "expectOn(world, name)",
+          'expectOn(world, name)\n  void load("x")',
+        )
+        .replace(
+          "import { expectOn, turnOn }",
+          "import { expectOn, load, turnOn }",
+        ),
+    })
+
+    expect(await rulesOf(root)).toEqual(["dynamic-import"])
+  })
+
+  test("rejects import.meta.glob outside the setup file", async () => {
+    const root = await makeProject({
+      "lamp.feature": feature,
+      "helpers/lamp.ts": helpers,
+      "steps/lamp.steps.ts": steps,
+      "support/more.ts":
+        'import.meta.glob("../extra/*.ts", { eager: true })\n',
+    })
+
+    expect(await rulesOf(root)).toEqual([
+      "glob-outside-entry",
+    ])
+  })
+})
+
 describe("registration", () => {
   test("rejects a step file the setup file never loads", async () => {
     const root = await makeProject({

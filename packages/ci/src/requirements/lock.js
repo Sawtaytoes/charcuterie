@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto"
 import { readFile, writeFile } from "node:fs/promises"
 import { join } from "node:path"
 
@@ -29,6 +30,7 @@ import { commandFor } from "./config.js"
  *   steps: string[],
  *   examples?: string[][],
  *   code: string[],
+ *   digest?: string,
  * }} LockedRequirement
  *
  * @typedef {{
@@ -292,6 +294,22 @@ export const buildLock = (analysis, previous) => {
     if (unit) {
       code[key] = unit.hash
     }
+  }
+
+  // A digest per requirement puts the ID itself in the lock's git
+  // diff when only the code behind it changed.
+  for (const requirement of Object.values(requirements)) {
+    requirement.digest = createHash("sha256")
+      .update(
+        JSON.stringify(
+          requirement.code.map((key) => [
+            key,
+            code[key] ?? "",
+          ]),
+        ),
+      )
+      .digest("hex")
+      .slice(0, 16)
   }
 
   return {

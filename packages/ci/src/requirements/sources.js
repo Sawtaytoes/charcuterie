@@ -227,6 +227,19 @@ const resolveRelative = (fromFile, specifier) => {
  * @param {string} name
  */
 const declaresName = (sourceFile, name) =>
+  (name === "default" &&
+    sourceFile.statements.some(
+      (statement) =>
+        (ts.isExportAssignment(statement) &&
+          !statement.isExportEquals) ||
+        ((ts.isFunctionDeclaration(statement) ||
+          ts.isClassDeclaration(statement)) &&
+          (ts.getModifiers(statement) ?? []).some(
+            (modifier) =>
+              modifier.kind ===
+              ts.SyntaxKind.DefaultKeyword,
+          )),
+    )) ||
   sourceFile.statements.some(
     (statement) =>
       ((ts.isFunctionDeclaration(statement) ||
@@ -587,6 +600,19 @@ export const readSources = (project) => {
   for (const module of modules.values()) {
     if (module.absolutePath === stepModulePath) {
       continue
+    }
+
+    if (
+      module.file !== config.entry &&
+      /import\.meta\.glob\b/.test(module.sourceFile.text)
+    ) {
+      problems.push({
+        file: module.file,
+        line: 1,
+        column: 1,
+        rule: "glob-outside-entry",
+        message: `Only ${config.entry} may load files with import.meta.glob. A glob elsewhere loads files the lock cannot follow.`,
+      })
     }
 
     for (const [localName, imported] of module.imports) {
@@ -1138,7 +1164,8 @@ export const readSources = (project) => {
    * @param {number} depth
    * @param {string[]} hops collects each barrel passed through,
    *   whose own top-level code also runs on import
-   * @returns {string}
+   * @returns {{ file: string, name: string }} the declaring file and
+   *   the name it declares; `*` when the name is a whole module
    */
   const declaringFile = (
     absolutePath,
@@ -1146,13 +1173,15 @@ export const readSources = (project) => {
     depth = 0,
     hops = [],
   ) => {
+    /** @type {{ file: string, name: string }} */
+    const here = { file: absolutePath, name: importedName }
+
     if (
       depth > 8 ||
-      importedName === "default" ||
       importedName === "*" ||
       !codeFile.test(absolutePath)
     ) {
-      return absolutePath
+      return here
     }
 
     const sourceFile = parseSource(
@@ -1160,9 +1189,14 @@ export const readSources = (project) => {
       readFileSync(absolutePath, "utf8"),
     )
 
+    if (declaresName(sourceFile, importedName)) {
+      return here
+    }
+
     for (const statement of sourceFile.statements) {
       if (
         !ts.isExportDeclaration(statement) ||
+        statement.isTypeOnly ||
         !statement.moduleSpecifier ||
         !ts.isStringLiteral(statement.moduleSpecifier)
       ) {
@@ -1179,7 +1213,12 @@ export const readSources = (project) => {
       }
 
       if (!statement.exportClause) {
-        // `export * from`: follow only if the target declares it.
+        // `export * from` never re-exports a default, and is
+        // followed only if the target provides the name.
+        if (importedName === "default") {
+          continue
+        }
+
         /** @type {string[]} */
         const deeper = []
         const followed = declaringFile(
@@ -1190,7 +1229,7 @@ export const readSources = (project) => {
         )
 
         if (
-          followed !== target ||
+          followed.file !== target ||
           declaresName(
             parseSource(
               target,
@@ -1207,12 +1246,27 @@ export const readSources = (project) => {
         continue
       }
 
+      // `export * as name from`: the name is the whole module.
+      if (
+        ts.isNamespaceExport(statement.exportClause) &&
+        statement.exportClause.name.text === importedName
+      ) {
+        hops.push(absolutePath)
+
+        return { file: target, name: "*" }
+      }
+
       if (ts.isNamedExports(statement.exportClause)) {
         for (const element of statement.exportClause
           .elements) {
-          if (element.name.text === importedName) {
+          if (
+            !element.isTypeOnly &&
+            element.name.text === importedName
+          ) {
             hops.push(absolutePath)
 
+            // `export { a as b }` and `export { default }`: follow
+            // the name the target declares, not the one imported.
             return declaringFile(
               target,
               (element.propertyName ?? element.name).text,
@@ -1224,7 +1278,135 @@ export const readSources = (project) => {
       }
     }
 
-    return absolutePath
+    return here
+  }
+
+  /**
+   * Everything a namespace (`import * as x`, `export * as x`) can
+   * reach: the module's own exports and every name it re-exports.
+   *
+   * @param {SourceModule} module
+   * @param {Set<string>} reached
+   * @param {Set<string>} seen
+   */
+  const reachNamespace = (
+    module,
+    reached,
+    seen = new Set(),
+  ) => {
+    if (seen.has(module.absolutePath)) {
+      return
+    }
+
+    seen.add(module.absolutePath)
+    enterModule(module, reached)
+
+    for (const name of module.exported) {
+      reachIdentifier(module, name, reached)
+    }
+
+    if (module.declarations.has("default")) {
+      reachIdentifier(module, "default", reached)
+    }
+
+    for (const statement of module.moduleStatements) {
+      if (
+        !ts.isExportDeclaration(statement) ||
+        statement.isTypeOnly ||
+        !statement.moduleSpecifier ||
+        !ts.isStringLiteral(statement.moduleSpecifier)
+      ) {
+        continue
+      }
+
+      const target = resolveSpecifier(
+        module.absolutePath,
+        statement.moduleSpecifier.text,
+      )
+
+      if (
+        !target ||
+        !codeFile.test(target) ||
+        isSubject(target) ||
+        target === stepModulePath
+      ) {
+        continue
+      }
+
+      const targetModule = moduleAt(target)
+
+      if (
+        statement.exportClause &&
+        ts.isNamedExports(statement.exportClause)
+      ) {
+        for (const element of statement.exportClause
+          .elements) {
+          reachExport(
+            targetModule,
+            (element.propertyName ?? element.name).text,
+            reached,
+          )
+        }
+      } else {
+        reachNamespace(targetModule, reached, seen)
+      }
+    }
+  }
+
+  /**
+   * Reach `name` as `module` exports it, following re-exports.
+   *
+   * @param {SourceModule} module
+   * @param {string} name
+   * @param {Set<string>} reached
+   */
+  const reachExport = (module, name, reached) => {
+    /** @type {string[]} */
+    const hops = []
+    const resolved = declaringFile(
+      module.absolutePath,
+      name,
+      0,
+      hops,
+    )
+
+    if (isSubject(resolved.file)) {
+      return
+    }
+
+    for (const hop of hops) {
+      if (!isSubject(hop)) {
+        enterModule(moduleAt(hop), reached)
+      }
+    }
+
+    const targetModule = moduleAt(resolved.file)
+
+    if (resolved.name === "*") {
+      reachNamespace(targetModule, reached)
+
+      return
+    }
+
+    if (targetModule.declarations.has(resolved.name)) {
+      reachIdentifier(targetModule, resolved.name, reached)
+
+      return
+    }
+
+    // A form the walker does not follow: hash the whole file and
+    // reach every declaration in it, so a miss over-reports.
+    reached.add(
+      addWholeFile(
+        resolved.file,
+        targetModule.file.startsWith(".."),
+      ),
+    )
+    enterModule(targetModule, reached)
+
+    for (const declared of targetModule.declarations.keys()) {
+      reachIdentifier(targetModule, declared, reached)
+    }
   }
 
   /**
@@ -1235,6 +1417,27 @@ export const readSources = (project) => {
   const walk = (module, node, reached) => {
     /** @param {ts.Node} child */
     const visit = (child) => {
+      if (
+        ts.isCallExpression(child) &&
+        child.expression.kind ===
+          ts.SyntaxKind.ImportKeyword
+      ) {
+        const [specifier] = child.arguments
+
+        if (
+          specifier &&
+          ts.isStringLiteralLike(specifier)
+        ) {
+          followSideEffectImport(
+            module,
+            specifier.text,
+            reached,
+          )
+        } else {
+          reportDynamicImport(module, child)
+        }
+      }
+
       if (
         ts.isPropertyAccessExpression(child) &&
         ts.isIdentifier(child.name)
@@ -1384,6 +1587,31 @@ export const readSources = (project) => {
   }
 
   /** @type {Set<string>} */
+  const reportedDynamic = new Set()
+
+  /**
+   * @param {SourceModule} module
+   * @param {ts.Node} node
+   */
+  const reportDynamicImport = (module, node) => {
+    const position = lineOf(module.sourceFile, node)
+    const key = `${module.file}:${position.line}`
+
+    if (reportedDynamic.has(key)) {
+      return
+    }
+
+    reportedDynamic.add(key)
+    problems.push({
+      file: module.file,
+      ...position,
+      rule: "dynamic-import",
+      message:
+        "Write `import()` with a string literal path, so the lock can follow it.",
+    })
+  }
+
+  /** @type {Set<string>} */
   const reportedUnresolved = new Set()
 
   /**
@@ -1503,62 +1731,20 @@ export const readSources = (project) => {
       return
     }
 
+    if (isSubject(target)) {
+      return
+    }
+
     if (imported.importedName === "*") {
-      if (isSubject(target)) {
-        return
-      }
-
-      const targetModule = moduleAt(target)
-
-      enterModule(targetModule, reached)
-
-      for (const exportedName of targetModule.exported) {
-        reachIdentifier(targetModule, exportedName, reached)
-      }
+      reachNamespace(moduleAt(target), reached)
 
       return
     }
 
-    /** @type {string[]} */
-    const hops = []
-    const declaring = declaringFile(
-      target,
+    reachExport(
+      moduleAt(target),
       imported.importedName,
-      0,
-      hops,
-    )
-
-    if (isSubject(declaring)) {
-      return
-    }
-
-    for (const hop of hops) {
-      if (!isSubject(hop)) {
-        enterModule(moduleAt(hop), reached)
-      }
-    }
-
-    const targetModule = moduleAt(declaring)
-
-    if (
-      targetModule.declarations.has(imported.importedName)
-    ) {
-      reachIdentifier(
-        targetModule,
-        imported.importedName,
-        reached,
-      )
-
-      return
-    }
-
-    // `export * as`, or another form the walker does not follow:
-    // hash the whole file rather than nothing.
-    reached.add(
-      addWholeFile(
-        declaring,
-        targetModule.file.startsWith(".."),
-      ),
+      reached,
     )
   }
 
