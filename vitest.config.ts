@@ -30,6 +30,7 @@ export default defineConfig({
       "packages/docs/vitest.storybook.config.ts",
       "packages/docs/vitest.ui.config.ts",
       "packages/docs/vitest.requirements.config.ts",
+      "packages/docs/vitest.requirements-responsive.config.ts",
     ],
   },
 })

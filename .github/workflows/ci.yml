@@ -83,6 +83,17 @@ jobs:
       - run: pnpm install --frozen-lockfile --store-dir "$HOME/.cache/pnpm/store"
       - run: pnpm lint:biome
       - run: pnpm lint:eslint
+      # Gherkin requirements, checked without a browser: tags, IDs,
+      # undefined/ambiguous/unused steps, and the lock that records
+      # what each requirement proves. See docs/gherkin-requirements.md.
+      - run: pnpm requirements:check
+      - name: List requirements this pull request changes
+        if: ${{ github.event_name == 'pull_request' }}
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          git fetch --no-tags --depth=1 origin "$BASE_REF"
+          pnpm requirements:diff --base FETCH_HEAD --summary
 
   typecheck:
     needs: [changes]

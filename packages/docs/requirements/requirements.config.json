@@ -1,0 +1,11 @@
+{
+  "idPrefix": "REQ-UI-",
+  "features": ["**/*.feature"],
+  "sources": ["**/*.ts"],
+  "exclude": ["**/*.test.ts", "**/node_modules/**"],
+  "helpers": ["helpers/**/*.ts"],
+  "stepModule": "support/steps.ts",
+  "allowedTags": ["@responsive", "@todo"],
+  "pendingTags": ["@todo"],
+  "lock": "requirements.lock.json"
+}
