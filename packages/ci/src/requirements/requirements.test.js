@@ -1799,6 +1799,117 @@ describe("changes found by the tenth review", () => {
   })
 })
 
+describe("changes found by the eleventh review", () => {
+  test("rejects an extensionless import that a .js file beside it could take over", async () => {
+    const root = await makeProject({
+      "lamp.feature": feature,
+      "helpers/lamp.ts": helpers,
+      "helpers/limit.ts": "export const limit = 1\n",
+      "helpers/limit.js": "export const limit = 9\n",
+      "steps/lamp.steps.ts": `import { limit } from "../helpers/limit"\n${steps.replace(
+        "expectOn(world, name)",
+        "expectOn(world, name)\n  void limit",
+      )}`,
+    })
+    const { problems } = await analyzeProject(root)
+
+    const unresolved = problems.filter(
+      (problem) => problem.rule === "unresolved-import",
+    )
+
+    expect(unresolved).toHaveLength(1)
+    expect(unresolved[0]?.message).toContain(
+      "helpers/limit.js",
+    )
+  })
+
+  test("rejects a root-absolute or # subpath import", async () => {
+    for (const specifier of [
+      "/requirements/patch.ts",
+      "#patch",
+    ]) {
+      const root = await makeProject({
+        "lamp.feature": feature,
+        "helpers/lamp.ts": `import "${specifier}"\n${helpers}`,
+        "steps/lamp.steps.ts": steps,
+      })
+
+      expect(await rulesOf(root)).toEqual([
+        "unresolved-import",
+      ])
+    }
+  })
+
+  test("follows export * past a local that is not exported", async () => {
+    const root = await makeProject({
+      "lamp.feature": feature,
+      "helpers/lamp.ts": helpers,
+      "steps/lamp.steps.ts": `import { check } from "../../fixture/index.ts"\n${steps.replace(
+        "expectOn(world, name)",
+        "expectOn(world, name)\n  check()",
+      )}`,
+      "../fixture/index.ts":
+        'const check = () => 1\n\nexport const other = () => check()\n\nexport * from "./weak.ts"\n',
+      "../fixture/weak.ts":
+        "export const check = () => 2\n",
+    })
+    const analysis = await analyzeProject(root)
+    const lock = buildLock(
+      analysis,
+      await readLock(analysis),
+    )
+
+    expect(lock.requirements["REQ-T-1"]?.code).toContain(
+      "../fixture/weak.ts › check",
+    )
+  })
+
+  test("keeps a static and an instance method of the same name apart", async () => {
+    // The step never names the class, so its method is reached by
+    // name, and both methods named `flip` must be units of their own.
+    const root = await makeProject({
+      "lamp.feature": feature,
+      "helpers/lamp.ts": helpers,
+      "helpers/switch.ts":
+        "export class Switch {\n  static flip() {\n    return 1\n  }\n\n  flip() {\n    return 2\n  }\n}\n",
+      "steps/lamp.steps.ts": steps.replace(
+        "expectOn(world, name)",
+        "expectOn(world, name)\n  void world.lamp.flip()",
+      ),
+    })
+    const analysis = await analyzeProject(root)
+    const lock = buildLock(
+      analysis,
+      await readLock(analysis),
+    )
+
+    expect(lock.requirements["REQ-T-1"]?.code).toEqual(
+      expect.arrayContaining([
+        "helpers/switch.ts › Switch.flip",
+        "helpers/switch.ts › Switch.flip (static)",
+      ]),
+    )
+  })
+
+  test("a top-level using declaration joins the module unit", async () => {
+    const root = await makeProject({
+      "lamp.feature": feature,
+      // The initializer alone is inert; only `using` makes it code.
+      "helpers/lamp.ts": `${helpers}\nusing held = null\n`,
+      "steps/lamp.steps.ts": steps,
+    })
+    const analysis = await analyzeProject(root)
+    const lock = buildLock(
+      analysis,
+      await readLock(analysis),
+    )
+
+    expect(Object.keys(lock.code)).toContain(
+      "helpers/lamp.ts › ‹module›",
+    )
+  })
+})
+
 describe("registration", () => {
   test("rejects a step file the setup file never loads", async () => {
     const root = await makeProject({

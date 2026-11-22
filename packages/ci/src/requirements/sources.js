@@ -262,30 +262,65 @@ const summaryOf = (node) => {
  * @returns {string | null} absolute path of an existing file
  */
 const resolveRelative = (fromFile, specifier) => {
+  const candidates = relativeCandidates(fromFile, specifier)
+
+  return candidates.length === 1 ? candidates[0] : null
+}
+
+/** Vite's default `resolve.extensions`, in its order. */
+const viteExtensions = [
+  ".mjs",
+  ".js",
+  ".mts",
+  ".ts",
+  ".jsx",
+  ".tsx",
+  ".json",
+]
+
+/** @param {string} path */
+const isExistingFile = (path) =>
+  existsSync(path) && statSync(path).isFile()
+
+/**
+ * Every file Vite could load for a relative specifier. A specifier
+ * that names a file exactly has one. Otherwise more than one means
+ * the checker cannot know which runs: Vite tries `.js` before `.ts`,
+ * so `./queries` can load a `queries.js` placed beside `queries.ts`.
+ *
+ * @param {string} fromFile
+ * @param {string} specifier
+ * @returns {string[]}
+ */
+const relativeCandidates = (fromFile, specifier) => {
   if (!specifier.startsWith(".")) {
-    return null
+    return []
   }
 
   const base = resolve(dirname(fromFile), specifier)
+
+  if (isExistingFile(base)) {
+    return [base]
+  }
+
   // TypeScript lets `./weak.js` name `weak.ts`.
   const withoutJs = base.replace(/\.[cm]?jsx?$/, "")
-  const candidates = [
-    base,
-    `${base}.ts`,
-    `${base}.tsx`,
-    `${withoutJs}.ts`,
-    `${withoutJs}.tsx`,
-    join(base, "index.ts"),
-    join(base, "index.tsx"),
-  ]
 
-  return (
-    candidates.find(
-      (candidate) =>
-        existsSync(candidate) &&
-        statSync(candidate).isFile(),
-    ) ?? null
-  )
+  return [
+    ...new Set([
+      ...viteExtensions.map(
+        (extension) => `${base}${extension}`,
+      ),
+      ...(withoutJs === base
+        ? []
+        : [".ts", ".mts", ".tsx"].map(
+            (extension) => `${withoutJs}${extension}`,
+          )),
+      ...viteExtensions.map((extension) =>
+        join(base, `index${extension}`),
+      ),
+    ]),
+  ].filter(isExistingFile)
 }
 
 /**
@@ -306,17 +341,37 @@ const declaresName = (sourceFile, name) =>
               ts.SyntaxKind.DefaultKeyword,
           )),
     )) ||
+  // Only an exported name counts: `export * from` still supplies a
+  // name the module declares but does not export.
   sourceFile.statements.some(
     (statement) =>
-      ((ts.isFunctionDeclaration(statement) ||
+      (((ts.isFunctionDeclaration(statement) ||
         ts.isClassDeclaration(statement)) &&
         statement.name?.text === name) ||
-      (ts.isVariableStatement(statement) &&
-        statement.declarationList.declarations.some(
-          (declaration) =>
-            ts.isIdentifier(declaration.name) &&
-            declaration.name.text === name,
-        )),
+        (ts.isVariableStatement(statement) &&
+          statement.declarationList.declarations.some(
+            (declaration) =>
+              ts.isIdentifier(declaration.name) &&
+              declaration.name.text === name,
+          ))) &&
+      (ts.getModifiers(statement) ?? []).some(
+        (modifier) =>
+          modifier.kind === ts.SyntaxKind.ExportKeyword,
+      ),
+  ) ||
+  sourceFile.statements.some(
+    (statement) =>
+      ts.isExportDeclaration(statement) &&
+      !statement.moduleSpecifier &&
+      !statement.isTypeOnly &&
+      statement.exportClause !== undefined &&
+      ts.isNamedExports(statement.exportClause) &&
+      statement.exportClause.elements.some(
+        (element) =>
+          element.name.text === name &&
+          (element.propertyName ?? element.name).text ===
+            name,
+      ),
   )
 
 /**
@@ -636,7 +691,11 @@ const readModule = (root, absolutePath) => {
       // An initializer that runs code, or a destructuring the walker
       // cannot name, runs when the module loads whether or not a step
       // uses the binding — so it also joins the ‹module› unit.
+      // A `using` binding's disposer runs when the module finishes.
       if (
+        (statement.declarationList.flags &
+          ts.NodeFlags.Using) !==
+          0 ||
         statement.declarationList.declarations.some(
           (declaration) =>
             !ts.isIdentifier(declaration.name) ||
@@ -685,8 +744,16 @@ const readModule = (root, absolutePath) => {
           member.name &&
           ts.isIdentifier(member.name)
         ) {
+          // A static and an instance method can share a name.
+          const isStatic = (
+            ts.getModifiers(member) ?? []
+          ).some(
+            (modifier) =>
+              modifier.kind === ts.SyntaxKind.StaticKeyword,
+          )
+
           methods.set(
-            `${statement.name.text}.${member.name.text}`,
+            `${statement.name.text}.${member.name.text}${isStatic ? " (static)" : ""}`,
             member,
           )
         }
@@ -1154,6 +1221,10 @@ export const readSources = (project) => {
   /** @param {string} specifier */
   const isFollowedSpecifier = (specifier) =>
     specifier.startsWith(".") ||
+    // Vite loads these from the project root or the `imports` map.
+    // They never resolve here, so the check reports them.
+    specifier.startsWith("/") ||
+    specifier.startsWith("#") ||
     Boolean(packageOf(specifier))
 
   /**
@@ -1317,16 +1388,17 @@ export const readSources = (project) => {
     .map((file) => addWholeFile(resolve(root, file), false))
     .sort()
 
-  /** @type {Map<string, { module: SourceModule, node: ts.Node }[]>} */
+  /** @type {Map<string, { module: SourceModule, node: ts.Node, qualified: string }[]>} */
   const methodsByName = new Map()
 
   for (const module of modules.values()) {
     for (const [qualified, node] of module.methods) {
-      const methodName =
+      const methodName = (
         qualified.split(".")[1] ?? qualified
+      ).replace(/ \(static\)$/, "")
       const list = methodsByName.get(methodName) ?? []
 
-      list.push({ module, node })
+      list.push({ module, node, qualified })
       methodsByName.set(methodName, list)
     }
   }
@@ -1644,15 +1716,9 @@ export const readSources = (project) => {
         for (const method of methodsByName.get(
           child.name.text,
         ) ?? []) {
-          const className =
-            method.node.parent &&
-            ts.isClassDeclaration(method.node.parent) &&
-            method.node.parent.name
-              ? method.node.parent.name.text
-              : "class"
           const key = addUnit(
             method.module,
-            `${className}.${child.name.text}`,
+            method.qualified,
             method.node,
           )
 
@@ -1899,12 +1965,24 @@ export const readSources = (project) => {
     }
 
     reportedUnresolved.add(key)
+
+    const candidates = relativeCandidates(
+      module.absolutePath,
+      specifier,
+    )
+
     problems.push({
       file: module.file,
       line: 1,
       column: 1,
       rule: "unresolved-import",
-      message: `"${specifier}" does not resolve to a file the checker can read, so the lock cannot follow it. Import the file by its path.`,
+      message:
+        candidates.length > 1
+          ? `"${specifier}" could load any of ${candidates.map((candidate) => toKey(candidate)).join(", ")}, so the lock cannot know which runs. Write the full file name.`
+          : specifier.startsWith("/") ||
+              specifier.startsWith("#")
+            ? `"${specifier}" is not followed. Import the file by its relative path.`
+            : `"${specifier}" does not resolve to a file the checker can read, so the lock cannot follow it. Import the file by its path.`,
     })
   }
 

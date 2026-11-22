@@ -155,15 +155,19 @@ requires `storySort` inline in `.storybook/preview.tsx`, and the test runner imp
 file, so reordering the sidebar marks every requirement. And a new, removed, or reordered
 import or re-export line in any module the scenarios load marks every requirement, because
 that module's top-level code runs for all of them. A type annotation inside a function
-also counts as code, so changing it marks the requirements that reach that function.
+also counts as code, so changing it marks the requirements that reach that function. A
+top-level value that spreads, reads a property, or does arithmetic counts as code too, even
+in a story no scenario uses, so adding one to a story file marks every requirement that
+loads that file.
 Relock for any of these and say so in the pull request.
 
 The lock is a tripwire, not a proof. It reads code by name without running it, and each
 review of it has found new ways around it. Reading the lock diff and the job summary in
 review is still the final check. A top-level statement that may run code joins its module's `‹module›` unit. That
 includes an initializer that calls a function, assigns a value, reads a property (a
-getter), or builds a template with a value (`toString`). It also includes a class with an
-`extends` expression, a decorator, a computed member name, or a static initializer. Only
+getter), or builds a template with a value (`toString`). It also includes a class whose `extends`
+clause calls or reads something, a decorator, a computed member name, a static initializer,
+and a top-level `using` declaration. Only
 literals, names, functions, and object and array literals built from them stay out.
 Editing it marks every requirement that reaches that module, and every requirement when
 the module is a step file. A barrel's own top-level code counts when a name passes through it, and renamed,
@@ -173,7 +177,11 @@ top-level code of every module its target imports counts, as for a static import
 setup file may call `import.meta.glob`, in any module the lock reaches. A
 side-effect import (`import "./patch.ts"`) is followed, and so is `import {} from` or an
 import of inline types only, which load the module the same way. A `@jsx` pragma comment
-is rejected, because it changes which module compiles the file's JSX. Any relative import in a module the
+is rejected, because it changes which module compiles the file's JSX. The check matches
+the text anywhere in the file, so do not write `@jsx` in a comment either. A relative
+import must name one file: if `./queries` could load both `queries.js` and `queries.ts`,
+the check fails, because Vite tries `.js` first. Root-absolute (`/…`) and `#` subpath
+imports are rejected. Any relative import in a module the
 lock reaches must resolve, or the check fails. A lazy or conditional
 `import.meta.glob` is rejected. A lock in the wrong shape fails, and CI finds the base
 commit's lock through the base commit's own config.
