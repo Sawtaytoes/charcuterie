@@ -264,8 +264,13 @@ const summaryOf = (node) => {
 const resolveRelative = (fromFile, specifier) => {
   const candidates = relativeCandidates(fromFile, specifier)
 
+  // A directory's own `package.json` can point Vite anywhere.
   return candidates.length === 1 &&
-    !candidates[0].endsWith("package.json")
+    candidates[0] !==
+      join(
+        resolve(dirname(fromFile), specifier),
+        "package.json",
+      )
     ? candidates[0]
     : null
 }
@@ -1078,10 +1083,13 @@ export const readSources = (project) => {
             const [expressionNode, handler, priority] =
               node.arguments
 
+            const body =
+              handler && ts.skipParentheses(handler)
+
             if (
-              handler &&
-              !ts.isArrowFunction(handler) &&
-              !ts.isFunctionExpression(handler)
+              !body ||
+              (!ts.isArrowFunction(body) &&
+                !ts.isFunctionExpression(body))
             ) {
               problems.push({
                 file: module.file,
@@ -1484,47 +1492,61 @@ export const readSources = (project) => {
   }
 
   /**
-   * A barrel such as `testing/index.ts` only re-exports, so hashing
-   * it would miss a change to the assertion it forwards. Follow the
-   * name through `export … from` to the file that declares it.
-   *
+   * @typedef {{
+   *   file: string,
+   *   name: string,
+   *   isFound: boolean,
+   *   isTooDeep: boolean,
+   * }} DeclarationSearch
+   */
+
+  /**
    * @param {string} absolutePath
    * @param {string} importedName
    * @param {number} depth
-   * @param {string[]} hops collects each barrel passed through,
-   *   whose own top-level code also runs on import
-   * @returns {{ file: string, name: string }} the declaring file and
-   *   the name it declares; `*` when the name is a whole module
+   * @param {string[]} hops
+   * @param {Set<string>} seen the files on this path, so a cycle of
+   *   `export *` ends instead of running out of depth
+   * @returns {DeclarationSearch}
    */
-  const declaringFile = (
+  const searchDeclaration = (
     absolutePath,
     importedName,
-    depth = 0,
-    hops = [],
+    depth,
+    hops,
+    seen,
   ) => {
-    /** @type {{ file: string, name: string }} */
-    const here = { file: absolutePath, name: importedName }
+    /** @param {boolean} isFound */
+    const here = (isFound) => ({
+      file: absolutePath,
+      name: importedName,
+      isFound,
+      isTooDeep: false,
+    })
 
     if (depth > 8) {
-      reportTooDeep(absolutePath, importedName)
-
-      return here
+      return { ...here(false), isTooDeep: true }
     }
 
     if (
       importedName === "*" ||
       !codeFile.test(absolutePath)
     ) {
-      return here
+      return here(true)
     }
 
+    if (seen.has(absolutePath)) {
+      return here(false)
+    }
+
+    const onPath = new Set(seen).add(absolutePath)
     const sourceFile = parseSource(
       absolutePath,
       readFileSync(absolutePath, "utf8"),
     )
 
     if (declaresName(sourceFile, importedName)) {
-      return here
+      return here(true)
     }
 
     // A named re-export wins over `export *` wherever it is written,
@@ -1541,6 +1563,9 @@ export const readSources = (project) => {
           statement.exportClause === undefined,
       ),
     ]
+
+    /** @type {{ search: DeclarationSearch, hops: string[] } | null} */
+    let tooDeep = null
 
     for (const statement of exportStatements) {
       if (
@@ -1570,26 +1595,24 @@ export const readSources = (project) => {
 
         /** @type {string[]} */
         const deeper = []
-        const followed = declaringFile(
+        const followed = searchDeclaration(
           target,
           importedName,
           depth + 1,
           deeper,
+          onPath,
         )
 
-        if (
-          followed.file !== target ||
-          declaresName(
-            parseSource(
-              target,
-              readFileSync(target, "utf8"),
-            ),
-            importedName,
-          )
-        ) {
+        if (followed.isFound) {
           hops.push(absolutePath, ...deeper)
 
           return followed
+        }
+
+        // Another `export *` may still supply the name; report the
+        // depth only if none does.
+        if (followed.isTooDeep && !tooDeep) {
+          tooDeep = { search: followed, hops: deeper }
         }
 
         continue
@@ -1602,7 +1625,12 @@ export const readSources = (project) => {
       ) {
         hops.push(absolutePath)
 
-        return { file: target, name: "*" }
+        return {
+          file: target,
+          name: "*",
+          isFound: true,
+          isTooDeep: false,
+        }
       }
 
       if (ts.isNamedExports(statement.exportClause)) {
@@ -1616,18 +1644,59 @@ export const readSources = (project) => {
 
             // `export { a as b }` and `export { default }`: follow
             // the name the target declares, not the one imported.
-            return declaringFile(
+            return searchDeclaration(
               target,
               (element.propertyName ?? element.name).text,
               depth + 1,
               hops,
+              onPath,
             )
           }
         }
       }
     }
 
-    return here
+    if (tooDeep) {
+      hops.push(absolutePath, ...tooDeep.hops)
+
+      return tooDeep.search
+    }
+
+    return here(false)
+  }
+
+  /**
+   * A barrel such as `testing/index.ts` only re-exports, so hashing
+   * it would miss a change to the assertion it forwards. Follow the
+   * name through `export … from` to the file that declares it.
+   *
+   * @param {string} absolutePath
+   * @param {string} importedName
+   * @param {string[]} hops collects each barrel passed through,
+   *   whose own top-level code also runs on import
+   * @returns {{ file: string, name: string }} the declaring file and
+   *   the name it declares; `*` when the name is a whole module
+   */
+  const declaringFile = (
+    absolutePath,
+    importedName,
+    hops = [],
+  ) => {
+    const search = searchDeclaration(
+      absolutePath,
+      importedName,
+      0,
+      hops,
+      new Set(),
+    )
+
+    if (search.isTooDeep) {
+      reportTooDeep(search.file, search.name)
+    }
+
+    // When nothing declares the name, the search ends at the last
+    // file it reached, which the caller then hashes whole.
+    return { file: search.file, name: search.name }
   }
 
   /**
@@ -1715,7 +1784,6 @@ export const readSources = (project) => {
     const resolved = declaringFile(
       module.absolutePath,
       name,
-      0,
       hops,
     )
 
@@ -2057,10 +2125,12 @@ export const readSources = (project) => {
       message:
         candidates.length > 1
           ? `"${specifier}" could load any of ${candidates.map((candidate) => toKey(candidate)).join(", ")}, so the lock cannot know which runs. Write the full file name.`
-          : specifier.startsWith("/") ||
-              specifier.startsWith("#")
-            ? `"${specifier}" is not followed. Import the file by its relative path.`
-            : `"${specifier}" does not resolve to a file the checker can read, so the lock cannot follow it. Import the file by its path.`,
+          : candidates[0]?.endsWith("package.json")
+            ? `"${specifier}" is a directory with a package.json, which can send Vite to any file. Import the file by its full path.`
+            : specifier.startsWith("/") ||
+                specifier.startsWith("#")
+              ? `"${specifier}" is not followed. Import the file by its relative path.`
+              : `"${specifier}" does not resolve to a file the checker can read, so the lock cannot follow it. Import the file by its path.`,
     })
   }
 

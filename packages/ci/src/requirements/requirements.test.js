@@ -1964,22 +1964,80 @@ describe("changes found by the twelfth review", () => {
     expect(code).toContain("../fixture/real.ts › check")
   })
 
-  test("reports a re-export chain too deep to follow", async () => {
+  /**
+   * A barrel chain of `hops` re-exports from the index to `check`.
+   *
+   * @param {number} hops
+   * @param {"named" | "star"} form
+   */
+  const chainOf = (hops, form) => {
     /** @type {Record<string, string>} */
     const chain = {
+      [`../fixture/b${hops}.ts`]:
+        "export const check = () => 1\n",
+    }
+
+    for (let hop = 0; hop < hops; hop += 1) {
+      const from = hop === 0 ? "index" : `b${hop}`
+
+      chain[`../fixture/${from}.ts`] =
+        form === "named"
+          ? `export { check } from "./b${hop + 1}.ts"\n`
+          : `export * from "./b${hop + 1}.ts"\n`
+    }
+
+    return chain
+  }
+
+  test("follows eight re-exports, and reports a ninth as too deep", async () => {
+    for (const form of /** @type {const} */ ([
+      "named",
+      "star",
+    ])) {
+      const fits = await reachedThroughBarrel(
+        chainOf(8, form),
+      )
+
+      expect(fits.problems).toEqual([])
+      expect(fits.code).toContain(
+        "../fixture/b8.ts › check",
+      )
+      expect(
+        (await reachedThroughBarrel(chainOf(9, form)))
+          .problems,
+      ).toContain("reexport-too-deep")
+    }
+  })
+
+  test("a cycle of export * ends without a depth report", async () => {
+    const { problems, code } = await reachedThroughBarrel({
       "../fixture/index.ts":
-        'export { check } from "./b1.ts"\n',
-      "../fixture/b10.ts": "export const check = () => 1\n",
-    }
+        'export * from "./a.ts"\nexport * from "./real.ts"\n',
+      "../fixture/a.ts": 'export * from "./index.ts"\n',
+      "../fixture/real.ts":
+        "export const check = () => 1\n",
+    })
 
-    for (let hop = 1; hop < 10; hop += 1) {
-      chain[`../fixture/b${hop}.ts`] =
-        `export { check } from "./b${hop + 1}.ts"\n`
-    }
+    expect(problems).toEqual([])
+    expect(code).toContain("../fixture/real.ts › check")
+  })
 
-    expect(
-      (await reachedThroughBarrel(chain)).problems,
-    ).toContain("reexport-too-deep")
+  test("a long chain without the name does not hide the export * that has it", async () => {
+    const chain = chainOf(10, "star")
+
+    chain["../fixture/b10.ts"] =
+      "export const other = () => 1\n"
+    chain["../fixture/index.ts"] =
+      'export * from "./b1.ts"\nexport * from "./real.ts"\n'
+
+    const { problems, code } = await reachedThroughBarrel({
+      ...chain,
+      "../fixture/real.ts":
+        "export const check = () => 1\n",
+    })
+
+    expect(problems).toEqual([])
+    expect(code).toContain("../fixture/real.ts › check")
   })
 
   test("rejects a directory import whose directory has a package.json", async () => {
@@ -1996,6 +2054,20 @@ describe("changes found by the twelfth review", () => {
     )
   })
 
+  test("still resolves an exact package.json or index file", async () => {
+    const root = await makeProject({
+      "lamp.feature": feature,
+      "helpers/lamp.ts": `import "./q/index.ts"\nimport manifest from "./q/package.json"\n\nexport const version = () => manifest\n${helpers}`,
+      "helpers/q/index.ts": "export {}\n",
+      "helpers/q/package.json": '{ "version": "1.0.0" }\n',
+      "steps/lamp.steps.ts": steps,
+    })
+
+    expect(await rulesOf(root)).not.toContain(
+      "unresolved-import",
+    )
+  })
+
   test("rejects a step handler that is not an inline function", async () => {
     const root = await makeProject({
       "lamp.feature": feature,
@@ -2007,6 +2079,32 @@ describe("changes found by the twelfth review", () => {
     })
 
     expect(await rulesOf(root)).toEqual([
+      "step-handler-shape",
+    ])
+  })
+
+  test("accepts a parenthesized inline handler, and rejects a missing one", async () => {
+    const wrapped = await makeProject({
+      "lamp.feature": feature,
+      "helpers/lamp.ts": helpers,
+      "steps/lamp.steps.ts": steps.replace(
+        'Given("a lamp named {string}", (world, name: string) => {})',
+        'Given("a lamp named {string}", ((world, name: string) => {}))',
+      ),
+    })
+
+    expect(await rulesOf(wrapped)).toEqual([])
+
+    const missing = await makeProject({
+      "lamp.feature": feature,
+      "helpers/lamp.ts": helpers,
+      "steps/lamp.steps.ts": steps.replace(
+        'Given("a lamp named {string}", (world, name: string) => {})',
+        'Given("a lamp named {string}")',
+      ),
+    })
+
+    expect(await rulesOf(missing)).toEqual([
       "step-handler-shape",
     ])
   })
