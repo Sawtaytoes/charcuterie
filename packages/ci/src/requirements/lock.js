@@ -1,0 +1,404 @@
+import { readFile, writeFile } from "node:fs/promises"
+import { join } from "node:path"
+
+/**
+ * The lock is the requirement ledger.
+ *
+ * Plain English does not stop an agent from weakening a test: it can
+ * leave every sentence alone and loosen the assertion underneath. So
+ * each requirement's entry records both halves — the steps a person
+ * reads, and the code each step reaches, down to the helper that
+ * asserts and the story that supplies the fixture. Change either,
+ * and the lock goes stale until someone regenerates it, which puts
+ * the change in front of a reviewer as a named requirement ID.
+ *
+ * A requirement is never deleted from the lock. It is retired, with
+ * a reason, and its ID can never be reused.
+ *
+ * @typedef {{
+ *   feature: string,
+ *   rule?: string,
+ *   scenario: string,
+ *   status: "active" | "pending",
+ *   steps: string[],
+ *   examples?: string[][],
+ *   code: string[],
+ * }} LockedRequirement
+ *
+ * @typedef {{
+ *   version: 1,
+ *   requirements: Record<string, LockedRequirement>,
+ *   code: Record<string, string>,
+ *   retired: Record<string, { scenario: string, reason: string }>,
+ * }} RequirementsLock
+ *
+ * @typedef {import("./check.js").Analysis} Analysis
+ */
+
+/** @returns {RequirementsLock} */
+export const emptyLock = () => ({
+  version: 1,
+  requirements: {},
+  code: {},
+  retired: {},
+})
+
+/**
+ * @param {Analysis} analysis
+ * @returns {Promise<RequirementsLock>}
+ */
+export const readLock = async (analysis) => {
+  try {
+    return JSON.parse(
+      await readFile(
+        join(
+          analysis.project.root,
+          analysis.project.config.lock,
+        ),
+        "utf8",
+      ),
+    )
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      "code" in error &&
+      error.code === "ENOENT"
+    ) {
+      return emptyLock()
+    }
+
+    throw error
+  }
+}
+
+/**
+ * The lock the current tree implies. `retired` is carried over from
+ * the existing lock, because nothing in the tree can produce it.
+ *
+ * @param {Analysis} analysis
+ * @param {RequirementsLock} previous
+ * @returns {RequirementsLock}
+ */
+export const buildLock = (analysis, previous) => {
+  const pendingTags = new Set(
+    analysis.project.config.pendingTags,
+  )
+  /** @type {RequirementsLock["requirements"]} */
+  const requirements = {}
+  /** @type {Set<string>} */
+  const reachedCode = new Set()
+
+  for (const document of analysis.documents) {
+    for (const scenario of document.scenarios) {
+      const idTag = scenario.ownTags.find((tag) =>
+        analysis.idPattern.test(tag.name),
+      )
+
+      if (!idTag) {
+        continue
+      }
+
+      /** @type {Set<string>} */
+      const code = new Set()
+
+      for (const match of analysis.stepMatches) {
+        if (match.scenario !== scenario) {
+          continue
+        }
+
+        for (const definition of match.matches) {
+          for (const key of analysis.sources.reachOf(
+            definition,
+          )) {
+            code.add(key)
+          }
+        }
+      }
+
+      for (const key of code) {
+        reachedCode.add(key)
+      }
+
+      const backgroundSteps =
+        scenario.pickles[0]?.steps
+          .slice(
+            0,
+            Math.max(
+              0,
+              (scenario.pickles[0]?.steps.length ?? 0) -
+                scenario.templateSteps.length,
+            ),
+          )
+          .map((step) => `${step.keyword} ${step.text}`) ??
+        []
+
+      const [examples] = scenario.examples
+
+      requirements[idTag.name.slice(1)] = {
+        feature: document.file,
+        ...(scenario.ruleName
+          ? { rule: scenario.ruleName }
+          : {}),
+        scenario: scenario.name,
+        status: scenario.ownTags.some((tag) =>
+          pendingTags.has(tag.name),
+        )
+          ? "pending"
+          : "active",
+        steps: [
+          ...backgroundSteps,
+          ...scenario.templateSteps,
+        ],
+        ...(examples
+          ? {
+              examples: [examples.header, ...examples.rows],
+            }
+          : {}),
+        code: [...code].sort(),
+      }
+    }
+  }
+
+  /** @type {RequirementsLock["code"]} */
+  const code = {}
+
+  for (const key of [...reachedCode].sort()) {
+    const unit = analysis.sources.units.get(key)
+
+    if (unit) {
+      code[key] = unit.hash
+    }
+  }
+
+  return {
+    version: 1,
+    requirements: Object.fromEntries(
+      Object.entries(requirements).sort(([left], [right]) =>
+        left.localeCompare(right, "en", { numeric: true }),
+      ),
+    ),
+    code,
+    retired: previous.retired ?? {},
+  }
+}
+
+/** @param {RequirementsLock} lock */
+export const serializeLock = (lock) =>
+  `${JSON.stringify(lock, null, 2)}\n`
+
+/**
+ * @param {Analysis} analysis
+ * @param {RequirementsLock} lock
+ */
+export const writeLock = (analysis, lock) =>
+  writeFile(
+    join(
+      analysis.project.root,
+      analysis.project.config.lock,
+    ),
+    serializeLock(lock),
+  )
+
+/**
+ * Every way the tree and the lock disagree, as problems. An ID that
+ * left the features without being retired is the one an agent most
+ * needs to explain, so it gets its own rule.
+ *
+ * @param {Analysis} analysis
+ * @param {RequirementsLock} locked
+ */
+export const lockProblems = (analysis, locked) => {
+  const lockFile = analysis.project.config.lock
+  const expected = buildLock(analysis, locked)
+  /** @type {import("./features.js").Problem[]} */
+  const problems = []
+
+  for (const id of Object.keys(locked.requirements)) {
+    if (!(id in expected.requirements)) {
+      problems.push({
+        file: lockFile,
+        line: 1,
+        column: 1,
+        rule: "removed-requirement",
+        message: `${id} ("${locked.requirements[id]?.scenario}") is in the lock but no scenario has it. If it was removed on purpose, run \`charcuterie-requirements lock --retire ${id} --reason "<why>"\` and say so in the pull request.`,
+      })
+    }
+  }
+
+  for (const id of Object.keys(expected.requirements)) {
+    if (id in (locked.retired ?? {})) {
+      problems.push({
+        file: lockFile,
+        line: 1,
+        column: 1,
+        rule: "retired-id",
+        message: `${id} was retired ("${locked.retired[id]?.reason}"). Give the new scenario a new ID.`,
+      })
+    }
+  }
+
+  const removed = problems.some(
+    (problem) => problem.rule === "removed-requirement",
+  )
+
+  if (
+    !removed &&
+    serializeLock(expected) !== serializeLock(locked)
+  ) {
+    const changes = describeChanges(locked, expected)
+
+    problems.push({
+      file: lockFile,
+      line: 1,
+      column: 1,
+      rule: "stale-lock",
+      message: `The lock does not match the requirements. Changed: ${changes.map((change) => change.id).join(", ") || "lock metadata"}. Run \`charcuterie-requirements lock\` and list these IDs in the pull request.`,
+    })
+  }
+
+  return problems
+}
+
+/**
+ * @typedef {{
+ *   id: string,
+ *   kind: "added" | "retired" | "removed" | "changed",
+ *   scenario: string,
+ *   details: string[],
+ * }} RequirementChange
+ */
+
+/**
+ * @param {RequirementsLock} before
+ * @param {RequirementsLock} after
+ * @returns {RequirementChange[]}
+ */
+export const describeChanges = (before, after) => {
+  /** @type {RequirementChange[]} */
+  const changes = []
+  const ids = new Set([
+    ...Object.keys(before.requirements ?? {}),
+    ...Object.keys(after.requirements ?? {}),
+  ])
+
+  for (const id of [...ids].sort((left, right) =>
+    left.localeCompare(right, "en", { numeric: true }),
+  )) {
+    const old = before.requirements?.[id]
+    const current = after.requirements?.[id]
+
+    if (!old && current) {
+      changes.push({
+        id,
+        kind: "added",
+        scenario: current.scenario,
+        details: [`status: ${current.status}`],
+      })
+      continue
+    }
+
+    if (old && !current) {
+      const retired = after.retired?.[id]
+
+      changes.push({
+        id,
+        kind: retired ? "retired" : "removed",
+        scenario: old.scenario,
+        details: retired
+          ? [`reason: ${retired.reason}`]
+          : [],
+      })
+      continue
+    }
+
+    if (!old || !current) {
+      continue
+    }
+
+    /** @type {string[]} */
+    const details = []
+
+    if (old.scenario !== current.scenario) {
+      details.push(
+        `renamed: "${old.scenario}" -> "${current.scenario}"`,
+      )
+    }
+
+    if (old.status !== current.status) {
+      details.push(
+        `status: ${old.status} -> ${current.status}`,
+      )
+    }
+
+    if (old.feature !== current.feature) {
+      details.push(
+        `moved: ${old.feature} -> ${current.feature}`,
+      )
+    }
+
+    if (
+      JSON.stringify(old.steps) !==
+        JSON.stringify(current.steps) ||
+      JSON.stringify(old.examples) !==
+        JSON.stringify(current.examples)
+    ) {
+      details.push("spec: the steps or examples changed")
+    }
+
+    const oldCode = new Set(old.code)
+    const currentCode = new Set(current.code)
+
+    for (const key of current.code) {
+      if (!oldCode.has(key)) {
+        details.push(`now reaches: ${key}`)
+      } else if (before.code?.[key] !== after.code?.[key]) {
+        details.push(`code changed: ${key}`)
+      }
+    }
+
+    for (const key of old.code) {
+      if (!currentCode.has(key)) {
+        details.push(`no longer reaches: ${key}`)
+      }
+    }
+
+    if (details.length > 0) {
+      changes.push({
+        id,
+        kind: "changed",
+        scenario: current.scenario,
+        details,
+      })
+    }
+  }
+
+  return changes
+}
+
+/**
+ * @param {RequirementChange[]} changes
+ */
+export const formatChangesMarkdown = (changes) => {
+  if (changes.length === 0) {
+    return "### Requirements\n\nNo requirement changed: every scenario and the code behind it match the base branch.\n"
+  }
+
+  const lines = [
+    "### Requirements changed",
+    "",
+    "Each ID below proves something different from the base branch. Check that the change was intended before merging.",
+    "",
+  ]
+
+  for (const change of changes) {
+    lines.push(
+      `- **${change.id}** ${change.kind}: ${change.scenario}`,
+    )
+
+    for (const detail of change.details) {
+      lines.push(`  - ${detail}`)
+    }
+  }
+
+  return `${lines.join("\n")}\n`
+}
