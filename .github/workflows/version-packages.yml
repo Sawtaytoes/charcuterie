@@ -11,6 +11,13 @@ on:
 
 concurrency: version-packages-${{ github.ref }}
 
+# Turborepo sends anonymous usage telemetry to Vercel unless one of these is set.
+# Keep both on every workflow that runs `pnpm build` (decision:
+# 2026-11-22-turborepo-telemetry-stays-off-and-turbo-writes-no-agent-guidance).
+env:
+  TURBO_TELEMETRY_DISABLED: "1"
+  DO_NOT_TRACK: "1"
+
 jobs:
   version:
     runs-on: ubuntu-latest
