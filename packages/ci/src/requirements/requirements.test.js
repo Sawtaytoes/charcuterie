@@ -1211,6 +1211,44 @@ describe("changes found by the fifth review", () => {
     )
   })
 
+  test("a release's version bump in a runtime package.json does not change the lock, and its exports do", async () => {
+    const manifest = {
+      name: "kit",
+      version: "1.0.0",
+      exports: { ".": "./index.js" },
+    }
+    const root = await lockedLamp({
+      "requirements.config.json": JSON.stringify({
+        ...config,
+        runtime: [
+          "index.ts",
+          "support/**/*.ts",
+          "../kit/package.json",
+        ],
+      }),
+      "../kit/package.json": JSON.stringify(manifest),
+    })
+
+    await writeFile(
+      join(root, "../kit/package.json"),
+      JSON.stringify({ ...manifest, version: "1.1.0" }),
+    )
+
+    expect((await resultOf(root)).details).toEqual([])
+
+    await writeFile(
+      join(root, "../kit/package.json"),
+      JSON.stringify({
+        ...manifest,
+        exports: { ".": "./weak.js" },
+      }),
+    )
+
+    expect((await resultOf(root)).details).toContain(
+      "REQ-T-1 code changed: ../kit/package.json",
+    )
+  })
+
   test("reports an unresolved relative import even when nothing reads it", async () => {
     const root = await makeProject({
       "lamp.feature": feature,

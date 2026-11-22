@@ -68,6 +68,29 @@ const normalizeCss = (text) =>
     .replace(/;}/g, "}")
     .trim()
 
+/**
+ * Only the fields that decide which code runs. A release bumps
+ * `version` in every package.json; that must not mark requirements
+ * changed, or every release would stale the lock on master.
+ * Dependency versions are the pnpm lockfile's job.
+ *
+ * @param {string} text
+ */
+const packageManifestText = (text) => {
+  const manifest = JSON.parse(text)
+
+  return JSON.stringify(
+    [
+      "name",
+      "type",
+      "main",
+      "module",
+      "exports",
+      "imports",
+    ].map((field) => [field, manifest[field] ?? null]),
+  )
+}
+
 /** @param {string} text */
 const hashText = (text) =>
   createHash("sha256")
@@ -901,11 +924,13 @@ export const readSources = (project) => {
         line: 1,
         hash: sourceFile
           ? hashNode(sourceFile, sourceFile)
-          : absolutePath.endsWith(".json")
-            ? hashText(JSON.stringify(JSON.parse(text)))
-            : absolutePath.endsWith(".css")
-              ? hashText(normalizeCss(text))
-              : hashText(text),
+          : absolutePath.endsWith("/package.json")
+            ? hashText(packageManifestText(text))
+            : absolutePath.endsWith(".json")
+              ? hashText(JSON.stringify(JSON.parse(text)))
+              : absolutePath.endsWith(".css")
+                ? hashText(normalizeCss(text))
+                : hashText(text),
         isExternal,
         isHelper: false,
       })

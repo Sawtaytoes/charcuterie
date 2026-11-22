@@ -632,7 +632,7 @@
     }
   },
   "code": {
-    "../../storybook-config/package.json": "275fcfcfc8844ec8",
+    "../../storybook-config/package.json": "d557f6849f5d3263",
     "../../storybook-config/src/addons.ts": "959e7106bd014a74",
     "../../storybook-config/src/index.ts": "b48081e5f8a70cb1",
     "../../storybook-config/src/manager.ts": "ad4540892d87fde0",
@@ -682,7 +682,7 @@
     "../../ui/src/testing/expectAgentDrivable.ts › getIsHiddenFromAgents": "e6e51ba2d0b96972",
     "../../ui/src/testing/expectAgentDrivable.ts › ‹module›": "07ebfe7e29533960",
     "../../ui/src/testing/index.ts › ‹module›": "496d459e333426f4",
-    "../../vitest-config/package.json": "d33bc5485415c9fa",
+    "../../vitest-config/package.json": "4073e5cca14a366d",
     "../../vitest-config/src/checkOptimizeDeps.js": "c137f4078c2cb5f4",
     "../../vitest-config/src/checkOptimizeDeps.test.js": "4870cc0038a867b9",
     "../../vitest-config/src/cli/checkOptimizeDeps.js": "8d490a4b137e1dd7",
