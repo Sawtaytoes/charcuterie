@@ -29,6 +29,7 @@ import {
  *   entry: string,
  *   runtime: string[],
  *   subjects: string[],
+ *   packages: Record<string, string>,
  *   command: string,
  *   allowedTags: string[],
  *   pendingTags: string[],
@@ -51,7 +52,11 @@ const defaults = {
   idPrefix: "REQ-",
   features: ["**/*.feature"],
   sources: ["**/*.ts"],
-  exclude: ["**/*.test.ts", "**/node_modules/**"],
+  exclude: [
+    "**/*.test.ts",
+    "**/*.test.js",
+    "**/node_modules/**",
+  ],
   helpers: ["helpers/**/*.ts"],
   stepModule: "support/steps.ts",
   // Must equal the `import.meta.glob` in `entry`; the check compares
@@ -67,6 +72,9 @@ const defaults = {
   // A `!` pattern excludes, so stories can be fixtures while the
   // components beside them are subjects.
   subjects: [],
+  // Workspace packages to follow by name: package name -> directory,
+  // relative to the root.
+  packages: {},
   // How problem messages name the CLI.
   command: "charcuterie-requirements",
   allowedTags: [],
@@ -115,9 +123,15 @@ const expand = async (root, patterns, exclude) => {
     })) {
       const path = match.split("\\").join("/")
 
+      // `**/*.test.js` never matches `../x/a.test.js`, so match
+      // the path below its leading `../` segments too.
+      const inside = path.replace(/^(\.\.\/)+/, "")
+
       if (
-        !exclude.some((excluded) =>
-          matchesGlob(path, excluded),
+        !exclude.some(
+          (excluded) =>
+            matchesGlob(path, excluded) ||
+            matchesGlob(inside, excluded),
         )
       ) {
         found.add(path)

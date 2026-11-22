@@ -19,9 +19,7 @@
     "../vitest.requirements.config.ts",
     "../vitest.requirements-responsive.config.ts",
     "../vitest.ui.setup.ts",
-    "../../storybook-config/src/**/*.{js,ts,tsx}",
     "../../storybook-config/package.json",
-    "../../vitest-config/src/**/*.js",
     "../../vitest-config/package.json"
   ],
   "subjects": [
@@ -33,5 +31,9 @@
   "allowedTags": ["@responsive", "@todo"],
   "pendingTags": ["@todo"],
   "lock": "requirements.lock.json",
-  "command": "pnpm requirements:"
+  "command": "pnpm requirements:",
+  "packages": {
+    "@charcuterie/storybook-config": "../../storybook-config",
+    "@charcuterie/vitest-config": "../../vitest-config"
+  }
 }

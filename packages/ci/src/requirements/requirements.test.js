@@ -1262,6 +1262,131 @@ describe("changes found by the fifth review", () => {
   })
 })
 
+describe("changes found by the sixth review", () => {
+  /** @param {Record<string, string>} files */
+  const lockedLamp = async (files = {}) => {
+    const root = await makeProject({
+      "lamp.feature": feature,
+      "helpers/lamp.ts": helpers,
+      "steps/lamp.steps.ts": steps,
+      "switch.feature": `Feature: Switch
+
+  @REQ-T-2
+  Scenario: A switch exists
+    Given a switch
+`,
+      "steps/switch.steps.ts": `import { Given } from "../support/steps.ts"
+
+/** A switch. */
+Given("a switch", () => {})
+`,
+      ...files,
+    })
+    const analysis = await analyzeProject(root)
+
+    expect(analysis.problems).toEqual([])
+    await writeLock(
+      analysis,
+      buildLock(analysis, await readLock(analysis)),
+    )
+
+    return root
+  }
+
+  /** @param {string} root */
+  const resultOf = async (root) => {
+    const analysis = await analyzeProject(root)
+    const locked = await readLock(analysis)
+
+    return {
+      rules: analysis.problems.map(
+        (problem) => problem.rule,
+      ),
+      details: describeChanges(
+        locked,
+        buildLock(analysis, locked),
+      ).flatMap((change) =>
+        change.details.map(
+          (detail) => `${change.id} ${detail}`,
+        ),
+      ),
+    }
+  }
+
+  test("a helper's top-level code marks requirements that never call it", async () => {
+    const root = await lockedLamp()
+
+    await writeFile(
+      join(root, "helpers/lamp.ts"),
+      `${helpers}\nMath.random = () => 0\n`,
+    )
+
+    expect((await resultOf(root)).details).toEqual(
+      expect.arrayContaining([
+        "REQ-T-1 now reaches: helpers/lamp.ts › ‹module›",
+        "REQ-T-2 now reaches: helpers/lamp.ts › ‹module›",
+      ]),
+    )
+  })
+
+  test("follows a workspace package by name, through its exports, and skips its tests", async () => {
+    const kit =
+      'export const configure = () => ({ a11y: "error" })\n'
+    const root = await lockedLamp({
+      "requirements.config.json": JSON.stringify({
+        ...config,
+        packages: { "@acme/kit": "../kit" },
+        runtime: [
+          "index.ts",
+          "support/**/*.ts",
+          "../kit/src/**/*.js",
+        ],
+      }),
+      "../kit/package.json": JSON.stringify({
+        name: "@acme/kit",
+        exports: {
+          "./setup": { source: "./src/setup.ts" },
+        },
+      }),
+      "../kit/src/setup.ts": kit,
+      "../kit/src/setup.test.js": "export {}\n",
+      "support/setup.ts":
+        'import { configure } from "@acme/kit/setup"\n\nconfigure()\n',
+    })
+
+    await writeFile(
+      join(root, "../kit/src/setup.test.js"),
+      "export const more = 1\n",
+    )
+
+    expect((await resultOf(root)).details).toEqual([])
+
+    await writeFile(
+      join(root, "../kit/src/setup.ts"),
+      kit.replace('"error"', '"todo"'),
+    )
+
+    expect((await resultOf(root)).details).toEqual(
+      expect.arrayContaining([
+        "REQ-T-1 code changed: ../kit/src/setup.ts › configure",
+        "REQ-T-2 code changed: ../kit/src/setup.ts › configure",
+      ]),
+    )
+  })
+
+  test("reports a re-export that does not resolve", async () => {
+    const root = await makeProject({
+      "lamp.feature": feature,
+      "helpers/lamp.ts": `${helpers}\nexport { gone } from "./gone.ts"\n`,
+      "steps/lamp.steps.ts": steps,
+    })
+
+    expect((await resultOf(root)).rules).toEqual([
+      "unresolved-import",
+    ])
+  })
+})
+
 describe("registration", () => {
   test("rejects a step file the setup file never loads", async () => {
     const root = await makeProject({

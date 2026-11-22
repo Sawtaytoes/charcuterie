@@ -132,10 +132,13 @@ const parseSource = (absolutePath, text) =>
     text,
     ts.ScriptTarget.Latest,
     true,
-    absolutePath.endsWith(".tsx")
+    /\.[jt]sx$/.test(absolutePath)
       ? ts.ScriptKind.TSX
       : ts.ScriptKind.TS,
   )
+
+/** Files the walker reads as modules: TypeScript and JavaScript. */
+const codeFile = /\.[cm]?[jt]sx?$/
 
 /**
  * @param {ts.SourceFile} sourceFile
@@ -899,6 +902,139 @@ export const readSources = (project) => {
   const reachCache = new Map()
   const definitionCalls = new Set(definitionNodes.values())
 
+  /**
+   * Workspace packages the scenarios load by name, such as
+   * `@charcuterie/storybook-config/testing`, resolved through each
+   * package's `exports` (its `source` condition first, since a built
+   * `dist` is not in git) and walked like relative imports.
+   */
+  const packageDirectories = Object.entries(config.packages)
+    .map(([name, directory]) => ({
+      name,
+      directory: resolve(root, directory),
+    }))
+    .sort(
+      (left, right) => right.name.length - left.name.length,
+    )
+
+  /** @param {string} specifier */
+  const packageOf = (specifier) =>
+    packageDirectories.find(
+      ({ name }) =>
+        specifier === name ||
+        specifier.startsWith(`${name}/`),
+    )
+
+  /** @param {string} specifier */
+  const isFollowedSpecifier = (specifier) =>
+    specifier.startsWith(".") ||
+    Boolean(packageOf(specifier))
+
+  /**
+   * @param {string} specifier
+   * @returns {string | null}
+   */
+  const resolvePackage = (specifier) => {
+    const found = packageOf(specifier)
+
+    if (!found) {
+      return null
+    }
+
+    const subpath =
+      specifier === found.name
+        ? "."
+        : `.${specifier.slice(found.name.length)}`
+    const manifestPath = join(
+      found.directory,
+      "package.json",
+    )
+
+    if (!existsSync(manifestPath)) {
+      return null
+    }
+
+    const manifest = JSON.parse(
+      readFileSync(manifestPath, "utf8"),
+    )
+    /** @type {unknown} */
+    let entry =
+      typeof manifest.exports === "string" &&
+      subpath === "."
+        ? manifest.exports
+        : manifest.exports?.[subpath]
+
+    if (entry === undefined && manifest.exports) {
+      for (const [pattern, value] of Object.entries(
+        manifest.exports,
+      )) {
+        if (
+          pattern.endsWith("/*") &&
+          subpath.startsWith(pattern.slice(0, -1)) &&
+          typeof value === "string"
+        ) {
+          entry = value.replace(
+            "*",
+            subpath.slice(pattern.length - 1),
+          )
+        }
+      }
+    }
+
+    if (entry === undefined && subpath === ".") {
+      entry = manifest.main
+    }
+
+    if (entry && typeof entry === "object") {
+      const conditions =
+        /** @type {Record<string, unknown>} */ (entry)
+
+      entry =
+        conditions.source ??
+        conditions.import ??
+        conditions.default
+    }
+
+    if (typeof entry !== "string") {
+      return null
+    }
+
+    const file = resolve(found.directory, entry)
+
+    return existsSync(file) && statSync(file).isFile()
+      ? file
+      : null
+  }
+
+  /**
+   * @param {string} fromFile
+   * @param {string} specifier
+   */
+  const resolveSpecifier = (fromFile, specifier) =>
+    resolveRelative(fromFile, specifier) ??
+    resolvePackage(specifier)
+
+  /**
+   * Every module a module imports or re-exports from at runtime.
+   *
+   * @param {SourceModule} module
+   */
+  const edgesOf = (module) => [
+    ...[...module.imports.values()]
+      .filter((imported) => !imported.isTypeOnly)
+      .map((imported) => imported.specifier),
+    ...module.moduleStatements.flatMap((statement) =>
+      ((ts.isImportDeclaration(statement) &&
+        !statement.importClause) ||
+        (ts.isExportDeclaration(statement) &&
+          !statement.isTypeOnly)) &&
+      statement.moduleSpecifier &&
+      ts.isStringLiteral(statement.moduleSpecifier)
+        ? [statement.moduleSpecifier.text]
+        : [],
+    ),
+  ]
+
   /** @param {string} absolutePath */
   const toKey = (absolutePath) =>
     relative(root, absolutePath).split("\\").join("/")
@@ -1014,7 +1150,7 @@ export const readSources = (project) => {
       depth > 8 ||
       importedName === "default" ||
       importedName === "*" ||
-      !/\.tsx?$/.test(absolutePath)
+      !codeFile.test(absolutePath)
     ) {
       return absolutePath
     }
@@ -1033,7 +1169,7 @@ export const readSources = (project) => {
         continue
       }
 
-      const target = resolveRelative(
+      const target = resolveSpecifier(
         absolutePath,
         statement.moduleSpecifier.text,
       )
@@ -1219,18 +1355,14 @@ export const readSources = (project) => {
 
     reached.add(key)
 
-    // Every relative import must resolve, used or not: a missing
-    // file would otherwise be skipped silently.
-    for (const imported of module.imports.values()) {
+    // Every followed import and re-export must resolve, used or
+    // not: a missing file would otherwise be skipped silently.
+    for (const specifier of edgesOf(module)) {
       if (
-        !imported.isTypeOnly &&
-        imported.specifier.startsWith(".") &&
-        !resolveRelative(
-          module.absolutePath,
-          imported.specifier,
-        )
+        isFollowedSpecifier(specifier) &&
+        !resolveSpecifier(module.absolutePath, specifier)
       ) {
-        reportUnresolved(module, imported.specifier)
+        reportUnresolved(module, specifier)
       }
     }
 
@@ -1285,11 +1417,11 @@ export const readSources = (project) => {
     specifier,
     reached,
   ) => {
-    if (!specifier.startsWith(".")) {
+    if (!isFollowedSpecifier(specifier)) {
       return
     }
 
-    const target = resolveRelative(
+    const target = resolveSpecifier(
       module.absolutePath,
       specifier,
     )
@@ -1304,7 +1436,7 @@ export const readSources = (project) => {
       return
     }
 
-    if (!/\.tsx?$/.test(target)) {
+    if (!codeFile.test(target)) {
       reached.add(addWholeFile(target, true))
 
       return
@@ -1345,12 +1477,15 @@ export const readSources = (project) => {
       return
     }
 
-    const target = resolveRelative(
+    const target = resolveSpecifier(
       module.absolutePath,
       imported.specifier,
     )
 
-    if (!target && imported.specifier.startsWith(".")) {
+    if (
+      !target &&
+      isFollowedSpecifier(imported.specifier)
+    ) {
       reportUnresolved(module, imported.specifier)
 
       return
@@ -1362,7 +1497,7 @@ export const readSources = (project) => {
       return
     }
 
-    if (!/\.tsx?$/.test(target)) {
+    if (!codeFile.test(target)) {
       reached.add(addWholeFile(target, true))
 
       return
@@ -1533,11 +1668,43 @@ export const readSources = (project) => {
    */
   const loadedEverywhere = new Set(wholeRuntimeKeys)
 
+  /** @type {Set<string>} */
+  const enteredEverywhere = new Set()
+
+  /**
+   * A module's top-level code runs once it is imported, so every
+   * module a step file or runtime file imports, transitively, runs
+   * for every scenario.
+   *
+   * @param {SourceModule} module
+   */
+  const enterEverywhere = (module) => {
+    if (enteredEverywhere.has(module.absolutePath)) {
+      return
+    }
+
+    enteredEverywhere.add(module.absolutePath)
+    enterModule(module, loadedEverywhere)
+
+    for (const specifier of edgesOf(module)) {
+      const target = resolveSpecifier(
+        module.absolutePath,
+        specifier,
+      )
+
+      if (
+        target &&
+        target !== stepModulePath &&
+        codeFile.test(target) &&
+        !isSubject(target)
+      ) {
+        enterEverywhere(moduleAt(target))
+      }
+    }
+  }
+
   for (const file of project.stepFiles) {
-    enterModule(
-      moduleAt(resolve(root, file)),
-      loadedEverywhere,
-    )
+    enterEverywhere(moduleAt(resolve(root, file)))
   }
 
   for (const file of [
@@ -1547,7 +1714,7 @@ export const readSources = (project) => {
     const absolutePath = resolve(root, file)
 
     if (
-      !/\.tsx?$/.test(absolutePath) ||
+      !codeFile.test(absolutePath) ||
       !existsSync(absolutePath)
     ) {
       continue
@@ -1555,11 +1722,13 @@ export const readSources = (project) => {
 
     const runtimeModule = moduleAt(absolutePath)
 
+    enterEverywhere(runtimeModule)
+
     for (const [
       localName,
       imported,
     ] of runtimeModule.imports) {
-      if (imported.specifier.startsWith(".")) {
+      if (isFollowedSpecifier(imported.specifier)) {
         reachIdentifier(
           runtimeModule,
           localName,

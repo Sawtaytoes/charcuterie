@@ -120,11 +120,13 @@ its tags; and every code unit those steps reach:
 - the runtime every scenario passes through, hashed as whole files: `index.ts`,
   `support/` (the World, the step wrapper, and the parameter types), the requirements
   config, the Vitest requirement configs, `vitest.ui.setup.ts`, and the
-  `storybook-config` and `vitest-config` packages they import (their JavaScript, sources,
-  and `package.json`); plus whatever those
+  `package.json` of the `storybook-config` and `vitest-config` packages they import (only
+  the fields that choose which code runs, so a release's version bump is not a change); plus whatever those
   runtime files import by relative path, such as `.storybook/preview.tsx`;
-- the top-level code of every step file, because `index.ts` loads them all for every
-  scenario. A step file must define at least one step; setup code goes in `support/`.
+- the top-level code of every step file, and of every module a step file or runtime file
+  imports, directly or not, because `index.ts` loads them all for every scenario. Workspace
+  packages listed in `packages` are followed by name through their `exports`. A step file
+  must define at least one step; setup code goes in `support/`.
 
 If you change any of them, the lock becomes stale and `requirements:check` fails, naming
 each requirement and the code that changed. This catches a weakened assertion even when no
@@ -145,10 +147,11 @@ change is intended:
 Comments and formatting do not change the lock, in TypeScript, JSON, or CSS. The
 components under test do not change it either: `subjects` in `requirements.config.json`
 names them, and the lock neither hashes nor follows them. A story change does change it,
-for the requirements that use that story. One known false positive remains: Storybook
+for the requirements that use that story. Two known false positives remain. Storybook
 requires `storySort` inline in `.storybook/preview.tsx`, and the test runner imports that
-file, so reordering the sidebar marks every requirement. Relock for it and say so in the
-pull request.
+file, so reordering the sidebar marks every requirement. And a new import line in any
+module the scenarios load marks every requirement, because that module's top-level code
+runs for all of them. Relock for either and say so in the pull request.
 
 The lock is a tripwire, not a proof. It reads code by name without running it, and each
 review of it has found new ways around it. Reading the lock diff and the job summary in
@@ -162,7 +165,7 @@ lock reaches must resolve, or the check fails. A lazy or conditional
 commit's lock through the base commit's own config.
 
 What the lock does not see: npm package versions (the pnpm lockfile covers those);
-workspace packages other than the two listed in `runtime`, imported by package name; the
+workspace packages not listed in `packages`, imported by name; the
 root `vitest.config.ts` and the CI workflow (code review covers those); a move of the whole
 requirements directory, which also changes `--root` in `package.json`; and code reached
 only through dynamic property access, `eval`, or an aliased step function. The walker matches names, not bindings, so it can also
