@@ -264,7 +264,10 @@ const summaryOf = (node) => {
 const resolveRelative = (fromFile, specifier) => {
   const candidates = relativeCandidates(fromFile, specifier)
 
-  return candidates.length === 1 ? candidates[0] : null
+  return candidates.length === 1 &&
+    !candidates[0].endsWith("package.json")
+    ? candidates[0]
+    : null
 }
 
 /** Vite's default `resolve.extensions`, in its order. */
@@ -316,12 +319,22 @@ const relativeCandidates = (fromFile, specifier) => {
         : [".ts", ".mts", ".tsx"].map(
             (extension) => `${withoutJs}${extension}`,
           )),
+      // Vite reads a directory's `package.json` before its index.
+      join(base, "package.json"),
       ...viteExtensions.map((extension) =>
         join(base, `index${extension}`),
       ),
     ]),
   ].filter(isExistingFile)
 }
+
+/** @param {ts.Node} statement */
+const isAmbient = (statement) =>
+  ts.canHaveModifiers(statement) &&
+  (ts.getModifiers(statement) ?? []).some(
+    (modifier) =>
+      modifier.kind === ts.SyntaxKind.DeclareKeyword,
+  )
 
 /**
  * @param {ts.SourceFile} sourceFile
@@ -342,9 +355,11 @@ const declaresName = (sourceFile, name) =>
           )),
     )) ||
   // Only an exported name counts: `export * from` still supplies a
-  // name the module declares but does not export.
+  // name the module declares but does not export. A `declare` emits
+  // nothing, so it does not count either.
   sourceFile.statements.some(
     (statement) =>
+      !isAmbient(statement) &&
       (((ts.isFunctionDeclaration(statement) ||
         ts.isClassDeclaration(statement)) &&
         statement.name?.text === name) ||
@@ -617,6 +632,11 @@ const readModule = (root, absolutePath) => {
     )
 
   for (const statement of sourceFile.statements) {
+    // `declare` emits no code, so it declares nothing at run time.
+    if (isAmbient(statement)) {
+      continue
+    }
+
     if (
       ts.isImportDeclaration(statement) &&
       ts.isStringLiteral(statement.moduleSpecifier)
@@ -1055,8 +1075,22 @@ export const readSources = (project) => {
               message: `${config.entry} never loads this file, so this ${imported.importedName} would not run. Move it into a file matching ${config.stepFiles.join(", ")}.`,
             })
           } else if (target === stepModulePath) {
-            const [expressionNode, , priority] =
+            const [expressionNode, handler, priority] =
               node.arguments
+
+            if (
+              handler &&
+              !ts.isArrowFunction(handler) &&
+              !ts.isFunctionExpression(handler)
+            ) {
+              problems.push({
+                file: module.file,
+                ...position,
+                rule: "step-handler-shape",
+                message:
+                  "Pass the step's code as an inline function. Any other expression runs when the step file loads, for every scenario, and the lock cannot tie it to this step.",
+              })
+            }
 
             if (priority) {
               problems.push({
@@ -1425,6 +1459,30 @@ export const readSources = (project) => {
     return key
   }
 
+  /** @type {Set<string>} */
+  const reportedTooDeep = new Set()
+
+  /**
+   * @param {string} absolutePath
+   * @param {string} name
+   */
+  const reportTooDeep = (absolutePath, name) => {
+    const key = `${absolutePath}|${name}`
+
+    if (reportedTooDeep.has(key)) {
+      return
+    }
+
+    reportedTooDeep.add(key)
+    problems.push({
+      file: toKey(absolutePath),
+      line: 1,
+      column: 1,
+      rule: "reexport-too-deep",
+      message: `\`${name}\` passes through more than eight re-exports before this file, so the checker stops following it. Import it from a file closer to where it is declared.`,
+    })
+  }
+
   /**
    * A barrel such as `testing/index.ts` only re-exports, so hashing
    * it would miss a change to the assertion it forwards. Follow the
@@ -1447,8 +1505,13 @@ export const readSources = (project) => {
     /** @type {{ file: string, name: string }} */
     const here = { file: absolutePath, name: importedName }
 
+    if (depth > 8) {
+      reportTooDeep(absolutePath, importedName)
+
+      return here
+    }
+
     if (
-      depth > 8 ||
       importedName === "*" ||
       !codeFile.test(absolutePath)
     ) {
@@ -1464,7 +1527,22 @@ export const readSources = (project) => {
       return here
     }
 
-    for (const statement of sourceFile.statements) {
+    // A named re-export wins over `export *` wherever it is written,
+    // so try every named one first.
+    const exportStatements = [
+      ...sourceFile.statements.filter(
+        (statement) =>
+          ts.isExportDeclaration(statement) &&
+          statement.exportClause !== undefined,
+      ),
+      ...sourceFile.statements.filter(
+        (statement) =>
+          ts.isExportDeclaration(statement) &&
+          statement.exportClause === undefined,
+      ),
+    ]
+
+    for (const statement of exportStatements) {
       if (
         !ts.isExportDeclaration(statement) ||
         statement.isTypeOnly ||

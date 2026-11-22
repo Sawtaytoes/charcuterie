@@ -1910,6 +1910,108 @@ describe("changes found by the eleventh review", () => {
   })
 })
 
+describe("changes found by the twelfth review", () => {
+  /**
+   * The code keys REQ-T-1 reaches when its Then step calls `check`
+   * from a fixture barrel.
+   *
+   * @param {Record<string, string>} fixture
+   */
+  const reachedThroughBarrel = async (fixture) => {
+    const root = await makeProject({
+      "lamp.feature": feature,
+      "helpers/lamp.ts": helpers,
+      "steps/lamp.steps.ts": `import { check } from "../../fixture/index.ts"\n${steps.replace(
+        "expectOn(world, name)",
+        "expectOn(world, name)\n  check()",
+      )}`,
+      ...fixture,
+    })
+    const analysis = await analyzeProject(root)
+
+    return {
+      problems: analysis.problems.map(
+        (problem) => problem.rule,
+      ),
+      code:
+        buildLock(analysis, await readLock(analysis))
+          .requirements["REQ-T-1"]?.code ?? [],
+    }
+  }
+
+  test("a named re-export wins over an earlier export *", async () => {
+    const { code } = await reachedThroughBarrel({
+      "../fixture/index.ts":
+        'export * from "./weak.ts"\nexport { check } from "./strong.ts"\n',
+      "../fixture/weak.ts":
+        "export const check = () => 1\n",
+      "../fixture/strong.ts":
+        "export const check = () => 2\n",
+    })
+
+    expect(code).toContain("../fixture/strong.ts › check")
+    expect(code).not.toContain("../fixture/weak.ts › check")
+  })
+
+  test("an export declare does not hide the export * that supplies the name", async () => {
+    const { code } = await reachedThroughBarrel({
+      "../fixture/index.ts":
+        'export declare const check: () => number\nexport * from "./real.ts"\n',
+      "../fixture/real.ts":
+        "export const check = () => 1\n",
+    })
+
+    expect(code).toContain("../fixture/real.ts › check")
+  })
+
+  test("reports a re-export chain too deep to follow", async () => {
+    /** @type {Record<string, string>} */
+    const chain = {
+      "../fixture/index.ts":
+        'export { check } from "./b1.ts"\n',
+      "../fixture/b10.ts": "export const check = () => 1\n",
+    }
+
+    for (let hop = 1; hop < 10; hop += 1) {
+      chain[`../fixture/b${hop}.ts`] =
+        `export { check } from "./b${hop + 1}.ts"\n`
+    }
+
+    expect(
+      (await reachedThroughBarrel(chain)).problems,
+    ).toContain("reexport-too-deep")
+  })
+
+  test("rejects a directory import whose directory has a package.json", async () => {
+    const root = await makeProject({
+      "lamp.feature": feature,
+      "helpers/lamp.ts": `import "./q"\n${helpers}`,
+      "helpers/q/index.ts": "export {}\n",
+      "helpers/q/package.json": '{ "main": "./evil.js" }\n',
+      "steps/lamp.steps.ts": steps,
+    })
+
+    expect(await rulesOf(root)).toContain(
+      "unresolved-import",
+    )
+  })
+
+  test("rejects a step handler that is not an inline function", async () => {
+    const root = await makeProject({
+      "lamp.feature": feature,
+      "helpers/lamp.ts": helpers,
+      "steps/lamp.steps.ts": steps.replace(
+        'Given("a lamp named {string}", (world, name: string) => {})',
+        'Given("a lamp named {string}", (0, (world, name: string) => {}))',
+      ),
+    })
+
+    expect(await rulesOf(root)).toEqual([
+      "step-handler-shape",
+    ])
+  })
+})
+
 describe("registration", () => {
   test("rejects a step file the setup file never loads", async () => {
     const root = await makeProject({
