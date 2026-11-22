@@ -1510,6 +1510,78 @@ export const expectExact = (count: number) => {
     expect(await rulesOf(root)).toEqual(["dynamic-import"])
   })
 
+  test("follows a literal dynamic import of a barrel to the code it re-exports", async () => {
+    expect(
+      await throughBarrel(
+        'export { expectExact } from "./expectExact.ts"\n',
+        "",
+        'void (await import("../../fixture/index.ts")).expectExact(1)',
+      ),
+    ).toContain(
+      "REQ-T-1 code changed: ../fixture/limit.ts › default",
+    )
+  })
+
+  test("rejects import.meta.glob in a fixture outside the root, and ignores one in a comment", async () => {
+    const root = await makeProject({
+      "lamp.feature": feature,
+      "helpers/lamp.ts": `// Never import.meta.glob here.\n${helpers}`,
+      "steps/lamp.steps.ts": `import { check } from "../../fixture/checks.ts"\n${steps.replace(
+        "expectOn(world, name)",
+        "expectOn(world, name)\n  check()",
+      )}`,
+      "../fixture/checks.ts":
+        'const loaded = import.meta.glob("./checks/*.ts", { eager: true })\n\nexport const check = () => loaded\n',
+    })
+
+    expect(await rulesOf(root)).toEqual([
+      "glob-outside-entry",
+    ])
+  })
+
+  test("names each changed requirement on its own line of the lock", async () => {
+    const root = await makeProject({
+      "lamp.feature": feature,
+      "helpers/lamp.ts": helpers,
+      "steps/lamp.steps.ts": steps,
+    })
+    const analysis = await analyzeProject(root)
+    const lock = buildLock(
+      analysis,
+      await readLock(analysis),
+    )
+
+    expect(Object.keys(lock.digests ?? {})).toEqual([
+      "REQ-T-1",
+    ])
+  })
+
+  test("an inline type specifier added to an import is not a change", async () => {
+    const root = await makeProject({
+      "lamp.feature": feature,
+      "helpers/lamp.ts": helpers,
+      "steps/lamp.steps.ts": steps,
+    })
+    let analysis = await analyzeProject(root)
+
+    await writeLock(
+      analysis,
+      buildLock(analysis, await readLock(analysis)),
+    )
+    await writeFile(
+      join(root, "steps/lamp.steps.ts"),
+      steps.replace(
+        "import { expectOn, turnOn }",
+        "import { expectOn, type Lamp, turnOn }",
+      ),
+    )
+    analysis = await analyzeProject(root)
+
+    expect(
+      lockProblems(analysis, await readLock(analysis)),
+    ).toEqual([])
+  })
+
   test("rejects import.meta.glob outside the setup file", async () => {
     const root = await makeProject({
       "lamp.feature": feature,

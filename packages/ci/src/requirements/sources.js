@@ -91,6 +91,72 @@ const packageManifestText = (text) => {
   )
 }
 
+/**
+ * A statement as it runs. An inline `type` specifier is erased like
+ * `import type`, so adding one to an import is not a change.
+ *
+ * @param {ts.Node} statement
+ * @param {ts.SourceFile} sourceFile
+ */
+const runtimeText = (statement, sourceFile) => {
+  const bindings =
+    ts.isImportDeclaration(statement) &&
+    statement.importClause?.namedBindings
+  const print = (/** @type {ts.Node} */ node) =>
+    printer.printNode(
+      ts.EmitHint.Unspecified,
+      node,
+      sourceFile,
+    )
+
+  if (
+    !ts.isImportDeclaration(statement) ||
+    !bindings ||
+    !ts.isNamedImports(bindings)
+  ) {
+    return print(statement)
+  }
+
+  const defaultName =
+    statement.importClause?.name?.text ?? ""
+  const values = bindings.elements
+    .filter((element) => !element.isTypeOnly)
+    .map((element) => print(element))
+
+  return `import ${defaultName}{${values.join(",")}} from ${print(statement.moduleSpecifier)}`
+}
+
+/**
+ * True when the module calls `import.meta.glob`, read from the AST,
+ * so a comment that mentions it does not count.
+ *
+ * @param {ts.SourceFile} sourceFile
+ */
+const callsGlob = (sourceFile) => {
+  let found = false
+
+  /** @param {ts.Node} node */
+  const visit = (node) => {
+    if (
+      !found &&
+      ts.isCallExpression(node) &&
+      ts.isPropertyAccessExpression(node.expression) &&
+      node.expression.name.text === "glob" &&
+      ts.isMetaProperty(node.expression.expression)
+    ) {
+      found = true
+    }
+
+    if (!found) {
+      ts.forEachChild(node, visit)
+    }
+  }
+
+  visit(sourceFile)
+
+  return found
+}
+
 /** @param {string} text */
 const hashText = (text) =>
   createHash("sha256")
@@ -597,15 +663,26 @@ export const readSources = (project) => {
     return created
   }
 
-  for (const module of modules.values()) {
-    if (module.absolutePath === stepModulePath) {
-      continue
+  /** @type {Set<string>} */
+  const globChecked = new Set()
+
+  /**
+   * Only the setup file may load files by glob: a glob anywhere else
+   * loads files the lock cannot follow.
+   *
+   * @param {SourceModule} module
+   */
+  const checkGlob = (module) => {
+    if (
+      globChecked.has(module.absolutePath) ||
+      module.file === config.entry
+    ) {
+      return
     }
 
-    if (
-      module.file !== config.entry &&
-      /import\.meta\.glob\b/.test(module.sourceFile.text)
-    ) {
+    globChecked.add(module.absolutePath)
+
+    if (callsGlob(module.sourceFile)) {
       problems.push({
         file: module.file,
         line: 1,
@@ -614,6 +691,14 @@ export const readSources = (project) => {
         message: `Only ${config.entry} may load files with import.meta.glob. A glob elsewhere loads files the lock cannot follow.`,
       })
     }
+  }
+
+  for (const module of modules.values()) {
+    if (module.absolutePath === stepModulePath) {
+      continue
+    }
+
+    checkGlob(module)
 
     for (const [localName, imported] of module.imports) {
       const position = lineOf(
@@ -1428,7 +1513,7 @@ export const readSources = (project) => {
           specifier &&
           ts.isStringLiteralLike(specifier)
         ) {
-          followSideEffectImport(
+          followDynamicImport(
             module,
             specifier.text,
             reached,
@@ -1515,6 +1600,8 @@ export const readSources = (project) => {
    * @param {Set<string>} reached
    */
   const enterModule = (module, reached) => {
+    checkGlob(module)
+
     // A step definition is a top-level call too, but it is its own
     // unit; folding it in would tie every step in a file to the rest.
     const statements = module.moduleStatements.filter(
@@ -1543,11 +1630,7 @@ export const readSources = (project) => {
         hash: hashText(
           statements
             .map((statement) =>
-              printer.printNode(
-                ts.EmitHint.Unspecified,
-                statement,
-                module.sourceFile,
-              ),
+              runtimeText(statement, module.sourceFile),
             )
             .join("\n"),
         ),
@@ -1584,6 +1667,47 @@ export const readSources = (project) => {
         )
       }
     }
+  }
+
+  /**
+   * `import("…")` gives the whole module, re-exports included, so it
+   * is reached as a namespace.
+   *
+   * @param {SourceModule} module
+   * @param {string} specifier
+   * @param {Set<string>} reached
+   */
+  const followDynamicImport = (
+    module,
+    specifier,
+    reached,
+  ) => {
+    if (!isFollowedSpecifier(specifier)) {
+      return
+    }
+
+    const target = resolveSpecifier(
+      module.absolutePath,
+      specifier,
+    )
+
+    if (!target) {
+      reportUnresolved(module, specifier)
+
+      return
+    }
+
+    if (target === stepModulePath || isSubject(target)) {
+      return
+    }
+
+    if (!codeFile.test(target)) {
+      reached.add(addWholeFile(target, true))
+
+      return
+    }
+
+    reachNamespace(moduleAt(target), reached)
   }
 
   /** @type {Set<string>} */

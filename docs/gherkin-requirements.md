@@ -137,8 +137,8 @@ change is intended:
 
 1. Run `pnpm requirements:lock`. It prints the requirements that changed and why. For
    example: `REQ-UI-002 changed, code changed: helpers/states.ts › expectDisabled`.
-2. Copy that list into the pull request description. Each requirement's `digest` in the
-   lock also changes, so the lock's own diff shows the IDs. The reviewer checks each listed ID
+2. Copy that list into the pull request description. The lock's `digests` map has one
+   line per requirement ID, so the lock's own diff also names each changed requirement. The reviewer checks each listed ID
    against the requirement it names. CI writes the same list to the job summary.
 3. To remove a requirement, delete its scenario and run
    `pnpm requirements:lock --retire REQ-UI-005 --reason "<why>"`. Its ID can never be
@@ -161,7 +161,8 @@ initializer that calls a function or assigns a value, joins its module's `‹mod
 Editing it marks every requirement that reaches that module, and every requirement when
 the module is a step file. A barrel's own top-level code counts when a name passes through it, and renamed,
 default, and namespace re-exports are followed to the code behind them. A dynamic
-`import()` must use a string literal, and only the setup file may use `import.meta.glob`. A
+`import()` must use a string literal, and is followed like a namespace import. Only the
+setup file may call `import.meta.glob`, in any module the lock reaches. A
 side-effect import (`import "./patch.ts"`) is followed. Any relative import in a module the
 lock reaches must resolve, or the check fails. A lazy or conditional
 `import.meta.glob` is rejected. A lock in the wrong shape fails, and CI finds the base

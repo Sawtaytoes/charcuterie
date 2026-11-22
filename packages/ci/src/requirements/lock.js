@@ -30,12 +30,12 @@ import { commandFor } from "./config.js"
  *   steps: string[],
  *   examples?: string[][],
  *   code: string[],
- *   digest?: string,
  * }} LockedRequirement
  *
  * @typedef {{
  *   version: 1,
  *   requirements: Record<string, LockedRequirement>,
+ *   digests?: Record<string, string>,
  *   code: Record<string, string>,
  *   retired: Record<string, { scenario: string, reason: string }>,
  * }} RequirementsLock
@@ -296,10 +296,15 @@ export const buildLock = (analysis, previous) => {
     }
   }
 
-  // A digest per requirement puts the ID itself in the lock's git
-  // diff when only the code behind it changed.
-  for (const requirement of Object.values(requirements)) {
-    requirement.digest = createHash("sha256")
+  // One line per requirement, keyed by its ID, so the lock's own git
+  // diff names each requirement whose code changed.
+  /** @type {Record<string, string>} */
+  const digests = {}
+
+  for (const [id, requirement] of Object.entries(
+    requirements,
+  )) {
+    digests[id] = createHash("sha256")
       .update(
         JSON.stringify(
           requirement.code.map((key) => [
@@ -316,6 +321,11 @@ export const buildLock = (analysis, previous) => {
     version: 1,
     requirements: Object.fromEntries(
       Object.entries(requirements).sort(([left], [right]) =>
+        left.localeCompare(right, "en", { numeric: true }),
+      ),
+    ),
+    digests: Object.fromEntries(
+      Object.entries(digests).sort(([left], [right]) =>
         left.localeCompare(right, "en", { numeric: true }),
       ),
     ),
