@@ -186,11 +186,27 @@ pull request is what ships the library**; a merged feature pull request publishe
 ## Where a component's files live
 
 **Button's behavior suite is Gherkin.** Its six scenarios live in
-`packages/docs/requirements/button.feature`, with bindings in `steps.ts` and shared
-helpers in `world.ts`. Do not recreate `Button.test.tsx`: all five former tests were
-converted, with their complete assertions, plus a mouse-click case. The `requirements-*`
-Vitest projects run these scenarios in all four standard windows. This is the scoped
-exception to the `.test.tsx` convention below
+`packages/docs/requirements/button.feature`. Generic steps are in `steps/controls.steps.ts`,
+Button's fixtures are in `steps/button.steps.ts`, and the helpers they call are in
+`helpers/`. Do not recreate `Button.test.tsx`. **Read
+[`docs/gherkin-requirements.md`](docs/gherkin-requirements.md) before you touch a
+`.feature` file, a step, or a helper.** Three rules matter most:
+
+- **Change the requirement first.** Never edit a scenario so that changed code passes.
+  A requirement change is the owner's call: ask, then list it in the pull request.
+- **`pnpm requirements:check` must pass.** It runs in seconds with no browser. It rejects
+  undefined, ambiguous, and unused steps, runner tags such as `@skip` and `@fails`, and a
+  stale `requirements.lock.json`. The lock records the code behind every requirement, so
+  a weakened helper fails the check even when no English changed. After an intended
+  change, run `pnpm requirements:lock` and copy the IDs it prints into the pull request.
+- **To debug a failing step, run the `Trace:` command printed under the failure**, for
+  example `pnpm requirements:which button.feature:41`. It names the definition and every
+  file the step reaches.
+
+Requirement scenarios run once, in `wide`. A scenario tagged `@responsive` runs in all four
+windows ([locked IDs](docs/decisions/2026-11-22-requirements-are-locked-by-id-and-checked-before-the-browser.md),
+[one window](docs/decisions/2026-11-22-requirement-scenarios-run-in-one-window-unless-tagged-responsive.md)).
+This is the scoped exception to the `.test.tsx` convention below
 ([decision](docs/decisions/2026-10-14-button-behavior-tests-are-gherkin-scenarios.md)).
 
 `packages/ui/src/<Name>/` holds `<Name>.tsx`, `<Name>.stories.tsx`, `<Name>.mdx`,

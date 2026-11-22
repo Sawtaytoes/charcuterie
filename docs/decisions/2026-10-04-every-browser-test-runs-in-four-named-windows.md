@@ -4,7 +4,7 @@
 - **Date:** 2026-10-04
 - **Type:** Testing convention
 - **Supersedes:** —
-- **Superseded by:** —
+- **Superseded by:** [Requirement scenarios run in one window unless tagged responsive](2026-11-22-requirement-scenarios-run-in-one-window-unless-tagged-responsive.md), in part: Gherkin requirement scenarios only
 
 ## Decision
 
