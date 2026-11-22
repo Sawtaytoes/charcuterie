@@ -21,6 +21,7 @@ import { commandFor } from "./config.js"
  * @typedef {{
  *   feature: string,
  *   heading: string,
+ *   description: string,
  *   rule?: string,
  *   scenario: string,
  *   status: "active" | "pending",
@@ -255,6 +256,7 @@ export const buildLock = (analysis, previous) => {
       requirements[idTag.name.slice(1)] = {
         feature: document.file,
         heading: document.name,
+        description: scenario.description,
         ...(scenario.ruleName
           ? { rule: scenario.ruleName }
           : {}),
@@ -559,6 +561,15 @@ export const describeChanges = (before, after) => {
     if ((old.rule ?? "") !== (current.rule ?? "")) {
       details.push(
         `rule: "${old.rule ?? ""}" -> "${current.rule ?? ""}"`,
+      )
+    }
+
+    if (
+      (old.description ?? "") !==
+      (current.description ?? "")
+    ) {
+      details.push(
+        "description: the Feature, Rule, or Scenario prose changed",
       )
     }
 

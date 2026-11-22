@@ -1075,6 +1075,155 @@ Given("a switch", () => {})
   })
 })
 
+describe("changes found by the fifth review", () => {
+  /** @param {Record<string, string>} files */
+  const lockedLamp = async (files = {}) => {
+    const root = await makeProject({
+      "lamp.feature": feature,
+      "helpers/lamp.ts": helpers,
+      "steps/lamp.steps.ts": steps,
+      ...files,
+    })
+    const analysis = await analyzeProject(root)
+
+    expect(analysis.problems).toEqual([])
+    await writeLock(
+      analysis,
+      buildLock(analysis, await readLock(analysis)),
+    )
+
+    return root
+  }
+
+  /** @param {string} root */
+  const resultOf = async (root) => {
+    const analysis = await analyzeProject(root)
+    const locked = await readLock(analysis)
+
+    return {
+      rules: analysis.problems.map(
+        (problem) => problem.rule,
+      ),
+      details: describeChanges(
+        locked,
+        buildLock(analysis, locked),
+      ).flatMap((change) =>
+        change.details.map(
+          (detail) => `${change.id} ${detail}`,
+        ),
+      ),
+    }
+  }
+
+  test("an effectful default export joins the module unit", async () => {
+    const root = await lockedLamp()
+
+    await writeFile(
+      join(root, "steps/lamp.steps.ts"),
+      `${steps}\nexport default (globalThis.lampName = "Floor")\n`,
+    )
+
+    expect((await resultOf(root)).details).toContain(
+      "REQ-T-1 code changed: steps/lamp.steps.ts › ‹module›",
+    )
+  })
+
+  test("a barrel's own top-level code counts when a name passes through it", async () => {
+    const barrel =
+      'export { expectOn, turnOn } from "./lamp.ts"\n'
+    const root = await lockedLamp({
+      "helpers/lamp.ts": "export {}\n",
+      "steps/lamp.steps.ts": steps.replace(
+        'from "../helpers/lamp.ts"',
+        'from "../../shared/index.ts"',
+      ),
+      "../shared/index.ts": barrel,
+      "../shared/lamp.ts": helpers,
+    })
+
+    await writeFile(
+      join(root, "../shared/index.ts"),
+      `${barrel}\nthrow new Error("broken")\n`,
+    )
+
+    expect((await resultOf(root)).details).toContain(
+      "REQ-T-1 code changed: ../shared/index.ts › ‹module›",
+    )
+  })
+
+  test("the prose under Feature, Rule, and Scenario is part of the requirement, but rewrapping is not", async () => {
+    const withProse = feature.replace(
+      "Feature: Lamp\n",
+      "Feature: Lamp\n  A lamp tells everyone when it is on.\n",
+    )
+    const root = await lockedLamp({
+      "lamp.feature": withProse,
+    })
+
+    await writeFile(
+      join(root, "lamp.feature"),
+      withProse.replace(
+        "A lamp tells everyone when",
+        "A lamp tells everyone\n  when",
+      ),
+    )
+
+    expect((await resultOf(root)).details).toEqual([])
+
+    await writeFile(
+      join(root, "lamp.feature"),
+      withProse.replace("everyone", "some people"),
+    )
+
+    expect((await resultOf(root)).details).toEqual([
+      "REQ-T-1 description: the Feature, Rule, or Scenario prose changed",
+    ])
+  })
+
+  test("a CSS comment or reflow does not change the lock, and a rule does", async () => {
+    const css = ".lamp { color: red; }\n"
+    const root = await lockedLamp({
+      "requirements.config.json": JSON.stringify({
+        ...config,
+        runtime: [
+          "index.ts",
+          "support/**/*.ts",
+          "../tokens.css",
+        ],
+      }),
+      "../tokens.css": css,
+    })
+
+    await writeFile(
+      join(root, "../tokens.css"),
+      "/* The lamp. */\n.lamp {\n  color: red;\n}\n",
+    )
+
+    expect((await resultOf(root)).details).toEqual([])
+
+    await writeFile(
+      join(root, "../tokens.css"),
+      ".lamp { color: blue; }\n",
+    )
+
+    expect((await resultOf(root)).details).toContain(
+      "REQ-T-1 code changed: ../tokens.css",
+    )
+  })
+
+  test("reports an unresolved relative import even when nothing reads it", async () => {
+    const root = await makeProject({
+      "lamp.feature": feature,
+      "helpers/lamp.ts": helpers,
+      "steps/lamp.steps.ts": `import { gone } from "../helpers/gone.ts"\n${steps}`,
+    })
+
+    expect((await resultOf(root)).rules).toEqual([
+      "unresolved-import",
+    ])
+  })
+})
+
 describe("registration", () => {
   test("rejects a step file the setup file never loads", async () => {
     const root = await makeProject({

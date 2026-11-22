@@ -37,6 +37,7 @@ import { IdGenerator } from "@cucumber/messages"
  *   name: string,
  *   keyword: string,
  *   ruleName: string,
+ *   description: string,
  *   ownTags: { name: string, line: number }[],
  *   inheritedTags: { name: string, line: number }[],
  *   tags: string[],
@@ -167,7 +168,7 @@ export const parseFeature = async (root, file) => {
   const scenariosById = new Map()
   /** @type {{ name: string, line: number, ruleName: string }[]} */
   const ruleTags = []
-  /** @type {Map<string, { ruleName: string, inherited: { name: string, line: number }[] }>} */
+  /** @type {Map<string, { ruleName: string, ruleDescription: string, inherited: { name: string, line: number }[] }>} */
   const scenarioContext = new Map()
 
   const featureTags = toTags(feature.tags)
@@ -175,9 +176,15 @@ export const parseFeature = async (root, file) => {
   /**
    * @param {readonly import("@cucumber/messages").FeatureChild[] | readonly import("@cucumber/messages").RuleChild[]} children
    * @param {string} ruleName
+   * @param {string} ruleDescription
    * @param {{ name: string, line: number }[]} inherited
    */
-  const visit = (children, ruleName, inherited) => {
+  const visit = (
+    children,
+    ruleName,
+    ruleDescription,
+    inherited,
+  ) => {
     for (const child of children) {
       if (child.background) {
         for (const step of child.background.steps) {
@@ -199,16 +206,19 @@ export const parseFeature = async (root, file) => {
           })),
         )
 
-        visit(child.rule.children, child.rule.name, [
-          ...inherited,
-          ...ownRuleTags,
-        ])
+        visit(
+          child.rule.children,
+          child.rule.name,
+          child.rule.description,
+          [...inherited, ...ownRuleTags],
+        )
       }
 
       if (child.scenario) {
         scenariosById.set(child.scenario.id, child.scenario)
         scenarioContext.set(child.scenario.id, {
           ruleName,
+          ruleDescription,
           inherited,
         })
 
@@ -223,13 +233,14 @@ export const parseFeature = async (root, file) => {
     }
   }
 
-  visit(feature.children, "", featureTags)
+  visit(feature.children, "", "", featureTags)
 
   /** @type {FeatureScenario[]} */
   const scenarios = [...scenariosById.values()].map(
     (scenario) => {
       const context = scenarioContext.get(scenario.id) ?? {
         ruleName: "",
+        ruleDescription: "",
         inherited: featureTags,
       }
 
@@ -239,6 +250,16 @@ export const parseFeature = async (root, file) => {
         name: scenario.name,
         keyword: scenario.keyword.trim(),
         ruleName: context.ruleName,
+        // The prose under Feature, Rule, and Scenario is part of the
+        // written requirement. Whitespace is collapsed so rewrapping
+        // a paragraph is not a change.
+        description: [
+          feature.description,
+          context.ruleDescription,
+          scenario.description,
+        ]
+          .map((text) => text.replace(/\s+/g, " ").trim())
+          .join("\n"),
         ownTags: toTags(scenario.tags),
         inheritedTags: context.inherited,
         // What QuickPickle acts on: it applies Feature and Rule tags to

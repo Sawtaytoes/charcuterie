@@ -110,7 +110,8 @@ one keyboard focus, and the same body cleanup, so concurrent scenarios would int
 ## The lock
 
 `requirements.lock.json` records each requirement's steps, including their data tables and
-doc strings, its tags, and every code unit those steps reach:
+doc strings; the prose under its Feature, Rule, and Scenario (rewrapping is not a change);
+its tags; and every code unit those steps reach:
 
 - the step definitions, the helpers and World members they call, and each module's imports
   and top-level statements;
@@ -119,7 +120,8 @@ doc strings, its tags, and every code unit those steps reach:
 - the runtime every scenario passes through, hashed as whole files: `index.ts`,
   `support/` (the World, the step wrapper, and the parameter types), the requirements
   config, the Vitest requirement configs, `vitest.ui.setup.ts`, and the
-  `storybook-config` and `vitest-config` packages they import; plus whatever those
+  `storybook-config` and `vitest-config` packages they import (their JavaScript, sources,
+  and `package.json`); plus whatever those
   runtime files import by relative path, such as `.storybook/preview.tsx`;
 - the top-level code of every step file, because `index.ts` loads them all for every
   scenario. A step file must define at least one step; setup code goes in `support/`.
@@ -140,17 +142,22 @@ change is intended:
    reused. On a pull request, CI compares the lock with the base commit and fails if a
    requirement or a retirement entry disappears, or if a retired ID comes back.
 
-Comments and formatting do not change the lock. The components under test do not change
-it either: `subjects` in `requirements.config.json` names them, and the lock neither hashes
-nor follows them. A story change does change it, for the requirements that use that story.
+Comments and formatting do not change the lock, in TypeScript, JSON, or CSS. The
+components under test do not change it either: `subjects` in `requirements.config.json`
+names them, and the lock neither hashes nor follows them. A story change does change it,
+for the requirements that use that story. One known false positive remains: Storybook
+requires `storySort` inline in `.storybook/preview.tsx`, and the test runner imports that
+file, so reordering the sidebar marks every requirement. Relock for it and say so in the
+pull request.
 
 The lock is a tripwire, not a proof. It reads code by name without running it, and each
 review of it has found new ways around it. Reading the lock diff and the job summary in
 review is still the final check. A top-level statement that runs code, such as an
 initializer that calls a function or assigns a value, joins its module's `‹module›` unit.
 Editing it marks every requirement that reaches that module, and every requirement when
-the module is a step file. A side-effect import (`import "./patch.ts"`) is followed, and a
-relative import the checker cannot resolve is an error. A lazy or conditional
+the module is a step file. A barrel's own top-level code counts when a name passes through it. A
+side-effect import (`import "./patch.ts"`) is followed. Any relative import in a module the
+lock reaches must resolve, or the check fails. A lazy or conditional
 `import.meta.glob` is rejected. A lock in the wrong shape fails, and CI finds the base
 commit's lock through the base commit's own config.
 

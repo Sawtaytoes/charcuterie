@@ -2,7 +2,11 @@
   "idPrefix": "REQ-UI-",
   "features": ["**/*.feature"],
   "sources": ["**/*.ts"],
-  "exclude": ["**/*.test.ts", "**/node_modules/**"],
+  "exclude": [
+    "**/*.test.ts",
+    "**/*.test.js",
+    "**/node_modules/**"
+  ],
   "helpers": ["helpers/**/*.ts"],
   "stepModule": "support/steps.ts",
   "stepFiles": ["steps/*.steps.ts"],
@@ -15,8 +19,10 @@
     "../vitest.requirements.config.ts",
     "../vitest.requirements-responsive.config.ts",
     "../vitest.ui.setup.ts",
-    "../../storybook-config/src/**/*.{ts,tsx}",
-    "../../vitest-config/src/**/*.ts"
+    "../../storybook-config/src/**/*.{js,ts,tsx}",
+    "../../storybook-config/package.json",
+    "../../vitest-config/src/**/*.js",
+    "../../vitest-config/package.json"
   ],
   "subjects": [
     "../../ui/src/**/*.tsx",

@@ -54,6 +54,20 @@ import ts from "typescript"
 
 const stepKinds = new Set(["Given", "When", "Then"])
 
+/**
+ * CSS without comments and layout, so a comment or a reflow does not
+ * change a requirement. Strings are rare in token sheets and kept.
+ *
+ * @param {string} text
+ */
+const normalizeCss = (text) =>
+  text
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/\s+/g, " ")
+    .replace(/\s*([{};:,>])\s*/g, "$1")
+    .replace(/;}/g, "}")
+    .trim()
+
 /** @param {string} text */
 const hashText = (text) =>
   createHash("sha256")
@@ -392,6 +406,10 @@ const readModule = (root, absolutePath) => {
       !statement.isExportEquals
     ) {
       declarations.set("default", statement)
+
+      if (!isInert(statement.expression)) {
+        moduleStatements.push(statement)
+      }
     } else if (ts.isVariableStatement(statement)) {
       // An initializer that runs code, or a destructuring the walker
       // cannot name, runs when the module loads whether or not a step
@@ -885,7 +903,9 @@ export const readSources = (project) => {
           ? hashNode(sourceFile, sourceFile)
           : absolutePath.endsWith(".json")
             ? hashText(JSON.stringify(JSON.parse(text)))
-            : hashText(text),
+            : absolutePath.endsWith(".css")
+              ? hashText(normalizeCss(text))
+              : hashText(text),
         isExternal,
         isHelper: false,
       })
@@ -955,12 +975,15 @@ export const readSources = (project) => {
    * @param {string} absolutePath
    * @param {string} importedName
    * @param {number} depth
+   * @param {string[]} hops collects each barrel passed through,
+   *   whose own top-level code also runs on import
    * @returns {string}
    */
   const declaringFile = (
     absolutePath,
     importedName,
     depth = 0,
+    hops = [],
   ) => {
     if (
       depth > 8 ||
@@ -996,10 +1019,13 @@ export const readSources = (project) => {
 
       if (!statement.exportClause) {
         // `export * from`: follow only if the target declares it.
+        /** @type {string[]} */
+        const deeper = []
         const followed = declaringFile(
           target,
           importedName,
           depth + 1,
+          deeper,
         )
 
         if (
@@ -1012,6 +1038,8 @@ export const readSources = (project) => {
             importedName,
           )
         ) {
+          hops.push(absolutePath, ...deeper)
+
           return followed
         }
 
@@ -1022,10 +1050,13 @@ export const readSources = (project) => {
         for (const element of statement.exportClause
           .elements) {
           if (element.name.text === importedName) {
+            hops.push(absolutePath)
+
             return declaringFile(
               target,
               (element.propertyName ?? element.name).text,
               depth + 1,
+              hops,
             )
           }
         }
@@ -1162,6 +1193,21 @@ export const readSources = (project) => {
     }
 
     reached.add(key)
+
+    // Every relative import must resolve, used or not: a missing
+    // file would otherwise be skipped silently.
+    for (const imported of module.imports.values()) {
+      if (
+        !imported.isTypeOnly &&
+        imported.specifier.startsWith(".") &&
+        !resolveRelative(
+          module.absolutePath,
+          imported.specifier,
+        )
+      ) {
+        reportUnresolved(module, imported.specifier)
+      }
+    }
 
     for (const statement of statements) {
       if (!ts.isImportDeclaration(statement)) {
@@ -1313,13 +1359,23 @@ export const readSources = (project) => {
       return
     }
 
+    /** @type {string[]} */
+    const hops = []
     const declaring = declaringFile(
       target,
       imported.importedName,
+      0,
+      hops,
     )
 
     if (isSubject(declaring)) {
       return
+    }
+
+    for (const hop of hops) {
+      if (!isSubject(hop)) {
+        enterModule(moduleAt(hop), reached)
+      }
     }
 
     const targetModule = moduleAt(declaring)
