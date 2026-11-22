@@ -1535,11 +1535,14 @@ export const readSources = (project) => {
       return here(true)
     }
 
-    if (seen.has(absolutePath)) {
+    // A path can pass through one file twice under different names.
+    const visit = `${absolutePath}|${importedName}`
+
+    if (seen.has(visit)) {
       return here(false)
     }
 
-    const onPath = new Set(seen).add(absolutePath)
+    const onPath = new Set(seen).add(visit)
     const sourceFile = parseSource(
       absolutePath,
       readFileSync(absolutePath, "utf8"),
@@ -1566,6 +1569,14 @@ export const readSources = (project) => {
 
     /** @type {{ search: DeclarationSearch, hops: string[] } | null} */
     let tooDeep = null
+    /**
+     * The first `export *` whose chain reached another file without
+     * finding a declaration the checker recognizes. That file is the
+     * best guess, and is hashed whole.
+     *
+     * @type {{ search: DeclarationSearch, hops: string[] } | null}
+     */
+    let reachedElsewhere = null
 
     for (const statement of exportStatements) {
       if (
@@ -1613,6 +1624,15 @@ export const readSources = (project) => {
         // depth only if none does.
         if (followed.isTooDeep && !tooDeep) {
           tooDeep = { search: followed, hops: deeper }
+        } else if (
+          !followed.isTooDeep &&
+          followed.file !== target &&
+          !reachedElsewhere
+        ) {
+          reachedElsewhere = {
+            search: followed,
+            hops: deeper,
+          }
         }
 
         continue
@@ -1660,6 +1680,12 @@ export const readSources = (project) => {
       hops.push(absolutePath, ...tooDeep.hops)
 
       return tooDeep.search
+    }
+
+    if (reachedElsewhere) {
+      hops.push(absolutePath, ...reachedElsewhere.hops)
+
+      return reachedElsewhere.search
     }
 
     return here(false)

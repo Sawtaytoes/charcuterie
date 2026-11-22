@@ -2054,6 +2054,29 @@ describe("changes found by the twelfth review", () => {
     )
   })
 
+  test("an export * in front of a named chain still hashes the file the chain ends in", async () => {
+    const { code } = await reachedThroughBarrel({
+      "../fixture/index.ts": 'export * from "./a.ts"\n',
+      "../fixture/a.ts": 'export { check } from "./b.ts"\n',
+      "../fixture/b.ts":
+        "let impl = () => 0\n\nexport const setup = () => {\n  impl = () => 1\n}\n\nexport { impl as check }\n",
+    })
+
+    expect(code).toContain("../fixture/b.ts")
+  })
+
+  test("a path through one file under two names follows both", async () => {
+    const { code } = await reachedThroughBarrel({
+      "../fixture/index.ts": 'export * from "./a.ts"\n',
+      "../fixture/a.ts":
+        'export { y as check } from "./b.ts"\n\nexport const z = () => 1\n',
+      "../fixture/b.ts":
+        'export { z as y } from "./a.ts"\n',
+    })
+
+    expect(code).toContain("../fixture/a.ts › z")
+  })
+
   test("still resolves an exact package.json or index file", async () => {
     const root = await makeProject({
       "lamp.feature": feature,
