@@ -1,5 +1,12 @@
 # @charcuterie/vite-config
 
+## 1.2.1
+
+### Patch Changes
+
+- Updated dependencies [465a6e3]
+  - @charcuterie/tokens@1.10.3
+
 ## 1.2.0
 
 ### Minor Changes
