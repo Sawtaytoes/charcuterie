@@ -25,7 +25,9 @@ import {
 import { byRole, scopeOf } from "./queries.ts"
 import {
   expectAbsent,
+  expectAccessible,
   expectBusy,
+  expectClosed,
   expectDescription,
   expectDisabled,
   expectFocused,
@@ -244,14 +246,30 @@ describe("pointer", () => {
       context,
       '<button type="button">Inside</button>',
     )
+    const pageClicks: EventTarget[] = []
+    const recordPageClick = (event: Event) => {
+      if (event.target) {
+        pageClicks.push(event.target)
+      }
+    }
 
     byRole(world, "button", "Inside").addEventListener(
       "click",
       trackActivations(world, "Inside"),
     )
+    document.body.addEventListener("click", recordPageClick)
 
-    await clickOutside(world)
+    try {
+      await clickOutside(world)
+    } finally {
+      document.body.removeEventListener(
+        "click",
+        recordPageClick,
+      )
+    }
+
     expectActivations(world, "Inside", 0)
+    expect(pageClicks).toEqual([document.body])
   })
 
   test("clickOutside tells the author to open a story first", async (context) => {
@@ -291,6 +309,54 @@ describe("typing", () => {
     ).rejects.toThrow()
   })
 
+  test("expectFocused rejects a control that never takes focus", async (context) => {
+    const world = makeWorld(
+      context,
+      '<button type="button">First</button><button type="button">Second</button>',
+    )
+
+    byRole(world, "button", "First").focus()
+
+    await expect(
+      expectFocused(world, "button", "Second"),
+    ).rejects.toThrow()
+  })
+
+  test("expectFocused waits for focus that arrives a frame later", async (context) => {
+    const world = makeWorld(
+      context,
+      '<button type="button">Later</button>',
+    )
+
+    setTimeout(() => {
+      byRole(world, "button", "Later").focus()
+    }, 50)
+
+    await expectFocused(world, "button", "Later")
+  })
+
+  test("expectAccessible rejects a control the keyboard cannot reach", (context) => {
+    const world = makeWorld(
+      context,
+      '<label>Title <input type="text" tabindex="-1" /></label>',
+    )
+
+    expect(() =>
+      expectAccessible(world, "textbox", "Title"),
+    ).toThrow()
+  })
+
+  test("expectAccessible rejects two controls with one name", (context) => {
+    const world = makeWorld(
+      context,
+      '<button type="button">Start</button><button type="button">Start</button>',
+    )
+
+    expect(() =>
+      expectAccessible(world, "button", "Start"),
+    ).toThrow()
+  })
+
   test("moveFocus focuses the named control only", async (context) => {
     const world = makeWorld(
       context,
@@ -322,22 +388,40 @@ describe("presence", () => {
     await expectFocusInside(world, "dialog", "Inner")
   })
 
-  test("expectAbsent rejects a dialog that stays", async (context) => {
+  test("expectAbsent rejects a dialog that is there, hidden or not", (context) => {
     const world = makeWorld(
       context,
-      '<div role="dialog" aria-label="Stays"></div>',
+      '<div role="dialog" aria-label="Stays"></div><div role="dialog" aria-label="Exiting" aria-hidden="true" inert></div>',
     )
 
-    await expect(
+    expect(() =>
       expectAbsent(world, "dialog", "Stays"),
-    ).rejects.toThrow(/every dialog named "Stays"/)
-    await expect(
-      expectAbsent(world, "dialog"),
-    ).rejects.toThrow(/every dialog on the page/)
-    await expectAbsent(world, "dialog", "Another")
+    ).toThrow(/every dialog named "Stays"/)
+    expect(() =>
+      expectAbsent(world, "dialog", "Exiting"),
+    ).toThrow(/every dialog named "Exiting"/)
+    expect(() => expectAbsent(world, "dialog")).toThrow(
+      /every dialog in the document/,
+    )
+    expectAbsent(world, "dialog", "Another")
   })
 
-  test("expectAbsent waits for a panel that leaves", async (context) => {
+  test("expectAbsent does not wait for an element to leave", (context) => {
+    const world = makeWorld(
+      context,
+      '<button type="button">Close</button>',
+    )
+
+    setTimeout(() => {
+      document.querySelector("button")?.remove()
+    }, 50)
+
+    expect(() =>
+      expectAbsent(world, "button", "Close"),
+    ).toThrow()
+  })
+
+  test("expectClosed waits for a panel that leaves", async (context) => {
     const world = makeWorld(
       context,
       '<div role="listbox" aria-label="Parents"></div>',
@@ -347,7 +431,18 @@ describe("presence", () => {
       document.querySelector('[role="listbox"]')?.remove()
     }, 50)
 
-    await expectAbsent(world, "listbox")
+    await expectClosed(world, "listbox")
+  })
+
+  test("expectClosed rejects a panel stuck in its exit", async (context) => {
+    const world = makeWorld(
+      context,
+      '<div role="dialog" aria-label="Stuck" aria-hidden="true" inert></div>',
+    )
+
+    await expect(
+      expectClosed(world, "dialog", "Stuck"),
+    ).rejects.toThrow(/every dialog named "Stuck"/)
   })
 
   test("expectHiddenFromAssistiveTechnology rejects a live dialog", (context) => {

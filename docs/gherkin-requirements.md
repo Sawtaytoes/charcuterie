@@ -197,7 +197,7 @@ import must name one file: if `./queries` could load both `queries.js` and `quer
 the check fails, because Vite tries `.js` first. Root-absolute (`/…`) and `#` subpath
 imports are rejected, and so is a directory import whose directory has a `package.json`. A
 named re-export wins over `export *` wherever it is written, an `export declare` counts as
-nothing, a JSON file supplies its top-level keys to `export *` and is hashed whole, two `export *` lines that supply one name from different declarations fail the check, because JavaScript then exports neither, and a name that passes through more than eight re-exports fails the check. A `package.json` that is valid JSON but not an object, such as `null`, fails the check too. A step
+nothing, a JSON file supplies its top-level keys to `export *` and is hashed whole, a type-only local export does not hide the value an `export *` supplies, and a name that passes through more than eight re-exports fails the check. Malformed JSON that any `export *` names fails the check, and so does a `package.json` that is valid JSON but not an object, such as `null`. Two `export *` lines that supply one name from different declarations are not reported: JavaScript exports neither, so the scenarios fail when the module loads. A step
 definition's code must be an inline function. Any relative import in a module the
 lock reaches must resolve, or the check fails. A lazy or conditional
 `import.meta.glob` is rejected. A lock in the wrong shape fails, and CI finds the base
@@ -295,7 +295,7 @@ A description step compares the whole accessible description, in order, so one s
 replaces the old tests' split on `aria-describedby` and their substring matches.
 
 Shared source and style rules, contrast checks, Storybook accessibility audits, and visual
-regression still cover Button through their own suites.
+regression still cover Button, Dialog, and Field through their own suites.
 
 If Chromium is missing in a local container, install the browser version this repo needs
 into a writable cache, and set `PLAYWRIGHT_BROWSERS_PATH` for the run. Do not change the

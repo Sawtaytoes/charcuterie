@@ -21,11 +21,17 @@ role and name: layout, paint, ids, and where props land.
 3. **A click must land.** The click helper fails when something covers the control's
    center. `userEvent.click` dispatches to the element directly and would click through a
    scrim.
-4. **Assertions that wait.** Focus, visibility, and absence wait for the next frames,
-   because a dialog's focus manager and exit run after the event. "Does not have focus"
-   is checked once, because a wait could only make a negative pass sooner.
+4. **Positive checks wait; negative checks do not.** "Has focus", "is visible", and
+   "has closed" wait for the next frames, because a dialog's focus manager and exit run
+   after the event. "Has closed" waits until the panel leaves the document, so a panel
+   stuck in its exit, `inert` and `aria-hidden`, still fails. "There is no …" and "does
+   not have focus" are checked once, because a wait would let something that appears and
+   then leaves pass.
 5. **Whole descriptions.** "is described as" compares the full accessible description in
    order. It replaces the old split on `aria-describedby` and its substring matches.
+6. **Every control a scenario acts on is checked as agent-drivable** at least once, as the
+   old tests did with `expectAgentDrivable`, so a control the keyboard cannot reach
+   fails.
 
 ## Context
 
@@ -50,6 +56,7 @@ Five planted defects were run against both suites:
 | Field reads the error before the help text | fails | fails |
 | Field drops `required` and keeps `aria-required` | **passes** | fails |
 | The scrim sits above the dialogs | fails in 1 test | fails in 5 scenarios |
+| Field puts `tabIndex={-1}` on its control | fails in 14 tests | fails in 10 scenarios |
 
 ## Evidence
 

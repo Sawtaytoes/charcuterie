@@ -2639,31 +2639,76 @@ describe("the round-12 gaps", () => {
     ])
   })
 
-  test("reports a name that two export * lines supply", async () => {
-    const { problems } = await throughBarrel({
+  test("an export * behind a type-only local export still supplies the value", async () => {
+    for (const local of [
+      "type check = string\nexport { type check }\n",
+      "interface check { a: number }\nexport { check }\n",
+      "type check = string\nexport type { check }\n",
+    ]) {
+      const { problems, code } = await throughBarrel({
+        "../fixture/index.ts": `${local}export * from "./runtime.ts"\n`,
+        "../fixture/runtime.ts":
+          "export const check = () => {}\n",
+      })
+
+      expect(problems).toEqual([])
+      expect(code).toContain(
+        "../fixture/runtime.ts › check",
+      )
+    }
+  })
+
+  test("a local value exported by name still wins over an export *", async () => {
+    const { code } = await throughBarrel({
       "../fixture/index.ts":
-        'export * from "./weak.ts"\nexport * from "./strong.ts"\n',
-      "../fixture/weak.ts":
+        'const check = () => {}\ntype check = string\nexport { check }\nexport * from "./other.ts"\n',
+      "../fixture/other.ts":
         "export const check = () => {}\n",
-      "../fixture/strong.ts":
-        "export const check = () => { throw new Error() }\n",
     })
 
-    expect(problems).toEqual([
-      expect.objectContaining({
-        file: "../fixture/index.ts",
-        rule: "ambiguous-export",
-      }),
-    ])
-    expect(problems[0]?.message).toContain(
-      "../fixture/weak.ts",
-    )
-    expect(problems[0]?.message).toContain(
-      "../fixture/strong.ts",
+    expect(code).toContain("../fixture/index.ts › check")
+    expect(code).not.toContain(
+      "../fixture/other.ts › check",
     )
   })
 
-  test("two export * lines that reach the same declaration are not ambiguous", async () => {
+  test("follows a name a file imports and exports again", async () => {
+    const { problems, code } = await throughBarrel({
+      "../fixture/index.ts":
+        'export * from "./a.ts"\nexport * from "./b.ts"\n',
+      "../fixture/a.ts":
+        'import { check } from "./shared.ts"\nexport { check }\n',
+      "../fixture/b.ts": 'export * from "./shared.ts"\n',
+      "../fixture/shared.ts":
+        "export const check = () => {}\n",
+    })
+
+    expect(problems).toEqual([])
+    expect(code).toContain("../fixture/shared.ts › check")
+  })
+
+  test("reports malformed JSON that an export * names after the name is found", async () => {
+    for (const barrel of [
+      'export const check = () => {}\nexport * from "./bad.json"\n',
+      'export { check } from "./good.ts"\nexport * from "./bad.json"\n',
+    ]) {
+      const { problems } = await throughBarrel({
+        "../fixture/index.ts": barrel,
+        "../fixture/good.ts":
+          "export const check = () => {}\n",
+        "../fixture/bad.json": "{ not json\n",
+      })
+
+      expect(problems).toEqual([
+        expect.objectContaining({
+          file: "../fixture/bad.json",
+          rule: "malformed-json",
+        }),
+      ])
+    }
+  })
+
+  test("two export * lines that reach the same declaration hash it once", async () => {
     const { problems, code } = await throughBarrel({
       "../fixture/index.ts":
         'export * from "./a.ts"\nexport * from "./b.ts"\n',

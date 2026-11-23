@@ -17,6 +17,7 @@ import {
   expectAbsent,
   expectAccessible,
   expectBusy,
+  expectClosed,
   expectDescription,
   expectDisabled,
   expectFocused,
@@ -131,18 +132,29 @@ Then(
   },
 )
 
-/** Nothing on the page has this role and name, once any closing panel has left. */
+/** Nothing in the document has this role and name, now; checked once, without waiting. */
 Then(
   "there is no {role} named {string}",
-  async (world, role: Role, name: string) => {
-    await expectAbsent(world, role, name)
+  (world, role: Role, name: string) => {
+    expectAbsent(world, role, name)
   },
 )
 
-/** Nothing on the page has this role, once any closing panel has left. */
-Then("there is no {role}", async (world, role: Role) => {
-  await expectAbsent(world, role)
-})
+/** The named panel has left the document, after its exit. */
+Then(
+  "the {role} named {string} has closed",
+  async (world, role: Role, name: string) => {
+    await expectClosed(world, role, name)
+  },
+)
+
+/** No panel with this role is left in the document, after their exits. */
+Then(
+  "every {role} has closed",
+  async (world, role: Role) => {
+    await expectClosed(world, role)
+  },
+)
 
 /** On the page, but inert or aria-hidden. */
 Then(

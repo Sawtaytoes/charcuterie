@@ -8,9 +8,9 @@ import {
 import { Given } from "../support/steps.ts"
 
 /**
- * Dialog fixtures: its stories, by the names Storybook shows. The stories
- * are composed inside the step, so only the requirements that open a
- * Dialog story reach them in the lock.
+ * Dialog fixtures: its stories, by the names Storybook shows. Every
+ * scenario loads this file, so the lock counts the Dialog story module
+ * for every requirement, not only the ones that open a Dialog story.
  */
 
 /** A Dialog story, by its Storybook name, such as "All States". */

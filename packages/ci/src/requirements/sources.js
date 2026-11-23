@@ -77,6 +77,9 @@ const normalizeCss = (text) =>
 const parseJson = (text) =>
   JSON.parse(text.replace(/^\uFEFF/, ""))
 
+/** A JSON file that parses, but is not the object it must be. */
+class NotAnObjectError extends Error {}
+
 /**
  * A `package.json` parsed, which must be an object. `null`, an array,
  * or a bare value parses as JSON, but no tool can read fields from it.
@@ -97,9 +100,6 @@ const parseManifest = (text) => {
 
   return manifest
 }
-
-/** A JSON file that parses, but is not the object it must be. */
-class NotAnObjectError extends Error {}
 
 /**
  * Only the fields that decide which code runs. A release bumps
@@ -460,11 +460,63 @@ const declaresName = (sourceFile, name) =>
       ts.isNamedExports(statement.exportClause) &&
       statement.exportClause.elements.some(
         (element) =>
+          !element.isTypeOnly &&
           element.name.text === name &&
           (element.propertyName ?? element.name).text ===
-            name,
+            name &&
+          !isTypeOnlyLocal(sourceFile, name),
       ),
   )
+
+/**
+ * A local name that only a type or an interface declares. TypeScript
+ * erases `export { name }` for it, so it exports no value, and an
+ * `export *` in the same file still supplies the runtime name.
+ *
+ * @param {ts.SourceFile} sourceFile
+ * @param {string} name
+ */
+const isTypeOnlyLocal = (sourceFile, name) => {
+  /** @param {ts.Node} statement */
+  const isTypeDeclaration = (statement) =>
+    (ts.isInterfaceDeclaration(statement) ||
+      ts.isTypeAliasDeclaration(statement)) &&
+    statement.name.text === name
+
+  /** @param {ts.Node} statement */
+  const isValueDeclaration = (statement) =>
+    ((ts.isFunctionDeclaration(statement) ||
+      ts.isClassDeclaration(statement) ||
+      ts.isEnumDeclaration(statement) ||
+      ts.isModuleDeclaration(statement)) &&
+      statement.name?.text === name) ||
+    (ts.isVariableStatement(statement) &&
+      statement.declarationList.declarations.some(
+        (declaration) =>
+          ts.isIdentifier(declaration.name) &&
+          declaration.name.text === name,
+      )) ||
+    (ts.isImportDeclaration(statement) &&
+      !statement.importClause?.isTypeOnly &&
+      (statement.importClause?.name?.text === name ||
+        (statement.importClause?.namedBindings !==
+          undefined &&
+          (ts.isNamespaceImport(
+            statement.importClause.namedBindings,
+          )
+            ? statement.importClause.namedBindings.name
+                .text === name
+            : statement.importClause.namedBindings.elements.some(
+                (element) =>
+                  !element.isTypeOnly &&
+                  element.name.text === name,
+              )))))
+
+  return (
+    sourceFile.statements.some(isTypeDeclaration) &&
+    !sourceFile.statements.some(isValueDeclaration)
+  )
+}
 
 /**
  * @typedef {{
@@ -1617,44 +1669,6 @@ export const readSources = (project) => {
     })
   }
 
-  /** @type {Set<string>} */
-  const reportedAmbiguous = new Set()
-
-  /**
-   * Two `export *` lines in one file that supply the same name from
-   * different declarations. JavaScript then exports neither, so an
-   * import of the name fails when the module links, and the checker
-   * cannot say which code a step reaches.
-   *
-   * @param {string} absolutePath the barrel
-   * @param {string} name
-   * @param {string[]} suppliers the declaring files
-   */
-  const reportAmbiguousExport = (
-    absolutePath,
-    name,
-    suppliers,
-  ) => {
-    const key = `${absolutePath}|${name}`
-
-    if (reportedAmbiguous.has(key)) {
-      return
-    }
-
-    reportedAmbiguous.add(key)
-    problems.push({
-      file: toKey(absolutePath),
-      line: 1,
-      column: 1,
-      rule: "ambiguous-export",
-      message: `Two \`export *\` lines supply \`${name}\`, from ${suppliers
-        .map(toKey)
-        .join(
-          " and ",
-        )}. JavaScript exports neither, so an import of \`${name}\` fails. Re-export it by name: \`export { ${name} } from "…"\`.`,
-    })
-  }
-
   /**
    * @typedef {{
    *   file: string,
@@ -1701,14 +1715,6 @@ export const readSources = (project) => {
     // file declares no names the checker can read. The caller hashes
     // the file whole either way.
     if (!codeFile.test(absolutePath)) {
-      if (absolutePath.endsWith(".json")) {
-        try {
-          parseJson(readFileSync(absolutePath, "utf8"))
-        } catch (error) {
-          reportMalformedJson(toKey(absolutePath), error)
-        }
-      }
-
       return here(jsonDeclares(absolutePath, importedName))
     }
 
@@ -1724,6 +1730,31 @@ export const readSources = (project) => {
       absolutePath,
       readFileSync(absolutePath, "utf8"),
     )
+
+    // Vite loads every module a file re-exports, even when the search
+    // finds the name before it reaches that module, so malformed JSON
+    // there fails the import.
+    for (const statement of sourceFile.statements) {
+      if (
+        ts.isExportDeclaration(statement) &&
+        statement.moduleSpecifier &&
+        ts.isStringLiteral(statement.moduleSpecifier) &&
+        statement.moduleSpecifier.text.endsWith(".json")
+      ) {
+        const target = resolveSpecifier(
+          absolutePath,
+          statement.moduleSpecifier.text,
+        )
+
+        if (target) {
+          try {
+            parseJson(readFileSync(target, "utf8"))
+          } catch (error) {
+            reportMalformedJson(toKey(target), error)
+          }
+        }
+      }
+    }
 
     if (declaresName(sourceFile, importedName)) {
       return here(true)
@@ -1763,15 +1794,6 @@ export const readSources = (project) => {
      * @type {{ search: DeclarationSearch, hops: string[] } | null}
      */
     let nonCodeFallback = null
-    /**
-     * The first `export *` that supplies the name. The search goes on
-     * through the rest, because a second one that supplies a
-     * different declaration makes the name ambiguous, and an
-     * ambiguous name is not exported at all.
-     *
-     * @type {{ search: DeclarationSearch, hops: string[], target: string } | null}
-     */
-    let starFound = null
 
     for (const statement of exportStatements) {
       if (
@@ -1810,24 +1832,9 @@ export const readSources = (project) => {
         )
 
         if (followed.isFound) {
-          if (!starFound) {
-            starFound = {
-              search: followed,
-              hops: deeper,
-              target,
-            }
-          } else if (
-            followed.file !== starFound.search.file ||
-            followed.name !== starFound.search.name
-          ) {
-            reportAmbiguousExport(
-              absolutePath,
-              importedName,
-              [starFound.search.file, followed.file],
-            )
-          }
+          hops.push(absolutePath, ...deeper)
 
-          continue
+          return followed
         }
 
         if (
@@ -1914,12 +1921,6 @@ export const readSources = (project) => {
           }
         }
       }
-    }
-
-    if (starFound) {
-      hops.push(absolutePath, ...starFound.hops)
-
-      return starFound.search
     }
 
     if (tooDeep) {

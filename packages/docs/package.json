@@ -39,6 +39,7 @@
     "@vitejs/plugin-react": "6.0.1",
     "@vitest/browser": "^4.1.12",
     "@vitest/browser-playwright": "^4.1.12",
+    "dom-accessibility-api": "0.6.3",
     "playwright": "^1.61.1",
     "quickpickle": "^1.11.2",
     "reg-keygen-git-hash-plugin": "^0.14.2",

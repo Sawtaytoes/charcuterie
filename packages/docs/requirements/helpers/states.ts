@@ -1,3 +1,4 @@
+import { computeAccessibleName } from "dom-accessibility-api"
 import { expect, waitFor } from "storybook/test"
 
 import {
@@ -95,26 +96,61 @@ export const expectVisible = async (
 }
 
 /**
- * Nothing on the page has this role, or this role and name. Waits,
- * because a closing panel leaves on the next frame; a panel that never
- * leaves fails at the wait's timeout.
+ * Every element with this role, or this role and name, in the
+ * document, hidden ones included. A closing panel is `inert` and
+ * `aria-hidden` while it animates out, so a query of the accessibility
+ * tree alone would call a panel that never leaves "gone".
  */
-export const expectAbsent = async (
+const inDocument = (
+  world: RequirementsWorld,
+  role: Role,
+  name?: string,
+) =>
+  scopeOf(world)
+    .queryAllByRole(role, { hidden: true })
+    .filter(
+      // Testing Library names a hidden element "", so the name is
+      // computed here with hidden content included.
+      (element) =>
+        name === undefined ||
+        computeAccessibleName(element, { hidden: true }) ===
+          name,
+    )
+
+const describeMatches = (role: Role, name?: string) =>
+  name === undefined
+    ? `every ${role} in the document`
+    : `every ${role} named "${name}" in the document`
+
+/**
+ * Nothing in the document has this role and name, now. Checked once:
+ * a wait would let an element that appears and then leaves pass.
+ */
+export const expectAbsent = (
   world: RequirementsWorld,
   role: Role,
   name?: string,
 ) => {
-  const scope = scopeOf(world)
+  expect(
+    inDocument(world, role, name),
+    describeMatches(role, name),
+  ).toHaveLength(0)
+}
 
+/**
+ * The panel has left the document. Waits, because a closing panel
+ * leaves after its exit; one that never leaves fails at the wait's
+ * timeout.
+ */
+export const expectClosed = async (
+  world: RequirementsWorld,
+  role: Role,
+  name?: string,
+) => {
   await waitFor(() =>
     expect(
-      scope.queryAllByRole(
-        role,
-        name === undefined ? {} : { name },
-      ),
-      name === undefined
-        ? `every ${role} on the page`
-        : `every ${role} named "${name}" on the page`,
+      inDocument(world, role, name),
+      describeMatches(role, name),
     ).toHaveLength(0),
   )
 }
