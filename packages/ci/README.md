@@ -82,6 +82,27 @@ file, because the package is not published (see above):
 - run: node .charcuterie-lint/packages/ci/src/cli/docsLint.js --base "${{ github.event.pull_request.base.sha }}"
 ```
 
+### Which runner the docs workflows use
+
+`shared-docs-only-changes.yml` (job `detect`) and `shared-docs-lint.yml` (job
+`decisionRecords`) run on `ubuntu-latest` unless the caller passes `runsOn`, a JSON list of
+runner labels. A repo that has its own runner lane passes that lane, so its short docs jobs
+do not land on the shared runner:
+
+```yaml
+changes:
+  uses: sawtaytoes/charcuterie/.github/workflows/shared-docs-only-changes.yml@workflows-v1
+  with:
+    runsOn: '["pulsen-boot"]'
+docs:
+  uses: sawtaytoes/charcuterie/.github/workflows/shared-docs-lint.yml@workflows-v1
+  with:
+    charcuterieRepository: sawtaytoes/charcuterie
+    runsOn: '["pulsen-boot"]'
+```
+
+The lane must have Git and Node, because both jobs run shell and `actions/checkout`.
+
 ## ⚠️ Lint changed files, not the whole tree
 
 That is why the no-argument mode is the changed-files mode. Roughly a fifth of existing

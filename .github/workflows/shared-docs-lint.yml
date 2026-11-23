@@ -14,6 +14,8 @@
 #     uses: sawtaytoes/charcuterie/.github/workflows/shared-docs-lint.yml@workflows-v1
 #     with:
 #       charcuterieRepository: sawtaytoes/charcuterie
+#       # Optional: a repo with its own runner lane keeps this job there.
+#       runsOn: '["pulsen-boot"]'
 #
 # ⚠️ The linter runs FROM A CHECKOUT, not from npm. `@charcuterie/ci` is not
 # published: npm will not let you configure a trusted publisher for a package
@@ -45,10 +47,19 @@ on:
         type: string
         required: false
         default: workflows-v1
+      runsOn:
+        description: >-
+          JSON list of runner labels for the job. The default keeps the job on
+          the shared `ubuntu-latest` runners. A caller with its own lane passes
+          that lane, e.g. `'["pulsen-boot"]'`, so its jobs stay off the shared
+          runner.
+        type: string
+        required: false
+        default: '["ubuntu-latest"]'
 
 jobs:
   decisionRecords:
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(inputs.runsOn || '["ubuntu-latest"]') }}
 
     steps:
       - uses: actions/checkout@v7
