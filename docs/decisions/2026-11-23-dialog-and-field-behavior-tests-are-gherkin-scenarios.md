@@ -47,7 +47,7 @@ matcher is found once. The `required` helper's rejection test showed that
 `toBeRequired()` passes on `aria-required` alone. The old Field test used it, so a field
 that lost its native `required` passed. The scenario now fails on that change.
 
-Five planted defects were run against both suites:
+Six planted defects were run against both suites:
 
 | Defect | Plain tests | Requirements |
 | --- | --- | --- |

@@ -56,6 +56,7 @@ Feature: Dialog
       And there is no button named "Close"
       When I press Escape
       Then the dialog named "This erases eight completed titles" is visible
+      And the button named "Keep the titles" is accessible by role and name
       When I click the button named "Keep the titles"
       Then every dialog has closed
 

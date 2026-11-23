@@ -96,6 +96,58 @@ export const expectVisible = async (
 }
 
 /**
+ * The name a hidden element would have if it were shown. The name
+ * computation skips a root that is `aria-hidden`, so its label is read
+ * here from the parts it would come from. Nothing in the DOM changes:
+ * a helper that waits observes DOM mutations, and changing an
+ * attribute would wake it again, forever.
+ */
+const shownNameOf = (element: Element) => {
+  const label = element.getAttribute("aria-label")?.trim()
+
+  if (label) {
+    return label
+  }
+
+  const labelledBy = element.getAttribute("aria-labelledby")
+
+  if (labelledBy) {
+    return labelledBy
+      .split(/\s+/)
+      .map((id) => document.getElementById(id))
+      .filter((part) => part !== null)
+      .map((part) => computeAccessibleName(part))
+      .join(" ")
+      .trim()
+  }
+
+  return [...element.childNodes]
+    .map((child) =>
+      child instanceof Element
+        ? computeAccessibleName(child)
+        : (child.textContent ?? ""),
+    )
+    .join("")
+    .replace(/\s+/g, " ")
+    .trim()
+}
+
+/**
+ * The names an element can have, hidden or not. A visible element
+ * keeps its own name, without decorative children such as an
+ * `aria-hidden` asterisk. A hidden one is named as it would be if it
+ * were shown.
+ */
+const namesOf = (element: Element) =>
+  new Set([
+    computeAccessibleName(element),
+    computeAccessibleName(element, { hidden: true }),
+    ...(element.getAttribute("aria-hidden") === "true"
+      ? [shownNameOf(element)]
+      : []),
+  ])
+
+/**
  * Every element with this role, or this role and name, in the
  * document, hidden ones included. A closing panel is `inert` and
  * `aria-hidden` while it animates out, so a query of the accessibility
@@ -110,11 +162,10 @@ const inDocument = (
     .queryAllByRole(role, { hidden: true })
     .filter(
       // Testing Library names a hidden element "", so the name is
-      // computed here with hidden content included.
-      (element) =>
-        name === undefined ||
-        computeAccessibleName(element, { hidden: true }) ===
-          name,
+      // computed here, every way it could read. An element matches
+      // when any of them is the name, so absence errs toward failing.
+      (element: HTMLElement) =>
+        name === undefined || namesOf(element).has(name),
     )
 
 const describeMatches = (role: Role, name?: string) =>
@@ -164,11 +215,7 @@ export const expectHiddenFromAssistiveTechnology = (
   role: Role,
   name: string,
 ) => {
-  const scope = scopeOf(world)
-  const matches = scope.queryAllByRole(role, {
-    hidden: true,
-    name,
-  })
+  const matches = inDocument(world, role, name)
 
   if (matches.length !== 1) {
     throw new Error(

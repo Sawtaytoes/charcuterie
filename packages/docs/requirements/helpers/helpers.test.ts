@@ -406,6 +406,28 @@ describe("presence", () => {
     expectAbsent(world, "dialog", "Another")
   })
 
+  test("expectAbsent rejects an element whose name has a hidden decorative part", (context) => {
+    const world = makeWorld(
+      context,
+      '<button type="button">Close <span aria-hidden="true">×</span></button><label for="f1">Disc label <span aria-hidden="true">*</span></label><input id="f1" type="text" required /><div role="dialog" aria-labelledby="h1" aria-hidden="true" inert><h2 id="h1">Title <span aria-hidden="true">*</span></h2></div>',
+    )
+
+    expect(() =>
+      expectAbsent(world, "button", "Close"),
+    ).toThrow(/every button named "Close"/)
+    expect(() =>
+      expectAbsent(world, "textbox", "Disc label"),
+    ).toThrow(/every textbox named "Disc label"/)
+    expect(() =>
+      expectAbsent(world, "dialog", "Title"),
+    ).toThrow(/every dialog named "Title"/)
+    expect(
+      document
+        .querySelector('[role="dialog"]')
+        ?.getAttribute("aria-hidden"),
+    ).toBe("true")
+  })
+
   test("expectAbsent does not wait for an element to leave", (context) => {
     const world = makeWorld(
       context,
@@ -448,7 +470,7 @@ describe("presence", () => {
   test("expectHiddenFromAssistiveTechnology rejects a live dialog", (context) => {
     const world = makeWorld(
       context,
-      '<div role="dialog" aria-label="Live"></div><div role="dialog" aria-label="Lower" inert></div>',
+      '<div role="dialog" aria-label="Live"></div><div role="dialog" aria-label="Lower" inert></div><div role="dialog" aria-label="Hidden" aria-hidden="true"></div>',
     )
 
     expect(() =>
@@ -462,6 +484,11 @@ describe("presence", () => {
       world,
       "dialog",
       "Lower",
+    )
+    expectHiddenFromAssistiveTechnology(
+      world,
+      "dialog",
+      "Hidden",
     )
   })
 
