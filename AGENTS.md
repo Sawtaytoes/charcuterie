@@ -204,15 +204,16 @@ steps are in `steps/controls.steps.ts`, each component's fixtures are in
   requirement, revert; do not relock. After an intended change, run
   `pnpm requirements:lock` and copy the IDs it prints into the pull request.
 - **To debug a failing step, run the `Trace:` command printed under the failure**, for
-  example `pnpm requirements:which button.feature:41`. It names the definition and every
-  file the step reaches.
+  example `pnpm requirements:which button.feature:41`. It names the definition, the
+  helpers it calls, and the files its step file loads.
 
 Requirement scenarios run once, in `wide`. A scenario tagged `@responsive` runs in all four
 windows ([locked IDs](docs/decisions/2026-11-22-requirements-are-locked-by-id-and-checked-before-the-browser.md),
 [one window](docs/decisions/2026-11-22-requirement-scenarios-run-in-one-window-unless-tagged-responsive.md)).
 This is the scoped exception to the `.test.tsx` convention below
 ([Button](docs/decisions/2026-10-14-button-behavior-tests-are-gherkin-scenarios.md),
-[Dialog and Field](docs/decisions/2026-11-23-dialog-and-field-behavior-tests-are-gherkin-scenarios.md)).
+[Dialog and Field](docs/decisions/2026-11-23-dialog-and-field-behavior-tests-are-gherkin-scenarios.md),
+[file-level lock](docs/decisions/2026-11-23-the-requirements-lock-hashes-files-from-the-bundler-graph.md)).
 
 `packages/ui/src/<Name>/` holds `<Name>.tsx`, `<Name>.stories.tsx`, `<Name>.mdx`,
 `<Name>.test.tsx` as siblings — matching mux-magic. Shared helpers sit at `src/` root with a

@@ -82,7 +82,7 @@ export const analyzeProject = async (rootDirectory) => {
     }
   }
 
-  const sources = readSources(project)
+  const sources = await readSources(project)
 
   const registry = new ParameterTypeRegistry()
 

@@ -5,9 +5,9 @@
  * at runtime.
  *
  * Given a feature line, a requirement ID, or step text, this prints
- * the matched definition with its file:line, then every helper,
- * World method, and fixture file that definition reaches. An agent
- * debugging a failure opens those files and no others.
+ * the matched definition with its file:line, the helpers it calls
+ * with theirs, and the files its step file loads beyond the runtime
+ * every scenario shares. An agent debugging a failure starts there.
  *
  * @typedef {import("./check.js").Analysis} Analysis
  * @typedef {import("./check.js").StepMatch} StepMatch
@@ -31,24 +31,29 @@ const describeDefinition = (
     lines.push(`${indent}            ${definition.summary}`)
   }
 
-  const reached = [...analysis.sources.reachOf(definition)]
-    .filter((key) => key !== definition.key)
-    .map((key) => analysis.sources.units.get(key))
-    .filter((unit) => unit !== undefined)
+  for (const [index, call] of analysis.sources
+    .callsOf(definition)
+    .entries()) {
+    const label = index === 0 ? "calls     " : "          "
+
+    lines.push(
+      `${indent}${label}  ${call.file}:${call.line}  ${call.name}`,
+    )
+  }
+
+  const loaded = [...analysis.sources.reachOf(definition)]
+    .filter((key) => key !== definition.file)
     .sort(
       (left, right) =>
-        Number(left.isExternal) -
-          Number(right.isExternal) ||
-        left.key.localeCompare(right.key),
+        Number(left.startsWith("..")) -
+          Number(right.startsWith("..")) ||
+        left.localeCompare(right),
     )
 
-  for (const [index, unit] of reached.entries()) {
-    const label = index === 0 ? "reaches   " : "          "
-    const name = unit.isExternal
-      ? `${unit.file} (fixture or library file)`
-      : `${unit.file}:${unit.line}  ${unit.key.split(" › ")[1] ?? unit.key}`
+  for (const [index, key] of loaded.entries()) {
+    const label = index === 0 ? "loads     " : "          "
 
-    lines.push(`${indent}${label}  ${name}`)
+    lines.push(`${indent}${label}  ${key}`)
   }
 
   return lines
@@ -239,14 +244,14 @@ export const traceIndexJson = (analysis) =>
       kind: definition.kind,
       expression: definition.expression,
       summary: definition.summary,
-      reaches: [...analysis.sources.reachOf(definition)]
-        .filter((key) => key !== definition.key)
-        .map((key) => {
-          const unit = analysis.sources.units.get(key)
-
-          return unit?.isExternal
-            ? unit.file
-            : `${unit?.file}:${unit?.line} ${key.split(" › ")[1] ?? key}`
-        }),
+      calls: analysis.sources
+        .callsOf(definition)
+        .map(
+          (call) =>
+            `${call.file}:${call.line} ${call.name}`,
+        ),
+      loads: [
+        ...analysis.sources.reachOf(definition),
+      ].filter((key) => key !== definition.file),
     })),
   }))

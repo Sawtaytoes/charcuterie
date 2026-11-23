@@ -14,7 +14,7 @@ and [one window unless `@responsive`](decisions/2026-11-22-requirement-scenarios
 
 ```sh
 pnpm requirements:check                  # lint features and steps, verify the lock (seconds, no browser)
-pnpm requirements:which button.feature:41  # what runs for this line, and every file it reaches
+pnpm requirements:which button.feature:41  # what runs for this line: helpers it calls, files it loads
 pnpm requirements:which REQ-UI-003       # the same, for each step of one requirement
 pnpm requirements:index                  # every step traced; add --json for tools
 pnpm requirements:lock                   # rewrite the lock after an intended change
@@ -125,94 +125,91 @@ parallel the same way more test files do.
 
 `requirements.lock.json` records each requirement's steps, including their data tables and
 doc strings; the prose under its Feature, Rule, and Scenario (rewrapping is not a change);
-its tags; and every code unit those steps reach:
+its tags; and every file those steps load. esbuild, the compiler Vite uses, finds the
+files: the checker asks it for the import graph and hashes each file it lists. Nothing in
+the checker resolves an import by hand.
 
-- the step definitions, the helpers and World members they call, and each module's imports
-  and top-level statements;
-- the fixtures they import from outside this directory, one export at a time, such as
-  the `Playground` story and `expectAgentDrivable`;
-- the runtime every scenario passes through, hashed as whole files: `index.ts`,
-  `support/` (the World, the step wrapper, and the parameter types), the requirements
-  config, the Vitest requirement configs, `vitest.ui.setup.ts`, and the
-  `package.json` of the `storybook-config` and `vitest-config` packages they import (only
-  the fields that choose which code runs, so a release's version bump is not a change); plus whatever those
-  runtime files import by relative path, such as `.storybook/preview.tsx`;
-- the top-level code of every step file, and of every module a step file or runtime file
-  imports, directly or not, because `index.ts` loads them all for every scenario. Workspace
-  packages listed in `packages` are followed by name through their `exports`. A step file
-  must define at least one step; setup code goes in `support/`.
+- **`shared`** lists the files every scenario loads, once: `index.ts`, `support/` (the
+  World, the step wrapper, and the parameter types), the requirements config, the Vitest
+  configs (the root `vitest.config.ts` included), `vitest.ui.setup.ts`, the `package.json`
+  of the `storybook-config` and `vitest-config` packages, and everything those files
+  import, such as `.storybook/preview.tsx` and `tokens.css`. The requirements config is
+  always shared, so moving a story into `subjects` changes every requirement.
+- **Each requirement's `code`** lists the files its step files load beyond `shared`: the
+  step files whose definitions its steps match, their helpers, and the stories and
+  assertions they import from outside this directory, such as `expectAgentDrivable.ts`.
+- **`code` at the top level** holds each file's hash once.
 
-If you change any of them, the lock becomes stale and `requirements:check` fails, naming
-each requirement and the code that changed. This catches a weakened assertion even when no
-English changed.
+If you change any of these files, the lock becomes stale and `requirements:check` fails,
+naming each requirement and the file that changed. A change to a shared file is reported
+once, as `Every requirement`. This catches a weakened assertion even when no English
+changed.
 
 **If you did not mean to change a requirement, revert the edit. Do not relock.** When the
 change is intended:
 
 1. Run `pnpm requirements:lock`. It prints the requirements that changed and why, as a
    Markdown list. For example, `- **REQ-UI-002** changed: <scenario>`, followed by
-   `- code changed: helpers/states.ts › expectDisabled`.
+   `- code changed: helpers/states.ts`.
 2. Copy that list into the pull request description. The lock's `digests` map has one
-   line per requirement ID. Each line hashes the whole entry: the spec, tags, status, and
-   code. So the lock's own diff also names each changed requirement. The reviewer checks each listed ID
-   against the requirement it names. CI writes the same list to the job summary.
+   line per requirement ID. Each line hashes the whole entry: the spec, tags, status, the
+   shared files, and its own files. So the lock's own diff also names each changed
+   requirement. The reviewer checks each listed ID against the requirement it names. CI
+   writes the same list to the job summary.
 3. To remove a requirement, delete its scenario and run
    `pnpm requirements:lock --retire REQ-UI-005 --reason "<why>"`. Its ID can never be
    reused. On a pull request, CI compares the lock with the base commit and fails if a
    requirement or a retirement entry disappears, or if a retired ID comes back.
 
-Comments and formatting do not change the lock, in TypeScript, JSON, or CSS. The
-components under test do not change it either: `subjects` in `requirements.config.json`
-names them, and the lock neither hashes nor follows them. A story change does change it,
-for the requirements that use that story. Two known false positives remain. Storybook
-requires `storySort` inline in `.storybook/preview.tsx`, and the test runner imports that
-file, so reordering the sidebar marks every requirement. And a new, removed, or reordered
-import or re-export line in any module the scenarios load marks every requirement, because
-that module's top-level code runs for all of them. A type annotation inside a function
-also counts as code, so changing it marks the requirements that reach that function. A
-top-level value that spreads, reads a property, or does arithmetic counts as code too, even
-in a story no scenario uses, so adding one to a story file marks every requirement that
-loads that file.
-Relock for any of these and say so in the pull request.
+Code is hashed as esbuild compiles it, so comments, formatting, and types do not change the
+lock. CSS is hashed without comments and layout, and JSON by value. A `package.json`
+counts only for the fields that choose which code runs, so a release's version bump is not
+a change. An unused value import still counts, because importing a module runs its
+top-level code.
 
-The lock is a tripwire, not a proof. It reads code by name without running it, and each
-review of it has found new ways around it. Reading the lock diff and the job summary in
-review is still the final check. A top-level statement that may run code joins its module's `‹module›` unit. That
-includes an initializer that calls a function, assigns a value, reads a property (a
-getter), or builds a template with a value (`toString`). It also includes a class whose `extends`
-clause calls or reads something, a decorator, a computed member name, a static initializer,
-and a top-level `using` declaration. Only
-literals, names, functions, and object and array literals built from them stay out.
-Editing it marks every requirement that reaches that module, and every requirement when
-the module is a step file. A barrel's own top-level code counts when a name passes through it, and renamed,
-default, and namespace re-exports are followed to the code behind them. A dynamic
-`import()` must use a string literal. It is followed like a namespace import, and the
-top-level code of every module its target imports counts, as for a static import. Only the
-setup file may call `import.meta.glob`, in any module the lock reaches. A
-side-effect import (`import "./patch.ts"`) is followed, and so is `import {} from` or an
-import of inline types only, which load the module the same way. A `@jsx` pragma comment
-is rejected, because it changes which module compiles the file's JSX. The check matches
-the text anywhere in the file, so do not write `@jsx` in a comment either. A relative
-import must name one file: if `./queries` could load both `queries.js` and `queries.ts`,
-the check fails, because Vite tries `.js` first. Root-absolute (`/…`) and `#` subpath
-imports are rejected, and so is a directory import whose directory has a `package.json`. A
-named re-export wins over `export *` wherever it is written, an `export declare` counts as
-nothing, a JSON file supplies its top-level keys to `export *` and is hashed whole, a type-only local export does not hide the value an `export *` supplies, and a name that passes through more than eight re-exports fails the check. Malformed JSON that any `export *` names fails the check, and so does a `package.json` that is valid JSON but not an object, such as `null`. Two `export *` lines that supply one name from different declarations are not reported: JavaScript exports neither, so the scenarios fail when the module loads. A step
-definition's code must be an inline function. Any relative import in a module the
-lock reaches must resolve, or the check fails. A lazy or conditional
-`import.meta.glob` is rejected. A lock in the wrong shape fails, and CI finds the base
-commit's lock through the base commit's own config.
+The walk stops at three kinds of import:
 
-What the lock does not see: npm package versions (the pnpm lockfile covers those);
-workspace packages not listed in `packages`, imported by name; the
-root `vitest.config.ts`, `package.json` scripts, and the CI workflow (code review covers
-those); a Vitest setup file named only by a string path, unless it is listed in `runtime`;
-`tsconfig.json` files; files a CSS `@import` loads; the order of scenarios in a feature
-file; a move of the whole
-requirements directory, which also changes `--root` in `package.json`; and code reached
-only through dynamic property access, `eval`, or an aliased step function. The walker matches names, not bindings, so it can also
-list a same-named function that a step does not really call; that errs toward reporting a
-change.
+- the components under test, which `subjects` in `requirements.config.json` names (the
+  `ui` components and their CSS, and the `logic` and `tokens` packages they build on). A
+  component change is not a requirement change.
+- npm packages: anything resolved inside `node_modules`. The pnpm lockfile covers their
+  versions. Workspace packages resolve through their `node_modules` link to their source,
+  so they are followed.
+- a package's build output that is not built yet, such as `@charcuterie/tokens/theme.css`.
+
+Adding a component's feature, step file, and stories changes no existing requirement. A
+change to a story file marks the requirements whose step file imports it. A change to a
+helper marks every requirement whose step files import that helper. Today every
+requirement uses `controls.steps.ts`, which imports every helper, so a helper change marks
+all of them. Split `controls.steps.ts` by concern if that becomes noise.
+
+One attribution gap is known. `index.ts` loads every step file for every scenario, so a
+top-level statement in `dialog.steps.ts` also runs during the Button scenarios. The lock
+still goes stale, but it names only the Dialog requirements. A step file must define at
+least one step; setup code goes in `support/`.
+
+Other rules the check enforces on every file the scenarios load, inside this directory or
+not:
+
+- A dynamic `import()` must use a string literal, and only the setup file may call
+  `import.meta.glob`. A lazy or conditional `import.meta.glob` in the setup file is
+  rejected too.
+- A `@jsx` pragma comment is rejected, because it changes which module compiles the
+  file's JSX. The check matches the text anywhere in the file, so do not write `@jsx` in
+  a comment either.
+- Only runtime files may import a hook or `defineParameterType` from `quickpickle`.
+- Every relative import must resolve, and every loaded file must parse.
+- A step definition's code must be an inline function.
+
+A lock in the wrong shape fails, and CI finds the base commit's lock through the base
+commit's own config. A version 1 lock on the base branch is still read.
+
+The lock is a tripwire, not a proof. What it does not see: npm package versions;
+`package.json` scripts and the CI workflow (code review covers those); a Vitest setup file
+named only by a string path, unless it is listed in `runtime`; `tsconfig.json` files; the
+order of scenarios in a feature file; a move of the whole requirements directory, which
+also changes `--root` in `package.json`; and code reached only through `eval`. Reading
+the lock diff and the job summary in review is still the final check.
 
 ## Reading a failure
 
@@ -229,8 +226,8 @@ Trace: pnpm requirements:which requirements/button.feature:41
 
 The first line names the requirement. The `Error:` line names the step and its feature
 line. A step timeout comes from QuickPickle, outside the wrapper, so it has no
-`Step definition:` line; run `pnpm requirements:which` on its feature line. The stack names the helper that failed. Run the `Trace:` command to list every file
-that step reaches; open those files and no others. If the code is right and the
+`Step definition:` line; run `pnpm requirements:which` on its feature line. The stack names the helper that failed. Run the `Trace:` command to list the helpers
+that step calls, with their lines, and the files its step file loads. If the code is right and the
 requirement is wrong, change the scenario. That is a requirement change: ask the owner,
 and report it in the pull request.
 
