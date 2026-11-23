@@ -22,7 +22,11 @@
    and the workspace libraries they build on (`ui`, `logic`, `tokens`). Anything resolved
    inside `node_modules` is not followed. Other workspace packages are followed through
    their `node_modules` link.
-5. **Every loaded file follows the rules.** The `quickpickle` hook ban, the glob ban, the
+5. **A file read another way is followed the way Vite loads it.** `?raw`, `?url`, and
+   `new URL` data are hashed byte for byte, a subject included. `?worker`, `?inline`, and
+   a `new URL` worker are built as entries, so what they import counts. A workspace
+   `package.json` whose `exports` chose an import is hashed with it.
+6. **Every loaded file follows the rules.** The `quickpickle` hook ban, the glob ban, the
    JSX pragma ban, and the string-literal `import()` rule apply to every file the
    scenarios load, not only to files in the requirements directory.
 

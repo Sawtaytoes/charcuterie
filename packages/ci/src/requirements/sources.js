@@ -61,20 +61,6 @@ import { readGraph } from "./graph.js"
 const stepKinds = new Set(["Given", "When", "Then"])
 
 /**
- * CSS without comments and layout, so a comment or a reflow does not
- * change a requirement. Strings are rare in token sheets and kept.
- *
- * @param {string} text
- */
-const normalizeCss = (text) =>
-  text
-    .replace(/\/\*[\s\S]*?\*\//g, "")
-    .replace(/\s+/g, " ")
-    .replace(/\s*([{};:,>])\s*/g, "$1")
-    .replace(/;}/g, "}")
-    .trim()
-
-/**
  * `JSON.parse` after dropping a byte-order mark, which Vite accepts.
  *
  * @param {string} text
@@ -182,7 +168,10 @@ const loaders = /** @type {const} */ ({
 
 /**
  * A file's hash, taken from what runs rather than what is written.
- * A file read as text or a URL (`isRaw`) is hashed byte for byte.
+ * A file read as bytes or a URL (`as: "bytes"`) is hashed byte for
+ * byte. A `package.json` that chose an import's target, or that a
+ * runtime list names (`as: "manifest"`), counts only for the fields
+ * that choose code; imported as data, it counts whole.
  *
  * Code is hashed as esbuild compiles it, the same compiler Vite uses
  * for TypeScript: comments, formatting, and types are gone, so a
@@ -190,16 +179,19 @@ const loaders = /** @type {const} */ ({
  * changed. `verbatimModuleSyntax` keeps every value import, even an
  * unused one, because importing a module runs its top-level code.
  *
+ * CSS is hashed as esbuild prints it, which drops comments and layout
+ * but keeps selectors and strings exact.
+ *
  * @param {string} absolutePath
- * @param {boolean} [isRaw]
+ * @param {"code" | "bytes" | "manifest"} [as]
  * @returns {string}
  */
-const hashFile = (absolutePath, isRaw = false) => {
+const hashFile = (absolutePath, as = "code") => {
   const extension = extname(absolutePath)
   const loader =
     loaders[/** @type {keyof typeof loaders} */ (extension)]
 
-  if (isRaw) {
+  if (as === "bytes") {
     return createHash("sha256")
       .update(readFileSync(absolutePath))
       .digest("hex")
@@ -223,11 +215,15 @@ const hashFile = (absolutePath, isRaw = false) => {
 
   if (extension === ".css") {
     return hashText(
-      normalizeCss(readFileSync(absolutePath, "utf8")),
+      transformSync(readFileSync(absolutePath, "utf8"), {
+        loader: "css",
+        legalComments: "none",
+        sourcefile: absolutePath,
+      }).code,
     )
   }
 
-  if (basename(absolutePath) === "package.json") {
+  if (as === "manifest") {
     return hashText(
       packageManifestText(
         readFileSync(absolutePath, "utf8"),
@@ -263,6 +259,9 @@ const parseSource = (absolutePath, text) =>
       ? ts.ScriptKind.TSX
       : ts.ScriptKind.TS,
   )
+
+/** Runtime files that are graph entries: code and stylesheets. */
+const graphEntry = /\.(?:[cm]?[jt]sx?|css)$/
 
 /** Files the walker reads as modules: TypeScript and JavaScript. */
 const codeFile = /\.[cm]?[jt]sx?$/
@@ -1048,9 +1047,10 @@ export const readSources = async (project) => {
     visit(module.sourceFile)
   }
 
+  // Runtime stylesheets are entries too, so their `@import`s count.
   const runtimeCode = [...runtimeFiles].filter(
     (file) =>
-      codeFile.test(file) &&
+      graphEntry.test(file) &&
       existsSync(resolve(root, file)),
   )
   const graph = await readGraph(
@@ -1074,7 +1074,7 @@ export const readSources = async (project) => {
       continue
     }
 
-    if (codeFile.test(file)) {
+    if (graphEntry.test(file)) {
       for (const loaded of graph.closureOf(file)) {
         shared.add(loaded)
       }
@@ -1126,7 +1126,13 @@ export const readSources = async (project) => {
     try {
       hash = hashFile(
         absolutePath,
-        graph.rawFiles.has(absolutePath),
+        graph.rawFiles.has(absolutePath)
+          ? "bytes"
+          : graph.manifests.has(absolutePath) ||
+              (runtimeFiles.has(key) &&
+                basename(absolutePath) === "package.json")
+            ? "manifest"
+            : "code",
       )
     } catch (error) {
       problems.push({
@@ -1174,11 +1180,78 @@ export const readSources = async (project) => {
     resolveRelative(module.absolutePath, specifier)
 
   /**
+   * Where a name is declared, following re-exports. Only the trace
+   * uses this, to print a line; the lock does not depend on it.
+   *
+   * @param {string} path
+   * @param {string} name
+   * @param {number} [depth]
+   * @returns {{ path: string, line: number } | null}
+   */
+  const declarationOf = (path, name, depth = 0) => {
+    if (
+      depth > 8 ||
+      !codeFile.test(path) ||
+      !existsSync(path)
+    ) {
+      return null
+    }
+
+    const module = moduleAt(path)
+    const declaration = module.declarations.get(name)
+
+    if (declaration) {
+      return {
+        path,
+        line: lineOf(module.sourceFile, declaration).line,
+      }
+    }
+
+    for (const statement of module.sourceFile.statements) {
+      if (
+        !ts.isExportDeclaration(statement) ||
+        !statement.moduleSpecifier ||
+        !ts.isStringLiteral(statement.moduleSpecifier)
+      ) {
+        continue
+      }
+
+      const next = resolveImport(
+        module,
+        statement.moduleSpecifier.text,
+      )
+      const clause = statement.exportClause
+      const element =
+        clause && ts.isNamedExports(clause)
+          ? clause.elements.find(
+              (candidate) => candidate.name.text === name,
+            )
+          : undefined
+
+      if (!next || (clause && !element)) {
+        continue
+      }
+
+      const found = declarationOf(
+        next,
+        element?.propertyName?.text ?? name,
+        depth + 1,
+      )
+
+      if (found) {
+        return found
+      }
+    }
+
+    return null
+  }
+
+  /**
    * The imported functions a definition calls directly, each with the
    * line that declares it, so the trace can name them.
    *
    * @param {StepDefinition} definition
-   * @returns {{ name: string, file: string, line: number }[]}
+   * @returns {{ name: string, file: string, line: number | null }[]}
    */
   const callsOf = (definition) => {
     const node = definitionNodes.get(definition.key)
@@ -1190,7 +1263,7 @@ export const readSources = async (project) => {
       return []
     }
 
-    /** @type {Map<string, { name: string, file: string, line: number }>} */
+    /** @type {Map<string, { name: string, file: string, line: number | null }>} */
     const calls = new Map()
 
     /** @param {ts.Node} child */
@@ -1212,21 +1285,15 @@ export const readSources = async (project) => {
           target &&
           !calls.has(child.expression.text)
         ) {
-          const declaration = codeFile.test(target)
-            ? moduleAt(target).declarations.get(
-                imported.importedName,
-              )
-            : undefined
+          const found = declarationOf(
+            target,
+            imported.importedName,
+          )
 
           calls.set(child.expression.text, {
             name: imported.importedName,
-            file: toKey(target),
-            line: declaration
-              ? lineOf(
-                  moduleAt(target).sourceFile,
-                  declaration,
-                ).line
-              : 1,
+            file: toKey(found?.path ?? target),
+            line: found?.line ?? null,
           })
         }
       }

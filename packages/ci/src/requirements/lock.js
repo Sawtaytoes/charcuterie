@@ -128,8 +128,25 @@ export const parseLock = (text, source) => {
     errors.push("version must be 2")
   }
 
-  if (lock.version === 2 && !Array.isArray(lock.shared)) {
-    errors.push('"shared" must be an array')
+  if (lock.version === 2) {
+    const shared = Array.isArray(lock.shared)
+      ? lock.shared
+      : null
+    const code = isRecord(lock.code)
+      ? /** @type {Record<string, unknown>} */ (lock.code)
+      : {}
+
+    if (
+      !shared ||
+      shared.some(
+        (key) => typeof key !== "string" || !(key in code),
+      ) ||
+      new Set(shared).size !== shared.length
+    ) {
+      errors.push(
+        '"shared" must list unique files, each hashed in "code"',
+      )
+    }
   }
 
   for (const key of ["requirements", "code", "retired"]) {

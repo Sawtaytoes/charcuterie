@@ -1563,6 +1563,17 @@ defineParameterType({ name: "lamp", regexp: /desk|floor/, transformer: (name: st
       "REQ-T-1 now loads: helpers/patch.ts",
       "REQ-T-1 code changed: steps/lamp.steps.ts",
     ])
+
+    // A tsconfig with verbatimModuleSyntax keeps an unused named
+    // import, which runs the module, so the hash keeps it too.
+    await writeFile(
+      join(root, "steps/lamp.steps.ts"),
+      `import { turnOn as unused } from "../helpers/lamp.ts"\n${steps}`,
+    )
+
+    expect(await detailsOf(root)).toContain(
+      "REQ-T-1 code changed: steps/lamp.steps.ts",
+    )
   })
 
   test("hashes a fixture outside the root whole, and never a subject", async () => {
@@ -1852,7 +1863,8 @@ export const Desk = { args: { name: "Desk" } }
 
   test("hashes a file imported as text or a URL byte for byte", async () => {
     const root = await lockedLamp({
-      "helpers/lamp.ts": `import template from "../fixtures/template.ts?raw"\n\nexport const page = () => [template, new URL("./data.txt", import.meta.url)]\n${helpers}`,
+      "helpers/lamp.ts": `import template from "../fixtures/template.ts?raw"\n\nexport const page = () => [template, new URL("./data.txt", import.meta.url), new URL("data.json", import.meta.url)]\n${helpers}`,
+      "helpers/data.json": '{ "on": true }\n',
       "fixtures/template.ts": "export const x = 1\n",
       "helpers/data.txt": "on\n",
       "steps/lamp.steps.ts": steps
@@ -1872,11 +1884,297 @@ export const Desk = { args: { name: "Desk" } }
       "// on\nexport const x = 1\n",
     )
     await writeFile(join(root, "helpers/data.txt"), "off\n")
+    await writeFile(
+      join(root, "helpers/data.json"),
+      '{ "on": true }\n\n',
+    )
 
     expect(await detailsOf(root)).toEqual([
       "REQ-T-1 code changed: fixtures/template.ts",
+      "REQ-T-1 code changed: helpers/data.json",
       "REQ-T-1 code changed: helpers/data.txt",
     ])
+  })
+
+  test("follows a worker and an inline stylesheet, and hashes a subject read as text", async () => {
+    const root = await lockedLamp({
+      "requirements.config.json": JSON.stringify({
+        ...config,
+        subjects: ["../ui/*.tsx"],
+      }),
+      "../ui/Example.tsx":
+        "export const Example = () => null\n",
+      "helpers/lamp.ts": `import Worker from "./worker.ts?worker"\nimport css from "./lamp.css?inline"\nimport source from "../../ui/Example.tsx?raw"\nimport UrlWorker from "./url-worker.ts?url"\n\nexport const assets = () => [Worker, css, source, UrlWorker, new Worker(new URL("./other-worker.ts", import.meta.url))]\n${helpers}`,
+      "helpers/worker.ts":
+        'import { reply } from "./child.ts"\n\npostMessage(reply)\n',
+      "helpers/child.ts": "export const reply = 1\n",
+      "helpers/other-worker.ts":
+        'import { reply } from "./other-child.ts"\n\npostMessage(reply)\n',
+      "helpers/other-child.ts": "export const reply = 1\n",
+      "helpers/url-worker.ts": "postMessage(1)\n",
+      "helpers/lamp.css": '@import "./inner.css";\n',
+      "helpers/inner.css": ".lamp { color: red; }\n",
+      "steps/lamp.steps.ts": steps
+        .replace(
+          "turnOn(world, name)",
+          "turnOn(world, name)\n  assets()",
+        )
+        .replace(
+          "import { expectOn,",
+          "import { assets, expectOn,",
+        ),
+    })
+
+    await writeFile(
+      join(root, "helpers/child.ts"),
+      "export const reply = 2\n",
+    )
+    await writeFile(
+      join(root, "helpers/other-child.ts"),
+      "export const reply = 2\n",
+    )
+    await writeFile(
+      join(root, "helpers/inner.css"),
+      ".lamp { color: blue; }\n",
+    )
+    await writeFile(
+      join(root, "../ui/Example.tsx"),
+      "// A note.\nexport const Example = () => null\n",
+    )
+
+    expect(await detailsOf(root)).toEqual([
+      "REQ-T-1 code changed: ../ui/Example.tsx",
+      "REQ-T-1 code changed: helpers/child.ts",
+      "REQ-T-1 code changed: helpers/inner.css",
+      "REQ-T-1 code changed: helpers/other-child.ts",
+    ])
+  })
+
+  test("rejects a root URL, and ignores one in a comment", async () => {
+    const root = await makeProject({
+      "lamp.feature": feature,
+      "helpers/lamp.ts": `// new URL("./missing.txt", import.meta.url)\nexport const asset = () => new URL("/data.txt", import.meta.url)\n${helpers}`,
+      "steps/lamp.steps.ts": steps
+        .replace(
+          "turnOn(world, name)",
+          "turnOn(world, name)\n  asset()",
+        )
+        .replace(
+          "import { expectOn,",
+          "import { asset, expectOn,",
+        ),
+    })
+    const analysis = await analyzeProject(root)
+
+    expect(analysis.problems).toEqual([
+      expect.objectContaining({
+        rule: "unresolved-import",
+        message: expect.stringContaining('"/data.txt"'),
+      }),
+    ])
+  })
+
+  test("a workspace package's exports choose its files, as Vite's conditions do", async () => {
+    const manifest = {
+      name: "@test/kit",
+      version: "1.0.0",
+      exports: {
+        "./a": {
+          development: "./dev.js",
+          import: "./prod.js",
+        },
+        "./first": "./one.js",
+        "./second": "./two.js",
+      },
+    }
+    const root = await lockedLamp({
+      "../kit/package.json": JSON.stringify(manifest),
+      "../kit/dev.js": "export const x = 1\n",
+      "../kit/prod.js": "export const x = 1\n",
+      "../kit/one.js": "export const value = 1\n",
+      "../kit/two.js": "export const value = 2\n",
+    })
+
+    await mkdir(join(root, "../node_modules/@test"), {
+      recursive: true,
+    })
+    await symlink(
+      join(root, "../kit"),
+      join(root, "../node_modules/@test/kit"),
+    )
+    await writeFile(
+      join(root, "helpers/lamp.ts"),
+      `import { x } from "@test/kit/a"\nimport { value as first } from "@test/kit/first"\nimport { value as second } from "@test/kit/second"\n\nexport const kit = () => x + first - second\n${helpers}`,
+    )
+    await writeFile(
+      join(root, "steps/lamp.steps.ts"),
+      steps
+        .replace(
+          "turnOn(world, name)",
+          "turnOn(world, name)\n  kit()",
+        )
+        .replace(
+          "import { expectOn,",
+          "import { kit, expectOn,",
+        ),
+    )
+
+    let analysis = await analyzeProject(root)
+
+    await writeLock(
+      analysis,
+      buildLock(analysis, await readLock(analysis)),
+    )
+
+    expect(
+      (await readLock(analysis)).requirements["REQ-T-1"]
+        ?.code,
+    ).toEqual(
+      expect.arrayContaining([
+        "../kit/dev.js",
+        "../kit/package.json",
+      ]),
+    )
+
+    await writeFile(
+      join(root, "../kit/package.json"),
+      JSON.stringify({
+        ...manifest,
+        exports: {
+          ...manifest.exports,
+          "./first": "./two.js",
+          "./second": "./one.js",
+        },
+      }),
+    )
+
+    expect(await detailsOf(root)).toEqual([
+      "REQ-T-1 code changed: ../kit/package.json",
+    ])
+
+    await writeFile(
+      join(root, "../kit/package.json"),
+      JSON.stringify({ ...manifest, version: "1.0.1" }),
+    )
+    analysis = await analyzeProject(root)
+
+    expect(
+      lockProblems(analysis, await readLock(analysis)),
+    ).toEqual([])
+  })
+
+  test("CSS keeps selectors and strings exact, and a runtime stylesheet's imports count", async () => {
+    const root = await lockedLamp({
+      "requirements.config.json": JSON.stringify({
+        ...config,
+        runtime: [
+          "index.ts",
+          "support/**/*.ts",
+          "runtime.css",
+        ],
+      }),
+      "runtime.css": '@import "./inner.css";\n',
+      "inner.css": 'a :hover { content: "a  b"; }\n',
+    })
+
+    await writeFile(
+      join(root, "inner.css"),
+      'a:hover { content: "a  b"; }\n',
+    )
+
+    expect(await detailsOf(root)).toEqual([
+      "Every requirement code changed: inner.css",
+    ])
+
+    await writeFile(
+      join(root, "inner.css"),
+      'a:hover { content: "a b"; }\n',
+    )
+
+    expect(await detailsOf(root)).toEqual([
+      "Every requirement code changed: inner.css",
+    ])
+  })
+
+  test("a package.json imported as data counts whole", async () => {
+    const root = await lockedLamp({
+      "helpers/lamp.ts": `import manifest from "../fixtures/package.json"\n\nexport const version = () => manifest.version\n${helpers}`,
+      "fixtures/package.json":
+        '{ "name": "lamp", "version": "1.0.0" }\n',
+      "steps/lamp.steps.ts": steps
+        .replace(
+          "turnOn(world, name)",
+          "turnOn(world, name)\n  version()",
+        )
+        .replace(
+          "import { expectOn,",
+          "import { version, expectOn,",
+        ),
+    })
+
+    await writeFile(
+      join(root, "fixtures/package.json"),
+      '{ "name": "lamp", "version": "1.0.1" }\n',
+    )
+
+    expect(await detailsOf(root)).toEqual([
+      "REQ-T-1 code changed: fixtures/package.json",
+    ])
+  })
+
+  test("a changed file changes the digest line of each requirement that loads it", async () => {
+    const root = await lockedLamp()
+    const before = await readLock(
+      await analyzeProject(root),
+    )
+
+    await writeFile(
+      join(root, "helpers/lamp.ts"),
+      helpers.replace("throw new Error(name)", "return"),
+    )
+
+    const analysis = await analyzeProject(root)
+    const after = buildLock(
+      analysis,
+      await readLock(analysis),
+    )
+
+    expect(after.digests?.["REQ-T-1"]).not.toBe(
+      before.digests?.["REQ-T-1"],
+    )
+  })
+
+  test("refuses a shared list that names a file with no hash", () => {
+    const lock = {
+      version: 2,
+      requirements: {},
+      shared: [null, "absent.ts"],
+      code: {},
+      retired: {},
+    }
+
+    expect(() =>
+      parseLock(JSON.stringify(lock), "lock"),
+    ).toThrow(/"shared" must list unique files/)
+  })
+
+  test("the trace follows a re-export to the line that declares the helper", async () => {
+    const root = await makeProject({
+      "lamp.feature": feature,
+      "helpers/lamp.ts": helpers,
+      "helpers/index.ts":
+        '// The barrel.\nexport { expectOn, turnOn } from "./lamp.ts"\n',
+      "steps/lamp.steps.ts": steps.replace(
+        '"../helpers/lamp.ts"',
+        '"../helpers/index.ts"',
+      ),
+    })
+    const trace = traceTarget(
+      await analyzeProject(root),
+      "lamp.feature:9",
+    )
+
+    expect(trace).toContain("helpers/lamp.ts:3  expectOn")
   })
 
   test("still compares with a version 1 lock on the base branch", () => {

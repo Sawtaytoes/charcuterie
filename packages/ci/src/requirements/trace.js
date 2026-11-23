@@ -37,7 +37,7 @@ const describeDefinition = (
     const label = index === 0 ? "calls     " : "          "
 
     lines.push(
-      `${indent}${label}  ${call.file}:${call.line}  ${call.name}`,
+      `${indent}${label}  ${call.line === null ? call.file : `${call.file}:${call.line}`}  ${call.name}`,
     )
   }
 
@@ -246,9 +246,10 @@ export const traceIndexJson = (analysis) =>
       summary: definition.summary,
       calls: analysis.sources
         .callsOf(definition)
-        .map(
-          (call) =>
-            `${call.file}:${call.line} ${call.name}`,
+        .map((call) =>
+          call.line === null
+            ? `${call.file} ${call.name}`
+            : `${call.file}:${call.line} ${call.name}`,
         ),
       loads: [
         ...analysis.sources.reachOf(definition),

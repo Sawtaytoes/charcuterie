@@ -162,12 +162,23 @@ change is intended:
    requirement or a retirement entry disappears, or if a retired ID comes back.
 
 Code is hashed as esbuild compiles it, so comments, formatting, and types do not change the
-lock. A file imported as text or as a URL (`?raw`, `?url`, or
-`new URL("./file", import.meta.url)`) is hashed byte for byte, because its comments are
-part of what the test reads. CSS is hashed without comments and layout, and JSON by value. A `package.json`
-counts only for the fields that choose which code runs, so a release's version bump is not
-a change. An unused value import still counts, because importing a module runs its
-top-level code.
+lock. CSS is hashed as esbuild prints it: comments and layout drop out, but selectors and
+strings stay exact. JSON is hashed by value. An unused value import still counts, because
+a tsconfig with `verbatimModuleSyntax` keeps it, and then it runs the imported module.
+
+Some imports load a file in another way:
+
+- `?raw` and `?url` imports, and `new URL("./data.txt", import.meta.url)`, read the
+  file's bytes or address, so the file is hashed byte for byte, comments included. That
+  holds for a subject too: a test that reads a component as text depends on its bytes.
+- `?worker`, `?inline`, and other queries still compile the file, so it is built as its
+  own entry and what it imports is followed. So is a code file named by `new URL`, such as
+  a worker.
+- `new URL("/…", import.meta.url)` starts at the server root, which the lock cannot
+  follow, so the check rejects it.
+- A `package.json` whose `exports` chose an import's target is hashed with that import,
+  for the fields that choose code. So is a `package.json` listed in `runtime`. A release's
+  version bump is not a change. A `package.json` imported as data counts whole.
 
 The walk stops at three kinds of import:
 
@@ -179,8 +190,9 @@ The walk stops at three kinds of import:
   versions. Workspace packages resolve through their `node_modules` link to their source,
   so they are followed.
 - a package's build output that is not built yet, such as `@charcuterie/tokens/theme.css`.
-  Workspace packages resolve through their `source` export condition, so the lock hashes
-  the source that `pnpm build` compiles into `dist`.
+  Workspace packages resolve with Vite's browser conditions (`development`, `module`,
+  `browser`) plus `source`, so the lock hashes the source that `pnpm build` compiles into
+  `dist`.
 
 Adding a component's feature, step file, and stories changes no existing requirement. A
 change to a story file marks the requirements whose step file imports it. A change to a
@@ -210,9 +222,10 @@ A lock in the wrong shape fails, and CI finds the base commit's lock through the
 commit's own config. A version 1 lock on the base branch is still read.
 
 The lock is a tripwire, not a proof. What it does not see: npm package versions;
+`tsconfig.json` settings that change compiled output, such as `useDefineForClassFields`;
+comments inside a function a test reads with `.toString()`;
 `package.json` scripts and the CI workflow (code review covers those); a Vitest setup file
-named only by a string path, unless it is listed in `runtime`; `tsconfig.json` files; the
-order of scenarios in a feature file; a move of the whole requirements directory, which
+named only by a string path, unless it is listed in `runtime`; the order of scenarios in a feature file; a move of the whole requirements directory, which
 also changes `--root` in `package.json`; and code reached only through `eval`. Reading
 the lock diff and the job summary in review is still the final check.
 
