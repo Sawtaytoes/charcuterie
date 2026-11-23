@@ -162,7 +162,9 @@ change is intended:
    requirement or a retirement entry disappears, or if a retired ID comes back.
 
 Code is hashed as esbuild compiles it, so comments, formatting, and types do not change the
-lock. CSS is hashed without comments and layout, and JSON by value. A `package.json`
+lock. A file imported as text or as a URL (`?raw`, `?url`, or
+`new URL("./file", import.meta.url)`) is hashed byte for byte, because its comments are
+part of what the test reads. CSS is hashed without comments and layout, and JSON by value. A `package.json`
 counts only for the fields that choose which code runs, so a release's version bump is not
 a change. An unused value import still counts, because importing a module runs its
 top-level code.
@@ -171,11 +173,14 @@ The walk stops at three kinds of import:
 
 - the components under test, which `subjects` in `requirements.config.json` names (the
   `ui` components and their CSS, and the `logic` and `tokens` packages they build on). A
-  component change is not a requirement change.
+  component change is not a requirement change. Stories, story helpers, test helpers,
+  and `ui/src/testing/` are excluded from `subjects`, so they are hashed.
 - npm packages: anything resolved inside `node_modules`. The pnpm lockfile covers their
   versions. Workspace packages resolve through their `node_modules` link to their source,
   so they are followed.
 - a package's build output that is not built yet, such as `@charcuterie/tokens/theme.css`.
+  Workspace packages resolve through their `source` export condition, so the lock hashes
+  the source that `pnpm build` compiles into `dist`.
 
 Adding a component's feature, step file, and stories changes no existing requirement. A
 change to a story file marks the requirements whose step file imports it. A change to a

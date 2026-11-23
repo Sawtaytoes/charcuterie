@@ -30,7 +30,9 @@
     "../../logic/src/**",
     "../../tokens/src/**",
     "!../../ui/src/**/*.stories.tsx",
-    "!../../ui/src/**/*.storyHelpers.tsx"
+    "!../../ui/src/**/*.storyHelpers.tsx",
+    "!../../ui/src/**/*.testHelpers.tsx",
+    "!../../ui/src/testing/**"
   ],
   "allowedTags": ["@responsive", "@todo"],
   "pendingTags": ["@todo"],

@@ -182,6 +182,7 @@ const loaders = /** @type {const} */ ({
 
 /**
  * A file's hash, taken from what runs rather than what is written.
+ * A file read as text or a URL (`isRaw`) is hashed byte for byte.
  *
  * Code is hashed as esbuild compiles it, the same compiler Vite uses
  * for TypeScript: comments, formatting, and types are gone, so a
@@ -190,12 +191,20 @@ const loaders = /** @type {const} */ ({
  * unused one, because importing a module runs its top-level code.
  *
  * @param {string} absolutePath
+ * @param {boolean} [isRaw]
  * @returns {string}
  */
-const hashFile = (absolutePath) => {
+const hashFile = (absolutePath, isRaw = false) => {
   const extension = extname(absolutePath)
   const loader =
     loaders[/** @type {keyof typeof loaders} */ (extension)]
+
+  if (isRaw) {
+    return createHash("sha256")
+      .update(readFileSync(absolutePath))
+      .digest("hex")
+      .slice(0, 16)
+  }
 
   if (loader) {
     return hashText(
@@ -1115,7 +1124,10 @@ export const readSources = async (project) => {
     let hash
 
     try {
-      hash = hashFile(absolutePath)
+      hash = hashFile(
+        absolutePath,
+        graph.rawFiles.has(absolutePath),
+      )
     } catch (error) {
       problems.push({
         file: key,

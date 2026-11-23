@@ -1,5 +1,11 @@
+import { existsSync, readFileSync } from "node:fs"
 import { isBuiltin } from "node:module"
-import { matchesGlob, relative, resolve } from "node:path"
+import {
+  dirname,
+  matchesGlob,
+  relative,
+  resolve,
+} from "node:path"
 
 import { build } from "esbuild"
 
@@ -24,13 +30,16 @@ import { build } from "esbuild"
  *
  * @typedef {{
  *   imports: Map<string, Map<string, string>>,
+ *   rawFiles: Set<string>,
  *   closureOf: (entry: string) => Set<string>,
  *   problems: import("./features.js").Problem[],
  * }} ModuleGraph
  *
  * `imports` maps each loaded file (absolute) to its import specifiers
  * and the files they resolved to. `closureOf` lists every tracked file
- * an entry loads, itself included.
+ * an entry loads, itself included. `rawFiles` are files some module
+ * imports as text or as a URL (`?raw`, `new URL(…, import.meta.url)`),
+ * so their bytes matter, not just the code they compile to.
  */
 
 /**
@@ -49,6 +58,10 @@ const viteExtensions = [
 
 /** Files esbuild reads as modules. Anything else is an asset. */
 const moduleFile = /\.(?:[cm]?[jt]sx?|json|css)$/
+
+/** `new URL("./file", import.meta.url)`, which Vite resolves. */
+const urlImport =
+  /new\s+URL\(\s*(["'`])([^"'`]+)\1\s*,\s*import\.meta\.url\s*\)/g
 
 /** Vite import suffixes such as `?raw` and `?url`. */
 const querySuffix = /\?.*$/
@@ -76,6 +89,8 @@ export const readGraph = async (
 ) => {
   /** @type {Map<string, Map<string, string>>} */
   const imports = new Map()
+  /** @type {Set<string>} */
+  const rawFiles = new Set()
   /** @type {import("./features.js").Problem[]} */
   const problems = []
 
@@ -149,7 +164,13 @@ export const readGraph = async (
           specifier !== args.path ||
           !moduleFile.test(result.path)
         ) {
-          imports.set(result.path, new Map())
+          // The file is loaded as text or a URL, not as a module, so it
+          // is hashed byte for byte and nothing is read from it.
+          rawFiles.add(result.path)
+
+          if (!imports.has(result.path)) {
+            imports.set(result.path, new Map())
+          }
 
           return { path: args.path, external: true }
         }
@@ -222,6 +243,46 @@ export const readGraph = async (
     }
   }
 
+  // Vite also loads `new URL("./file", import.meta.url)`, which esbuild
+  // leaves alone. Such a file can be a worker or data a test reads.
+  for (const [file, edges] of [...imports]) {
+    if (
+      !/\.[cm]?[jt]sx?$/.test(file) ||
+      !existsSync(file)
+    ) {
+      continue
+    }
+
+    for (const match of readFileSync(file, "utf8").matchAll(
+      urlImport,
+    )) {
+      const specifier = match[2] ?? ""
+      const target = resolve(dirname(file), specifier)
+
+      if (!specifier.startsWith(".")) {
+        continue
+      }
+
+      if (!existsSync(target)) {
+        problems.push({
+          file: toPosix(relative(root, file)),
+          line: 1,
+          column: 1,
+          rule: "unresolved-import",
+          message: `new URL("${specifier}", import.meta.url) names a file that does not exist. The lock hashes every file a scenario loads, so every import must resolve.`,
+        })
+        continue
+      }
+
+      edges.set(`new URL(${specifier})`, target)
+      rawFiles.add(target)
+
+      if (!imports.has(target)) {
+        imports.set(target, new Map())
+      }
+    }
+  }
+
   /** @param {string} entry */
   const closureOf = (entry) => {
     const start = resolve(root, entry)
@@ -243,5 +304,5 @@ export const readGraph = async (
     return reached
   }
 
-  return { imports, closureOf, problems }
+  return { imports, rawFiles, closureOf, problems }
 }

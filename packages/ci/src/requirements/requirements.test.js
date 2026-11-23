@@ -1850,6 +1850,35 @@ export const Desk = { args: { name: "Desk" } }
     ])
   })
 
+  test("hashes a file imported as text or a URL byte for byte", async () => {
+    const root = await lockedLamp({
+      "helpers/lamp.ts": `import template from "../fixtures/template.ts?raw"\n\nexport const page = () => [template, new URL("./data.txt", import.meta.url)]\n${helpers}`,
+      "fixtures/template.ts": "export const x = 1\n",
+      "helpers/data.txt": "on\n",
+      "steps/lamp.steps.ts": steps
+        .replace(
+          "turnOn(world, name)",
+          "turnOn(world, name)\n  page()",
+        )
+        .replace(
+          "import { expectOn,",
+          "import { page, expectOn,",
+        ),
+    })
+
+    // As text, a comment is part of what the test reads.
+    await writeFile(
+      join(root, "fixtures/template.ts"),
+      "// on\nexport const x = 1\n",
+    )
+    await writeFile(join(root, "helpers/data.txt"), "off\n")
+
+    expect(await detailsOf(root)).toEqual([
+      "REQ-T-1 code changed: fixtures/template.ts",
+      "REQ-T-1 code changed: helpers/data.txt",
+    ])
+  })
+
   test("still compares with a version 1 lock on the base branch", () => {
     const base = parseLock(
       JSON.stringify({
