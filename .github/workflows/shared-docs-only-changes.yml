@@ -5,6 +5,9 @@
 #   jobs:
 #     changes:
 #       uses: Sawtaytoes/charcuterie/.github/workflows/shared-docs-only-changes.yml@workflows-v1
+#       # Optional: a repo with its own runner lane keeps this job there.
+#       # with:
+#       #   runsOn: '["pulsen-boot"]'
 #     check:
 #       needs: [changes]
 #       if: ${{ needs.changes.outputs.isDocsOnly != 'true' }}
@@ -26,6 +29,16 @@ on:
     # No `checkoutVersion` input: `uses:` cannot take an expression, so the
     # action version has to be literal. v7 is what both hosts resolve —
     # github.com and data.forgejo.org.
+    inputs:
+      runsOn:
+        description: >-
+          JSON list of runner labels for the job. The default keeps the job on
+          the shared `ubuntu-latest` runners. A caller with its own lane passes
+          that lane, e.g. `'["pulsen-boot"]'`, so its jobs stay off the shared
+          runner.
+        type: string
+        required: false
+        default: '["ubuntu-latest"]'
     outputs:
       isDocsOnly:
         description: "'true' only when every changed file is documentation."
@@ -44,7 +57,7 @@ jobs:
   # nothing, so a required check stays pending and the pull request can never
   # merge, with no failure to explain why.
   detect:
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(inputs.runsOn || '["ubuntu-latest"]') }}
 
     outputs:
       isDocsOnly: ${{ steps.detect.outputs.isDocsOnly }}
