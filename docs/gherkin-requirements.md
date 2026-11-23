@@ -31,19 +31,23 @@ with the rest of the suite. CI's `lint` job runs `requirements:check` and writes
 ```
 packages/docs/requirements/
   button.feature              one feature per component
+  dialog.feature
+  field.feature
   requirements.config.json    ID prefix, allowed tags, globs
   requirements.lock.json      generated; never edit by hand
   index.ts                    setup: sets the World, loads every steps/*.steps.ts
   support/
-    RequirementsWorld.ts      per-scenario STATE only: canvas, page, activations
+    RequirementsWorld.ts      per-scenario STATE only: page, storyRoot, activations
     steps.ts                  Given/When/Then wrappers; the only way to register a step
     parameterTypes.ts         {role}
   helpers/                    plain functions that take the World; one concern per file
-    queries.ts  input.ts  states.ts  activations.ts  stories.ts
+    queries.ts  input.ts  states.ts  activations.ts  audits.ts  stories.ts
     helpers.test.ts           each helper against the cases it must reject
   steps/
     controls.steps.ts         generic steps for any control, by role and name
     button.steps.ts           Button's fixtures: the Givens that open its stories
+    dialog.steps.ts           `the Dialog story "<name>" is open`
+    field.steps.ts            `the Field story "<name>" is open`
 ```
 
 Put a new action or assertion in `helpers/` and test it in `helpers.test.ts`, including a
@@ -70,6 +74,13 @@ Feature: Button
   `Rule` that states the business rule in one sentence.
 - **Given sets up, When acts, Then checks.** The checker fails a step whose keyword does
   not match its definition's.
+- **Open a story by the name Storybook shows**, such as
+  `Given the Dialog story "All States" is open`. A component needs its own fixture step
+  only when a scenario installs a handler, as Button's activation counts do.
+- **Queries search the whole page.** A dialog, a tooltip, or a listbox portals out of the
+  story's canvas, so every step finds controls in `document.body`.
+- **A click must land.** The click step fails when a scrim or another panel covers the
+  control's center, because a person could not click it there.
 - **Use the words a person sees or hears**: roles and accessible names, not class names,
   props, or test IDs. Find controls by role and name; `{role}` covers the common ARIA roles.
 - **Check the exact result.** "The status named "Loading…" is visible," not "a status is
@@ -103,9 +114,12 @@ The checker rejects every other tag. That includes `@skip`, `@wip`, `@fails`, `@
 requirement stop proving anything while the suite stays green. `@fails` is the most
 dangerous, because it reports a failure as a pass.
 
-Scenarios in one file run one after another. Each feature file is its own test file, and
-Vitest can run separate test files in parallel. `@concurrent` stays banned within a file. Every scenario shares one document,
-one keyboard focus, and the same body cleanup, so concurrent scenarios would interfere.
+Scenarios run exactly as plain `*.test.tsx` tests do. Each feature file is one Vitest test
+file. Vitest runs separate files in parallel, and the tests inside one file one after
+another. Neither project turns on `test.concurrent`. `@concurrent` is banned for the same
+reason the plain tests never use `test.concurrent`: every test in a browser file shares
+one document, one keyboard focus, and the same body cleanup. More features run in
+parallel the same way more test files do.
 
 ## The lock
 
@@ -183,7 +197,7 @@ import must name one file: if `./queries` could load both `queries.js` and `quer
 the check fails, because Vite tries `.js` first. Root-absolute (`/…`) and `#` subpath
 imports are rejected, and so is a directory import whose directory has a `package.json`. A
 named re-export wins over `export *` wherever it is written, an `export declare` counts as
-nothing, a JSON file supplies its top-level keys to `export *` and is hashed whole, and a name that passes through more than eight re-exports fails the check. A step
+nothing, a JSON file supplies its top-level keys to `export *` and is hashed whole, two `export *` lines that supply one name from different declarations fail the check, because JavaScript then exports neither, and a name that passes through more than eight re-exports fails the check. A `package.json` that is valid JSON but not an object, such as `null`, fails the check too. A step
 definition's code must be an inline function. Any relative import in a module the
 lock reaches must resolve, or the check fails. A lazy or conditional
 `import.meta.glob` is rejected. A lock in the wrong shape fails, and CI finds the base
@@ -241,6 +255,44 @@ The Button suite replaced `Button.test.tsx`
 | `@REQ-UI-002` | A disabled button ignores clicks, and Tab does not focus it | A click starts nothing; the control is natively disabled; Tab does not focus it. |
 | `@REQ-UI-003` | A busy button announces its state | The agent-drivability check; disabled; `aria-busy="true"`; a visible status named "Loading…". |
 | `@REQ-UI-005` | The states board includes a busy button | The `AllStates` story's loading button has `aria-busy="true"`. |
+
+## Dialog coverage
+
+Behavior moved from `Dialog.test.tsx` to `dialog.feature`
+([decision](decisions/2026-11-23-dialog-and-field-behavior-tests-are-gherkin-scenarios.md)).
+`Dialog.test.tsx` keeps layout and paint: the size widths, the phone fit, the scroll clamp,
+the scrim token, and the one shared scrim for stacked dialogs.
+
+| Requirement | Scenario | Replaces |
+| --- | --- | --- |
+| `@REQ-UI-007` | An open dialog can be identified by its role and name | the dialog is reachable from a body-scoped query |
+| `@REQ-UI-008` | A dialog with no body is its question and its answers | a dialog with no body renders from heading and footer alone |
+| `@REQ-UI-009` | Escape closes a dialog and returns focus to the button that opened it | focus is trapped inside, and Escape restores it to the trigger |
+| `@REQ-UI-010` | A dialog that holds a form puts the caret in its field | initialFocus puts the caret in the field, not on Close |
+| `@REQ-UI-011` | A non-dismissable dialog ignores Escape and closes from its own answer | a non-dismissable dialog ignores Escape rather than closing |
+| `@REQ-UI-012` | A second dialog covers the first, and they close top-first | stacked dialogs share one scrim and dismiss top-first, except the scrim count |
+| `@REQ-UI-013` to `@REQ-UI-015` | Escape, a click elsewhere, and a choice inside a dialog's picker | a picker cancels its selection without closing the enclosing draft |
+
+## Field coverage
+
+Behavior moved from `Field.test.tsx` to `field.feature`. `Field.test.tsx` keeps the wiring a
+consumer relies on: an adopted `id`, the overlay trigger's `id`, the derivable label `id`,
+and where rest props land.
+
+| Requirement | Scenario | Replaces |
+| --- | --- | --- |
+| `@REQ-UI-016` | A text field is named by its label and described by its help text | the label names the control; a description is announced |
+| `@REQ-UI-017` | A picker in a field is named by its label and its value | the slot takes a Picker as readily as an input |
+| `@REQ-UI-018` | A required text field is required both ways | `required` is spelled twice. The old test used `toBeRequired()`, which also passes on `aria-required` alone. |
+| `@REQ-UI-019` | A field with an error is invalid and announces the error | an error is the only source of invalidity |
+| `@REQ-UI-020` | The help text is read before the error | description is described before error |
+| `@REQ-UI-021` | A caller's own description is read first, then the help text, then the error | a caller's aria-describedby composes with the description and the error |
+| `@REQ-UI-022` to `@REQ-UI-024` | A field and a tooltip nested in both orders | the two slot-forwarding tests and the tip described alongside |
+| `@REQ-UI-025`, `@REQ-UI-026` | A group is named by its legend; it describes its error | the two group tests |
+| `@REQ-UI-027` | A disabled group disables every control inside it | the disabled half of the fieldset rest-prop test |
+
+A description step compares the whole accessible description, in order, so one step
+replaces the old tests' split on `aria-describedby` and their substring matches.
 
 Shared source and style rules, contrast checks, Storybook accessibility audits, and visual
 regression still cover Button through their own suites.

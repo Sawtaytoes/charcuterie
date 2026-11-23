@@ -78,6 +78,30 @@ const parseJson = (text) =>
   JSON.parse(text.replace(/^\uFEFF/, ""))
 
 /**
+ * A `package.json` parsed, which must be an object. `null`, an array,
+ * or a bare value parses as JSON, but no tool can read fields from it.
+ *
+ * @param {string} text
+ * @returns {Record<string, any>}
+ */
+const parseManifest = (text) => {
+  const manifest = parseJson(text)
+
+  if (
+    typeof manifest !== "object" ||
+    manifest === null ||
+    Array.isArray(manifest)
+  ) {
+    throw new NotAnObjectError()
+  }
+
+  return manifest
+}
+
+/** A JSON file that parses, but is not the object it must be. */
+class NotAnObjectError extends Error {}
+
+/**
  * Only the fields that decide which code runs. A release bumps
  * `version` in every package.json; that must not mark requirements
  * changed, or every release would stale the lock on master.
@@ -86,7 +110,7 @@ const parseJson = (text) =>
  * @param {string} text
  */
 const packageManifestText = (text) => {
-  const manifest = parseJson(text)
+  const manifest = parseManifest(text)
 
   return JSON.stringify(
     [
@@ -1345,11 +1369,11 @@ export const readSources = (project) => {
     let manifest
 
     try {
-      manifest = parseJson(
+      manifest = parseManifest(
         readFileSync(manifestPath, "utf8"),
       )
-    } catch {
-      reportMalformedJson(toKey(manifestPath))
+    } catch (error) {
+      reportMalformedJson(toKey(manifestPath), error)
 
       return null
     }
@@ -1437,8 +1461,11 @@ export const readSources = (project) => {
   /** @type {Set<string>} */
   const reportedMalformed = new Set()
 
-  /** @param {string} key */
-  const reportMalformedJson = (key) => {
+  /**
+   * @param {string} key
+   * @param {unknown} [error] what parsing threw
+   */
+  const reportMalformedJson = (key, error) => {
     if (reportedMalformed.has(key)) {
       return
     }
@@ -1449,7 +1476,10 @@ export const readSources = (project) => {
       line: 1,
       column: 1,
       rule: "malformed-json",
-      message: `${key} is not valid JSON, so Vite cannot load it. Fix the file.`,
+      message:
+        error instanceof NotAnObjectError
+          ? `${key} is valid JSON but not a JSON object, so no tool can read a field from it. Fix the file.`
+          : `${key} is not valid JSON, so Vite cannot load it. Fix the file.`,
     })
   }
 
@@ -1468,8 +1498,8 @@ export const readSources = (project) => {
           ? packageManifestText(text)
           : JSON.stringify(parseJson(text)),
       )
-    } catch {
-      reportMalformedJson(key)
+    } catch (error) {
+      reportMalformedJson(key, error)
 
       return hashText(text)
     }
@@ -1587,6 +1617,44 @@ export const readSources = (project) => {
     })
   }
 
+  /** @type {Set<string>} */
+  const reportedAmbiguous = new Set()
+
+  /**
+   * Two `export *` lines in one file that supply the same name from
+   * different declarations. JavaScript then exports neither, so an
+   * import of the name fails when the module links, and the checker
+   * cannot say which code a step reaches.
+   *
+   * @param {string} absolutePath the barrel
+   * @param {string} name
+   * @param {string[]} suppliers the declaring files
+   */
+  const reportAmbiguousExport = (
+    absolutePath,
+    name,
+    suppliers,
+  ) => {
+    const key = `${absolutePath}|${name}`
+
+    if (reportedAmbiguous.has(key)) {
+      return
+    }
+
+    reportedAmbiguous.add(key)
+    problems.push({
+      file: toKey(absolutePath),
+      line: 1,
+      column: 1,
+      rule: "ambiguous-export",
+      message: `Two \`export *\` lines supply \`${name}\`, from ${suppliers
+        .map(toKey)
+        .join(
+          " and ",
+        )}. JavaScript exports neither, so an import of \`${name}\` fails. Re-export it by name: \`export { ${name} } from "…"\`.`,
+    })
+  }
+
   /**
    * @typedef {{
    *   file: string,
@@ -1633,6 +1701,14 @@ export const readSources = (project) => {
     // file declares no names the checker can read. The caller hashes
     // the file whole either way.
     if (!codeFile.test(absolutePath)) {
+      if (absolutePath.endsWith(".json")) {
+        try {
+          parseJson(readFileSync(absolutePath, "utf8"))
+        } catch (error) {
+          reportMalformedJson(toKey(absolutePath), error)
+        }
+      }
+
       return here(jsonDeclares(absolutePath, importedName))
     }
 
@@ -1687,6 +1763,15 @@ export const readSources = (project) => {
      * @type {{ search: DeclarationSearch, hops: string[] } | null}
      */
     let nonCodeFallback = null
+    /**
+     * The first `export *` that supplies the name. The search goes on
+     * through the rest, because a second one that supplies a
+     * different declaration makes the name ambiguous, and an
+     * ambiguous name is not exported at all.
+     *
+     * @type {{ search: DeclarationSearch, hops: string[], target: string } | null}
+     */
+    let starFound = null
 
     for (const statement of exportStatements) {
       if (
@@ -1725,9 +1810,24 @@ export const readSources = (project) => {
         )
 
         if (followed.isFound) {
-          hops.push(absolutePath, ...deeper)
+          if (!starFound) {
+            starFound = {
+              search: followed,
+              hops: deeper,
+              target,
+            }
+          } else if (
+            followed.file !== starFound.search.file ||
+            followed.name !== starFound.search.name
+          ) {
+            reportAmbiguousExport(
+              absolutePath,
+              importedName,
+              [starFound.search.file, followed.file],
+            )
+          }
 
-          return followed
+          continue
         }
 
         if (
@@ -1814,6 +1914,12 @@ export const readSources = (project) => {
           }
         }
       }
+    }
+
+    if (starFound) {
+      hops.push(absolutePath, ...starFound.hops)
+
+      return starFound.search
     }
 
     if (tooDeep) {
