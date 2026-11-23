@@ -4,70 +4,16 @@ import { inject, test } from "vitest"
 
 import { expectNoAxeViolations } from "../expectNoAxeViolations.testHelpers.ts"
 import { mountStory } from "../mountStory.testHelpers.ts"
-import {
-  expectAgentDrivable,
-  expectHiddenFromAgents,
-} from "../testing/index.ts"
+import { expectAgentDrivable } from "../testing/index.ts"
 import * as stories from "./Dialog.stories.tsx"
 
-const {
-  PickerDraft,
-  AllStates,
-  AllVariants,
-  Playground,
-  InitialFocus,
-  Interactive,
-  NoBody,
-  Responsive,
-  Stacked,
-} = composeStories(stories)
-
-test("a dialog with no body renders from heading and footer alone", async () => {
-  const { body, canvas } = await mountStory(NoBody)
-
-  await userEvent.click(
-    expectAgentDrivable(canvas, {
-      name: "Delete the file",
-      role: "button",
-    }),
-  )
-
-  // `children` is optional: the question is the accessible name and
-  // the answers are the footer, with nothing in between.
-  const dialog = expectAgentDrivable(body, {
-    name: "Delete this file? This cannot be undone.",
-    role: "dialog",
-  })
-
-  await expect(
-    expectAgentDrivable(body, {
-      name: "Delete",
-      role: "button",
-    }),
-  ).toBeInTheDocument()
-
-  await expectNoAxeViolations(dialog)
-})
-
-test("the dialog is reachable from a body-scoped query", async () => {
-  const { body, canvas } = await mountStory(Playground)
-
-  await userEvent.click(
-    expectAgentDrivable(canvas, {
-      name: "Show the read error",
-      role: "button",
-    }),
-  )
-
-  // Portalled now, so the panel is found through `body`; the trigger
-  // stays in the canvas.
-  const dialog = expectAgentDrivable(body, {
-    name: "Read error on title 4",
-    role: "dialog",
-  })
-
-  await expectNoAxeViolations(dialog)
-})
+/**
+ * Layout and paint only. The Dialog's behavior, what a person can do
+ * and hear, is `REQ-UI-007` to `REQ-UI-015` in
+ * `packages/docs/requirements/dialog.feature`.
+ */
+const { AllStates, AllVariants, Responsive, Stacked } =
+  composeStories(stories)
 
 const isNarrow = inject("viewport") === "narrow"
 
@@ -118,45 +64,6 @@ test.runIf(isNarrow)(
     )
   },
 )
-
-test("a non-dismissable dialog ignores Escape rather than closing", async () => {
-  const { body, canvas } = await mountStory(AllStates)
-
-  await userEvent.click(
-    expectAgentDrivable(canvas, {
-      name: "Not dismissable",
-      role: "button",
-    }),
-  )
-
-  const _dialog = expectAgentDrivable(body, {
-    name: "This erases eight completed titles",
-    role: "dialog",
-  })
-
-  // There is no Close button, and Escape is disabled at the dismiss
-  // layer (`isDismissable={false}` → `useDismiss` escapeKey off), so
-  // the browser cannot close a dialog the app still owns.
-  await expect(
-    body.queryByRole("button", { name: "Close" }),
-  ).toBeNull()
-
-  await userEvent.keyboard("{Escape}")
-
-  const keepButton = await body.findByRole("button", {
-    name: "Keep the titles",
-  })
-
-  await expect(body.getByRole("dialog")).toBeInTheDocument()
-
-  // The differential half. Without it, "still open" would also be
-  // satisfied by a dialog nothing can close at all.
-  await userEvent.click(keepButton)
-
-  await waitFor(() => {
-    expect(body.queryByRole("dialog")).toBeNull()
-  })
-})
 
 test("a long body scrolls inside the clamp", async () => {
   const { body, canvas } = await mountStory(AllStates)
@@ -230,230 +137,54 @@ test("the scrim is the token, rendered as the shared backdrop", async () => {
 })
 
 /**
- * The keyboard contract, driven — and Escape is pressable for real
- * now, unlike the old native `<dialog>`. `useDismiss` listens for a
- * keydown rather than relying on a UA default action, so
- * `userEvent.keyboard("{Escape}")` is a real close request.
+ * Stacking draws one scrim behind both dialogs, and the scrim leaves
+ * with the last of them. The behavior, which dialog is live and which
+ * closes first, is `REQ-UI-012` in `packages/docs/requirements/dialog.feature`;
+ * the scrim is paint, so it is checked here.
  */
-test("focus is trapped inside, and Escape restores it to the trigger", async () => {
-  const { body, canvas } = await mountStory(Interactive)
-
-  const trigger = expectAgentDrivable(canvas, {
-    name: "Stop the rip",
-    role: "button",
-  })
-
-  await userEvent.click(trigger)
-
-  const dialog = expectAgentDrivable(body, {
-    name: "Stop the rip?",
-    role: "dialog",
-  })
-
-  await waitFor(() => {
-    expect(dialog.contains(document.activeElement)).toBe(
-      true,
-    )
-  })
-
-  await userEvent.keyboard("{Escape}")
-
-  await waitFor(() => {
-    expect(body.queryByRole("dialog")).toBeNull()
-  })
-
-  // Focus restored to what opened it — `FloatingFocusManager`'s
-  // `returnFocus`, the thing hand-rolled modals in the fleet lose.
-  await expect(document.activeElement).toBe(trigger)
-})
-
-/**
- * Stacking: one scrim behind two dialogs, the lower one `inert`, and
- * a top-first dismissal on both an outside press and Escape.
- */
-test("stacked dialogs share one scrim and dismiss top-first", async () => {
+test("stacked dialogs share one scrim, and it leaves with the last", async () => {
   const { body, canvas } = await mountStory(Stacked)
 
   await userEvent.click(
-    expectAgentDrivable(canvas, {
+    canvas.getByRole("button", {
       name: "Open the first dialog",
-      role: "button",
     }),
   )
-
-  // Captured while it is still the only dialog: once the second opens,
-  // the first goes `inert` and a role query no longer sees it.
-  const first = expectAgentDrivable(body, {
-    name: "First dialog",
-    role: "dialog",
-  })
 
   await userEvent.click(
-    expectAgentDrivable(body, {
+    body.getByRole("button", {
       name: "Open a second over it",
-      role: "button",
     }),
   )
 
-  const second = expectAgentDrivable(body, {
-    name: "Second dialog",
-    role: "dialog",
-  })
+  await expect(
+    body.getByRole("dialog", { name: "Second dialog" }),
+  ).toBeInTheDocument()
 
   // One scrim for both — the whole point of the provider.
   await expect(
     document.body.querySelectorAll(".bg-scrim"),
   ).toHaveLength(1)
 
-  // The lower dialog is hidden from assistive tech while the top is
-  // open, and focus is trapped in the top.
-  expectHiddenFromAgents(first)
-
-  await waitFor(() => {
-    expect(second.contains(document.activeElement)).toBe(
-      true,
-    )
-  })
-
-  // The top dialog's own controls are actually **hittable** — the
-  // scrim sits a layer below the panels, so it does not intercept a
-  // real click. `userEvent` fires on the element directly and would
-  // miss this; `elementFromPoint` is the check that a covering scrim
-  // fails.
-  const closeButton = expectAgentDrivable(body, {
-    name: "Close this one",
-    role: "button",
-  })
-
-  const buttonRect = closeButton.getBoundingClientRect()
-
-  const atPoint = document.elementFromPoint(
-    buttonRect.left + buttonRect.width / 2,
-    buttonRect.top + buttonRect.height / 2,
-  )
-
-  await expect(
-    atPoint !== null && closeButton.contains(atPoint),
-  ).toBe(true)
-
-  // An outside press closes the top only.
-  await userEvent.click(document.body)
+  await userEvent.keyboard("{Escape}")
 
   await waitFor(() => {
     expect(
-      body.queryByRole("dialog", {
-        name: "Second dialog",
-      }),
+      body.queryByRole("dialog", { name: "Second dialog" }),
     ).toBeNull()
   })
 
-  // The first is live again — no longer inert, and the scrim stays.
   await expect(
     document.body.querySelectorAll(".bg-scrim"),
   ).toHaveLength(1)
 
-  const firstAgain = expectAgentDrivable(body, {
-    name: "First dialog",
-    role: "dialog",
-  })
-
-  // Escape closes the last one, and the scrim goes with it.
   await userEvent.keyboard("{Escape}")
 
   await waitFor(() => {
     expect(body.queryByRole("dialog")).toBeNull()
   })
 
-  await expect(firstAgain).not.toBeInTheDocument()
-
   await expect(
     document.body.querySelector(".bg-scrim"),
   ).toBeNull()
-})
-
-test("initialFocus puts the caret in the field, not on Close", async () => {
-  // Without it the focus manager takes the first tabbable element,
-  // which is the Close button — so a dialog wrapping a form eats
-  // whatever is typed first. The consumer cannot fix that from
-  // outside: focusing in its own effect races the manager and
-  // loses, which reads as the app ignoring you.
-  const { body, canvas } = await mountStory(InitialFocus)
-
-  await userEvent.click(
-    expectAgentDrivable(canvas, {
-      name: "Add a title",
-      role: "button",
-    }),
-  )
-
-  const field = expectAgentDrivable(body, {
-    name: "Title",
-    role: "textbox",
-  })
-
-  await waitFor(async () => {
-    await expect(field).toHaveFocus()
-  })
-
-  await userEvent.keyboard("Sharpen the chisels")
-
-  await expect(field).toHaveValue("Sharpen the chisels")
-})
-
-test("a picker cancels its selection without closing the enclosing draft", async () => {
-  const { body } = await mountStory(PickerDraft)
-  const input = expectAgentDrivable(body, {
-    role: "textbox",
-    name: "Draft name",
-  })
-  await userEvent.clear(input)
-  await userEvent.type(input, "An unsaved change")
-  const trigger = body.getByRole("button", {
-    name: "Draft parent: No parent",
-  })
-  await userEvent.click(trigger)
-  const option = body.getByRole("option", {
-    name: "No parent",
-  })
-  await expect(option).toHaveFocus()
-  await userEvent.keyboard("{Escape}")
-  await expect(
-    body.getByRole("dialog", { name: "Edit a draft" }),
-  ).toBeVisible()
-  await expect(input).toHaveValue("An unsaved change")
-  await expect(trigger).toHaveFocus()
-  await expect(
-    body.queryByRole("listbox"),
-  ).not.toBeInTheDocument()
-  // A press elsewhere in the draft also dismisses only the picker.
-  await userEvent.click(trigger)
-  await expect(
-    body.getByRole("option", { name: "No parent" }),
-  ).toHaveFocus()
-  await userEvent.click(input)
-  await expect(
-    body.queryByRole("listbox"),
-  ).not.toBeInTheDocument()
-  await expect(
-    body.getByRole("dialog", { name: "Edit a draft" }),
-  ).toBeVisible()
-  await expect(input).toHaveValue("An unsaved change")
-  await userEvent.click(trigger)
-  await userEvent.click(
-    body.getByRole("option", { name: "Another draft" }),
-  )
-  await expect(
-    body.getByRole("dialog", { name: "Edit a draft" }),
-  ).toBeVisible()
-  await expect(
-    body.getByRole("button", {
-      name: "Draft parent: Another draft",
-    }),
-  ).toHaveFocus()
-  await userEvent.keyboard("{Escape}")
-  await waitFor(() =>
-    expect(
-      body.queryByRole("dialog", { name: "Edit a draft" }),
-    ).not.toBeInTheDocument(),
-  )
 })

@@ -14,11 +14,14 @@ export type Canvas = ReturnType<typeof within>
  * function a step reaches. Keep this class small.
  */
 export class RequirementsWorld extends QuickPickleWorld {
-  /** The story's own canvas. Set by `openStory`. */
-  canvas?: Canvas
-
-  /** `document.body`, for panels that portal out of the canvas. */
+  /**
+   * `document.body`, where every query looks: a dialog or a listbox
+   * portals out of the story's canvas. Set by `openStory`.
+   */
   page?: Canvas
+
+  /** The story's own canvas element, for an audit of the story alone. */
+  storyRoot?: HTMLElement
 
   /**
    * Activation counts, keyed by the accessible name of the control

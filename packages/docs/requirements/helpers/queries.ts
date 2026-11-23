@@ -7,23 +7,22 @@ import type {
 export type Role = AgentTarget["role"]
 
 /**
- * The story's canvas, or the whole page for a panel that portals out
- * of it. Throws a plain instruction rather than a null dereference
- * when a scenario forgot its Given.
+ * The whole page, as a person sees it. A dialog, a tooltip, or a
+ * listbox portals out of the story's canvas to `document.body`, so a
+ * query scoped to the canvas would not find the panel a person is
+ * looking at. Throws a plain instruction rather than a null
+ * dereference when a scenario forgot its Given.
  */
 export const scopeOf = (
   world: RequirementsWorld,
-  isPage = false,
 ): Canvas => {
-  const scope = isPage ? world.page : world.canvas
-
-  if (!scope) {
+  if (!world.page) {
     throw new Error(
       'No story is open. Start the scenario with a Given that opens one, such as "Given the Button playground is open".',
     )
   }
 
-  return scope
+  return world.page
 }
 
 /**

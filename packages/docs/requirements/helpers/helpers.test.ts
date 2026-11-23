@@ -12,15 +12,33 @@ import {
   expectActivations,
   trackActivations,
 } from "./activations.ts"
-import { click, press } from "./input.ts"
+import { auditElement, auditStory } from "./audits.ts"
+import {
+  click,
+  clickOutside,
+  expectNotCovered,
+  moveFocus,
+  press,
+  replaceText,
+  typeText,
+} from "./input.ts"
 import { byRole, scopeOf } from "./queries.ts"
 import {
+  expectAbsent,
   expectBusy,
+  expectDescription,
   expectDisabled,
   expectFocused,
+  expectFocusInside,
+  expectHiddenFromAssistiveTechnology,
+  expectMarkedInvalid,
   expectNotFocused,
+  expectNotMarkedInvalid,
+  expectRequired,
+  expectValue,
   expectVisible,
 } from "./states.ts"
+import { storyNamed } from "./stories.ts"
 
 /**
  * The helpers are the assertions every requirement leans on, so each
@@ -45,8 +63,8 @@ const makeWorld = (context: TestContext, html = "") => {
 
     container.innerHTML = html
     document.body.append(container)
-    world.canvas = within(container)
     world.page = within(document.body)
+    world.storyRoot = container
   }
 
   return world
@@ -192,5 +210,330 @@ describe("press", () => {
     await expect(
       press(makeWorld(context), "F13"),
     ).rejects.toThrow(/helpers\/input\.ts/)
+  })
+})
+
+describe("pointer", () => {
+  const covered =
+    '<button type="button">Under</button><div style="position: fixed; inset: 0; background: rgb(0 0 0 / 0.5)"></div>'
+
+  test("expectNotCovered rejects a control under a scrim", (context) => {
+    const world = makeWorld(context, covered)
+
+    expect(() =>
+      expectNotCovered(byRole(world, "button", "Under")),
+    ).toThrow(/Something covers this control/)
+  })
+
+  test("click refuses a covered control and starts nothing", async (context) => {
+    const world = makeWorld(context, covered)
+
+    byRole(world, "button", "Under").addEventListener(
+      "click",
+      trackActivations(world, "Under"),
+    )
+
+    await expect(
+      click(world, "button", "Under"),
+    ).rejects.toThrow(/Something covers this control/)
+    expectActivations(world, "Under", 0)
+  })
+
+  test("clickOutside presses the page, not a control", async (context) => {
+    const world = makeWorld(
+      context,
+      '<button type="button">Inside</button>',
+    )
+
+    byRole(world, "button", "Inside").addEventListener(
+      "click",
+      trackActivations(world, "Inside"),
+    )
+
+    await clickOutside(world)
+    expectActivations(world, "Inside", 0)
+  })
+
+  test("clickOutside tells the author to open a story first", async (context) => {
+    await expect(
+      clickOutside(makeWorld(context)),
+    ).rejects.toThrow(/No story is open/)
+  })
+})
+
+describe("typing", () => {
+  test("typeText types braces and brackets as themselves", async (context) => {
+    const world = makeWorld(
+      context,
+      '<label>Pattern <input type="text" /></label>',
+    )
+
+    moveFocus(world, "textbox", "Pattern")
+    await typeText(world, "{Enter} [x]")
+    await expectValue(
+      world,
+      "textbox",
+      "Pattern",
+      "{Enter} [x]",
+    )
+  })
+
+  test("replaceText replaces, rather than appends", async (context) => {
+    const world = makeWorld(
+      context,
+      '<label>Name <input type="text" value="Old" /></label>',
+    )
+
+    await replaceText(world, "textbox", "Name", "New")
+    await expectValue(world, "textbox", "Name", "New")
+    await expect(
+      expectValue(world, "textbox", "Name", "OldNew"),
+    ).rejects.toThrow()
+  })
+
+  test("moveFocus focuses the named control only", async (context) => {
+    const world = makeWorld(
+      context,
+      '<label>First <input type="text" /></label><label>Second <input type="text" /></label>',
+    )
+
+    moveFocus(world, "textbox", "Second")
+    await expectFocused(world, "textbox", "Second")
+    await expectNotFocused(world, "textbox", "First")
+  })
+})
+
+describe("presence", () => {
+  test("expectFocusInside rejects focus outside the named element", async (context) => {
+    const world = makeWorld(
+      context,
+      '<div role="dialog" aria-label="Inner"><button type="button">In</button></div><button type="button">Out</button>',
+    )
+
+    byRole(world, "button", "Out").focus()
+
+    await expect(
+      expectFocusInside(world, "dialog", "Inner"),
+    ).rejects.toThrow(
+      /focus is inside the dialog named "Inner"/,
+    )
+
+    byRole(world, "button", "In").focus()
+    await expectFocusInside(world, "dialog", "Inner")
+  })
+
+  test("expectAbsent rejects a dialog that stays", async (context) => {
+    const world = makeWorld(
+      context,
+      '<div role="dialog" aria-label="Stays"></div>',
+    )
+
+    await expect(
+      expectAbsent(world, "dialog", "Stays"),
+    ).rejects.toThrow(/every dialog named "Stays"/)
+    await expect(
+      expectAbsent(world, "dialog"),
+    ).rejects.toThrow(/every dialog on the page/)
+    await expectAbsent(world, "dialog", "Another")
+  })
+
+  test("expectAbsent waits for a panel that leaves", async (context) => {
+    const world = makeWorld(
+      context,
+      '<div role="listbox" aria-label="Parents"></div>',
+    )
+
+    setTimeout(() => {
+      document.querySelector('[role="listbox"]')?.remove()
+    }, 50)
+
+    await expectAbsent(world, "listbox")
+  })
+
+  test("expectHiddenFromAssistiveTechnology rejects a live dialog", (context) => {
+    const world = makeWorld(
+      context,
+      '<div role="dialog" aria-label="Live"></div><div role="dialog" aria-label="Lower" inert></div>',
+    )
+
+    expect(() =>
+      expectHiddenFromAssistiveTechnology(
+        world,
+        "dialog",
+        "Live",
+      ),
+    ).toThrow(/hidden from assistive technology/)
+    expectHiddenFromAssistiveTechnology(
+      world,
+      "dialog",
+      "Lower",
+    )
+  })
+
+  test("expectHiddenFromAssistiveTechnology rejects a dialog that is not there", (context) => {
+    const world = makeWorld(context, "<div></div>")
+
+    expect(() =>
+      expectHiddenFromAssistiveTechnology(
+        world,
+        "dialog",
+        "Gone",
+      ),
+    ).toThrow(/found 0/)
+  })
+})
+
+describe("field state", () => {
+  test("expectRequired rejects required without aria-required", async (context) => {
+    const world = makeWorld(
+      context,
+      '<label>Disc label <input type="text" required /></label>',
+    )
+
+    await expect(
+      expectRequired(world, "textbox", "Disc label"),
+    ).rejects.toThrow()
+  })
+
+  test("expectRequired rejects aria-required without required", async (context) => {
+    const world = makeWorld(
+      context,
+      '<label>Disc label <input type="text" aria-required="true" /></label>',
+    )
+
+    await expect(
+      expectRequired(world, "textbox", "Disc label"),
+    ).rejects.toThrow()
+  })
+
+  test("invalidity is aria-invalid, not the browser's own validity", async (context) => {
+    const world = makeWorld(
+      context,
+      '<label>Empty <input type="text" required /></label><label>Wrong <input type="text" aria-invalid="true" /></label>',
+    )
+
+    await expectNotMarkedInvalid(world, "textbox", "Empty")
+    await expect(
+      expectMarkedInvalid(world, "textbox", "Empty"),
+    ).rejects.toThrow()
+    await expectMarkedInvalid(world, "textbox", "Wrong")
+    await expect(
+      expectNotMarkedInvalid(world, "textbox", "Wrong"),
+    ).rejects.toThrow()
+  })
+
+  test("expectDescription rejects the right parts in the wrong order", async (context) => {
+    const world = makeWorld(
+      context,
+      '<label for="path">Path</label><input id="path" type="text" aria-describedby="error help" /><p id="help">Absolute paths only.</p><p id="error">Not writable.</p>',
+    )
+
+    await expect(
+      expectDescription(
+        world,
+        "textbox",
+        "Path",
+        "Absolute paths only. Not writable.",
+      ),
+    ).rejects.toThrow()
+    await expectDescription(
+      world,
+      "textbox",
+      "Path",
+      "Not writable. Absolute paths only.",
+    )
+  })
+
+  test("expectDescription rejects part of the description", async (context) => {
+    const world = makeWorld(
+      context,
+      '<label for="path">Path</label><input id="path" type="text" aria-describedby="help error" /><p id="help">Absolute paths only.</p><p id="error">Not writable.</p>',
+    )
+
+    await expect(
+      expectDescription(
+        world,
+        "textbox",
+        "Path",
+        "Absolute paths only.",
+      ),
+    ).rejects.toThrow()
+  })
+})
+
+describe("audits", () => {
+  test("auditElement rejects an unnamed control inside the element", async (context) => {
+    const world = makeWorld(
+      context,
+      '<div role="dialog" aria-label="Broken"><button type="button"></button></div>',
+    )
+
+    await expect(
+      auditElement(world, "dialog", "Broken"),
+    ).rejects.toThrow(/accessibility violations/)
+  })
+
+  test("auditStory rejects a violation in the story", async (context) => {
+    const world = makeWorld(
+      context,
+      '<input type="text" />',
+    )
+
+    await expect(auditStory(world)).rejects.toThrow(
+      /accessibility violations/,
+    )
+  })
+
+  test("auditStory tells the author to open a story first", async (context) => {
+    await expect(
+      auditStory(makeWorld(context)),
+    ).rejects.toThrow(/No story is open/)
+  })
+})
+
+describe("storyNamed", () => {
+  const story = { run: async () => {} }
+
+  test("finds a story by its sidebar name", () => {
+    const allStates = { ...story }
+
+    expect(
+      storyNamed(
+        "Dialog",
+        { AllStates: allStates, Playground: { ...story } },
+        "All States",
+      ),
+    ).toBe(allStates)
+  })
+
+  test("prefers a story's own name", () => {
+    const renamed = { ...story, storyName: "Busy board" }
+
+    expect(
+      storyNamed(
+        "Dialog",
+        { AllStates: renamed },
+        "Busy board",
+      ),
+    ).toBe(renamed)
+    expect(() =>
+      storyNamed(
+        "Dialog",
+        { AllStates: renamed },
+        "All States",
+      ),
+    ).toThrow(/Its stories are: "Busy board"/)
+  })
+
+  test("lists the stories when the name is wrong", () => {
+    expect(() =>
+      storyNamed(
+        "Dialog",
+        { AllStates: { ...story } },
+        "AllStates",
+      ),
+    ).toThrow(
+      'Dialog has no story named "AllStates". Its stories are: "All States".',
+    )
   })
 })

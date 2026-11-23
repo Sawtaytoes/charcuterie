@@ -1,6 +1,9 @@
-import { expect } from "storybook/test"
+import { expect, waitFor } from "storybook/test"
 
-import { expectAgentDrivable } from "../../../ui/src/testing/index.ts"
+import {
+  expectAgentDrivable,
+  expectHiddenFromAgents,
+} from "../../../ui/src/testing/index.ts"
 import type { RequirementsWorld } from "../support/RequirementsWorld.ts"
 import { byRole, type Role, scopeOf } from "./queries.ts"
 
@@ -16,20 +19,43 @@ export const expectAccessible = (
   name: string,
 ) => expectAgentDrivable(scopeOf(world), { role, name })
 
+/**
+ * Waits for focus, because a dialog's focus manager moves it a frame
+ * after the dialog opens.
+ */
 export const expectFocused = async (
   world: RequirementsWorld,
   role: Role,
   name: string,
 ) => {
-  await expect(byRole(world, role, name)).toHaveFocus()
+  await waitFor(() =>
+    expect(byRole(world, role, name)).toHaveFocus(),
+  )
 }
 
+/** Checked once, now: waiting could only make a negative pass sooner. */
 export const expectNotFocused = async (
   world: RequirementsWorld,
   role: Role,
   name: string,
 ) => {
   await expect(byRole(world, role, name)).not.toHaveFocus()
+}
+
+/** Focus is on the named element or on something inside it. */
+export const expectFocusInside = async (
+  world: RequirementsWorld,
+  role: Role,
+  name: string,
+) => {
+  await waitFor(() => {
+    const container = byRole(world, role, name)
+
+    expect(
+      container.contains(document.activeElement),
+      `focus is inside the ${role} named "${name}" (it is on <${document.activeElement?.tagName.toLowerCase() ?? "nothing"}>)`,
+    ).toBe(true)
+  })
 }
 
 /** Natively disabled: a click does nothing and Tab skips it. */
@@ -63,5 +89,129 @@ export const expectVisible = async (
   role: Role,
   name: string,
 ) => {
-  await expect(byRole(world, role, name)).toBeVisible()
+  await waitFor(() =>
+    expect(byRole(world, role, name)).toBeVisible(),
+  )
+}
+
+/**
+ * Nothing on the page has this role, or this role and name. Waits,
+ * because a closing panel leaves on the next frame; a panel that never
+ * leaves fails at the wait's timeout.
+ */
+export const expectAbsent = async (
+  world: RequirementsWorld,
+  role: Role,
+  name?: string,
+) => {
+  const scope = scopeOf(world)
+
+  await waitFor(() =>
+    expect(
+      scope.queryAllByRole(
+        role,
+        name === undefined ? {} : { name },
+      ),
+      name === undefined
+        ? `every ${role} on the page`
+        : `every ${role} named "${name}" on the page`,
+    ).toHaveLength(0),
+  )
+}
+
+/**
+ * Present, but hidden from assistive technology (`inert` or
+ * `aria-hidden`), as the lower of two stacked dialogs is.
+ */
+export const expectHiddenFromAssistiveTechnology = (
+  world: RequirementsWorld,
+  role: Role,
+  name: string,
+) => {
+  const scope = scopeOf(world)
+  const matches = scope.queryAllByRole(role, {
+    hidden: true,
+    name,
+  })
+
+  if (matches.length !== 1) {
+    throw new Error(
+      `Expected exactly one ${role} named "${name}" on the page, hidden or not; found ${matches.length}.`,
+    )
+  }
+
+  expectHiddenFromAgents(matches[0] as Element)
+}
+
+/** The value a person sees in the field. */
+export const expectValue = async (
+  world: RequirementsWorld,
+  role: Role,
+  name: string,
+  value: string,
+) => {
+  await expect(byRole(world, role, name)).toHaveValue(value)
+}
+
+/**
+ * Required both ways: `required`, which the browser validates, and
+ * `aria-required`, which a screen reader announces on a control the
+ * browser does not validate.
+ */
+export const expectRequired = async (
+  world: RequirementsWorld,
+  role: Role,
+  name: string,
+) => {
+  const element = byRole(world, role, name)
+
+  // Not `toBeRequired()`: it also accepts `aria-required` alone, so it
+  // could not tell the browser's half missing.
+  await expect(element).toHaveAttribute("required")
+  await expect(element).toHaveAttribute(
+    "aria-required",
+    "true",
+  )
+}
+
+/**
+ * `aria-invalid="true"`, which only an error sets. Not the browser's
+ * own validity: an empty required field is "invalid" to the browser
+ * before anyone has typed in it.
+ */
+export const expectMarkedInvalid = async (
+  world: RequirementsWorld,
+  role: Role,
+  name: string,
+) => {
+  await expect(byRole(world, role, name)).toHaveAttribute(
+    "aria-invalid",
+    "true",
+  )
+}
+
+export const expectNotMarkedInvalid = async (
+  world: RequirementsWorld,
+  role: Role,
+  name: string,
+) => {
+  await expect(
+    byRole(world, role, name),
+  ).not.toHaveAttribute("aria-invalid")
+}
+
+/**
+ * The whole accessible description, exactly, in order: what a screen
+ * reader reads after the name. The order is part of it, because
+ * "help, then error" and "error, then help" are different sentences.
+ */
+export const expectDescription = async (
+  world: RequirementsWorld,
+  role: Role,
+  name: string,
+  description: string,
+) => {
+  await expect(
+    byRole(world, role, name),
+  ).toHaveAccessibleDescription(description)
 }
