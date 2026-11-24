@@ -29,4 +29,12 @@ export class RequirementsWorld extends QuickPickleWorld {
    * named X has been activated" can only ever count X.
    */
   activations = new Map<string, number>()
+
+  /**
+   * Every element a step found by role and name, keyed by both. A
+   * panel that closes is often hidden before it leaves, and a hidden
+   * element has no accessible name to find it by. So "has closed"
+   * watches the element the scenario saw while it was open.
+   */
+  seen = new Map<string, Set<Element>>()
 }

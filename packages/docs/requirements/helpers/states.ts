@@ -1,4 +1,3 @@
-import { computeAccessibleName } from "dom-accessibility-api"
 import { expect, waitFor } from "storybook/test"
 
 import {
@@ -6,7 +5,13 @@ import {
   expectHiddenFromAgents,
 } from "../../../ui/src/testing/index.ts"
 import type { RequirementsWorld } from "../support/RequirementsWorld.ts"
-import { byRole, type Role, scopeOf } from "./queries.ts"
+import {
+  byRole,
+  type Role,
+  remember,
+  scopeOf,
+  stillInDocument,
+} from "./queries.ts"
 
 /**
  * The library's agent-drivability contract, which is more than the
@@ -18,7 +23,15 @@ export const expectAccessible = (
   world: RequirementsWorld,
   role: Role,
   name: string,
-) => expectAgentDrivable(scopeOf(world), { role, name })
+) => {
+  expectAgentDrivable(scopeOf(world), { role, name })
+  remember(
+    world,
+    role,
+    name,
+    scopeOf(world).getByRole(role, { name }),
+  )
+}
 
 /**
  * Waits for focus, because a dialog's focus manager moves it a frame
@@ -95,158 +108,33 @@ export const expectVisible = async (
   )
 }
 
-/** Hidden by its own attributes or style, not by an ancestor's. */
-const isHiddenItself = (element: Element) => {
-  const style = window.getComputedStyle(element)
-
-  return (
-    element.hasAttribute("hidden") ||
-    element.getAttribute("aria-hidden") === "true" ||
-    style.display === "none" ||
-    style.visibility === "hidden"
-  )
-}
-
 /**
- * The name a hidden element would have if it were shown.
+ * Every element with this role in the document, hidden ones included,
+ * or, with a name, every element with this role and name.
  *
- * The name computation returns "" for an element that is itself
- * hidden. So the name is computed on a copy of the page, in a
- * document fragment that nothing renders, with the element's hiding
- * attributes removed. That reads it with every rule of the
- * specification: `aria-labelledby` before `aria-label`, `<label for>`,
- * and content only for roles that take their name from it. Styles are
- * read from the live elements the copy stands for, so a decorative
- * child hidden by CSS stays out of the name. The page itself never
- * changes: a helper that waits observes DOM mutations, and changing
- * an attribute would wake it again, forever.
- */
-const shownNameOf = (element: Element) => {
-  const page = element.ownerDocument
-  const copyRoot = page.documentElement.cloneNode(
-    true,
-  ) as Element
-
-  // A fragment, so the copy's IDs and labels resolve inside it, and
-  // its window is the page's, which the name computation needs.
-  page.createDocumentFragment().append(copyRoot)
-
-  const originals = new Map<Element, Element>()
-  const copies = new Map<Element, Element>()
-  let copy: Element | undefined
-  const pair = (copied: Element, original: Element) => {
-    originals.set(copied, original)
-    copies.set(original, copied)
-
-    if (original === element) {
-      copy = copied
-    }
-
-    ;[...copied.children].forEach((child, index) => {
-      const match = original.children[index]
-
-      if (match) {
-        pair(child, match)
-      }
-    })
-  }
-
-  pair(copyRoot, page.documentElement)
-
-  if (!copy) {
-    throw new Error(
-      "The element is not in its document, so it has no name to read.",
-    )
-  }
-
-  const shown = copy
-
-  shown.removeAttribute("aria-hidden")
-  shown.removeAttribute("hidden")
-
-  // Outside the page, a control has no `<label for>`, so the copy
-  // names its labels the way `aria-labelledby` would. Both read the
-  // label's content.
-  const labels =
-    "labels" in element &&
-    element.labels instanceof NodeList
-      ? [...element.labels].filter(
-          (label): label is Element =>
-            label instanceof Element,
-        )
-      : []
-
-  if (
-    labels.length > 0 &&
-    !shown.hasAttribute("aria-labelledby") &&
-    !shown.hasAttribute("aria-label")
-  ) {
-    shown.setAttribute(
-      "aria-labelledby",
-      labels
-        .map((label, index) => {
-          const id = `requirements-shown-label-${index}`
-
-          copies.get(label)?.setAttribute("id", id)
-
-          return id
-        })
-        .join(" "),
-    )
-  }
-
-  return computeAccessibleName(shown, {
-    getComputedStyle: (node, pseudo) => {
-      const style = window.getComputedStyle(
-        originals.get(node) ?? node,
-        pseudo,
-      )
-
-      if (node !== shown || pseudo) {
-        return style
-      }
-
-      // The copy stands for the element as it would be shown.
-      return {
-        getPropertyValue: (property: string) =>
-          property === "display" ||
-          property === "visibility"
-            ? ""
-            : style.getPropertyValue(property),
-      } as CSSStyleDeclaration
-    },
-  })
-}
-
-/**
- * An element's accessible name, or for a hidden element, the name it
- * would have if it were shown. A decorative child, such as an
- * `aria-hidden` asterisk, is never part of it.
- */
-const nameOf = (element: Element) =>
-  isHiddenItself(element)
-    ? shownNameOf(element)
-    : computeAccessibleName(element)
-
-/**
- * Every element with this role, or this role and name, in the
- * document, hidden ones included. A closing panel is `inert` and
- * `aria-hidden` while it animates out, so a query of the accessibility
- * tree alone would call a panel that never leaves "gone".
+ * A name is matched two ways. An element in the accessibility tree is
+ * matched by its exact accessible name, the one a person hears, without
+ * decoration such as an `aria-hidden` asterisk. A hidden element has no
+ * accessible name, so it is matched only if a step found it by this
+ * name earlier in the scenario: a closing panel is `inert` and
+ * `aria-hidden` while it animates out, and the panel the scenario saw
+ * open is the one that has to leave. Computing a name for a hidden
+ * element would mean reimplementing the name rules, which two reviews
+ * showed is not reliable.
  */
 const inDocument = (
   world: RequirementsWorld,
   role: Role,
   name?: string,
 ) =>
-  scopeOf(world)
-    .queryAllByRole(role, { hidden: true })
-    .filter(
-      // Testing Library names a hidden element "", so the name is
-      // computed here, as it would read if the element were shown.
-      (element: HTMLElement) =>
-        name === undefined || nameOf(element) === name,
-    )
+  name === undefined
+    ? scopeOf(world).queryAllByRole(role, { hidden: true })
+    : [
+        ...new Set<Element>([
+          ...scopeOf(world).queryAllByRole(role, { name }),
+          ...stillInDocument(world, role, name),
+        ]),
+      ]
 
 const describeMatches = (role: Role, name?: string) =>
   name === undefined
@@ -299,7 +187,7 @@ export const expectHiddenFromAssistiveTechnology = (
 
   if (matches.length !== 1) {
     throw new Error(
-      `Expected exactly one ${role} named "${name}" on the page, hidden or not; found ${matches.length}.`,
+      `Expected exactly one ${role} named "${name}" on the page, hidden or not; found ${matches.length}. A hidden element is found by name only if a step found it while it was shown.`,
     )
   }
 

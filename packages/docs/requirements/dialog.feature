@@ -67,7 +67,8 @@ Feature: Dialog
       Given the Dialog story "Stacked" is open
       Then the button named "Open the first dialog" is accessible by role and name
       When I click the button named "Open the first dialog"
-      Then the button named "Open a second over it" is accessible by role and name
+      Then the dialog named "First dialog" is accessible by role and name
+      And the button named "Open a second over it" is accessible by role and name
       When I click the button named "Open a second over it"
       Then the dialog named "Second dialog" is accessible by role and name
       And the dialog named "First dialog" is hidden from assistive technology

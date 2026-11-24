@@ -27,6 +27,13 @@ role and name: layout, paint, ids, and where props land.
    stuck in its exit, `inert` and `aria-hidden`, still fails. "There is no …" and "does
    not have focus" are checked once, because a wait would let something that appears and
    then leaves pass.
+7. **A hidden element is matched by the element the scenario saw, not by a computed
+   name.** A hidden element has no accessible name. Two reviews found that every
+   reimplementation of the name rules for hidden elements missed real label shapes. So
+   the World remembers each element a step finds by role and name, and "has closed",
+   "there is no …", and "is hidden from assistive technology" match a hidden element
+   only through that memory. A scenario confirms a panel is open before it checks that
+   the panel closed or became hidden.
 5. **Whole descriptions.** "is described as" compares the full accessible description in
    order. It replaces the old split on `aria-describedby` and its substring matches.
 6. **Every control a scenario acts on is checked as agent-drivable** at least once, as the

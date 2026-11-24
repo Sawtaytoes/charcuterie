@@ -22,7 +22,7 @@ import {
   replaceText,
   typeText,
 } from "./input.ts"
-import { byRole, type Role, scopeOf } from "./queries.ts"
+import { byRole, scopeOf } from "./queries.ts"
 import {
   expectAbsent,
   expectAccessible,
@@ -388,11 +388,15 @@ describe("presence", () => {
     await expectFocusInside(world, "dialog", "Inner")
   })
 
-  test("expectAbsent rejects a dialog that is there, hidden or not", (context) => {
+  test("expectAbsent rejects a dialog that is there, and a hidden one the scenario saw", (context) => {
     const world = makeWorld(
       context,
-      '<div role="dialog" aria-label="Stays"></div><div role="dialog" aria-label="Exiting" aria-hidden="true" inert></div>',
+      '<div role="dialog" aria-label="Stays"></div><div role="dialog" aria-label="Exiting"></div><div role="dialog" aria-label="Unseen" aria-hidden="true"></div>',
     )
+    const exiting = byRole(world, "dialog", "Exiting")
+
+    exiting.setAttribute("aria-hidden", "true")
+    exiting.setAttribute("inert", "")
 
     expect(() =>
       expectAbsent(world, "dialog", "Stays"),
@@ -404,155 +408,50 @@ describe("presence", () => {
       /every dialog in the document/,
     )
     expectAbsent(world, "dialog", "Another")
+    // Never found while shown, so it has no name to match.
+    expectAbsent(world, "dialog", "Unseen")
   })
 
-  test("expectAbsent rejects an element whose name has a hidden decorative part", (context) => {
+  test("names are exact: decoration is not part of a name", (context) => {
     const world = makeWorld(
       context,
-      '<button type="button">Close <span aria-hidden="true">×</span></button><label for="f1">Disc label <span aria-hidden="true">*</span></label><input id="f1" type="text" required /><div role="dialog" aria-labelledby="h1" aria-hidden="true" inert><h2 id="h1">Title <span aria-hidden="true">*</span></h2></div>',
+      '<button type="button">Close <span aria-hidden="true">×</span></button><button type="button">Save<span style="display: none"> now</span></button><label for="f1">Disc label <span aria-hidden="true">*</span></label><input id="f1" type="text" required />',
     )
 
     expect(() =>
       expectAbsent(world, "button", "Close"),
     ).toThrow(/every button named "Close"/)
     expect(() =>
+      expectAbsent(world, "button", "Save"),
+    ).toThrow(/every button named "Save"/)
+    expect(() =>
       expectAbsent(world, "textbox", "Disc label"),
     ).toThrow(/every textbox named "Disc label"/)
+    expectAbsent(world, "button", "Close ×")
+    expectAbsent(world, "button", "Save now")
+    expectAbsent(world, "textbox", "Disc label *")
+  })
+
+  test("expectAccessible remembers the element it found", (context) => {
+    const world = makeWorld(
+      context,
+      '<div role="dialog" aria-labelledby="h1"><h2 id="h1">Title <span aria-hidden="true">*</span></h2><button type="button">Close</button></div>',
+    )
+
+    expectAccessible(world, "dialog", "Title")
+    document
+      .querySelector('[role="dialog"]')
+      ?.setAttribute("aria-hidden", "true")
+
+    expectHiddenFromAssistiveTechnology(
+      world,
+      "dialog",
+      "Title",
+    )
     expect(() =>
       expectAbsent(world, "dialog", "Title"),
     ).toThrow(/every dialog named "Title"/)
-    expect(
-      document
-        .querySelector('[role="dialog"]')
-        ?.getAttribute("aria-hidden"),
-    ).toBe("true")
   })
-
-  /**
-   * Each element's one true name, and names it must not answer to:
-   * its name with the decorative parts, or text that is not its name.
-   */
-  const names: {
-    label: string
-    html: string
-    role: Role
-    name: string
-    /** Hidden from assistive technology, but still in view. */
-    isHidden: boolean
-    notNames: string[]
-  }[] = [
-    {
-      label: "a visible button with an aria-hidden mark",
-      html: '<button type="button">Close <span aria-hidden="true">×</span></button>',
-      role: "button",
-      name: "Close",
-      isHidden: false,
-      notNames: ["Close ×"],
-    },
-    {
-      label: "a visible button with a part hidden by CSS",
-      html: '<button type="button">Close<span style="display: none"> now</span></button>',
-      role: "button",
-      name: "Close",
-      isHidden: false,
-      notNames: ["Close now"],
-    },
-    {
-      label: "a hidden dialog labelled by a span",
-      html: '<div role="dialog" aria-labelledby="s1" aria-hidden="true" inert><span id="s1">Title <span aria-hidden="true">*</span></span></div>',
-      role: "dialog",
-      name: "Title",
-      isHidden: true,
-      notNames: ["Title *"],
-    },
-    {
-      label: "a hidden button named by wrapped content",
-      html: '<button type="button" aria-hidden="true"><span>Save</span> <span aria-hidden="true">→</span><span style="display: none"> now</span></button>',
-      role: "button",
-      name: "Save",
-      isHidden: true,
-      notNames: ["Save →", "Save now"],
-    },
-    {
-      label: "a hidden field named by its label",
-      html: '<label for="f1">Disc label <span aria-hidden="true">*</span></label><input id="f1" type="text" aria-hidden="true" />',
-      role: "textbox",
-      name: "Disc label",
-      isHidden: true,
-      notNames: ["Disc label *"],
-    },
-    {
-      label: "a dialog hidden by the hidden attribute",
-      html: '<div role="dialog" hidden aria-labelledby="h1"><h2 id="h1">Title <span aria-hidden="true">*</span></h2></div>',
-      role: "dialog",
-      name: "Title",
-      // `hidden` removes it from view, which is more than the
-      // assistive-technology check asks for.
-      isHidden: false,
-      notNames: ["Title *"],
-    },
-    {
-      label: "a hidden dialog labelled by several parts",
-      html: '<div role="dialog" aria-hidden="true" aria-labelledby="p1 p2 p3"><span id="p1">Part 1</span><span id="p2"></span><span id="p3">Part 2 <span aria-hidden="true">*</span></span></div>',
-      role: "dialog",
-      name: "Part 1 Part 2",
-      isHidden: true,
-      notNames: ["Part 1  Part 2", "Part 1 Part 2 *"],
-    },
-    {
-      label:
-        "a hidden dialog with aria-labelledby and aria-label",
-      html: '<div role="dialog" aria-hidden="true" aria-label="Fallback" aria-labelledby="h2"><h2 id="h2">Real Title <span aria-hidden="true">*</span></h2></div>',
-      role: "dialog",
-      name: "Real Title",
-      isHidden: true,
-      notNames: ["Fallback", "Real Title *"],
-    },
-    {
-      label: "a hidden dialog with no name",
-      html: '<div role="dialog" aria-hidden="true"><button type="button">Close</button> Body text</div>',
-      role: "dialog",
-      name: "",
-      isHidden: true,
-      notNames: ["Close", "Close Body text"],
-    },
-  ]
-
-  for (const example of names) {
-    test(`reads one name for ${example.label}`, (context) => {
-      const world = makeWorld(context, example.html)
-      const before = document.body.innerHTML
-
-      expect(() =>
-        expectAbsent(world, example.role, example.name),
-      ).toThrow(/in the document/)
-
-      for (const notName of example.notNames) {
-        expectAbsent(world, example.role, notName)
-      }
-
-      if (example.isHidden) {
-        expectHiddenFromAssistiveTechnology(
-          world,
-          example.role,
-          example.name,
-        )
-
-        for (const notName of example.notNames) {
-          expect(() =>
-            expectHiddenFromAssistiveTechnology(
-              world,
-              example.role,
-              notName,
-            ),
-          ).toThrow()
-        }
-      }
-
-      // The names are read without changing the document.
-      expect(document.body.innerHTML).toBe(before)
-    })
-  }
 
   test("expectAbsent does not wait for an element to leave", (context) => {
     const world = makeWorld(
@@ -585,7 +484,12 @@ describe("presence", () => {
   test("expectClosed rejects a panel stuck in its exit", async (context) => {
     const world = makeWorld(
       context,
-      '<div role="dialog" aria-label="Stuck" aria-hidden="true" inert></div>',
+      '<div role="dialog" aria-label="Stuck"></div>',
+    )
+
+    byRole(world, "dialog", "Stuck").setAttribute(
+      "aria-hidden",
+      "true",
     )
 
     await expect(
@@ -596,7 +500,12 @@ describe("presence", () => {
   test("expectHiddenFromAssistiveTechnology rejects a live dialog", (context) => {
     const world = makeWorld(
       context,
-      '<div role="dialog" aria-label="Live"></div><div role="dialog" aria-label="Lower" inert></div><div role="dialog" aria-label="Hidden" aria-hidden="true"></div>',
+      '<div role="dialog" aria-label="Live"></div><div role="dialog" aria-label="Lower" inert></div><div role="dialog" aria-label="Hidden"></div>',
+    )
+
+    byRole(world, "dialog", "Hidden").setAttribute(
+      "aria-hidden",
+      "true",
     )
 
     expect(() =>

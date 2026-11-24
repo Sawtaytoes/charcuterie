@@ -82,8 +82,6 @@ export const createRequirementsConfig = ({
         "@storybook/addon-a11y/preview",
         "@storybook/addon-docs/blocks",
         "@tanstack/react-virtual",
-        // The absence helpers name hidden panels with it.
-        "dom-accessibility-api",
         "react-router",
         // `storyNamed` maps sidebar names with it. Discovered mid-run,
         // it reloads the page and the feature fails to import.
