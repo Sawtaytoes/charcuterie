@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs"
+import { existsSync, globSync, readFileSync } from "node:fs"
 import { isBuiltin } from "node:module"
 import {
   dirname,
@@ -9,7 +9,8 @@ import {
   resolve,
 } from "node:path"
 
-import { build, transformSync } from "esbuild"
+import { build } from "esbuild"
+import ts from "typescript"
 
 /**
  * Which files a module loads, as a bundler resolves them.
@@ -35,7 +36,9 @@ import { build, transformSync } from "esbuild"
  * @typedef {{
  *   imports: Map<string, Map<string, string>>,
  *   rawFiles: Set<string>,
+ *   dataFiles: Set<string>,
  *   manifests: Set<string>,
+ *   modules: Set<string>,
  *   closureOf: (entry: string) => Set<string>,
  *   problems: import("./features.js").Problem[],
  * }} ModuleGraph
@@ -44,8 +47,11 @@ import { build, transformSync } from "esbuild"
  * and the files they resolved to. `closureOf` lists every tracked file
  * an entry loads, itself included. `rawFiles` are files some module
  * reads as bytes (`?raw`, `?url`, or a `new URL(…, import.meta.url)`
- * asset), so their comments matter. `manifests` are the `package.json`
- * files whose `exports` chose a workspace import's target.
+ * asset), so their comments matter. `dataFiles` are JSON files some
+ * module imports as data, so every field counts. `manifests` are the
+ * `package.json` files whose `exports` chose a workspace import's
+ * target, or that set how its files are read. `modules` are the files
+ * that run as code.
  */
 
 /**
@@ -82,10 +88,6 @@ const moduleFile = /\.(?:[cm]?[jt]sx?|json|css)$/
 /** Code that can be an entry, such as a worker. */
 const codeFile = /\.[cm]?[jt]sx?$/
 
-/** `new URL("./file", import.meta.url)`, which Vite resolves. */
-const urlImport =
-  /new\s+URL\(\s*(["'`])([^"'`]+)\1\s*,\s*import\.meta\.url\s*\)/g
-
 /** Vite import suffixes such as `?raw` and `?worker`. */
 const querySuffix = /\?.*$/
 
@@ -102,73 +104,173 @@ const isBareSpecifier = (specifier) =>
 const toPosix = (path) => path.split("\\").join("/")
 
 /**
- * The nearest `package.json` above a file.
+ * A bare specifier's package name: `@scope/name` or `name`.
  *
- * @param {string} path
- * @returns {string | null}
+ * @param {string} specifier
  */
-const manifestOf = (path) => {
+const packageNameOf = (specifier) =>
+  specifier
+    .split("/")
+    .slice(0, specifier.startsWith("@") ? 2 : 1)
+    .join("/")
+
+/**
+ * The `package.json` files that decide what a package import loads:
+ * the package's own, whose `exports` chose the file, and the nearest
+ * one above the file, whose `type` says how a `.js` file is read.
+ *
+ * @param {string} path the resolved file
+ * @param {string} specifier the bare specifier that chose it
+ * @returns {string[]}
+ */
+const manifestsOf = (path, specifier) => {
+  const name = packageNameOf(specifier)
+  /** @type {string[]} */
+  const found = []
   let directory = dirname(path)
 
   while (directory !== dirname(directory)) {
     const candidate = join(directory, "package.json")
 
     if (existsSync(candidate)) {
-      return candidate
+      if (found.length === 0) {
+        found.push(candidate)
+      }
+
+      try {
+        if (
+          JSON.parse(readFileSync(candidate, "utf8"))
+            .name === name
+        ) {
+          if (!found.includes(candidate)) {
+            found.push(candidate)
+          }
+
+          return found
+        }
+      } catch {
+        // The lock reports a manifest it cannot read when it hashes it.
+      }
     }
 
     directory = dirname(directory)
   }
 
-  return null
+  return found
 }
 
-/** esbuild loaders for the code files the URL scan reads. */
-const loaders = /** @type {const} */ ({
-  ".ts": "ts",
-  ".mts": "ts",
-  ".cts": "ts",
-  ".tsx": "tsx",
-  ".js": "js",
-  ".mjs": "js",
-  ".cjs": "js",
-  ".jsx": "jsx",
+/** TypeScript script kinds for the code files the URL scan reads. */
+const scriptKinds = /** @type {const} */ ({
+  ".ts": ts.ScriptKind.TS,
+  ".mts": ts.ScriptKind.TS,
+  ".cts": ts.ScriptKind.TS,
+  ".tsx": ts.ScriptKind.TSX,
+  ".js": ts.ScriptKind.JS,
+  ".mjs": ts.ScriptKind.JS,
+  ".cjs": ts.ScriptKind.JS,
+  ".jsx": ts.ScriptKind.JSX,
 })
 
 /**
- * The `new URL(…, import.meta.url)` specifiers in a module, read from
- * its compiled code so a comment that mentions one does not count.
+ * @typedef {{
+ *   specifier: string,
+ *   isPattern: boolean,
+ *   line: number,
+ *   column: number,
+ * }} UrlImport
+ *
+ * `isPattern` marks a template such as `./${name}.json`, which Vite
+ * resolves as a glob, with `*` in place of each expression.
+ */
+
+/**
+ * The `new URL(…, import.meta.url)` calls in a module, read from its
+ * syntax tree, so a comment or a string that mentions one does not
+ * count.
  *
  * @param {string} file
+ * @returns {UrlImport[]}
  */
-const urlSpecifiersIn = (file) => {
-  const loader =
-    loaders[
-      /** @type {keyof typeof loaders} */ (extname(file))
+const urlImportsIn = (file) => {
+  const scriptKind =
+    scriptKinds[
+      /** @type {keyof typeof scriptKinds} */ (
+        extname(file)
+      )
     ]
 
-  if (!loader) {
+  if (scriptKind === undefined) {
     return []
   }
 
-  /** @type {string} */
-  let code
-
-  try {
-    code = transformSync(readFileSync(file, "utf8"), {
-      loader,
-      jsx: "preserve",
-      legalComments: "none",
-      target: "esnext",
-    }).code
-  } catch {
-    // The build reports a file that does not parse.
-    return []
-  }
-
-  return [...code.matchAll(urlImport)].map(
-    (match) => match[2] ?? "",
+  const source = ts.createSourceFile(
+    file,
+    readFileSync(file, "utf8"),
+    ts.ScriptTarget.Latest,
+    true,
+    scriptKind,
   )
+  /** @type {UrlImport[]} */
+  const found = []
+
+  /** @param {ts.Node} node */
+  const isImportMetaUrl = (node) =>
+    ts.isPropertyAccessExpression(node) &&
+    node.name.text === "url" &&
+    ts.isMetaProperty(node.expression) &&
+    node.expression.keywordToken ===
+      ts.SyntaxKind.ImportKeyword
+
+  /** @param {ts.Node} node */
+  const visit = (node) => {
+    if (
+      ts.isNewExpression(node) &&
+      ts.isIdentifier(node.expression) &&
+      node.expression.text === "URL" &&
+      node.arguments?.length === 2 &&
+      isImportMetaUrl(node.arguments[1])
+    ) {
+      const [target] = node.arguments
+      const position = source.getLineAndCharacterOfPosition(
+        node.getStart(source),
+      )
+      const at = {
+        line: position.line + 1,
+        column: position.character + 1,
+      }
+
+      if (
+        ts.isStringLiteral(target) ||
+        ts.isNoSubstitutionTemplateLiteral(target)
+      ) {
+        found.push({
+          specifier: target.text,
+          isPattern: false,
+          ...at,
+        })
+      } else if (ts.isTemplateExpression(target)) {
+        found.push({
+          specifier: [
+            target.head.text,
+            ...target.templateSpans.map(
+              (span) => `*${span.literal.text}`,
+            ),
+          ]
+            .join("")
+            // Two expressions side by side are still one wildcard.
+            .replace(/\*{2,}/g, "*"),
+          isPattern: true,
+          ...at,
+        })
+      }
+    }
+
+    ts.forEachChild(node, visit)
+  }
+
+  visit(source)
+
+  return found
 }
 
 /**
@@ -188,6 +290,8 @@ export const readGraph = async (
   /** @type {Set<string>} */
   const rawFiles = new Set()
   /** @type {Set<string>} */
+  const dataFiles = new Set()
+  /** @type {Set<string>} */
   const manifests = new Set()
   /** @type {Set<string>} */
   const modules = new Set()
@@ -195,6 +299,9 @@ export const readGraph = async (
   const problems = []
   /** @type {Set<string>} */
   const queued = new Set()
+  /** Every file built as an entry so far, root-relative. */
+  /** @type {Set<string>} */
+  const scheduled = new Set()
 
   /** @param {string} absolutePath */
   const isSubject = (absolutePath) => {
@@ -248,7 +355,10 @@ export const readGraph = async (
         }
 
         const specifier = args.path.replace(querySuffix, "")
-        const isBytes = byteQuery.test(args.path)
+        // A CSS `url()` reads the file as an asset, as `?url` does.
+        const isBytes =
+          byteQuery.test(args.path) ||
+          args.kind === "url-token"
         const result = await plugin.resolve(specifier, {
           kind: args.kind,
           importer: args.importer,
@@ -275,13 +385,14 @@ export const readGraph = async (
 
         if (isBareSpecifier(specifier) && args.importer) {
           // Its `exports` chose this file, so it is part of the import.
-          const manifest = manifestOf(result.path)
-
-          if (manifest) {
+          for (const manifest of manifestsOf(
+            result.path,
+            specifier,
+          )) {
             manifests.add(manifest)
             addEdge(
               args.importer,
-              `${specifier} (package.json)`,
+              `${specifier} (${toPosix(relative(root, manifest))})`,
               manifest,
             )
           }
@@ -310,6 +421,10 @@ export const readGraph = async (
           return { path: args.path, external: true }
         }
 
+        if (result.path.endsWith(".json")) {
+          dataFiles.add(result.path)
+        }
+
         return { path: result.path }
       })
     },
@@ -317,10 +432,20 @@ export const readGraph = async (
 
   /** @param {string[]} batch */
   const buildBatch = async (batch) => {
+    for (const entry of batch) {
+      scheduled.add(entry)
+    }
+
     try {
       const result = await build({
         absWorkingDir: root,
-        entryPoints: batch,
+        // Each entry gets its own output name. Two entries such as
+        // `target.ts?worker` and `target.js?worker` would otherwise
+        // both write `target.js`, and the build would fail.
+        entryPoints: batch.map((entry) => ({
+          in: entry,
+          out: `entry-${scheduled.size}-${batch.indexOf(entry)}`,
+        })),
         bundle: true,
         write: false,
         metafile: true,
@@ -382,23 +507,30 @@ export const readGraph = async (
 
   /** @type {Set<string>} */
   const scanned = new Set()
-  let batch = entries
+  let batch = [...new Set(entries)]
+
+  /**
+   * Whether a file still needs its own build. Each round builds only
+   * files no earlier round built, so the loop ends.
+   *
+   * @param {string} path absolute
+   */
+  const isPending = (path) =>
+    !modules.has(path) &&
+    !scheduled.has(toPosix(relative(root, path)))
 
   // Vite also loads `new URL("./file", import.meta.url)`, which esbuild
   // leaves alone. A code target is a worker: it is built like an entry,
   // so what it imports is followed. Anything else is data, read as
-  // bytes.
-  for (
-    let round = 0;
-    batch.length > 0 && round < 10;
-    round += 1
-  ) {
+  // bytes. Workers can load more workers, so this repeats until no
+  // new file turns up.
+  while (batch.length > 0) {
     await buildBatch(batch)
 
     /** @type {Set<string>} */
     const next = new Set(
       [...queued]
-        .filter((path) => !modules.has(path))
+        .filter(isPending)
         .map((path) => toPosix(relative(root, path))),
     )
 
@@ -411,47 +543,65 @@ export const readGraph = async (
 
       scanned.add(file)
 
-      for (const specifier of urlSpecifiersIn(file)) {
+      for (const url of urlImportsIn(file)) {
+        const { specifier } = url
+        /** @param {string} message */
+        const report = (message) =>
+          problems.push({
+            file: toPosix(relative(root, file)),
+            line: url.line,
+            column: url.column,
+            rule: "unresolved-import",
+            message,
+          })
+
         if (/^[a-z][a-z\d+.-]*:/i.test(specifier)) {
           continue
         }
 
         if (specifier.startsWith("/")) {
-          problems.push({
-            file: toPosix(relative(root, file)),
-            line: 1,
-            column: 1,
-            rule: "unresolved-import",
-            message: `new URL("${specifier}", import.meta.url) starts at the server root, which the lock cannot follow. Use a path relative to this file.`,
-          })
+          report(
+            `new URL("${specifier}", import.meta.url) starts at the server root, which the lock cannot follow. Use a path relative to this file.`,
+          )
           continue
         }
 
-        const target = resolve(dirname(file), specifier)
-
-        if (!existsSync(target)) {
-          problems.push({
-            file: toPosix(relative(root, file)),
-            line: 1,
-            column: 1,
-            rule: "unresolved-import",
-            message: `new URL("${specifier}", import.meta.url) names a file that does not exist. The lock hashes every file a scenario loads, so every import must resolve.`,
-          })
+        if (url.isPattern && !specifier.startsWith(".")) {
+          report(
+            `new URL(\`${specifier}\`, import.meta.url) does not start with a relative folder, so the lock cannot tell which files it loads. Start the template with "./" or "../".`,
+          )
           continue
         }
 
-        if (isSubject(target) && codeFile.test(target)) {
+        const targets = url.isPattern
+          ? globSync(specifier, { cwd: dirname(file) }).map(
+              (match) => resolve(dirname(file), match),
+            )
+          : [resolve(dirname(file), specifier)].filter(
+              (target) => existsSync(target),
+            )
+
+        if (targets.length === 0) {
+          report(
+            `new URL("${specifier}", import.meta.url) names ${url.isPattern ? "no file that exists" : "a file that does not exist"}. The lock hashes every file a scenario loads, so every import must resolve.`,
+          )
           continue
         }
 
-        addEdge(file, `new URL(${specifier})`, target)
-
-        if (codeFile.test(target)) {
-          if (!modules.has(target)) {
-            next.add(toPosix(relative(root, target)))
+        for (const target of targets) {
+          if (isSubject(target) && codeFile.test(target)) {
+            continue
           }
-        } else {
-          rawFiles.add(target)
+
+          addEdge(file, `new URL(${specifier})`, target)
+
+          if (codeFile.test(target)) {
+            if (isPending(target)) {
+              next.add(toPosix(relative(root, target)))
+            }
+          } else {
+            rawFiles.add(target)
+          }
         }
       }
     }
@@ -483,7 +633,9 @@ export const readGraph = async (
   return {
     imports,
     rawFiles,
+    dataFiles,
     manifests,
+    modules,
     closureOf,
     problems,
   }

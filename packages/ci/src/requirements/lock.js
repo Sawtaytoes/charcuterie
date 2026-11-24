@@ -139,7 +139,9 @@ export const parseLock = (text, source) => {
     if (
       !shared ||
       shared.some(
-        (key) => typeof key !== "string" || !(key in code),
+        (key) =>
+          typeof key !== "string" ||
+          !Object.hasOwn(code, key),
       ) ||
       new Set(shared).size !== shared.length
     ) {

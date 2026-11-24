@@ -168,17 +168,24 @@ a tsconfig with `verbatimModuleSyntax` keeps it, and then it runs the imported m
 
 Some imports load a file in another way:
 
-- `?raw` and `?url` imports, and `new URL("./data.txt", import.meta.url)`, read the
-  file's bytes or address, so the file is hashed byte for byte, comments included. That
-  holds for a subject too: a test that reads a component as text depends on its bytes.
+- `?raw` and `?url` imports, CSS `url()`, and `new URL("./data.txt", import.meta.url)`
+  read the file's bytes or address, so the file is hashed byte for byte, comments
+  included. That holds for a subject too: a test that reads a component as text depends
+  on its bytes. A file read only as text never runs, so the code rules below skip it.
 - `?worker`, `?inline`, and other queries still compile the file, so it is built as its
   own entry and what it imports is followed. So is a code file named by `new URL`, such as
-  a worker.
+  a worker. Workers that load workers are followed to the end of the chain.
+- `new URL` is read from the syntax tree, so a comment or a string that mentions it does
+  not count. A template such as `` new URL(`./fixtures/${name}.json`, import.meta.url) ``
+  is read as Vite reads it: as a glob, `./fixtures/*.json`, and every match is hashed.
 - `new URL("/…", import.meta.url)` starts at the server root, which the lock cannot
   follow, so the check rejects it.
-- A `package.json` whose `exports` chose an import's target is hashed with that import,
-  for the fields that choose code. So is a `package.json` listed in `runtime`. A release's
-  version bump is not a change. A `package.json` imported as data counts whole.
+- The `package.json` files that decide a workspace import are hashed with that import,
+  for the fields that choose code: the package's own, whose `exports` chose the target,
+  and the nearest one above the target, whose `type` says how it is read. So is a
+  `package.json` listed in `runtime`. A release's version bump is not a change. A
+  `package.json` that a module imports as data counts whole, even when it also chose
+  an export.
 
 The walk stops at three kinds of import:
 

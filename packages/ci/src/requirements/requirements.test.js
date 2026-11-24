@@ -2122,6 +2122,223 @@ export const Desk = { args: { name: "Desk" } }
     ])
   })
 
+  /**
+   * Links `../kit` into `../node_modules/@test/kit`, as pnpm links a
+   * workspace package.
+   *
+   * @param {string} root
+   */
+  const linkKit = async (root) => {
+    await mkdir(join(root, "../node_modules/@test"), {
+      recursive: true,
+    })
+    await symlink(
+      join(root, "../kit"),
+      join(root, "../node_modules/@test/kit"),
+    )
+  }
+
+  /**
+   * The lamp steps, calling a helper the test adds to `lamp.ts`.
+   *
+   * @param {string} name
+   */
+  const stepsCalling = (name) =>
+    steps
+      .replace(
+        "turnOn(world, name)",
+        `turnOn(world, name)\n  ${name}()`,
+      )
+      .replace(
+        "import { expectOn,",
+        `import { ${name}, expectOn,`,
+      )
+
+  test("tracks the package's own manifest when its exports point into a folder with another one", async () => {
+    const manifest = {
+      name: "@test/kit",
+      exports: {
+        "./first": "./nested/one.js",
+        "./second": "./nested/two.js",
+      },
+    }
+    const root = await makeProject({
+      "lamp.feature": feature,
+      "../kit/package.json": JSON.stringify(manifest),
+      "../kit/nested/package.json":
+        '{ "type": "module" }\n',
+      "../kit/nested/one.js": "export const value = 1\n",
+      "../kit/nested/two.js": "export const value = 2\n",
+      "helpers/lamp.ts": `import { value as first } from "@test/kit/first"\nimport { value as second } from "@test/kit/second"\n\nexport const kit = () => first - second\n${helpers}`,
+      "steps/lamp.steps.ts": stepsCalling("kit"),
+    })
+
+    await linkKit(root)
+
+    const analysis = await analyzeProject(root)
+
+    expect(analysis.problems).toEqual([])
+    await writeLock(
+      analysis,
+      buildLock(analysis, await readLock(analysis)),
+    )
+
+    await writeFile(
+      join(root, "../kit/package.json"),
+      JSON.stringify({
+        ...manifest,
+        exports: {
+          "./first": "./nested/two.js",
+          "./second": "./nested/one.js",
+        },
+      }),
+    )
+
+    expect(await detailsOf(root)).toEqual([
+      "REQ-T-1 code changed: ../kit/package.json",
+    ])
+
+    await writeFile(
+      join(root, "../kit/nested/package.json"),
+      '{ "type": "commonjs" }\n',
+    )
+
+    expect(await detailsOf(root)).toEqual([
+      "REQ-T-1 code changed: ../kit/nested/package.json",
+      "REQ-T-1 code changed: ../kit/package.json",
+    ])
+  })
+
+  test("a manifest that also chooses exports counts whole when a module reads it as data", async () => {
+    const manifest = {
+      name: "@test/kit",
+      version: "1.0.0",
+      exports: { ".": "./index.js" },
+    }
+    const root = await makeProject({
+      "lamp.feature": feature,
+      "../kit/package.json": JSON.stringify(manifest),
+      "../kit/index.js": "export const value = 1\n",
+      "helpers/lamp.ts": `import { value } from "@test/kit"\nimport kitManifest from "../../kit/package.json"\n\nexport const kit = () => value + kitManifest.version\n${helpers}`,
+      "steps/lamp.steps.ts": stepsCalling("kit"),
+    })
+
+    await linkKit(root)
+
+    const analysis = await analyzeProject(root)
+
+    expect(analysis.problems).toEqual([])
+    await writeLock(
+      analysis,
+      buildLock(analysis, await readLock(analysis)),
+    )
+
+    await writeFile(
+      join(root, "../kit/package.json"),
+      JSON.stringify({ ...manifest, version: "1.0.1" }),
+    )
+
+    expect(await detailsOf(root)).toEqual([
+      "REQ-T-1 code changed: ../kit/package.json",
+    ])
+  })
+
+  test("follows a chain of workers to its end", async () => {
+    /** @type {Record<string, string>} */
+    const workers = {}
+
+    for (let index = 0; index < 13; index += 1) {
+      workers[`helpers/w${index}.ts`] =
+        index < 12
+          ? `import Next from "./w${index + 1}.ts?worker"\n\nnew Next()\n`
+          : "postMessage(1)\n"
+    }
+
+    const root = await lockedLamp({
+      ...workers,
+      "helpers/lamp.ts": `import First from "./w0.ts?worker"\n\nexport const work = () => new First()\n${helpers}`,
+      "steps/lamp.steps.ts": stepsCalling("work"),
+    })
+
+    await writeFile(
+      join(root, "helpers/w12.ts"),
+      "postMessage(2)\n",
+    )
+
+    expect(await detailsOf(root)).toEqual([
+      "REQ-T-1 code changed: helpers/w12.ts",
+    ])
+  })
+
+  test("reads new URL calls from the syntax tree, and a template as Vite's glob", async () => {
+    const root = await lockedLamp({
+      "helpers/lamp.ts": `const note = 'new URL("./missing.txt", import.meta.url)'\n\nexport const fixture = (name: string) => [note, new URL(\`../fixtures/\${name}.json\`, import.meta.url)]\n${helpers}`,
+      "fixtures/day.json": '{ "on": true }\n',
+      "fixtures/night.json": '{ "on": false }\n',
+      "steps/lamp.steps.ts": steps
+        .replace(
+          "turnOn(world, name)",
+          'turnOn(world, name)\n  fixture("day")',
+        )
+        .replace(
+          "import { expectOn,",
+          "import { fixture, expectOn,",
+        ),
+    })
+
+    await writeFile(
+      join(root, "fixtures/night.json"),
+      '{"on":false}\n',
+    )
+
+    expect(await detailsOf(root)).toEqual([
+      "REQ-T-1 code changed: fixtures/night.json",
+    ])
+  })
+
+  test("builds two queried entries with the same file name", async () => {
+    const root = await lockedLamp({
+      "helpers/lamp.ts": `import First from "./target.ts?worker"\nimport Second from "./target.js?worker"\n\nexport const work = () => [new First(), new Second()]\n${helpers}`,
+      "helpers/target.ts": "postMessage(1)\n",
+      "helpers/target.js": "postMessage(2)\n",
+      "steps/lamp.steps.ts": stepsCalling("work"),
+    })
+
+    await writeFile(
+      join(root, "helpers/target.js"),
+      "postMessage(3)\n",
+    )
+
+    expect(await detailsOf(root)).toEqual([
+      "REQ-T-1 code changed: helpers/target.js",
+    ])
+  })
+
+  test("a file read only as text skips the code rules, and a CSS url() is read as bytes", async () => {
+    const root = await lockedLamp({
+      "requirements.config.json": JSON.stringify({
+        ...config,
+        subjects: ["../ui/*.tsx"],
+      }),
+      "../ui/Example.tsx":
+        "export const load = (name: string) => import(name)\n",
+      "helpers/lamp.ts": `import source from "../../ui/Example.tsx?raw"\nimport css from "./lamp.css?inline"\n\nexport const assets = () => [source, css]\n${helpers}`,
+      "helpers/lamp.css":
+        '.lamp { background: url("./data.json"); }\n',
+      "helpers/data.json": '{ "on": true }\n',
+      "steps/lamp.steps.ts": stepsCalling("assets"),
+    })
+
+    await writeFile(
+      join(root, "helpers/data.json"),
+      '{"on":true}\n',
+    )
+
+    expect(await detailsOf(root)).toEqual([
+      "REQ-T-1 code changed: helpers/data.json",
+    ])
+  })
+
   test("a changed file changes the digest line of each requirement that loads it", async () => {
     const root = await lockedLamp()
     const before = await readLock(
@@ -2155,6 +2372,15 @@ export const Desk = { args: { name: "Desk" } }
 
     expect(() =>
       parseLock(JSON.stringify(lock), "lock"),
+    ).toThrow(/"shared" must list unique files/)
+    expect(() =>
+      parseLock(
+        JSON.stringify({
+          ...lock,
+          shared: ["constructor"],
+        }),
+        "lock",
+      ),
     ).toThrow(/"shared" must list unique files/)
   })
 

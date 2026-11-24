@@ -1116,7 +1116,12 @@ export const readSources = async (project) => {
       continue
     }
 
-    if (codeFile.test(absolutePath)) {
+    // A file read only as text (`?raw`) never runs, so the rules for
+    // code do not apply to it.
+    if (
+      codeFile.test(absolutePath) &&
+      graph.modules.has(absolutePath)
+    ) {
       checkModule(moduleAt(absolutePath))
     }
 
@@ -1126,13 +1131,18 @@ export const readSources = async (project) => {
     try {
       hash = hashFile(
         absolutePath,
+        // The strictest use wins: bytes, then data, where every JSON
+        // field counts, then a manifest, where only the fields that
+        // choose code count.
         graph.rawFiles.has(absolutePath)
           ? "bytes"
-          : graph.manifests.has(absolutePath) ||
-              (runtimeFiles.has(key) &&
-                basename(absolutePath) === "package.json")
-            ? "manifest"
-            : "code",
+          : graph.dataFiles.has(absolutePath)
+            ? "code"
+            : graph.manifests.has(absolutePath) ||
+                (runtimeFiles.has(key) &&
+                  basename(absolutePath) === "package.json")
+              ? "manifest"
+              : "code",
       )
     } catch (error) {
       problems.push({
