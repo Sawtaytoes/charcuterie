@@ -2385,6 +2385,79 @@ export const Desk = { args: { name: "Desk" } }
     }
   })
 
+  test("a worker URL query follows the worker, and a URL fragment is not part of the file", async () => {
+    const root = await lockedLamp({
+      "helpers/lamp.ts": `import workerUrl from "./worker.ts?worker&url"\n\nexport const work = () => [workerUrl, new Worker(new URL("./other.ts#name", import.meta.url))]\n${helpers}`,
+      "helpers/worker.ts":
+        'import { reply } from "./child.ts"\n\npostMessage(reply)\n',
+      "helpers/child.ts": "export const reply = 1\n",
+      "helpers/other.ts": "postMessage(1)\n",
+      "steps/lamp.steps.ts": stepsCalling("work"),
+    })
+
+    await writeFile(
+      join(root, "helpers/child.ts"),
+      "export const reply = 2\n",
+    )
+
+    expect(await detailsOf(root)).toEqual([
+      "REQ-T-1 code changed: helpers/child.ts",
+    ])
+  })
+
+  test("rejects a worker whose script is not a new URL written inside it", async () => {
+    const root = await makeProject({
+      "lamp.feature": feature,
+      "helpers/lamp.ts": `export const work = () => {\n  const url = new URL("./worker.ts", import.meta.url)\n\n  return new Worker(url)\n}\n${helpers}`,
+      "helpers/worker.ts": "postMessage(1)\n",
+      "steps/lamp.steps.ts": stepsCalling("work"),
+    })
+    const analysis = await analyzeProject(root)
+
+    expect(analysis.problems).toEqual([
+      expect.objectContaining({
+        rule: "unresolved-import",
+        line: 4,
+        message: expect.stringContaining(
+          "new Worker(…) needs",
+        ),
+      }),
+    ])
+  })
+
+  test("a browser map that redirects a relative import counts", async () => {
+    const root = await lockedLamp({
+      "package.json": JSON.stringify({
+        name: "lamp",
+        browser: {
+          "./lib/a.ts": "./lib/one.ts",
+          "./lib/b.ts": "./lib/two.ts",
+        },
+      }),
+      "helpers/lamp.ts": `import { value as a } from "../lib/a.ts"\nimport { value as b } from "../lib/b.ts"\n\nexport const kit = () => a - b\n${helpers}`,
+      "lib/a.ts": "export const value = 0\n",
+      "lib/b.ts": "export const value = 0\n",
+      "lib/one.ts": "export const value = 1\n",
+      "lib/two.ts": "export const value = 2\n",
+      "steps/lamp.steps.ts": stepsCalling("kit"),
+    })
+
+    await writeFile(
+      join(root, "package.json"),
+      JSON.stringify({
+        name: "lamp",
+        browser: {
+          "./lib/a.ts": "./lib/two.ts",
+          "./lib/b.ts": "./lib/one.ts",
+        },
+      }),
+    )
+
+    expect(await detailsOf(root)).toEqual([
+      "REQ-T-1 code changed: package.json",
+    ])
+  })
+
   test("a swapped browser map changes the lock", async () => {
     const manifest = {
       name: "@test/kit",

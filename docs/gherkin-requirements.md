@@ -180,7 +180,13 @@ Some imports load a file in another way:
 - `new URL` is read from the syntax tree, so a comment or a string that mentions it does
   not count. Its path must be a plain string. A template with an expression, or a path
   built with `+`, could load any file, so the check rejects it: write one URL for each
-  file.
+  file. A query or a `#fragment` on the path is not part of the file. `new Worker(…)`
+  must have its `new URL(…)` written inside it; a worker made from a variable is
+  rejected, because the lock could not follow what it imports. The check does not see a
+  `Worker` constructor renamed through a variable, so do not rename it.
+- `?worker&url` is still a worker: it is followed like `?worker`.
+- A `package.json` with a `browser` map is hashed with every relative import under it,
+  because the map can send that import to another file.
 - `new URL("/…", import.meta.url)` starts at the server root, which the lock cannot
   follow, so the check rejects it.
 - The `package.json` files that decide a workspace import are hashed with that import,

@@ -98,6 +98,15 @@ const querySuffix = /\?.*$/
 /** Queries that load a file's bytes or its URL, not its code. */
 const byteQuery = /[?&](?:raw|url)(?:[&=]|$)/
 
+/**
+ * Worker queries. They win over `url`: `?worker&url` is the URL of a
+ * worker that still runs the file and what it imports.
+ */
+const workerQuery = /[?&](?:worker|sharedworker)(?:[&=]|$)/
+
+/** A URL's query and fragment, which are not part of its file. */
+const urlSuffix = /[?#].*$/
+
 /** @param {string} specifier */
 const isBareSpecifier = (specifier) =>
   !specifier.startsWith(".") && !specifier.startsWith("/")
@@ -225,6 +234,7 @@ const scriptKinds = /** @type {const} */ ({
  * @typedef {{
  *   specifier: string | null,
  *   isWorker: boolean,
+ *   isIndirectWorker?: boolean,
  *   line: number,
  *   column: number,
  * }} UrlImport
@@ -233,6 +243,9 @@ const scriptKinds = /** @type {const} */ ({
  * template with an expression, which the lock cannot follow. `isWorker`
  * marks `new Worker(new URL(…))` and `new SharedWorker(new URL(…))`,
  * which Vite builds as code. Any other URL is an asset, read as bytes.
+ * `isIndirectWorker` marks a `new Worker(…)` whose script is not a
+ * `new URL(…)` written inside it, such as a variable, which the lock
+ * cannot follow.
  */
 
 /**
@@ -281,11 +294,35 @@ const urlImportsIn = (file) => {
       node.expression.text === "SharedWorker")
 
   /** @param {ts.Node} node */
+  const isUrlCall = (node) =>
+    ts.isNewExpression(node) &&
+    ts.isIdentifier(node.expression) &&
+    node.expression.text === "URL"
+
+  /** @param {ts.Node} node */
   const visit = (node) => {
     if (
       ts.isNewExpression(node) &&
-      ts.isIdentifier(node.expression) &&
-      node.expression.text === "URL" &&
+      isWorkerCall(node) &&
+      node.arguments?.[0] &&
+      !isUrlCall(node.arguments[0])
+    ) {
+      const position = source.getLineAndCharacterOfPosition(
+        node.getStart(source),
+      )
+
+      found.push({
+        specifier: null,
+        isWorker: true,
+        isIndirectWorker: true,
+        line: position.line + 1,
+        column: position.character + 1,
+      })
+    }
+
+    if (
+      isUrlCall(node) &&
+      ts.isNewExpression(node) &&
       node.arguments?.length === 2 &&
       isImportMetaUrl(node.arguments[1])
     ) {
@@ -316,6 +353,40 @@ const urlImportsIn = (file) => {
   visit(source)
 
   return found
+}
+
+/**
+ * The nearest `package.json` above a file, when it has a `browser`
+ * map that can redirect the file's relative imports.
+ *
+ * @param {string} file
+ * @returns {string | null}
+ */
+const browserMapOf = (file) => {
+  for (
+    let directory = dirname(file);
+    directory !== dirname(directory);
+    directory = dirname(directory)
+  ) {
+    const candidate = join(directory, "package.json")
+
+    if (existsSync(candidate)) {
+      try {
+        const { browser } = JSON.parse(
+          readFileSync(candidate, "utf8"),
+        )
+
+        return browser && typeof browser === "object"
+          ? candidate
+          : null
+      } catch {
+        // The lock reports a manifest it cannot read when it hashes it.
+        return null
+      }
+    }
+  }
+
+  return null
 }
 
 /**
@@ -402,8 +473,9 @@ export const readGraph = async (
         const specifier = args.path.replace(querySuffix, "")
         // A CSS `url()` reads the file as an asset, as `?url` does.
         const isBytes =
-          byteQuery.test(args.path) ||
-          args.kind === "url-token"
+          !workerQuery.test(args.path) &&
+          (byteQuery.test(args.path) ||
+            args.kind === "url-token")
         const result = await plugin.resolve(specifier, {
           kind: args.kind,
           importer: args.importer,
@@ -439,6 +511,21 @@ export const readGraph = async (
             addEdge(
               args.importer,
               `${specifier} (${toPosix(relative(root, manifest))})`,
+              manifest,
+            )
+          }
+        }
+
+        if (!isBareSpecifier(specifier) && args.importer) {
+          // A package's `browser` map can send a relative import to
+          // another file, so the map is part of the import.
+          const manifest = browserMapOf(args.importer)
+
+          if (manifest) {
+            manifests.add(manifest)
+            addEdge(
+              args.importer,
+              `browser map (${toPosix(relative(root, manifest))})`,
               manifest,
             )
           }
@@ -600,6 +687,13 @@ export const readGraph = async (
             message,
           })
 
+        if (url.isIndirectWorker) {
+          report(
+            'new Worker(…) needs its script written as new URL("./worker.ts", import.meta.url) inside it, so the lock can follow what the worker imports.',
+          )
+          continue
+        }
+
         if (url.specifier === null) {
           report(
             "new URL(…, import.meta.url) needs a plain string path, so the lock can tell which file it loads. Write one URL for each file.",
@@ -608,7 +702,7 @@ export const readGraph = async (
         }
 
         const specifier = url.specifier.replace(
-          querySuffix,
+          urlSuffix,
           "",
         )
 
