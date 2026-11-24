@@ -20,8 +20,9 @@
    imported module.
 4. **The walk stops at the code under test and at npm.** `subjects` names the components
    and the workspace libraries they build on (`ui`, `logic`, `tokens`). Anything resolved
-   inside `node_modules` is not followed. Other workspace packages are followed through
-   their `node_modules` link.
+   inside `node_modules` is not followed, and neither is a file git ignores, such as a
+   package's `dist` build, so a built checkout and CI read the same lock. Other workspace
+   packages are followed through their `node_modules` link.
 5. **A file read another way is followed the way Vite loads it.** `?raw`, `?url`, CSS
    `url()`, and `new URL` assets are hashed byte for byte, a subject included. `?worker`,
    `?inline`, and `new Worker(new URL(…))` are built as entries, to the end of any chain,

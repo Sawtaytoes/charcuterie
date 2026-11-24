@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process"
 import {
   existsSync,
   readFileSync,
@@ -440,6 +441,99 @@ const findBrowserMap = (file) => {
 }
 
 /**
+ * Whether git ignores a file, such as a package's `dist` build. Build
+ * output is not in the repo, so whether it exists depends on whether
+ * someone ran `pnpm build`; the lock must read the same either way.
+ * Like an npm package, it stands for code the lock does not hash. Git
+ * lists ignored paths once per repository, a folder once for all it
+ * holds. Outside a repository nothing is ignored.
+ *
+ * @param {Map<string, string[] | null>} listings ignored paths by folder
+ * @param {string} path
+ */
+const isIgnoredByGit = (listings, path) => {
+  const directory = dirname(path)
+
+  if (!listings.has(directory)) {
+    const topLevel = spawnSync(
+      "git",
+      ["rev-parse", "--show-toplevel"],
+      { cwd: directory, encoding: "utf8" },
+    )
+
+    if (topLevel.status !== 0) {
+      listings.set(directory, null)
+    } else {
+      const top = topLevel.stdout.trim()
+      const cached = listings.get(top)
+
+      if (cached !== undefined) {
+        listings.set(directory, cached)
+      } else {
+        const ignored = spawnSync(
+          "git",
+          [
+            "ls-files",
+            "--others",
+            "--ignored",
+            "--exclude-standard",
+            "--directory",
+            "-z",
+          ],
+          {
+            cwd: top,
+            encoding: "utf8",
+            maxBuffer: 64 * 1024 * 1024,
+          },
+        )
+        const paths =
+          ignored.status === 0
+            ? ignored.stdout
+                .split("\0")
+                .filter(Boolean)
+                .map((entry) => join(top, entry))
+            : null
+
+        listings.set(top, paths)
+        listings.set(directory, paths)
+      }
+    }
+  }
+
+  const ignoredPaths = listings.get(directory)
+
+  return (
+    ignoredPaths?.some((ignored) =>
+      ignored.endsWith("/")
+        ? path.startsWith(ignored)
+        : path === ignored,
+    ) ?? false
+  )
+}
+
+/**
+ * Whether git's ignore rules cover a path, whether or not it exists,
+ * so a `new URL` into an unbuilt `dist` reads the same as a built one.
+ *
+ * @param {string} path
+ */
+const isIgnoredPattern = (path) => {
+  let directory = dirname(path)
+
+  while (!existsSync(directory)) {
+    directory = dirname(directory)
+  }
+
+  return (
+    spawnSync(
+      "git",
+      ["check-ignore", "-q", "--no-index", "--", path],
+      { cwd: directory },
+    ).status === 0
+  )
+}
+
+/**
  * @param {{
  *   root: string,
  *   subjects: string[],
@@ -452,6 +546,9 @@ export const readGraph = async (
   entries,
 ) => {
   browserMaps.clear()
+
+  /** @type {Map<string, string[] | null>} */
+  const ignoredListings = new Map()
 
   /** @type {Map<string, Map<string, string>>} */
   const imports = new Map()
@@ -548,6 +645,7 @@ export const readGraph = async (
         if (
           result.external ||
           result.path.includes("/node_modules/") ||
+          isIgnoredByGit(ignoredListings, result.path) ||
           (isSubject(result.path) && !isBytes)
         ) {
           return { path: args.path, external: true }
@@ -771,6 +869,11 @@ export const readGraph = async (
         }
 
         const target = resolve(dirname(file), specifier)
+
+        if (isIgnoredPattern(target)) {
+          // Build output: it is not in the repo, built or not.
+          continue
+        }
 
         if (!existsSync(target)) {
           report(
