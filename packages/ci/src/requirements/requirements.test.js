@@ -2270,11 +2270,11 @@ export const Desk = { args: { name: "Desk" } }
     ])
   })
 
-  test("reads new URL calls from the syntax tree, and a template as Vite's glob", async () => {
-    const root = await lockedLamp({
-      "helpers/lamp.ts": `const note = 'new URL("./missing.txt", import.meta.url)'\n\nexport const fixture = (name: string) => [note, new URL(\`../fixtures/\${name}.json\`, import.meta.url)]\n${helpers}`,
+  test("reads new URL calls from the syntax tree, and rejects a path it cannot follow", async () => {
+    const root = await makeProject({
+      "lamp.feature": feature,
+      "helpers/lamp.ts": `const note = 'new URL("./missing.txt", import.meta.url)'\n\nexport const fixture = (name: string) => [note, new URL(\`../fixtures/\${name}.json\`, import.meta.url), new URL("../fixtures/" + name + ".json", import.meta.url)]\n${helpers}`,
       "fixtures/day.json": '{ "on": true }\n',
-      "fixtures/night.json": '{ "on": false }\n',
       "steps/lamp.steps.ts": steps
         .replace(
           "turnOn(world, name)",
@@ -2285,14 +2285,150 @@ export const Desk = { args: { name: "Desk" } }
           "import { fixture, expectOn,",
         ),
     })
+    const analysis = await analyzeProject(root)
+
+    expect(analysis.problems).toEqual([
+      expect.objectContaining({
+        rule: "unresolved-import",
+        line: 3,
+        message: expect.stringContaining(
+          "plain string path",
+        ),
+      }),
+      expect.objectContaining({
+        rule: "unresolved-import",
+        line: 3,
+        message: expect.stringContaining(
+          "plain string path",
+        ),
+      }),
+    ])
+  })
+
+  test("a URL to a code file is an asset, unless a Worker loads it", async () => {
+    const root = await lockedLamp({
+      "helpers/lamp.ts": `export const assets = () => [new URL("../fixtures/day.js?v=1", import.meta.url), new Worker(new URL("./worker.ts", import.meta.url))]\n${helpers}`,
+      "fixtures/day.js": "export const on = true\n",
+      "helpers/worker.ts":
+        'import { reply } from "./child.ts"\n\npostMessage(reply)\n',
+      "helpers/child.ts": "export const reply = 1\n",
+      "steps/lamp.steps.ts": stepsCalling("assets"),
+    })
 
     await writeFile(
-      join(root, "fixtures/night.json"),
-      '{"on":false}\n',
+      join(root, "fixtures/day.js"),
+      "// A note.\nexport const on = true\n",
+    )
+    await writeFile(
+      join(root, "helpers/worker.ts"),
+      '// A note.\nimport { reply } from "./child.ts"\n\npostMessage(reply)\n',
     )
 
     expect(await detailsOf(root)).toEqual([
-      "REQ-T-1 code changed: fixtures/night.json",
+      "REQ-T-1 code changed: fixtures/day.js",
+    ])
+
+    await writeFile(
+      join(root, "helpers/child.ts"),
+      "export const reply = 2\n",
+    )
+
+    expect(await detailsOf(root)).toEqual([
+      "REQ-T-1 code changed: fixtures/day.js",
+      "REQ-T-1 code changed: helpers/child.ts",
+    ])
+  })
+
+  test("finds a linked package's manifest through its node_modules link, whatever its name", async () => {
+    for (const name of [undefined, "@test/actual"]) {
+      const manifest = {
+        ...(name ? { name } : {}),
+        exports: {
+          "./first": "./nested/one.js",
+          "./second": "./nested/two.js",
+        },
+      }
+      const root = await makeProject({
+        "lamp.feature": feature,
+        "../kit/package.json": JSON.stringify(manifest),
+        "../kit/nested/package.json":
+          '{ "type": "module" }\n',
+        "../kit/nested/one.js": "export const value = 1\n",
+        "../kit/nested/two.js": "export const value = 2\n",
+        "helpers/lamp.ts": `import { value as first } from "@test/kit/first"\nimport { value as second } from "@test/kit/second"\n\nexport const kit = () => first - second\n${helpers}`,
+        "steps/lamp.steps.ts": stepsCalling("kit"),
+      })
+
+      await linkKit(root)
+
+      const analysis = await analyzeProject(root)
+
+      expect(analysis.problems).toEqual([])
+      await writeLock(
+        analysis,
+        buildLock(analysis, await readLock(analysis)),
+      )
+      await writeFile(
+        join(root, "../kit/package.json"),
+        JSON.stringify({
+          ...manifest,
+          exports: {
+            "./first": "./nested/two.js",
+            "./second": "./nested/one.js",
+          },
+        }),
+      )
+
+      expect(await detailsOf(root)).toEqual([
+        "REQ-T-1 code changed: ../kit/package.json",
+      ])
+    }
+  })
+
+  test("a swapped browser map changes the lock", async () => {
+    const manifest = {
+      name: "@test/kit",
+      exports: { ".": "./index.js" },
+      browser: {
+        "./a.js": "./one.js",
+        "./b.js": "./two.js",
+      },
+    }
+    const root = await makeProject({
+      "lamp.feature": feature,
+      "../kit/package.json": JSON.stringify(manifest),
+      "../kit/index.js":
+        'import { value as a } from "./a.js"\nimport { value as b } from "./b.js"\n\nexport const value = a - b\n',
+      "../kit/a.js": "export const value = 0\n",
+      "../kit/b.js": "export const value = 0\n",
+      "../kit/one.js": "export const value = 1\n",
+      "../kit/two.js": "export const value = 2\n",
+      "helpers/lamp.ts": `import { value } from "@test/kit"\n\nexport const kit = () => value\n${helpers}`,
+      "steps/lamp.steps.ts": stepsCalling("kit"),
+    })
+
+    await linkKit(root)
+
+    const analysis = await analyzeProject(root)
+
+    expect(analysis.problems).toEqual([])
+    await writeLock(
+      analysis,
+      buildLock(analysis, await readLock(analysis)),
+    )
+    await writeFile(
+      join(root, "../kit/package.json"),
+      JSON.stringify({
+        ...manifest,
+        browser: {
+          "./a.js": "./two.js",
+          "./b.js": "./one.js",
+        },
+      }),
+    )
+
+    expect(await detailsOf(root)).toEqual([
+      "REQ-T-1 code changed: ../kit/package.json",
     ])
   })
 

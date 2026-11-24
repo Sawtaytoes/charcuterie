@@ -110,6 +110,7 @@ const packageManifestText = (text) => {
       "type",
       "main",
       "module",
+      "browser",
       "exports",
       "imports",
     ].map((field) => [field, manifest[field] ?? null]),

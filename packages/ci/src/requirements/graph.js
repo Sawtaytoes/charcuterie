@@ -1,4 +1,8 @@
-import { existsSync, globSync, readFileSync } from "node:fs"
+import {
+  existsSync,
+  readFileSync,
+  realpathSync,
+} from "node:fs"
 import { isBuiltin } from "node:module"
 import {
   dirname,
@@ -116,47 +120,93 @@ const packageNameOf = (specifier) =>
 
 /**
  * The `package.json` files that decide what a package import loads:
- * the package's own, whose `exports` chose the file, and the nearest
- * one above the file, whose `type` says how a `.js` file is read.
+ * the package's own, whose `exports` or `browser` map chose the file,
+ * and the nearest one above the file, whose `type` says how a `.js`
+ * file is read.
+ *
+ * The package's own is found the way Node and Vite find the package:
+ * through `node_modules/<name>` from the importing folder upward, so a
+ * workspace link whose `name` differs, or that has none, still counts.
+ * A package that imports itself by name has no link, so then it is the
+ * nearest manifest above the file whose `name` matches.
  *
  * @param {string} path the resolved file
  * @param {string} specifier the bare specifier that chose it
+ * @param {string} resolveDir the importing folder
  * @returns {string[]}
  */
-const manifestsOf = (path, specifier) => {
+const manifestsOf = (path, specifier, resolveDir) => {
   const name = packageNameOf(specifier)
-  /** @type {string[]} */
-  const found = []
-  let directory = dirname(path)
+  const realPath = realpathSync(path)
+  /** @type {Set<string>} */
+  const found = new Set()
 
-  while (directory !== dirname(directory)) {
-    const candidate = join(directory, "package.json")
+  /**
+   * The `package.json` files above a folder, nearest first.
+   *
+   * @param {string} start
+   */
+  const manifestsAbove = function* (start) {
+    for (
+      let directory = start;
+      directory !== dirname(directory);
+      directory = dirname(directory)
+    ) {
+      const candidate = join(directory, "package.json")
 
-    if (existsSync(candidate)) {
-      if (found.length === 0) {
-        found.push(candidate)
-      }
-
-      try {
-        if (
-          JSON.parse(readFileSync(candidate, "utf8"))
-            .name === name
-        ) {
-          if (!found.includes(candidate)) {
-            found.push(candidate)
-          }
-
-          return found
-        }
-      } catch {
-        // The lock reports a manifest it cannot read when it hashes it.
+      if (existsSync(candidate)) {
+        yield candidate
       }
     }
-
-    directory = dirname(directory)
   }
 
-  return found
+  /** @param {string} manifest */
+  const isNamed = (manifest) => {
+    try {
+      return (
+        JSON.parse(readFileSync(manifest, "utf8")).name ===
+        name
+      )
+    } catch {
+      // The lock reports a manifest it cannot read when it hashes it.
+      return false
+    }
+  }
+
+  for (
+    let directory = resolveDir;
+    directory !== dirname(directory) && found.size === 0;
+    directory = dirname(directory)
+  ) {
+    const link = join(directory, "node_modules", name)
+
+    if (existsSync(join(link, "package.json"))) {
+      const packageDirectory = realpathSync(link)
+
+      if (realPath.startsWith(`${packageDirectory}/`)) {
+        found.add(join(packageDirectory, "package.json"))
+      }
+    }
+  }
+
+  if (found.size === 0) {
+    for (const manifest of manifestsAbove(
+      dirname(realPath),
+    )) {
+      if (isNamed(manifest)) {
+        found.add(manifest)
+        break
+      }
+    }
+  }
+
+  const [nearest] = manifestsAbove(dirname(realPath))
+
+  if (nearest) {
+    found.add(nearest)
+  }
+
+  return [...found]
 }
 
 /** TypeScript script kinds for the code files the URL scan reads. */
@@ -173,14 +223,16 @@ const scriptKinds = /** @type {const} */ ({
 
 /**
  * @typedef {{
- *   specifier: string,
- *   isPattern: boolean,
+ *   specifier: string | null,
+ *   isWorker: boolean,
  *   line: number,
  *   column: number,
  * }} UrlImport
  *
- * `isPattern` marks a template such as `./${name}.json`, which Vite
- * resolves as a glob, with `*` in place of each expression.
+ * `specifier` is null when the path is not a plain string, such as a
+ * template with an expression, which the lock cannot follow. `isWorker`
+ * marks `new Worker(new URL(…))` and `new SharedWorker(new URL(…))`,
+ * which Vite builds as code. Any other URL is an asset, read as bytes.
  */
 
 /**
@@ -222,6 +274,13 @@ const urlImportsIn = (file) => {
       ts.SyntaxKind.ImportKeyword
 
   /** @param {ts.Node} node */
+  const isWorkerCall = (node) =>
+    ts.isNewExpression(node) &&
+    ts.isIdentifier(node.expression) &&
+    (node.expression.text === "Worker" ||
+      node.expression.text === "SharedWorker")
+
+  /** @param {ts.Node} node */
   const visit = (node) => {
     if (
       ts.isNewExpression(node) &&
@@ -234,35 +293,21 @@ const urlImportsIn = (file) => {
       const position = source.getLineAndCharacterOfPosition(
         node.getStart(source),
       )
-      const at = {
+
+      found.push({
+        specifier:
+          target &&
+          (ts.isStringLiteral(target) ||
+            ts.isNoSubstitutionTemplateLiteral(target))
+            ? target.text
+            : null,
+        isWorker:
+          isWorkerCall(node.parent) &&
+          /** @type {ts.NewExpression} */ (node.parent)
+            .arguments?.[0] === node,
         line: position.line + 1,
         column: position.character + 1,
-      }
-
-      if (
-        ts.isStringLiteral(target) ||
-        ts.isNoSubstitutionTemplateLiteral(target)
-      ) {
-        found.push({
-          specifier: target.text,
-          isPattern: false,
-          ...at,
-        })
-      } else if (ts.isTemplateExpression(target)) {
-        found.push({
-          specifier: [
-            target.head.text,
-            ...target.templateSpans.map(
-              (span) => `*${span.literal.text}`,
-            ),
-          ]
-            .join("")
-            // Two expressions side by side are still one wildcard.
-            .replace(/\*{2,}/g, "*"),
-          isPattern: true,
-          ...at,
-        })
-      }
+      })
     }
 
     ts.forEachChild(node, visit)
@@ -388,6 +433,7 @@ export const readGraph = async (
           for (const manifest of manifestsOf(
             result.path,
             specifier,
+            args.resolveDir,
           )) {
             manifests.add(manifest)
             addEdge(
@@ -544,7 +590,6 @@ export const readGraph = async (
       scanned.add(file)
 
       for (const url of urlImportsIn(file)) {
-        const { specifier } = url
         /** @param {string} message */
         const report = (message) =>
           problems.push({
@@ -554,6 +599,18 @@ export const readGraph = async (
             rule: "unresolved-import",
             message,
           })
+
+        if (url.specifier === null) {
+          report(
+            "new URL(…, import.meta.url) needs a plain string path, so the lock can tell which file it loads. Write one URL for each file.",
+          )
+          continue
+        }
+
+        const specifier = url.specifier.replace(
+          querySuffix,
+          "",
+        )
 
         if (/^[a-z][a-z\d+.-]*:/i.test(specifier)) {
           continue
@@ -566,42 +623,34 @@ export const readGraph = async (
           continue
         }
 
-        if (url.isPattern && !specifier.startsWith(".")) {
+        const target = resolve(dirname(file), specifier)
+
+        if (!existsSync(target)) {
           report(
-            `new URL(\`${specifier}\`, import.meta.url) does not start with a relative folder, so the lock cannot tell which files it loads. Start the template with "./" or "../".`,
+            `new URL("${specifier}", import.meta.url) names a file that does not exist. The lock hashes every file a scenario loads, so every import must resolve.`,
           )
           continue
         }
 
-        const targets = url.isPattern
-          ? globSync(specifier, { cwd: dirname(file) }).map(
-              (match) => resolve(dirname(file), match),
-            )
-          : [resolve(dirname(file), specifier)].filter(
-              (target) => existsSync(target),
-            )
-
-        if (targets.length === 0) {
-          report(
-            `new URL("${specifier}", import.meta.url) names ${url.isPattern ? "no file that exists" : "a file that does not exist"}. The lock hashes every file a scenario loads, so every import must resolve.`,
-          )
-          continue
-        }
-
-        for (const target of targets) {
-          if (isSubject(target) && codeFile.test(target)) {
+        if (url.isWorker && codeFile.test(target)) {
+          // A worker runs, so it is built like an entry and what it
+          // imports is followed. A subject's code stays outside.
+          if (isSubject(target)) {
             continue
           }
 
-          addEdge(file, `new URL(${specifier})`, target)
+          addEdge(
+            file,
+            `new Worker(${url.specifier})`,
+            target,
+          )
 
-          if (codeFile.test(target)) {
-            if (isPending(target)) {
-              next.add(toPosix(relative(root, target)))
-            }
-          } else {
-            rawFiles.add(target)
+          if (isPending(target)) {
+            next.add(toPosix(relative(root, target)))
           }
+        } else {
+          addEdge(file, `new URL(${url.specifier})`, target)
+          rawFiles.add(target)
         }
       }
     }

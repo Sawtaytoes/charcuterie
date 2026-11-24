@@ -23,12 +23,14 @@
    inside `node_modules` is not followed. Other workspace packages are followed through
    their `node_modules` link.
 5. **A file read another way is followed the way Vite loads it.** `?raw`, `?url`, CSS
-   `url()`, and `new URL` data are hashed byte for byte, a subject included. `?worker`,
-   `?inline`, and a `new URL` worker are built as entries, to the end of any chain, so
-   what they import counts. A `new URL` template is read as Vite's glob. The workspace
-   `package.json` files that chose an import are hashed with it: the package's own and
-   the nearest one above the target. When one use of a file needs more of it than
-   another, the stricter use wins: bytes, then data, then manifest fields.
+   `url()`, and `new URL` assets are hashed byte for byte, a subject included. `?worker`,
+   `?inline`, and `new Worker(new URL(…))` are built as entries, to the end of any chain,
+   so what they import counts. A `new URL` path must be a plain string; the check rejects
+   a template or a computed path, because the lock cannot tell which file it loads. The
+   workspace `package.json` files that chose an import are hashed with it: the package's
+   own, found through its `node_modules` link, and the nearest one above the target.
+   When one use of a file needs more of it than another, the stricter use wins: bytes,
+   then data, then manifest fields.
 6. **Every file that runs follows the rules.** The `quickpickle` hook ban, the glob ban,
    the JSX pragma ban, and the string-literal `import()` rule apply to every file the
    scenarios run, not only to files in the requirements directory. A file read only as
