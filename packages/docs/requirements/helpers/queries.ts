@@ -44,7 +44,11 @@ export const byRole = (
 const seenKey = (role: Role, name: string) =>
   JSON.stringify([role, name])
 
-/** Records an element a step found, for a later "has closed". */
+/**
+ * Records an element a step found, for a later "has closed". An
+ * element is remembered under the name it had when last found, so a
+ * control whose name changed is no longer matched by its old one.
+ */
 export const remember = (
   world: RequirementsWorld,
   role: Role,
@@ -52,21 +56,45 @@ export const remember = (
   element: Element,
 ) => {
   const key = seenKey(role, name)
+
+  for (const [otherKey, elements] of world.seen) {
+    if (otherKey !== key) {
+      elements.delete(element)
+    }
+  }
+
   const elements = world.seen.get(key) ?? new Set()
 
   elements.add(element)
   world.seen.set(key, elements)
 }
 
+/** Whether a step found an element by this role and name. */
+export const wasSeen = (
+  world: RequirementsWorld,
+  role: Role,
+  name: string,
+) => (world.seen.get(seenKey(role, name))?.size ?? 0) > 0
+
 /**
  * The elements a step found by this role and name that are still in
- * the document, hidden or not.
+ * the document but hidden from the accessibility tree. One that is
+ * not hidden is matched by its current name instead, so it does not
+ * answer to a name it no longer has.
  */
 export const stillInDocument = (
   world: RequirementsWorld,
   role: Role,
   name: string,
-) =>
-  [...(world.seen.get(seenKey(role, name)) ?? [])].filter(
-    (element) => element.isConnected,
+) => {
+  const accessible = new Set<Element>(
+    scopeOf(world).queryAllByRole(role),
   )
+
+  return [
+    ...(world.seen.get(seenKey(role, name)) ?? []),
+  ].filter(
+    (element) =>
+      element.isConnected && !accessible.has(element),
+  )
+}

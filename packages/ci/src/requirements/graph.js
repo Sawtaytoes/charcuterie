@@ -244,8 +244,8 @@ const scriptKinds = /** @type {const} */ ({
  * marks `new Worker(new URL(…))` and `new SharedWorker(new URL(…))`,
  * which Vite builds as code. Any other URL is an asset, read as bytes.
  * `isIndirectWorker` marks a `new Worker(…)` whose script is not a
- * `new URL(…)` written inside it, such as a variable, which the lock
- * cannot follow.
+ * `new URL(…, import.meta.url)` written inside it, such as a variable,
+ * another base, or no script at all, which the lock cannot follow.
  */
 
 /**
@@ -293,6 +293,17 @@ const urlImportsIn = (file) => {
     (node.expression.text === "Worker" ||
       node.expression.text === "SharedWorker")
 
+  // A `?worker` import named `Worker` shadows the global, and its
+  // constructor takes no script.
+  const isWorkerImported = source.statements.some(
+    (statement) =>
+      ts.isImportDeclaration(statement) &&
+      statement.importClause !== undefined &&
+      (statement.importClause.name?.text === "Worker" ||
+        statement.importClause.name?.text ===
+          "SharedWorker"),
+  )
+
   /** @param {ts.Node} node */
   const isUrlCall = (node) =>
     ts.isNewExpression(node) &&
@@ -304,8 +315,20 @@ const urlImportsIn = (file) => {
     if (
       ts.isNewExpression(node) &&
       isWorkerCall(node) &&
-      node.arguments?.[0] &&
-      !isUrlCall(node.arguments[0])
+      !isWorkerImported &&
+      !(
+        node.arguments?.[0] &&
+        isUrlCall(node.arguments[0]) &&
+        /** @type {ts.NewExpression} */ (node.arguments[0])
+          .arguments?.length === 2 &&
+        isImportMetaUrl(
+          /** @type {ts.Expression} */ (
+            /** @type {ts.NewExpression} */ (
+              node.arguments[0]
+            ).arguments?.[1]
+          ),
+        )
+      )
     ) {
       const position = source.getLineAndCharacterOfPosition(
         node.getStart(source),
@@ -363,6 +386,33 @@ const urlImportsIn = (file) => {
  * @returns {string | null}
  */
 const browserMapOf = (file) => {
+  const cached = browserMaps.get(dirname(file))
+
+  if (cached !== undefined) {
+    return cached
+  }
+
+  const found = findBrowserMap(file)
+
+  browserMaps.set(dirname(file), found)
+
+  return found
+}
+
+/**
+ * Browser-map lookups by folder, for one process. A requirements
+ * check reads each manifest once; a test that rewrites a manifest
+ * runs in a fresh `readGraph`, which clears this.
+ *
+ * @type {Map<string, string | null>}
+ */
+const browserMaps = new Map()
+
+/**
+ * @param {string} file
+ * @returns {string | null}
+ */
+const findBrowserMap = (file) => {
   for (
     let directory = dirname(file);
     directory !== dirname(directory);
@@ -401,6 +451,8 @@ export const readGraph = async (
   { root, subjects },
   entries,
 ) => {
+  browserMaps.clear()
+
   /** @type {Map<string, Map<string, string>>} */
   const imports = new Map()
   /** @type {Set<string>} */
@@ -472,10 +524,11 @@ export const readGraph = async (
 
         const specifier = args.path.replace(querySuffix, "")
         // A CSS `url()` reads the file as an asset, as `?url` does.
+        // A CSS `url()` is always an asset, whatever its query.
         const isBytes =
-          !workerQuery.test(args.path) &&
-          (byteQuery.test(args.path) ||
-            args.kind === "url-token")
+          args.kind === "url-token" ||
+          (!workerQuery.test(args.path) &&
+            byteQuery.test(args.path))
         const result = await plugin.resolve(specifier, {
           kind: args.kind,
           importer: args.importer,

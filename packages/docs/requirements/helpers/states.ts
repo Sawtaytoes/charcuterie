@@ -11,6 +11,7 @@ import {
   remember,
   scopeOf,
   stillInDocument,
+  wasSeen,
 } from "./queries.ts"
 
 /**
@@ -24,12 +25,11 @@ export const expectAccessible = (
   role: Role,
   name: string,
 ) => {
-  expectAgentDrivable(scopeOf(world), { role, name })
   remember(
     world,
     role,
     name,
-    scopeOf(world).getByRole(role, { name }),
+    expectAgentDrivable(scopeOf(world), { role, name }),
   )
 }
 
@@ -142,8 +142,10 @@ const describeMatches = (role: Role, name?: string) =>
     : `every ${role} named "${name}" in the document`
 
 /**
- * Nothing in the document has this role and name, now. Checked once:
- * a wait would let an element that appears and then leaves pass.
+ * Nothing has this role and name, now: no element in the accessibility
+ * tree, and no hidden element the scenario found by this name earlier.
+ * A hidden element the scenario never saw has no name to match. Checked
+ * once: a wait would let an element that appears and then leaves pass.
  */
 export const expectAbsent = (
   world: RequirementsWorld,
@@ -166,6 +168,14 @@ export const expectClosed = async (
   role: Role,
   name?: string,
 ) => {
+  // A panel the scenario never saw would pass while stuck in its exit,
+  // hidden and nameless, so a named close needs a sighting first.
+  if (name !== undefined && !wasSeen(world, role, name)) {
+    throw new Error(
+      `The scenario never found the ${role} named "${name}" while it was open, so it cannot tell that this ${role} closed. Check that it is accessible by role and name before it closes.`,
+    )
+  }
+
   await waitFor(() =>
     expect(
       inDocument(world, role, name),
