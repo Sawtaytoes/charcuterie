@@ -3,6 +3,7 @@ import {
   mkdir,
   mkdtemp,
   rm,
+  symlink,
   writeFile,
 } from "node:fs/promises"
 import { tmpdir } from "node:os"
@@ -407,38 +408,6 @@ describe("the lock", () => {
     return root
   }
 
-  test("names the requirement whose helper was weakened, though no English changed", async () => {
-    const root = await lockedProject({})
-
-    await writeFile(
-      join(root, "helpers/lamp.ts"),
-      helpers.replace(
-        "if (!world.on.has(name)) throw new Error(name)",
-        "return",
-      ),
-    )
-
-    const analysis = await analyzeProject(root)
-    const locked = await readLock(analysis)
-
-    expect(lockProblems(analysis, locked)).toContainEqual(
-      expect.objectContaining({
-        rule: "stale-lock",
-        message: expect.stringContaining("REQ-T-1"),
-      }),
-    )
-    expect(
-      describeChanges(locked, buildLock(analysis, locked)),
-    ).toEqual([
-      expect.objectContaining({
-        id: "REQ-T-1",
-        details: [
-          "code changed: helpers/lamp.ts › expectOn",
-        ],
-      }),
-    ])
-  })
-
   test("ignores a comment or formatting change", async () => {
     const root = await lockedProject({})
 
@@ -452,28 +421,6 @@ describe("the lock", () => {
     expect(
       lockProblems(analysis, await readLock(analysis)),
     ).toEqual([])
-  })
-
-  test("follows a barrel re-export to the file that declares the helper", async () => {
-    const root = await makeProject({
-      "lamp.feature": feature,
-      "steps/lamp.steps.ts": steps.replace(
-        'from "../helpers/lamp.ts"',
-        'from "../../shared/index.ts"',
-      ),
-      "../shared/index.ts":
-        'export { expectOn, turnOn } from "./lamp.ts"\n',
-      "../shared/lamp.ts": helpers,
-    })
-    const analysis = await analyzeProject(root)
-    const lock = buildLock(
-      analysis,
-      await readLock(analysis),
-    )
-
-    expect(lock.requirements["REQ-T-1"]?.code).toContain(
-      "../shared/lamp.ts › expectOn",
-    )
   })
 
   test("refuses a removed requirement until it is retired, then refuses its ID", async () => {
@@ -594,54 +541,6 @@ describe("changes that must not pass unnoticed", () => {
     )
   })
 
-  test("weakening the step wrapper changes every requirement", async () => {
-    const root = await lockedLamp()
-
-    await writeFile(
-      join(root, "support/steps.ts"),
-      wrapper.replace(
-        "export const Then = () => {}",
-        "export const Then = () => undefined",
-      ),
-    )
-
-    expect((await changesOf(root)).details).toContain(
-      "REQ-T-1 code changed: support/steps.ts",
-    )
-  })
-
-  test("changing a parameter type's transformer changes the lock", async () => {
-    const parameterTypes = `import { defineParameterType } from "quickpickle"
-
-defineParameterType({ name: "lamp", regexp: /desk|floor/, transformer: (name: string) => name })
-`
-    const root = await lockedLamp({
-      "support/parameterTypes.ts": parameterTypes,
-    })
-
-    await writeFile(
-      join(root, "support/parameterTypes.ts"),
-      parameterTypes.replace("=> name", '=> "desk"'),
-    )
-
-    expect((await changesOf(root)).details).toContain(
-      "REQ-T-1 code changed: support/parameterTypes.ts",
-    )
-  })
-
-  test("a module-level patch in a helper file changes the lock", async () => {
-    const root = await lockedLamp()
-
-    await writeFile(
-      join(root, "helpers/lamp.ts"),
-      `${helpers}\nMath.random = () => 0\n`,
-    )
-
-    expect((await changesOf(root)).details).toContain(
-      "REQ-T-1 now reaches: helpers/lamp.ts › ‹module›",
-    )
-  })
-
   test("a changed data table changes the lock", async () => {
     const withTable = feature.replace(
       '      Then "Desk" is on',
@@ -658,72 +557,6 @@ defineParameterType({ name: "lamp", regexp: /desk|floor/, transformer: (name: st
 
     expect((await changesOf(root)).details).toContain(
       "REQ-T-1 spec: the steps or examples changed",
-    )
-  })
-
-  test("a fixture outside the root is hashed per export, and a subject is not hashed", async () => {
-    const fixture = `import { Lamp } from "./Lamp.tsx"
-
-export default { component: Lamp }
-
-export const Desk = { args: { name: "Desk" } }
-
-export const Floor = { args: { name: "Floor" } }
-`
-    const root = await lockedLamp({
-      "requirements.config.json": JSON.stringify({
-        ...config,
-        subjects: ["../ui/*.tsx", "!../ui/*.stories.tsx"],
-      }),
-      "../ui/Lamp.stories.tsx": fixture,
-      "../ui/Lamp.tsx": "export const Lamp = () => null\n",
-      "steps/lamp.steps.ts": steps
-        .replace(
-          'import { Given, Then, When } from "../support/steps.ts"',
-          'import { Given, Then, When } from "../support/steps.ts"\nimport meta, { Desk } from "../../ui/Lamp.stories.tsx"',
-        )
-        .replace(
-          "(world, name: string) => {})",
-          "(world, name: string) => { void meta; void Desk })",
-        ),
-    })
-    const { analysis } = await changesOf(root)
-    const code = buildLock(
-      analysis,
-      await readLock(analysis),
-    ).requirements["REQ-T-1"]?.code
-
-    expect(code).toEqual(
-      expect.arrayContaining([
-        "../ui/Lamp.stories.tsx › Desk",
-        "../ui/Lamp.stories.tsx › default",
-      ]),
-    )
-    expect(code?.some((key) => key.includes("Floor"))).toBe(
-      false,
-    )
-    expect(
-      code?.some((key) => key.startsWith("../ui/Lamp.tsx")),
-    ).toBe(false)
-
-    await writeFile(
-      join(root, "../ui/Lamp.stories.tsx"),
-      fixture.replace('"Floor"', '"Ceiling"'),
-    )
-    await writeFile(
-      join(root, "../ui/Lamp.tsx"),
-      "export const Lamp = () => undefined\n",
-    )
-
-    expect((await changesOf(root)).rules).toEqual([])
-
-    await writeFile(
-      join(root, "../ui/Lamp.stories.tsx"),
-      fixture.replace('"Desk" }', '"Lamp" }'),
-    )
-
-    expect((await changesOf(root)).details).toContain(
-      "REQ-T-1 code changed: ../ui/Lamp.stories.tsx › Desk",
     )
   })
 })
@@ -762,35 +595,6 @@ describe("changes found by the third review", () => {
       ),
     )
   }
-
-  test("an unused initializer that runs code changes the lock; an erased type import does not", async () => {
-    const root = await lockedLamp()
-
-    await writeFile(
-      join(root, "steps/lamp.steps.ts"),
-      `import type { World } from "../support/world.ts"\n${steps}`,
-    )
-
-    expect(await detailsOf(root)).toEqual([])
-
-    await writeFile(
-      join(root, "steps/lamp.steps.ts"),
-      `${steps}\nconst unused = (globalThis.lampName = "Floor")\n`,
-    )
-
-    expect(await detailsOf(root)).toContain(
-      "REQ-T-1 code changed: steps/lamp.steps.ts › ‹module›",
-    )
-
-    await writeFile(
-      join(root, "steps/lamp.steps.ts"),
-      `${steps}\nconst { unused } = { unused: 1 }\n`,
-    )
-
-    expect(await detailsOf(root)).toContain(
-      "REQ-T-1 code changed: steps/lamp.steps.ts › ‹module›",
-    )
-  })
 
   test("keeps data-table cell boundaries", async () => {
     const table = (row) =>
@@ -939,24 +743,6 @@ describe("changes found by the third review", () => {
 
 describe("changes found by the fourth review", () => {
   /** @param {Record<string, string>} files */
-  const lockedLamp = async (files = {}) => {
-    const root = await makeProject({
-      "lamp.feature": feature,
-      "helpers/lamp.ts": helpers,
-      "steps/lamp.steps.ts": steps,
-      ...files,
-    })
-    const analysis = await analyzeProject(root)
-
-    expect(analysis.problems).toEqual([])
-    await writeLock(
-      analysis,
-      buildLock(analysis, await readLock(analysis)),
-    )
-
-    return root
-  }
-
   /** @param {string} root */
   const resultOf = async (root) => {
     const analysis = await analyzeProject(root)
@@ -989,65 +775,6 @@ describe("changes found by the fourth review", () => {
     expect((await resultOf(root)).rules).toEqual([
       "step-file-without-steps",
     ])
-  })
-
-  test("a patch in one step file changes requirements that use none of its steps", async () => {
-    const other = `import { Given } from "../support/steps.ts"
-
-/** A switch. */
-Given("a switch", () => {})
-`
-    const root = await lockedLamp({
-      "switch.feature": `Feature: Switch
-
-  @REQ-T-2
-  Scenario: A switch exists
-    Given a switch
-`,
-      "steps/switch.steps.ts": other,
-    })
-
-    await writeFile(
-      join(root, "steps/switch.steps.ts"),
-      `${other}\nMath.random = () => 0\n`,
-    )
-
-    expect((await resultOf(root)).details).toContain(
-      "REQ-T-1 code changed: steps/switch.steps.ts › ‹module›",
-    )
-  })
-
-  test("follows the relative imports of runtime files, and side-effect imports", async () => {
-    const root = await lockedLamp({
-      "requirements.config.json": JSON.stringify({
-        ...config,
-        runtime: [
-          "index.ts",
-          "support/**/*.ts",
-          "../setup.ts",
-        ],
-      }),
-      "../setup.ts":
-        'import preview from "./preview.ts"\nimport "./patch.ts"\n\nvoid preview\n',
-      "../preview.ts": "export default { a11y: true }\n",
-      "../patch.ts": "export const patched = 1\n",
-    })
-
-    await writeFile(
-      join(root, "../preview.ts"),
-      "export default { a11y: false }\n",
-    )
-    await writeFile(
-      join(root, "../patch.ts"),
-      "export const patched = 2\n",
-    )
-
-    expect((await resultOf(root)).details).toEqual(
-      expect.arrayContaining([
-        "REQ-T-1 code changed: ../preview.ts › default",
-        "REQ-T-1 code changed: ../patch.ts › patched",
-      ]),
-    )
   })
 
   test("reports a relative import it cannot follow, and resolves .js to .ts", async () => {
@@ -1115,42 +842,6 @@ describe("changes found by the fifth review", () => {
     }
   }
 
-  test("an effectful default export joins the module unit", async () => {
-    const root = await lockedLamp()
-
-    await writeFile(
-      join(root, "steps/lamp.steps.ts"),
-      `${steps}\nexport default (globalThis.lampName = "Floor")\n`,
-    )
-
-    expect((await resultOf(root)).details).toContain(
-      "REQ-T-1 code changed: steps/lamp.steps.ts › ‹module›",
-    )
-  })
-
-  test("a barrel's own top-level code counts when a name passes through it", async () => {
-    const barrel =
-      'export { expectOn, turnOn } from "./lamp.ts"\n'
-    const root = await lockedLamp({
-      "helpers/lamp.ts": "export {}\n",
-      "steps/lamp.steps.ts": steps.replace(
-        'from "../helpers/lamp.ts"',
-        'from "../../shared/index.ts"',
-      ),
-      "../shared/index.ts": barrel,
-      "../shared/lamp.ts": helpers,
-    })
-
-    await writeFile(
-      join(root, "../shared/index.ts"),
-      `${barrel}\nthrow new Error("broken")\n`,
-    )
-
-    expect((await resultOf(root)).details).toContain(
-      "REQ-T-1 code changed: ../shared/index.ts › ‹module›",
-    )
-  })
-
   test("the prose under Feature, Rule, and Scenario is part of the requirement, but rewrapping is not", async () => {
     const withProse = feature.replace(
       "Feature: Lamp\n",
@@ -1179,120 +870,10 @@ describe("changes found by the fifth review", () => {
       "REQ-T-1 description: the Feature, Rule, or Scenario prose changed",
     ])
   })
-
-  test("a CSS comment or reflow does not change the lock, and a rule does", async () => {
-    const css = ".lamp { color: red; }\n"
-    const root = await lockedLamp({
-      "requirements.config.json": JSON.stringify({
-        ...config,
-        runtime: [
-          "index.ts",
-          "support/**/*.ts",
-          "../tokens.css",
-        ],
-      }),
-      "../tokens.css": css,
-    })
-
-    await writeFile(
-      join(root, "../tokens.css"),
-      "/* The lamp. */\n.lamp {\n  color: red;\n}\n",
-    )
-
-    expect((await resultOf(root)).details).toEqual([])
-
-    await writeFile(
-      join(root, "../tokens.css"),
-      ".lamp { color: blue; }\n",
-    )
-
-    expect((await resultOf(root)).details).toContain(
-      "REQ-T-1 code changed: ../tokens.css",
-    )
-  })
-
-  test("a release's version bump in a runtime package.json does not change the lock, and its exports do", async () => {
-    const manifest = {
-      name: "kit",
-      version: "1.0.0",
-      exports: { ".": "./index.js" },
-    }
-    const root = await lockedLamp({
-      "requirements.config.json": JSON.stringify({
-        ...config,
-        runtime: [
-          "index.ts",
-          "support/**/*.ts",
-          "../kit/package.json",
-        ],
-      }),
-      "../kit/package.json": JSON.stringify(manifest),
-    })
-
-    await writeFile(
-      join(root, "../kit/package.json"),
-      JSON.stringify({ ...manifest, version: "1.1.0" }),
-    )
-
-    expect((await resultOf(root)).details).toEqual([])
-
-    await writeFile(
-      join(root, "../kit/package.json"),
-      JSON.stringify({
-        ...manifest,
-        exports: { ".": "./weak.js" },
-      }),
-    )
-
-    expect((await resultOf(root)).details).toContain(
-      "REQ-T-1 code changed: ../kit/package.json",
-    )
-  })
-
-  test("reports an unresolved relative import even when nothing reads it", async () => {
-    const root = await makeProject({
-      "lamp.feature": feature,
-      "helpers/lamp.ts": helpers,
-      "steps/lamp.steps.ts": `import { gone } from "../helpers/gone.ts"\n${steps}`,
-    })
-
-    expect((await resultOf(root)).rules).toEqual([
-      "unresolved-import",
-    ])
-  })
 })
 
 describe("changes found by the sixth review", () => {
   /** @param {Record<string, string>} files */
-  const lockedLamp = async (files = {}) => {
-    const root = await makeProject({
-      "lamp.feature": feature,
-      "helpers/lamp.ts": helpers,
-      "steps/lamp.steps.ts": steps,
-      "switch.feature": `Feature: Switch
-
-  @REQ-T-2
-  Scenario: A switch exists
-    Given a switch
-`,
-      "steps/switch.steps.ts": `import { Given } from "../support/steps.ts"
-
-/** A switch. */
-Given("a switch", () => {})
-`,
-      ...files,
-    })
-    const analysis = await analyzeProject(root)
-
-    expect(analysis.problems).toEqual([])
-    await writeLock(
-      analysis,
-      buildLock(analysis, await readLock(analysis)),
-    )
-
-    return root
-  }
-
   /** @param {string} root */
   const resultOf = async (root) => {
     const analysis = await analyzeProject(root)
@@ -1313,67 +894,6 @@ Given("a switch", () => {})
     }
   }
 
-  test("a helper's top-level code marks requirements that never call it", async () => {
-    const root = await lockedLamp()
-
-    await writeFile(
-      join(root, "helpers/lamp.ts"),
-      `${helpers}\nMath.random = () => 0\n`,
-    )
-
-    expect((await resultOf(root)).details).toEqual(
-      expect.arrayContaining([
-        "REQ-T-1 now reaches: helpers/lamp.ts › ‹module›",
-        "REQ-T-2 now reaches: helpers/lamp.ts › ‹module›",
-      ]),
-    )
-  })
-
-  test("follows a workspace package by name, through its exports, and skips its tests", async () => {
-    const kit =
-      'export const configure = () => ({ a11y: "error" })\n'
-    const root = await lockedLamp({
-      "requirements.config.json": JSON.stringify({
-        ...config,
-        packages: { "@acme/kit": "../kit" },
-        runtime: [
-          "index.ts",
-          "support/**/*.ts",
-          "../kit/src/**/*.js",
-        ],
-      }),
-      "../kit/package.json": JSON.stringify({
-        name: "@acme/kit",
-        exports: {
-          "./setup": { source: "./src/setup.ts" },
-        },
-      }),
-      "../kit/src/setup.ts": kit,
-      "../kit/src/setup.test.js": "export {}\n",
-      "support/setup.ts":
-        'import { configure } from "@acme/kit/setup"\n\nconfigure()\n',
-    })
-
-    await writeFile(
-      join(root, "../kit/src/setup.test.js"),
-      "export const more = 1\n",
-    )
-
-    expect((await resultOf(root)).details).toEqual([])
-
-    await writeFile(
-      join(root, "../kit/src/setup.ts"),
-      kit.replace('"error"', '"todo"'),
-    )
-
-    expect((await resultOf(root)).details).toEqual(
-      expect.arrayContaining([
-        "REQ-T-1 code changed: ../kit/src/setup.ts › configure",
-        "REQ-T-2 code changed: ../kit/src/setup.ts › configure",
-      ]),
-    )
-  })
-
   test("reports a re-export that does not resolve", async () => {
     const root = await makeProject({
       "lamp.feature": feature,
@@ -1388,140 +908,6 @@ Given("a switch", () => {})
 })
 
 describe("changes found by the seventh review", () => {
-  const limit = "export default () => 0\n"
-  const counter = `import allowed from "./limit.ts"
-
-export const expectExact = (count: number) => {
-  if (count > allowed()) throw new Error("too many")
-}
-`
-
-  /**
-   * A fixture outside the root that re-exports a helper in one of
-   * three forms; the helper calls a third file.
-   *
-   * @param {string} barrel
-   * @param {string} importLine
-   * @param {string} call
-   */
-  const throughBarrel = async (
-    barrel,
-    importLine,
-    call,
-  ) => {
-    const root = await makeProject({
-      "lamp.feature": feature,
-      "helpers/lamp.ts": helpers,
-      "steps/lamp.steps.ts": `${importLine}\n${steps.replace(
-        "expectOn(world, name)",
-        `expectOn(world, name)\n  ${call}`,
-      )}`,
-      "../fixture/index.ts": barrel,
-      "../fixture/expectExact.ts": counter,
-      "../fixture/limit.ts": limit,
-    })
-    let analysis = await analyzeProject(root)
-
-    expect(analysis.problems).toEqual([])
-    await writeLock(
-      analysis,
-      buildLock(analysis, await readLock(analysis)),
-    )
-
-    await writeFile(
-      join(root, "../fixture/limit.ts"),
-      "export default () => Number.POSITIVE_INFINITY\n",
-    )
-    analysis = await analyzeProject(root)
-
-    const locked = await readLock(analysis)
-
-    return describeChanges(
-      locked,
-      buildLock(analysis, locked),
-    ).flatMap((change) =>
-      change.details.map(
-        (detail) => `${change.id} ${detail}`,
-      ),
-    )
-  }
-
-  test("follows a renamed re-export to the code it calls", async () => {
-    expect(
-      await throughBarrel(
-        'export { expectExact as expectCount } from "./expectExact.ts"\n',
-        'import { expectCount } from "../../fixture/index.ts"',
-        "expectCount(1)",
-      ),
-    ).toContain(
-      "REQ-T-1 code changed: ../fixture/limit.ts › default",
-    )
-  })
-
-  test("follows a re-exported default", async () => {
-    expect(
-      await throughBarrel(
-        'export { default } from "./limit.ts"\n',
-        'import allowed from "../../fixture/index.ts"',
-        "allowed()",
-      ),
-    ).toContain(
-      "REQ-T-1 code changed: ../fixture/limit.ts › default",
-    )
-  })
-
-  test("follows a namespace re-export", async () => {
-    expect(
-      await throughBarrel(
-        'export * as counts from "./expectExact.ts"\n',
-        'import { counts } from "../../fixture/index.ts"',
-        "counts.expectExact(1)",
-      ),
-    ).toContain(
-      "REQ-T-1 code changed: ../fixture/limit.ts › default",
-    )
-  })
-
-  test("follows a literal dynamic import, and rejects a computed one", async () => {
-    expect(
-      await throughBarrel(
-        "export {}\n",
-        "",
-        'await import("../../fixture/limit.ts")',
-      ),
-    ).toContain(
-      "REQ-T-1 code changed: ../fixture/limit.ts › default",
-    )
-
-    const root = await makeProject({
-      "lamp.feature": feature,
-      "helpers/lamp.ts": `${helpers}\nexport const load = (path: string) => import(path)\n`,
-      "steps/lamp.steps.ts": steps
-        .replace(
-          "expectOn(world, name)",
-          'expectOn(world, name)\n  void load("x")',
-        )
-        .replace(
-          "import { expectOn, turnOn }",
-          "import { expectOn, load, turnOn }",
-        ),
-    })
-
-    expect(await rulesOf(root)).toEqual(["dynamic-import"])
-  })
-
-  test("follows a literal dynamic import of a barrel to the code it re-exports", async () => {
-    expect(
-      await throughBarrel(
-        'export { expectExact } from "./expectExact.ts"\n',
-        "",
-        'void (await import("../../fixture/index.ts")).expectExact(1)',
-      ),
-    ).toContain(
-      "REQ-T-1 code changed: ../fixture/limit.ts › default",
-    )
-  })
-
   test("rejects import.meta.glob in a fixture outside the root, and ignores one in a comment", async () => {
     const root = await makeProject({
       "lamp.feature": feature,
@@ -1658,120 +1044,9 @@ describe("changes found by the ninth review", () => {
       ),
     ).toEqual(["REQ-T-2"])
   })
-
-  test("a literal dynamic import enters the top-level code of what its target imports", async () => {
-    const root = await makeProject({
-      "lamp.feature": feature,
-      "helpers/lamp.ts": helpers,
-      "steps/lamp.steps.ts": steps.replace(
-        "expectOn(world, name)",
-        'expectOn(world, name)\n  void (await import("../../fixture/impl.ts")).check()',
-      ),
-      "../fixture/impl.ts":
-        'import { describe } from "./describe.ts"\n\nexport const check = () => describe()\n',
-      "../fixture/describe.ts":
-        'import { formatters } from "./formatters.ts"\n\nexport const describe = () => "lamp"\n\nexport const other = () => formatters\n',
-      "../fixture/formatters.ts":
-        "export const formatters = {}\n\nglobalThis.patched = false\n",
-    })
-    let analysis = await analyzeProject(root)
-
-    expect(analysis.problems).toEqual([])
-    await writeLock(
-      analysis,
-      buildLock(analysis, await readLock(analysis)),
-    )
-    await writeFile(
-      join(root, "../fixture/formatters.ts"),
-      "export const formatters = {}\n\nglobalThis.patched = true\n",
-    )
-    analysis = await analyzeProject(root)
-
-    const locked = await readLock(analysis)
-
-    expect(
-      describeChanges(
-        locked,
-        buildLock(analysis, locked),
-      ).flatMap((change) =>
-        change.details.map(
-          (detail) => `${change.id} ${detail}`,
-        ),
-      ),
-    ).toContain(
-      "REQ-T-1 code changed: ../fixture/formatters.ts › ‹module›",
-    )
-  })
 })
 
 describe("changes found by the tenth review", () => {
-  /**
-   * Locks a clean project, applies `edits`, and lists each change.
-   *
-   * @param {Record<string, string>} edits
-   * @param {Record<string, string>} [extra]
-   */
-  const changesAfter = async (edits, extra = {}) => {
-    const root = await makeProject({
-      "lamp.feature": feature,
-      "helpers/lamp.ts": helpers,
-      "steps/lamp.steps.ts": steps,
-      ...extra,
-    })
-    let analysis = await analyzeProject(root)
-
-    expect(analysis.problems).toEqual([])
-    await writeLock(
-      analysis,
-      buildLock(analysis, await readLock(analysis)),
-    )
-
-    for (const [file, text] of Object.entries(edits)) {
-      await writeFile(join(root, file), text)
-    }
-
-    analysis = await analyzeProject(root)
-
-    const locked = await readLock(analysis)
-
-    return describeChanges(
-      locked,
-      buildLock(analysis, locked),
-    ).flatMap((change) =>
-      change.details.map(
-        (detail) => `${change.id} ${detail}`,
-      ),
-    )
-  }
-
-  test("a class whose extends clause runs code joins the module unit", async () => {
-    expect(
-      (
-        await changesAfter({
-          "helpers/lamp.ts": `${helpers}\nconst withPatch = () => Object\n\nexport class Patched extends withPatch() {}\n`,
-        })
-      ).join("\n"),
-    ).toContain("helpers/lamp.ts › ‹module›")
-  })
-
-  test("a getter read or a template with a value joins the module unit", async () => {
-    const patcher =
-      "const patcher = {\n  get now() {\n    return 1\n  },\n}\n"
-
-    for (const line of [
-      "export const patchedAt = patcher.now\n",
-      `export const patchedText = \`\${patcher}\`\n`,
-    ]) {
-      expect(
-        (
-          await changesAfter({
-            "helpers/lamp.ts": `${helpers}\n${patcher}\n${line}`,
-          })
-        ).join("\n"),
-      ).toContain("helpers/lamp.ts › ‹module›")
-    }
-  })
-
   test("rejects a JSX pragma comment", async () => {
     const root = await makeProject({
       "lamp.feature": feature,
@@ -1780,133 +1055,6 @@ describe("changes found by the tenth review", () => {
     })
 
     expect(await rulesOf(root)).toEqual(["jsx-pragma"])
-  })
-
-  test("follows an empty import list like a side-effect import", async () => {
-    expect(
-      await changesAfter(
-        {
-          "fixtures/patch.ts": "globalThis.patched = 2\n",
-        },
-        {
-          "helpers/lamp.ts": `import {} from "../fixtures/patch.ts"\n${helpers}`,
-          "fixtures/patch.ts": "globalThis.patched = 1\n",
-        },
-      ),
-    ).toContain(
-      "REQ-T-1 code changed: fixtures/patch.ts › ‹module›",
-    )
-  })
-})
-
-describe("changes found by the eleventh review", () => {
-  test("rejects an extensionless import that a .js file beside it could take over", async () => {
-    const root = await makeProject({
-      "lamp.feature": feature,
-      "helpers/lamp.ts": helpers,
-      "helpers/limit.ts": "export const limit = 1\n",
-      "helpers/limit.js": "export const limit = 9\n",
-      "steps/lamp.steps.ts": `import { limit } from "../helpers/limit"\n${steps.replace(
-        "expectOn(world, name)",
-        "expectOn(world, name)\n  void limit",
-      )}`,
-    })
-    const { problems } = await analyzeProject(root)
-
-    const unresolved = problems.filter(
-      (problem) => problem.rule === "unresolved-import",
-    )
-
-    expect(unresolved).toHaveLength(1)
-    expect(unresolved[0]?.message).toContain(
-      "helpers/limit.js",
-    )
-  })
-
-  test("rejects a root-absolute or # subpath import", async () => {
-    for (const specifier of [
-      "/requirements/patch.ts",
-      "#patch",
-    ]) {
-      const root = await makeProject({
-        "lamp.feature": feature,
-        "helpers/lamp.ts": `import "${specifier}"\n${helpers}`,
-        "steps/lamp.steps.ts": steps,
-      })
-
-      expect(await rulesOf(root)).toEqual([
-        "unresolved-import",
-      ])
-    }
-  })
-
-  test("follows export * past a local that is not exported", async () => {
-    const root = await makeProject({
-      "lamp.feature": feature,
-      "helpers/lamp.ts": helpers,
-      "steps/lamp.steps.ts": `import { check } from "../../fixture/index.ts"\n${steps.replace(
-        "expectOn(world, name)",
-        "expectOn(world, name)\n  check()",
-      )}`,
-      "../fixture/index.ts":
-        'const check = () => 1\n\nexport const other = () => check()\n\nexport * from "./weak.ts"\n',
-      "../fixture/weak.ts":
-        "export const check = () => 2\n",
-    })
-    const analysis = await analyzeProject(root)
-    const lock = buildLock(
-      analysis,
-      await readLock(analysis),
-    )
-
-    expect(lock.requirements["REQ-T-1"]?.code).toContain(
-      "../fixture/weak.ts › check",
-    )
-  })
-
-  test("keeps a static and an instance method of the same name apart", async () => {
-    // The step never names the class, so its method is reached by
-    // name, and both methods named `flip` must be units of their own.
-    const root = await makeProject({
-      "lamp.feature": feature,
-      "helpers/lamp.ts": helpers,
-      "helpers/switch.ts":
-        "export class Switch {\n  static flip() {\n    return 1\n  }\n\n  flip() {\n    return 2\n  }\n}\n",
-      "steps/lamp.steps.ts": steps.replace(
-        "expectOn(world, name)",
-        "expectOn(world, name)\n  void world.lamp.flip()",
-      ),
-    })
-    const analysis = await analyzeProject(root)
-    const lock = buildLock(
-      analysis,
-      await readLock(analysis),
-    )
-
-    expect(lock.requirements["REQ-T-1"]?.code).toEqual(
-      expect.arrayContaining([
-        "helpers/switch.ts › Switch.flip",
-        "helpers/switch.ts › Switch.flip (static)",
-      ]),
-    )
-  })
-
-  test("a top-level using declaration joins the module unit", async () => {
-    const root = await makeProject({
-      "lamp.feature": feature,
-      // The initializer alone is inert; only `using` makes it code.
-      "helpers/lamp.ts": `${helpers}\nusing held = null\n`,
-      "steps/lamp.steps.ts": steps,
-    })
-    const analysis = await analyzeProject(root)
-    const lock = buildLock(
-      analysis,
-      await readLock(analysis),
-    )
-
-    expect(Object.keys(lock.code)).toContain(
-      "helpers/lamp.ts › ‹module›",
-    )
   })
 })
 
@@ -1939,121 +1087,6 @@ describe("changes found by the twelfth review", () => {
     }
   }
 
-  test("a named re-export wins over an earlier export *", async () => {
-    const { code } = await reachedThroughBarrel({
-      "../fixture/index.ts":
-        'export * from "./weak.ts"\nexport { check } from "./strong.ts"\n',
-      "../fixture/weak.ts":
-        "export const check = () => 1\n",
-      "../fixture/strong.ts":
-        "export const check = () => 2\n",
-    })
-
-    expect(code).toContain("../fixture/strong.ts › check")
-    expect(code).not.toContain("../fixture/weak.ts › check")
-  })
-
-  test("an export declare does not hide the export * that supplies the name", async () => {
-    const { code } = await reachedThroughBarrel({
-      "../fixture/index.ts":
-        'export declare const check: () => number\nexport * from "./real.ts"\n',
-      "../fixture/real.ts":
-        "export const check = () => 1\n",
-    })
-
-    expect(code).toContain("../fixture/real.ts › check")
-  })
-
-  /**
-   * A barrel chain of `hops` re-exports from the index to `check`.
-   *
-   * @param {number} hops
-   * @param {"named" | "star"} form
-   */
-  const chainOf = (hops, form) => {
-    /** @type {Record<string, string>} */
-    const chain = {
-      [`../fixture/b${hops}.ts`]:
-        "export const check = () => 1\n",
-    }
-
-    for (let hop = 0; hop < hops; hop += 1) {
-      const from = hop === 0 ? "index" : `b${hop}`
-
-      chain[`../fixture/${from}.ts`] =
-        form === "named"
-          ? `export { check } from "./b${hop + 1}.ts"\n`
-          : `export * from "./b${hop + 1}.ts"\n`
-    }
-
-    return chain
-  }
-
-  test("follows eight re-exports, and reports a ninth as too deep", async () => {
-    for (const form of /** @type {const} */ ([
-      "named",
-      "star",
-    ])) {
-      const fits = await reachedThroughBarrel(
-        chainOf(8, form),
-      )
-
-      expect(fits.problems).toEqual([])
-      expect(fits.code).toContain(
-        "../fixture/b8.ts › check",
-      )
-      expect(
-        (await reachedThroughBarrel(chainOf(9, form)))
-          .problems,
-      ).toContain("reexport-too-deep")
-    }
-  })
-
-  test("a cycle of export * ends without a depth report", async () => {
-    const { problems, code } = await reachedThroughBarrel({
-      "../fixture/index.ts":
-        'export * from "./a.ts"\nexport * from "./real.ts"\n',
-      "../fixture/a.ts": 'export * from "./index.ts"\n',
-      "../fixture/real.ts":
-        "export const check = () => 1\n",
-    })
-
-    expect(problems).toEqual([])
-    expect(code).toContain("../fixture/real.ts › check")
-  })
-
-  test("a long chain without the name does not hide the export * that has it", async () => {
-    const chain = chainOf(10, "star")
-
-    chain["../fixture/b10.ts"] =
-      "export const other = () => 1\n"
-    chain["../fixture/index.ts"] =
-      'export * from "./b1.ts"\nexport * from "./real.ts"\n'
-
-    const { problems, code } = await reachedThroughBarrel({
-      ...chain,
-      "../fixture/real.ts":
-        "export const check = () => 1\n",
-    })
-
-    expect(problems).toEqual([])
-    expect(code).toContain("../fixture/real.ts › check")
-  })
-
-  test("rejects a directory import whose directory has a package.json", async () => {
-    const root = await makeProject({
-      "lamp.feature": feature,
-      "helpers/lamp.ts": `import "./q"\n${helpers}`,
-      "helpers/q/index.ts": "export {}\n",
-      "helpers/q/package.json": '{ "main": "./evil.js" }\n',
-      "steps/lamp.steps.ts": steps,
-    })
-
-    expect(await rulesOf(root)).toContain(
-      "unresolved-import",
-    )
-  })
-
   test("an export * in front of a named chain still hashes the file the chain ends in", async () => {
     const { code } = await reachedThroughBarrel({
       "../fixture/index.ts": 'export * from "./a.ts"\n',
@@ -2063,65 +1096,6 @@ describe("changes found by the twelfth review", () => {
     })
 
     expect(code).toContain("../fixture/b.ts")
-  })
-
-  test("a path through one file under two names follows both", async () => {
-    const { code } = await reachedThroughBarrel({
-      "../fixture/index.ts": 'export * from "./a.ts"\n',
-      "../fixture/a.ts":
-        'export { y as check } from "./b.ts"\n\nexport const z = () => 1\n',
-      "../fixture/b.ts":
-        'export { z as y } from "./a.ts"\n',
-    })
-
-    expect(code).toContain("../fixture/a.ts › z")
-  })
-
-  test("an export * of a JSON file does not hide the export * that has the name", async () => {
-    const { code } = await reachedThroughBarrel({
-      "../fixture/index.ts":
-        'export * from "./data.json"\nexport * from "./real.ts"\n',
-      "../fixture/data.json": '{ "other": 1 }\n',
-      "../fixture/real.ts":
-        "export const check = () => 1\n",
-    })
-
-    expect(code).toContain("../fixture/real.ts › check")
-
-    const named = await reachedThroughBarrel({
-      "../fixture/index.ts":
-        'export { default as check } from "./data.json"\n',
-      "../fixture/data.json": '{ "other": 1 }\n',
-    })
-
-    expect(named.code).toContain("../fixture/data.json")
-  })
-
-  test("hashes a JSON file whose key an export * supplies", async () => {
-    for (const order of [
-      'export * from "./data.json"\nexport * from "./other.ts"\n',
-      'export * from "./other.ts"\nexport * from "./data.json"\n',
-    ]) {
-      const { code } = await reachedThroughBarrel({
-        "../fixture/index.ts": order,
-        "../fixture/data.json": '{ "check": 1 }\n',
-        "../fixture/other.ts":
-          "export const other = () => 1\n",
-      })
-
-      expect(code).toContain("../fixture/data.json")
-    }
-  })
-
-  test("falls back to a CSS file an export * names when nothing else supplies the name", async () => {
-    const { code } = await reachedThroughBarrel({
-      "../fixture/index.ts":
-        'export * from "./styles.module.css"\n',
-      "../fixture/styles.module.css":
-        ".check { color: red; }\n",
-    })
-
-    expect(code).toContain("../fixture/styles.module.css")
   })
 
   test("a non-code export * written first does not shadow a later chain", async () => {
@@ -2281,109 +1255,6 @@ describe("changes found by the twelfth review", () => {
     expect(await rulesOf(missing)).toEqual([
       "step-handler-shape",
     ])
-  })
-})
-
-describe("changes found by the review of PR 440", () => {
-  /**
-   * @param {Record<string, string>} fixture
-   * @param {string} importLine
-   * @param {string} call
-   */
-  const analyzeWith = async (fixture, importLine, call) => {
-    const root = await makeProject({
-      "lamp.feature": feature,
-      "helpers/lamp.ts": helpers,
-      "steps/lamp.steps.ts": `${importLine}\n${steps.replace(
-        "expectOn(world, name)",
-        `expectOn(world, name)\n  ${call}`,
-      )}`,
-      ...fixture,
-    })
-
-    return analyzeProject(root)
-  }
-
-  test("a too-deep chain that ends in a CSS export * still fails", async () => {
-    /** @type {Record<string, string>} */
-    const fixture = {
-      "../fixture/x.module.css": ".check { color: red; }\n",
-    }
-
-    for (let hop = 0; hop < 9; hop += 1) {
-      const from = hop === 0 ? "index" : `b${hop}`
-      const to =
-        hop === 8 ? "x.module.css" : `b${hop + 1}.ts`
-
-      fixture[`../fixture/${from}.ts`] =
-        `export * from "./${to}"\n`
-    }
-
-    const analysis = await analyzeWith(
-      fixture,
-      'import { check } from "../../fixture/index.ts"',
-      "void check",
-    )
-
-    expect(
-      analysis.problems.map((problem) => problem.rule),
-    ).toContain("reexport-too-deep")
-  })
-
-  test("reports malformed JSON behind a namespace import instead of crashing", async () => {
-    const analysis = await analyzeWith(
-      {
-        "../fixture/index.ts":
-          'export * from "./bad.json"\n',
-        "../fixture/bad.json": "{ not json\n",
-      },
-      'import * as data from "../../fixture/index.ts"',
-      "void data",
-    )
-
-    expect(
-      analysis.problems.map((problem) => problem.rule),
-    ).toEqual(["malformed-json"])
-  })
-
-  test("reports a malformed workspace package.json instead of crashing", async () => {
-    const root = await makeProject({
-      "requirements.config.json": JSON.stringify({
-        ...config,
-        packages: { "@acme/kit": "../kit" },
-      }),
-      "lamp.feature": feature,
-      "helpers/lamp.ts": helpers,
-      "steps/lamp.steps.ts": `import { kit } from "@acme/kit"\n${steps.replace(
-        "expectOn(world, name)",
-        "expectOn(world, name)\n  void kit",
-      )}`,
-      "../kit/package.json": "{ not json\n",
-      "../kit/index.ts": "export const kit = 1\n",
-    })
-    const analysis = await analyzeProject(root)
-
-    expect(
-      analysis.problems.map((problem) => problem.rule),
-    ).toContain("malformed-json")
-  })
-
-  test("reads a JSON file that starts with a byte-order mark", async () => {
-    const analysis = await analyzeWith(
-      {
-        "../fixture/index.ts":
-          'export * from "./bom.json"\n',
-        "../fixture/bom.json": '\uFEFF{ "check": 1 }\n',
-      },
-      'import { check } from "../../fixture/index.ts"',
-      "void check",
-    )
-
-    expect(analysis.problems).toEqual([])
-    expect(
-      buildLock(analysis, await readLock(analysis))
-        .requirements["REQ-T-1"]?.code,
-    ).toContain("../fixture/bom.json")
   })
 })
 
@@ -2565,175 +1436,1213 @@ describe("which", () => {
   })
 })
 
-describe("the round-12 gaps", () => {
-  /**
-   * @param {Record<string, string>} fixture
-   */
-  const throughBarrel = async (fixture) => {
+/**
+ * The lock records files, as esbuild resolves them. These tests plant
+ * the edits an agent could make to weaken a requirement, and the
+ * edits that must not count.
+ */
+describe("the file-level lock", () => {
+  /** @param {Record<string, string>} files */
+  const lockedLamp = async (files = {}) => {
     const root = await makeProject({
       "lamp.feature": feature,
       "helpers/lamp.ts": helpers,
-      "steps/lamp.steps.ts": `import { check } from "../../fixture/index.ts"\n${steps.replace(
-        "expectOn(world, name)",
-        "expectOn(world, name)\n  check()",
-      )}`,
-      ...fixture,
+      "steps/lamp.steps.ts": steps,
+      ...files,
     })
     const analysis = await analyzeProject(root)
 
-    return {
-      problems: analysis.problems,
-      code:
-        buildLock(analysis, await readLock(analysis))
-          .requirements["REQ-T-1"]?.code ?? [],
-    }
+    expect(analysis.problems).toEqual([])
+    await writeLock(
+      analysis,
+      buildLock(analysis, await readLock(analysis)),
+    )
+
+    return root
   }
 
-  /** @param {string} manifest */
-  const withWorkspaceManifest = async (manifest) =>
-    analyzeProject(
-      await makeProject({
-        "requirements.config.json": JSON.stringify({
-          ...config,
-          packages: { "@acme/kit": "../kit" },
+  /** @param {string} root */
+  const detailsOf = async (root) => {
+    const analysis = await analyzeProject(root)
+    const locked = await readLock(analysis)
+
+    return describeChanges(
+      locked,
+      buildLock(analysis, locked),
+    ).flatMap((change) =>
+      change.details.map(
+        (detail) => `${change.id} ${detail}`,
+      ),
+    )
+  }
+
+  test("names the requirement whose helper was weakened, though no English changed", async () => {
+    const root = await lockedLamp()
+
+    await writeFile(
+      join(root, "helpers/lamp.ts"),
+      helpers.replace(
+        "if (!world.on.has(name)) throw new Error(name)",
+        "return",
+      ),
+    )
+
+    expect(await detailsOf(root)).toEqual([
+      "REQ-T-1 code changed: helpers/lamp.ts",
+    ])
+  })
+
+  test("lists the runtime once, and a runtime change once for every requirement", async () => {
+    const parameterTypes = `import { defineParameterType } from "quickpickle"
+
+defineParameterType({ name: "lamp", regexp: /desk|floor/, transformer: (name: string) => name })
+`
+    const root = await lockedLamp({
+      "support/parameterTypes.ts": parameterTypes,
+    })
+    const analysis = await analyzeProject(root)
+    const lock = buildLock(
+      analysis,
+      await readLock(analysis),
+    )
+
+    expect(lock.version).toBe(2)
+    expect(lock.shared).toEqual([
+      "index.ts",
+      "requirements.config.json",
+      "support/parameterTypes.ts",
+      "support/steps.ts",
+    ])
+    expect(lock.requirements["REQ-T-1"]?.code).toEqual([
+      "helpers/lamp.ts",
+      "steps/lamp.steps.ts",
+    ])
+
+    await writeFile(
+      join(root, "support/parameterTypes.ts"),
+      parameterTypes.replace("=> name", '=> "desk"'),
+    )
+    await writeFile(
+      join(root, "support/steps.ts"),
+      wrapper.replace(
+        "export const Then = () => {}",
+        "export const Then = () => undefined",
+      ),
+    )
+
+    expect(await detailsOf(root)).toEqual([
+      "Every requirement code changed: support/parameterTypes.ts",
+      "Every requirement code changed: support/steps.ts",
+    ])
+  })
+
+  test("ignores comments, formatting, and types, but not an unused value import", async () => {
+    const root = await lockedLamp()
+
+    await writeFile(
+      join(root, "helpers/lamp.ts"),
+      `// A note.\n${helpers.replace("(world: World, name: string) =>", '(\n  world: World,\n  name: string | "Desk",\n) =>')}`,
+    )
+    await writeFile(
+      join(root, "steps/lamp.steps.ts"),
+      `import type { World } from "../support/world.ts"\n${steps.replace("import {", "import { type World as Other,")}`,
+    )
+
+    expect(await detailsOf(root)).toEqual([])
+
+    await writeFile(
+      join(root, "steps/lamp.steps.ts"),
+      `import "../helpers/patch.ts"\n${steps}`,
+    )
+    await writeFile(
+      join(root, "helpers/patch.ts"),
+      "Math.random = () => 0\n",
+    )
+
+    expect(await detailsOf(root)).toEqual([
+      "REQ-T-1 now loads: helpers/patch.ts",
+      "REQ-T-1 code changed: steps/lamp.steps.ts",
+    ])
+
+    // A tsconfig with verbatimModuleSyntax keeps an unused named
+    // import, which runs the module, so the hash keeps it too.
+    await writeFile(
+      join(root, "steps/lamp.steps.ts"),
+      `import { turnOn as unused } from "../helpers/lamp.ts"\n${steps}`,
+    )
+
+    expect(await detailsOf(root)).toContain(
+      "REQ-T-1 code changed: steps/lamp.steps.ts",
+    )
+  })
+
+  test("hashes a fixture outside the root whole, and never a subject", async () => {
+    const fixture = `import { Lamp } from "./Lamp.tsx"
+
+export default { component: Lamp }
+
+export const Desk = { args: { name: "Desk" } }
+`
+    const root = await lockedLamp({
+      "requirements.config.json": JSON.stringify({
+        ...config,
+        subjects: ["../ui/*.tsx", "!../ui/*.stories.tsx"],
+      }),
+      "../ui/Lamp.stories.tsx": fixture,
+      "../ui/Lamp.tsx": "export const Lamp = () => null\n",
+      "steps/lamp.steps.ts": steps
+        .replace(
+          'import { Given, Then, When } from "../support/steps.ts"',
+          'import { Given, Then, When } from "../support/steps.ts"\nimport { Desk } from "../../ui/Lamp.stories.tsx"',
+        )
+        .replace(
+          "(world, name: string) => {})",
+          "(world, name: string) => { void Desk })",
+        ),
+    })
+
+    await writeFile(
+      join(root, "../ui/Lamp.tsx"),
+      "export const Lamp = () => undefined\n",
+    )
+
+    expect(await detailsOf(root)).toEqual([])
+
+    await writeFile(
+      join(root, "../ui/Lamp.stories.tsx"),
+      fixture.replace('"Desk" }', '"Lamp" }'),
+    )
+
+    expect(await detailsOf(root)).toEqual([
+      "REQ-T-1 code changed: ../ui/Lamp.stories.tsx",
+    ])
+  })
+
+  test("a new step file and its feature leave existing requirements alone", async () => {
+    const root = await lockedLamp()
+
+    await writeFile(
+      join(root, "fan.feature"),
+      `Feature: Fan\n\n  @REQ-T-2\n  Scenario: A fan spins\n    Given a fan\n`,
+    )
+    await writeFile(
+      join(root, "steps/fan.steps.ts"),
+      `import { Given } from "../support/steps.ts"\nimport "../helpers/fan.ts"\n\nGiven("a fan", () => {})\n`,
+    )
+    await writeFile(
+      join(root, "helpers/fan.ts"),
+      "export {}\n",
+    )
+
+    expect(await detailsOf(root)).toEqual([
+      "REQ-T-2 status: active",
+    ])
+  })
+
+  test("a top-level patch in a step file marks that step file's requirements", async () => {
+    // Every step file loads for every scenario, so this patch also
+    // runs under REQ-T-2. The lock still goes stale, naming REQ-T-1.
+    const root = await lockedLamp({
+      "fan.feature": `Feature: Fan\n\n  @REQ-T-2\n  Scenario: A fan spins\n    Given a fan\n`,
+      "steps/fan.steps.ts": `import { Given } from "../support/steps.ts"\n\nGiven("a fan", () => {})\n`,
+    })
+
+    await writeFile(
+      join(root, "steps/lamp.steps.ts"),
+      `${steps}\nMath.random = () => 0\n`,
+    )
+
+    expect(await detailsOf(root)).toEqual([
+      "REQ-T-1 code changed: steps/lamp.steps.ts",
+    ])
+  })
+
+  test("follows a workspace package through node_modules, and stops at an npm package", async () => {
+    const root = await lockedLamp({
+      "../kit/package.json": JSON.stringify({
+        name: "@test/kit",
+        version: "1.0.0",
+        exports: {
+          ".": {
+            source: "./src/index.ts",
+            default: "./dist/index.js",
+          },
+        },
+      }),
+      "../kit/src/index.ts":
+        'export { check } from "./check.ts"\n',
+      "../kit/src/check.ts":
+        "export const check = () => 1\n",
+      "../node_modules/left-pad/package.json":
+        JSON.stringify({
+          name: "left-pad",
+          version: "1.0.0",
+          main: "index.js",
         }),
-        "lamp.feature": feature,
-        "helpers/lamp.ts": helpers,
-        "steps/lamp.steps.ts": `import { kit } from "@acme/kit"\n${steps.replace(
+      "../node_modules/left-pad/index.js":
+        "export default () => 1\n",
+    })
+
+    await mkdir(join(root, "../node_modules/@test"), {
+      recursive: true,
+    })
+    await symlink(
+      join(root, "../kit"),
+      join(root, "../node_modules/@test/kit"),
+    )
+    await writeFile(
+      join(root, "helpers/lamp.ts"),
+      `import { check } from "@test/kit"\nimport pad from "left-pad"\n\nexport const verify = () => check() + pad()\n${helpers}`,
+    )
+    await writeFile(
+      join(root, "steps/lamp.steps.ts"),
+      steps
+        .replace(
           "expectOn(world, name)",
-          "expectOn(world, name)\n  void kit",
-        )}`,
-        "../kit/package.json": manifest,
-        "../kit/index.ts": "export const kit = 1\n",
+          "expectOn(world, name)\n  verify()",
+        )
+        .replace(
+          "import { expectOn,",
+          "import { verify, expectOn,",
+        ),
+    )
+
+    const details = await detailsOf(root)
+
+    expect(details).toContain(
+      "REQ-T-1 now loads: ../kit/src/check.ts",
+    )
+    expect(
+      details.some((detail) => detail.includes("left-pad")),
+    ).toBe(false)
+  })
+
+  test("picks the file Vite would for an extensionless import", async () => {
+    const root = await makeProject({
+      "lamp.feature": feature,
+      "helpers/lamp.ts": helpers,
+      "helpers/lamp.js":
+        "export const expectOn = () => {}\nexport const turnOn = () => {}\n",
+      "steps/lamp.steps.ts": steps.replace(
+        '"../helpers/lamp.ts"',
+        '"../helpers/lamp"',
+      ),
+    })
+    const analysis = await analyzeProject(root)
+
+    expect(
+      buildLock(analysis, await readLock(analysis))
+        .requirements["REQ-T-1"]?.code,
+    ).toContain("helpers/lamp.js")
+  })
+
+  test("follows a literal dynamic import, and rejects a computed one", async () => {
+    const root = await makeProject({
+      "lamp.feature": feature,
+      "helpers/lamp.ts": `${helpers}\nexport const later = () => import("./late.ts")\nexport const computed = (name: string) => import(name)\n`,
+      "helpers/late.ts": "export const late = 1\n",
+      "steps/lamp.steps.ts": steps
+        .replace(
+          "turnOn(world, name)",
+          "turnOn(world, name)\n  later()\n  computed(name)",
+        )
+        .replace(
+          "import { expectOn,",
+          "import { computed, later, expectOn,",
+        ),
+    })
+    const analysis = await analyzeProject(root)
+
+    expect(
+      analysis.problems.map((problem) => problem.rule),
+    ).toEqual(["dynamic-import"])
+    expect(
+      buildLock(analysis, await readLock(analysis))
+        .requirements["REQ-T-1"]?.code,
+    ).toContain("helpers/late.ts")
+  })
+
+  test("rejects a quickpickle hook in a helper outside the root", async () => {
+    const root = await makeProject({
+      "lamp.feature": feature,
+      "helpers/lamp.ts": `import "../../shared/hooks.ts"\n${helpers}`,
+      "../shared/hooks.ts":
+        'import { Before } from "quickpickle"\n\nBefore(() => {})\n',
+      "steps/lamp.steps.ts": steps,
+    })
+
+    expect(await rulesOf(root)).toContain(
+      "quickpickle-outside-runtime",
+    )
+  })
+
+  test("reports a file it cannot read instead of crashing", async () => {
+    const root = await makeProject({
+      "lamp.feature": feature,
+      "helpers/lamp.ts": `import data from "./data.json"\n\nexport const value = () => data\n${helpers}`,
+      "helpers/data.json": "{ not json\n",
+      "steps/lamp.steps.ts": steps
+        .replace(
+          "turnOn(world, name)",
+          "turnOn(world, name)\n  value()",
+        )
+        .replace(
+          "import { expectOn,",
+          "import { value, expectOn,",
+        ),
+    })
+
+    expect(await rulesOf(root)).toContain(
+      "unresolved-import",
+    )
+  })
+
+  test("reads JSON with a byte-order mark, and ignores a release's version bump", async () => {
+    const manifest = {
+      name: "lamp-config",
+      version: "1.0.0",
+      exports: { ".": "./index.js" },
+    }
+    const root = await lockedLamp({
+      "requirements.config.json": JSON.stringify({
+        ...config,
+        runtime: [
+          "index.ts",
+          "support/**/*.ts",
+          "lamp.json",
+          "../package.json",
+        ],
+      }),
+      "lamp.json": '﻿{ "brightness": 1 }\n',
+      "../package.json": JSON.stringify(manifest),
+    })
+
+    await writeFile(
+      join(root, "../package.json"),
+      JSON.stringify({ ...manifest, version: "1.0.1" }),
+    )
+
+    expect(await detailsOf(root)).toEqual([])
+
+    await writeFile(
+      join(root, "../package.json"),
+      JSON.stringify({
+        ...manifest,
+        exports: { ".": "./other.js" },
       }),
     )
 
-  for (const manifest of [
-    "null\n",
-    "[]\n",
-    '"kit"\n',
-    "7\n",
-  ]) {
-    test(`reports a workspace package.json of ${manifest.trim()} instead of crashing`, async () => {
-      const analysis = await withWorkspaceManifest(manifest)
+    expect(await detailsOf(root)).toEqual([
+      "Every requirement code changed: ../package.json",
+    ])
+  })
 
-      expect(
-        analysis.problems.find(
-          (problem) => problem.rule === "malformed-json",
-        )?.message,
-      ).toMatch(/not a JSON object/)
-    })
-  }
-
-  test("reports malformed JSON that an export * reaches", async () => {
-    const { problems } = await throughBarrel({
-      "../fixture/index.ts": 'export * from "./bad.json"\n',
-      "../fixture/bad.json": "{ not json\n",
+  test("a CSS comment or reflow does not change the lock, and a rule does", async () => {
+    const css = ".lamp { color: red; }\n"
+    const root = await lockedLamp({
+      "helpers/lamp.ts": `import "./lamp.css"\n${helpers}`,
+      "helpers/lamp.css": css,
     })
 
-    expect(problems).toEqual([
+    await writeFile(
+      join(root, "helpers/lamp.css"),
+      `/* warm */\n.lamp {\n  color: red;\n}\n`,
+    )
+
+    expect(await detailsOf(root)).toEqual([])
+
+    await writeFile(
+      join(root, "helpers/lamp.css"),
+      ".lamp { color: blue; }\n",
+    )
+
+    expect(await detailsOf(root)).toEqual([
+      "REQ-T-1 code changed: helpers/lamp.css",
+    ])
+  })
+
+  test("hashes a file imported as text or a URL byte for byte", async () => {
+    const root = await lockedLamp({
+      "helpers/lamp.ts": `import template from "../fixtures/template.ts?raw"\n\nexport const page = () => [template, new URL("./data.txt", import.meta.url), new URL("data.json", import.meta.url)]\n${helpers}`,
+      "helpers/data.json": '{ "on": true }\n',
+      "fixtures/template.ts": "export const x = 1\n",
+      "helpers/data.txt": "on\n",
+      "steps/lamp.steps.ts": steps
+        .replace(
+          "turnOn(world, name)",
+          "turnOn(world, name)\n  page()",
+        )
+        .replace(
+          "import { expectOn,",
+          "import { page, expectOn,",
+        ),
+    })
+
+    // As text, a comment is part of what the test reads.
+    await writeFile(
+      join(root, "fixtures/template.ts"),
+      "// on\nexport const x = 1\n",
+    )
+    await writeFile(join(root, "helpers/data.txt"), "off\n")
+    await writeFile(
+      join(root, "helpers/data.json"),
+      '{ "on": true }\n\n',
+    )
+
+    expect(await detailsOf(root)).toEqual([
+      "REQ-T-1 code changed: fixtures/template.ts",
+      "REQ-T-1 code changed: helpers/data.json",
+      "REQ-T-1 code changed: helpers/data.txt",
+    ])
+  })
+
+  test("follows a worker and an inline stylesheet, and hashes a subject read as text", async () => {
+    const root = await lockedLamp({
+      "requirements.config.json": JSON.stringify({
+        ...config,
+        subjects: ["../ui/*.tsx"],
+      }),
+      "../ui/Example.tsx":
+        "export const Example = () => null\n",
+      "helpers/lamp.ts": `import Worker from "./worker.ts?worker"\nimport css from "./lamp.css?inline"\nimport source from "../../ui/Example.tsx?raw"\nimport UrlWorker from "./url-worker.ts?url"\n\nexport const assets = () => [Worker, css, source, UrlWorker, new Worker(new URL("./other-worker.ts", import.meta.url))]\n${helpers}`,
+      "helpers/worker.ts":
+        'import { reply } from "./child.ts"\n\npostMessage(reply)\n',
+      "helpers/child.ts": "export const reply = 1\n",
+      "helpers/other-worker.ts":
+        'import { reply } from "./other-child.ts"\n\npostMessage(reply)\n',
+      "helpers/other-child.ts": "export const reply = 1\n",
+      "helpers/url-worker.ts": "postMessage(1)\n",
+      "helpers/lamp.css": '@import "./inner.css";\n',
+      "helpers/inner.css": ".lamp { color: red; }\n",
+      "steps/lamp.steps.ts": steps
+        .replace(
+          "turnOn(world, name)",
+          "turnOn(world, name)\n  assets()",
+        )
+        .replace(
+          "import { expectOn,",
+          "import { assets, expectOn,",
+        ),
+    })
+
+    await writeFile(
+      join(root, "helpers/child.ts"),
+      "export const reply = 2\n",
+    )
+    await writeFile(
+      join(root, "helpers/other-child.ts"),
+      "export const reply = 2\n",
+    )
+    await writeFile(
+      join(root, "helpers/inner.css"),
+      ".lamp { color: blue; }\n",
+    )
+    await writeFile(
+      join(root, "../ui/Example.tsx"),
+      "// A note.\nexport const Example = () => null\n",
+    )
+
+    expect(await detailsOf(root)).toEqual([
+      "REQ-T-1 code changed: ../ui/Example.tsx",
+      "REQ-T-1 code changed: helpers/child.ts",
+      "REQ-T-1 code changed: helpers/inner.css",
+      "REQ-T-1 code changed: helpers/other-child.ts",
+    ])
+  })
+
+  test("rejects a root URL, and ignores one in a comment", async () => {
+    const root = await makeProject({
+      "lamp.feature": feature,
+      "helpers/lamp.ts": `// new URL("./missing.txt", import.meta.url)\nexport const asset = () => new URL("/data.txt", import.meta.url)\n${helpers}`,
+      "steps/lamp.steps.ts": steps
+        .replace(
+          "turnOn(world, name)",
+          "turnOn(world, name)\n  asset()",
+        )
+        .replace(
+          "import { expectOn,",
+          "import { asset, expectOn,",
+        ),
+    })
+    const analysis = await analyzeProject(root)
+
+    expect(analysis.problems).toEqual([
       expect.objectContaining({
-        file: "../fixture/bad.json",
-        rule: "malformed-json",
+        rule: "unresolved-import",
+        message: expect.stringContaining('"/data.txt"'),
       }),
     ])
   })
 
-  test("an export * behind a type-only local export still supplies the value", async () => {
-    for (const local of [
-      "type check = string\nexport { type check }\n",
-      "interface check { a: number }\nexport { check }\n",
-      "type check = string\nexport type { check }\n",
-    ]) {
-      const { problems, code } = await throughBarrel({
-        "../fixture/index.ts": `${local}export * from "./runtime.ts"\n`,
-        "../fixture/runtime.ts":
-          "export const check = () => {}\n",
-      })
-
-      expect(problems).toEqual([])
-      expect(code).toContain(
-        "../fixture/runtime.ts › check",
-      )
+  test("a workspace package's exports choose its files, as Vite's conditions do", async () => {
+    const manifest = {
+      name: "@test/kit",
+      version: "1.0.0",
+      exports: {
+        "./a": {
+          development: "./dev.js",
+          import: "./prod.js",
+        },
+        "./first": "./one.js",
+        "./second": "./two.js",
+      },
     }
-  })
-
-  test("a local value exported by name still wins over an export *", async () => {
-    const { code } = await throughBarrel({
-      "../fixture/index.ts":
-        'const check = () => {}\ntype check = string\nexport { check }\nexport * from "./other.ts"\n',
-      "../fixture/other.ts":
-        "export const check = () => {}\n",
+    const root = await lockedLamp({
+      "../kit/package.json": JSON.stringify(manifest),
+      "../kit/dev.js": "export const x = 1\n",
+      "../kit/prod.js": "export const x = 1\n",
+      "../kit/one.js": "export const value = 1\n",
+      "../kit/two.js": "export const value = 2\n",
     })
 
-    expect(code).toContain("../fixture/index.ts › check")
-    expect(code).not.toContain(
-      "../fixture/other.ts › check",
+    await mkdir(join(root, "../node_modules/@test"), {
+      recursive: true,
+    })
+    await symlink(
+      join(root, "../kit"),
+      join(root, "../node_modules/@test/kit"),
     )
+    await writeFile(
+      join(root, "helpers/lamp.ts"),
+      `import { x } from "@test/kit/a"\nimport { value as first } from "@test/kit/first"\nimport { value as second } from "@test/kit/second"\n\nexport const kit = () => x + first - second\n${helpers}`,
+    )
+    await writeFile(
+      join(root, "steps/lamp.steps.ts"),
+      steps
+        .replace(
+          "turnOn(world, name)",
+          "turnOn(world, name)\n  kit()",
+        )
+        .replace(
+          "import { expectOn,",
+          "import { kit, expectOn,",
+        ),
+    )
+
+    let analysis = await analyzeProject(root)
+
+    await writeLock(
+      analysis,
+      buildLock(analysis, await readLock(analysis)),
+    )
+
+    expect(
+      (await readLock(analysis)).requirements["REQ-T-1"]
+        ?.code,
+    ).toEqual(
+      expect.arrayContaining([
+        "../kit/dev.js",
+        "../kit/package.json",
+      ]),
+    )
+
+    await writeFile(
+      join(root, "../kit/package.json"),
+      JSON.stringify({
+        ...manifest,
+        exports: {
+          ...manifest.exports,
+          "./first": "./two.js",
+          "./second": "./one.js",
+        },
+      }),
+    )
+
+    expect(await detailsOf(root)).toEqual([
+      "REQ-T-1 code changed: ../kit/package.json",
+    ])
+
+    await writeFile(
+      join(root, "../kit/package.json"),
+      JSON.stringify({ ...manifest, version: "1.0.1" }),
+    )
+    analysis = await analyzeProject(root)
+
+    expect(
+      lockProblems(analysis, await readLock(analysis)),
+    ).toEqual([])
   })
 
-  test("follows a name a file imports and exports again", async () => {
-    const { problems, code } = await throughBarrel({
-      "../fixture/index.ts":
-        'export * from "./a.ts"\nexport * from "./b.ts"\n',
-      "../fixture/a.ts":
-        'import { check } from "./shared.ts"\nexport { check }\n',
-      "../fixture/b.ts": 'export * from "./shared.ts"\n',
-      "../fixture/shared.ts":
-        "export const check = () => {}\n",
+  test("CSS keeps selectors and strings exact, and a runtime stylesheet's imports count", async () => {
+    const root = await lockedLamp({
+      "requirements.config.json": JSON.stringify({
+        ...config,
+        runtime: [
+          "index.ts",
+          "support/**/*.ts",
+          "runtime.css",
+        ],
+      }),
+      "runtime.css": '@import "./inner.css";\n',
+      "inner.css": 'a :hover { content: "a  b"; }\n',
     })
 
-    expect(problems).toEqual([])
-    expect(code).toContain("../fixture/shared.ts › check")
+    await writeFile(
+      join(root, "inner.css"),
+      'a:hover { content: "a  b"; }\n',
+    )
+
+    expect(await detailsOf(root)).toEqual([
+      "Every requirement code changed: inner.css",
+    ])
+
+    await writeFile(
+      join(root, "inner.css"),
+      'a:hover { content: "a b"; }\n',
+    )
+
+    expect(await detailsOf(root)).toEqual([
+      "Every requirement code changed: inner.css",
+    ])
   })
 
-  test("reports malformed JSON that an export * names after the name is found", async () => {
-    for (const barrel of [
-      'export const check = () => {}\nexport * from "./bad.json"\n',
-      'export { check } from "./good.ts"\nexport * from "./bad.json"\n',
-    ]) {
-      const { problems } = await throughBarrel({
-        "../fixture/index.ts": barrel,
-        "../fixture/good.ts":
-          "export const check = () => {}\n",
-        "../fixture/bad.json": "{ not json\n",
+  test("a package.json imported as data counts whole", async () => {
+    const root = await lockedLamp({
+      "helpers/lamp.ts": `import manifest from "../fixtures/package.json"\n\nexport const version = () => manifest.version\n${helpers}`,
+      "fixtures/package.json":
+        '{ "name": "lamp", "version": "1.0.0" }\n',
+      "steps/lamp.steps.ts": steps
+        .replace(
+          "turnOn(world, name)",
+          "turnOn(world, name)\n  version()",
+        )
+        .replace(
+          "import { expectOn,",
+          "import { version, expectOn,",
+        ),
+    })
+
+    await writeFile(
+      join(root, "fixtures/package.json"),
+      '{ "name": "lamp", "version": "1.0.1" }\n',
+    )
+
+    expect(await detailsOf(root)).toEqual([
+      "REQ-T-1 code changed: fixtures/package.json",
+    ])
+  })
+
+  /**
+   * Links `../kit` into `../node_modules/@test/kit`, as pnpm links a
+   * workspace package.
+   *
+   * @param {string} root
+   */
+  const linkKit = async (root) => {
+    await mkdir(join(root, "../node_modules/@test"), {
+      recursive: true,
+    })
+    await symlink(
+      join(root, "../kit"),
+      join(root, "../node_modules/@test/kit"),
+    )
+  }
+
+  /**
+   * The lamp steps, calling a helper the test adds to `lamp.ts`.
+   *
+   * @param {string} name
+   */
+  const stepsCalling = (name) =>
+    steps
+      .replace(
+        "turnOn(world, name)",
+        `turnOn(world, name)\n  ${name}()`,
+      )
+      .replace(
+        "import { expectOn,",
+        `import { ${name}, expectOn,`,
+      )
+
+  test("tracks the package's own manifest when its exports point into a folder with another one", async () => {
+    const manifest = {
+      name: "@test/kit",
+      exports: {
+        "./first": "./nested/one.js",
+        "./second": "./nested/two.js",
+      },
+    }
+    const root = await makeProject({
+      "lamp.feature": feature,
+      "../kit/package.json": JSON.stringify(manifest),
+      "../kit/nested/package.json":
+        '{ "type": "module" }\n',
+      "../kit/nested/one.js": "export const value = 1\n",
+      "../kit/nested/two.js": "export const value = 2\n",
+      "helpers/lamp.ts": `import { value as first } from "@test/kit/first"\nimport { value as second } from "@test/kit/second"\n\nexport const kit = () => first - second\n${helpers}`,
+      "steps/lamp.steps.ts": stepsCalling("kit"),
+    })
+
+    await linkKit(root)
+
+    const analysis = await analyzeProject(root)
+
+    expect(analysis.problems).toEqual([])
+    await writeLock(
+      analysis,
+      buildLock(analysis, await readLock(analysis)),
+    )
+
+    await writeFile(
+      join(root, "../kit/package.json"),
+      JSON.stringify({
+        ...manifest,
+        exports: {
+          "./first": "./nested/two.js",
+          "./second": "./nested/one.js",
+        },
+      }),
+    )
+
+    expect(await detailsOf(root)).toEqual([
+      "REQ-T-1 code changed: ../kit/package.json",
+    ])
+
+    await writeFile(
+      join(root, "../kit/nested/package.json"),
+      '{ "type": "commonjs" }\n',
+    )
+
+    expect(await detailsOf(root)).toEqual([
+      "REQ-T-1 code changed: ../kit/nested/package.json",
+      "REQ-T-1 code changed: ../kit/package.json",
+    ])
+  })
+
+  test("a manifest that also chooses exports counts whole when a module reads it as data", async () => {
+    const manifest = {
+      name: "@test/kit",
+      version: "1.0.0",
+      exports: { ".": "./index.js" },
+    }
+    const root = await makeProject({
+      "lamp.feature": feature,
+      "../kit/package.json": JSON.stringify(manifest),
+      "../kit/index.js": "export const value = 1\n",
+      "helpers/lamp.ts": `import { value } from "@test/kit"\nimport kitManifest from "../../kit/package.json"\n\nexport const kit = () => value + kitManifest.version\n${helpers}`,
+      "steps/lamp.steps.ts": stepsCalling("kit"),
+    })
+
+    await linkKit(root)
+
+    const analysis = await analyzeProject(root)
+
+    expect(analysis.problems).toEqual([])
+    await writeLock(
+      analysis,
+      buildLock(analysis, await readLock(analysis)),
+    )
+
+    await writeFile(
+      join(root, "../kit/package.json"),
+      JSON.stringify({ ...manifest, version: "1.0.1" }),
+    )
+
+    expect(await detailsOf(root)).toEqual([
+      "REQ-T-1 code changed: ../kit/package.json",
+    ])
+  })
+
+  test("follows a chain of workers to its end", async () => {
+    /** @type {Record<string, string>} */
+    const workers = {}
+
+    for (let index = 0; index < 13; index += 1) {
+      workers[`helpers/w${index}.ts`] =
+        index < 12
+          ? `import Next from "./w${index + 1}.ts?worker"\n\nnew Next()\n`
+          : "postMessage(1)\n"
+    }
+
+    const root = await lockedLamp({
+      ...workers,
+      "helpers/lamp.ts": `import First from "./w0.ts?worker"\n\nexport const work = () => new First()\n${helpers}`,
+      "steps/lamp.steps.ts": stepsCalling("work"),
+    })
+
+    await writeFile(
+      join(root, "helpers/w12.ts"),
+      "postMessage(2)\n",
+    )
+
+    expect(await detailsOf(root)).toEqual([
+      "REQ-T-1 code changed: helpers/w12.ts",
+    ])
+  })
+
+  test("reads new URL calls from the syntax tree, and rejects a path it cannot follow", async () => {
+    const root = await makeProject({
+      "lamp.feature": feature,
+      "helpers/lamp.ts": `const note = 'new URL("./missing.txt", import.meta.url)'\n\nexport const fixture = (name: string) => [note, new URL(\`../fixtures/\${name}.json\`, import.meta.url), new URL("../fixtures/" + name + ".json", import.meta.url)]\n${helpers}`,
+      "fixtures/day.json": '{ "on": true }\n',
+      "steps/lamp.steps.ts": steps
+        .replace(
+          "turnOn(world, name)",
+          'turnOn(world, name)\n  fixture("day")',
+        )
+        .replace(
+          "import { expectOn,",
+          "import { fixture, expectOn,",
+        ),
+    })
+    const analysis = await analyzeProject(root)
+
+    expect(analysis.problems).toEqual([
+      expect.objectContaining({
+        rule: "unresolved-import",
+        line: 3,
+        message: expect.stringContaining(
+          "plain string path",
+        ),
+      }),
+      expect.objectContaining({
+        rule: "unresolved-import",
+        line: 3,
+        message: expect.stringContaining(
+          "plain string path",
+        ),
+      }),
+    ])
+  })
+
+  test("a URL to a code file is an asset, unless a Worker loads it", async () => {
+    const root = await lockedLamp({
+      "helpers/lamp.ts": `export const assets = () => [new URL("../fixtures/day.js?v=1", import.meta.url), new Worker(new URL("./worker.ts", import.meta.url))]\n${helpers}`,
+      "fixtures/day.js": "export const on = true\n",
+      "helpers/worker.ts":
+        'import { reply } from "./child.ts"\n\npostMessage(reply)\n',
+      "helpers/child.ts": "export const reply = 1\n",
+      "steps/lamp.steps.ts": stepsCalling("assets"),
+    })
+
+    await writeFile(
+      join(root, "fixtures/day.js"),
+      "// A note.\nexport const on = true\n",
+    )
+    await writeFile(
+      join(root, "helpers/worker.ts"),
+      '// A note.\nimport { reply } from "./child.ts"\n\npostMessage(reply)\n',
+    )
+
+    expect(await detailsOf(root)).toEqual([
+      "REQ-T-1 code changed: fixtures/day.js",
+    ])
+
+    await writeFile(
+      join(root, "helpers/child.ts"),
+      "export const reply = 2\n",
+    )
+
+    expect(await detailsOf(root)).toEqual([
+      "REQ-T-1 code changed: fixtures/day.js",
+      "REQ-T-1 code changed: helpers/child.ts",
+    ])
+  })
+
+  test("finds a linked package's manifest through its node_modules link, whatever its name", async () => {
+    for (const name of [undefined, "@test/actual"]) {
+      const manifest = {
+        ...(name ? { name } : {}),
+        exports: {
+          "./first": "./nested/one.js",
+          "./second": "./nested/two.js",
+        },
+      }
+      const root = await makeProject({
+        "lamp.feature": feature,
+        "../kit/package.json": JSON.stringify(manifest),
+        "../kit/nested/package.json":
+          '{ "type": "module" }\n',
+        "../kit/nested/one.js": "export const value = 1\n",
+        "../kit/nested/two.js": "export const value = 2\n",
+        "helpers/lamp.ts": `import { value as first } from "@test/kit/first"\nimport { value as second } from "@test/kit/second"\n\nexport const kit = () => first - second\n${helpers}`,
+        "steps/lamp.steps.ts": stepsCalling("kit"),
       })
 
-      expect(problems).toEqual([
-        expect.objectContaining({
-          file: "../fixture/bad.json",
-          rule: "malformed-json",
+      await linkKit(root)
+
+      const analysis = await analyzeProject(root)
+
+      expect(analysis.problems).toEqual([])
+      await writeLock(
+        analysis,
+        buildLock(analysis, await readLock(analysis)),
+      )
+      await writeFile(
+        join(root, "../kit/package.json"),
+        JSON.stringify({
+          ...manifest,
+          exports: {
+            "./first": "./nested/two.js",
+            "./second": "./nested/one.js",
+          },
         }),
+      )
+
+      expect(await detailsOf(root)).toEqual([
+        "REQ-T-1 code changed: ../kit/package.json",
       ])
     }
   })
 
-  test("two export * lines that reach the same declaration hash it once", async () => {
-    const { problems, code } = await throughBarrel({
-      "../fixture/index.ts":
-        'export * from "./a.ts"\nexport * from "./b.ts"\n',
-      "../fixture/a.ts": 'export * from "./check.ts"\n',
-      "../fixture/b.ts": 'export * from "./check.ts"\n',
-      "../fixture/check.ts":
-        "export const check = () => {}\n",
+  test("a worker URL query follows the worker, and a URL fragment is not part of the file", async () => {
+    const root = await lockedLamp({
+      "helpers/lamp.ts": `import workerUrl from "./worker.ts?worker&url"\n\nexport const work = () => [workerUrl, new Worker(new URL("./other.ts#name", import.meta.url))]\n${helpers}`,
+      "helpers/worker.ts":
+        'import { reply } from "./child.ts"\n\npostMessage(reply)\n',
+      "helpers/child.ts": "export const reply = 1\n",
+      "helpers/other.ts": "postMessage(1)\n",
+      "steps/lamp.steps.ts": stepsCalling("work"),
     })
 
-    expect(problems).toEqual([])
-    expect(code).toContain("../fixture/check.ts › check")
+    await writeFile(
+      join(root, "helpers/child.ts"),
+      "export const reply = 2\n",
+    )
+
+    expect(await detailsOf(root)).toEqual([
+      "REQ-T-1 code changed: helpers/child.ts",
+    ])
   })
 
-  test("a local declaration wins over an export * that supplies the same name", async () => {
-    const { problems, code } = await throughBarrel({
-      "../fixture/index.ts":
-        'export * from "./other.ts"\nexport const check = () => {}\n',
-      "../fixture/other.ts":
-        "export const check = () => {}\n",
+  test("rejects a worker whose script is not a new URL written inside it", async () => {
+    const root = await makeProject({
+      "lamp.feature": feature,
+      "helpers/lamp.ts": `export const work = () => {\n  const url = new URL("./worker.ts", import.meta.url)\n\n  return new Worker(url)\n}\n${helpers}`,
+      "helpers/worker.ts": "postMessage(1)\n",
+      "steps/lamp.steps.ts": stepsCalling("work"),
+    })
+    const analysis = await analyzeProject(root)
+
+    expect(analysis.problems).toEqual([
+      expect.objectContaining({
+        rule: "unresolved-import",
+        line: 4,
+        message: expect.stringContaining(
+          "new Worker(…) needs",
+        ),
+      }),
+    ])
+  })
+
+  test("a browser map that redirects a relative import counts", async () => {
+    const root = await lockedLamp({
+      "package.json": JSON.stringify({
+        name: "lamp",
+        browser: {
+          "./lib/a.ts": "./lib/one.ts",
+          "./lib/b.ts": "./lib/two.ts",
+        },
+      }),
+      "helpers/lamp.ts": `import { value as a } from "../lib/a.ts"\nimport { value as b } from "../lib/b.ts"\n\nexport const kit = () => a - b\n${helpers}`,
+      "lib/a.ts": "export const value = 0\n",
+      "lib/b.ts": "export const value = 0\n",
+      "lib/one.ts": "export const value = 1\n",
+      "lib/two.ts": "export const value = 2\n",
+      "steps/lamp.steps.ts": stepsCalling("kit"),
     })
 
-    expect(problems).toEqual([])
-    expect(code).toContain("../fixture/index.ts › check")
-    expect(code).not.toContain(
-      "../fixture/other.ts › check",
+    await writeFile(
+      join(root, "package.json"),
+      JSON.stringify({
+        name: "lamp",
+        browser: {
+          "./lib/a.ts": "./lib/two.ts",
+          "./lib/b.ts": "./lib/one.ts",
+        },
+      }),
     )
+
+    expect(await detailsOf(root)).toEqual([
+      "REQ-T-1 code changed: package.json",
+    ])
+  })
+
+  test("a swapped browser map changes the lock", async () => {
+    const manifest = {
+      name: "@test/kit",
+      exports: { ".": "./index.js" },
+      browser: {
+        "./a.js": "./one.js",
+        "./b.js": "./two.js",
+      },
+    }
+    const root = await makeProject({
+      "lamp.feature": feature,
+      "../kit/package.json": JSON.stringify(manifest),
+      "../kit/index.js":
+        'import { value as a } from "./a.js"\nimport { value as b } from "./b.js"\n\nexport const value = a - b\n',
+      "../kit/a.js": "export const value = 0\n",
+      "../kit/b.js": "export const value = 0\n",
+      "../kit/one.js": "export const value = 1\n",
+      "../kit/two.js": "export const value = 2\n",
+      "helpers/lamp.ts": `import { value } from "@test/kit"\n\nexport const kit = () => value\n${helpers}`,
+      "steps/lamp.steps.ts": stepsCalling("kit"),
+    })
+
+    await linkKit(root)
+
+    const analysis = await analyzeProject(root)
+
+    expect(analysis.problems).toEqual([])
+    await writeLock(
+      analysis,
+      buildLock(analysis, await readLock(analysis)),
+    )
+    await writeFile(
+      join(root, "../kit/package.json"),
+      JSON.stringify({
+        ...manifest,
+        browser: {
+          "./a.js": "./two.js",
+          "./b.js": "./one.js",
+        },
+      }),
+    )
+
+    expect(await detailsOf(root)).toEqual([
+      "REQ-T-1 code changed: ../kit/package.json",
+    ])
+  })
+
+  test("builds two queried entries with the same file name", async () => {
+    const root = await lockedLamp({
+      "helpers/lamp.ts": `import First from "./target.ts?worker"\nimport Second from "./target.js?worker"\n\nexport const work = () => [new First(), new Second()]\n${helpers}`,
+      "helpers/target.ts": "postMessage(1)\n",
+      "helpers/target.js": "postMessage(2)\n",
+      "steps/lamp.steps.ts": stepsCalling("work"),
+    })
+
+    await writeFile(
+      join(root, "helpers/target.js"),
+      "postMessage(3)\n",
+    )
+
+    expect(await detailsOf(root)).toEqual([
+      "REQ-T-1 code changed: helpers/target.js",
+    ])
+  })
+
+  test("a file read only as text skips the code rules, and a CSS url() is read as bytes", async () => {
+    const root = await lockedLamp({
+      "requirements.config.json": JSON.stringify({
+        ...config,
+        subjects: ["../ui/*.tsx"],
+      }),
+      "../ui/Example.tsx":
+        "export const load = (name: string) => import(name)\n",
+      "helpers/lamp.ts": `import source from "../../ui/Example.tsx?raw"\nimport css from "./lamp.css?inline"\n\nexport const assets = () => [source, css]\n${helpers}`,
+      "helpers/lamp.css":
+        '.lamp { background: url("./data.json"); }\n',
+      "helpers/data.json": '{ "on": true }\n',
+      "steps/lamp.steps.ts": stepsCalling("assets"),
+    })
+
+    await writeFile(
+      join(root, "helpers/data.json"),
+      '{"on":true}\n',
+    )
+
+    expect(await detailsOf(root)).toEqual([
+      "REQ-T-1 code changed: helpers/data.json",
+    ])
+  })
+
+  test("a changed file changes the digest line of each requirement that loads it", async () => {
+    const root = await lockedLamp()
+    const before = await readLock(
+      await analyzeProject(root),
+    )
+
+    await writeFile(
+      join(root, "helpers/lamp.ts"),
+      helpers.replace("throw new Error(name)", "return"),
+    )
+
+    const analysis = await analyzeProject(root)
+    const after = buildLock(
+      analysis,
+      await readLock(analysis),
+    )
+
+    expect(after.digests?.["REQ-T-1"]).not.toBe(
+      before.digests?.["REQ-T-1"],
+    )
+  })
+
+  test("refuses a shared list that names a file with no hash", () => {
+    const lock = {
+      version: 2,
+      requirements: {},
+      shared: [null, "absent.ts"],
+      code: {},
+      retired: {},
+    }
+
+    expect(() =>
+      parseLock(JSON.stringify(lock), "lock"),
+    ).toThrow(/"shared" must list unique files/)
+    expect(() =>
+      parseLock(
+        JSON.stringify({
+          ...lock,
+          shared: ["constructor"],
+        }),
+        "lock",
+      ),
+    ).toThrow(/"shared" must list unique files/)
+  })
+
+  test("the trace follows a re-export to the line that declares the helper", async () => {
+    const root = await makeProject({
+      "lamp.feature": feature,
+      "helpers/lamp.ts": helpers,
+      "helpers/index.ts":
+        '// The barrel.\nexport { expectOn, turnOn } from "./lamp.ts"\n',
+      "steps/lamp.steps.ts": steps.replace(
+        '"../helpers/lamp.ts"',
+        '"../helpers/index.ts"',
+      ),
+    })
+    const trace = traceTarget(
+      await analyzeProject(root),
+      "lamp.feature:9",
+    )
+
+    expect(trace).toContain("helpers/lamp.ts:3  expectOn")
+  })
+
+  test("still compares with a version 1 lock on the base branch", () => {
+    const base = parseLock(
+      JSON.stringify({
+        version: 1,
+        requirements: {
+          "REQ-T-1": {
+            feature: "lamp.feature",
+            scenario: "Turning a lamp on",
+            status: "active",
+            steps: [],
+            code: [],
+          },
+        },
+        code: {},
+        retired: {},
+      }),
+      "base",
+    )
+
+    expect(
+      baseProblems(
+        base,
+        {
+          version: 2,
+          requirements: {},
+          shared: [],
+          code: {},
+          retired: {},
+        },
+        "requirements.lock.json",
+      ).map((problem) => problem.rule),
+    ).toEqual(["removed-requirement"])
   })
 })

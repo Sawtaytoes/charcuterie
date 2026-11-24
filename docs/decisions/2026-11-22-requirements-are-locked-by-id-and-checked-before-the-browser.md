@@ -4,7 +4,7 @@
 - **Date:** 2026-11-22
 - **Type:** Testing convention
 - **Supersedes:** [Button behavior tests are Gherkin scenarios](2026-10-14-button-behavior-tests-are-gherkin-scenarios.md), in part: the `world.ts` and `steps.ts` layout. The conversion itself and its coverage stand.
-- **Superseded by:** —
+- **Superseded by:** [The requirements lock hashes files from the bundler's import graph](2026-11-23-the-requirements-lock-hashes-files-from-the-bundler-graph.md), in part: rule 1, how the lock finds and hashes code.
 
 ## Decision
 

@@ -11,10 +11,15 @@ import { commandFor } from "./config.js"
  * Plain English does not stop an agent from weakening a test: it can
  * leave every sentence alone and loosen the assertion underneath. So
  * each requirement's entry records both halves — the steps a person
- * reads, and the code each step reaches, down to the helper that
+ * reads, and the files its steps load, such as the helper that
  * asserts and the story that supplies the fixture. Change either,
  * and the lock goes stale until someone regenerates it, which puts
  * the change in front of a reviewer as a named requirement ID.
+ *
+ * Files every scenario loads (the runtime) are listed once, under
+ * `shared`, not in every requirement. A requirement's `code` lists
+ * only the files its step files add. `code` at the top level holds
+ * each file's hash once.
  *
  * A requirement is never deleted from the lock. It is retired, with
  * a reason, and its ID can never be reused.
@@ -33,9 +38,10 @@ import { commandFor } from "./config.js"
  * }} LockedRequirement
  *
  * @typedef {{
- *   version: 1,
+ *   version: 1 | 2,
  *   requirements: Record<string, LockedRequirement>,
  *   digests?: Record<string, string>,
+ *   shared?: string[],
  *   code: Record<string, string>,
  *   retired: Record<string, { scenario: string, reason: string }>,
  * }} RequirementsLock
@@ -45,8 +51,9 @@ import { commandFor } from "./config.js"
 
 /** @returns {RequirementsLock} */
 export const emptyLock = () => ({
-  version: 1,
+  version: 2,
   requirements: {},
+  shared: [],
   code: {},
   retired: {},
 })
@@ -115,8 +122,33 @@ export const parseLock = (text, source) => {
     isRecord(value) ? value : {}
   )
 
-  if (lock.version !== 1) {
-    errors.push("version must be 1")
+  // Version 1 is still read, so a pull request that upgrades the lock
+  // can compare it with the base branch's.
+  if (lock.version !== 1 && lock.version !== 2) {
+    errors.push("version must be 2")
+  }
+
+  if (lock.version === 2) {
+    const shared = Array.isArray(lock.shared)
+      ? lock.shared
+      : null
+    const code = isRecord(lock.code)
+      ? /** @type {Record<string, unknown>} */ (lock.code)
+      : {}
+
+    if (
+      !shared ||
+      shared.some(
+        (key) =>
+          typeof key !== "string" ||
+          !Object.hasOwn(code, key),
+      ) ||
+      new Set(shared).size !== shared.length
+    ) {
+      errors.push(
+        '"shared" must list unique files, each hashed in "code"',
+      )
+    }
   }
 
   for (const key of ["requirements", "code", "retired"]) {
@@ -225,10 +257,6 @@ export const buildLock = (analysis, previous) => {
         }
       }
 
-      for (const key of analysis.sources.runtimeKeys) {
-        code.add(key)
-      }
-
       for (const key of code) {
         reachedCode.add(key)
       }
@@ -285,6 +313,12 @@ export const buildLock = (analysis, previous) => {
     }
   }
 
+  const shared = analysis.sources.runtimeKeys
+
+  for (const key of shared) {
+    reachedCode.add(key)
+  }
+
   /** @type {RequirementsLock["code"]} */
   const code = {}
 
@@ -309,10 +343,9 @@ export const buildLock = (analysis, previous) => {
       .update(
         JSON.stringify({
           ...requirement,
-          code: requirement.code.map((key) => [
-            key,
-            code[key] ?? "",
-          ]),
+          code: [...shared, ...requirement.code].map(
+            (key) => [key, code[key] ?? ""],
+          ),
         }),
       )
       .digest("hex")
@@ -320,7 +353,7 @@ export const buildLock = (analysis, previous) => {
   }
 
   return {
-    version: 1,
+    version: 2,
     requirements: Object.fromEntries(
       Object.entries(requirements).sort(([left], [right]) =>
         left.localeCompare(right, "en", { numeric: true }),
@@ -331,6 +364,7 @@ export const buildLock = (analysis, previous) => {
         left.localeCompare(right, "en", { numeric: true }),
       ),
     ),
+    shared,
     code,
     retired: previous.retired ?? {},
   }
@@ -512,6 +546,7 @@ export const baseProblems = (base, head, lockFile) => {
  * @typedef {{
  *   id: string,
  *   kind: "added" | "retired" | "removed" | "changed",
+ *   isShared?: boolean,
  *   scenario: string,
  *   details: string[],
  * }} RequirementChange
@@ -525,6 +560,25 @@ export const baseProblems = (base, head, lockFile) => {
 export const describeChanges = (before, after) => {
   /** @type {RequirementChange[]} */
   const changes = []
+  const sharedDetails = codeDetails(
+    before.shared ?? [],
+    after.shared ?? [],
+    before,
+    after,
+  )
+
+  // A runtime change affects every requirement. It is reported once,
+  // and each requirement's own details list only its own files.
+  if (sharedDetails.length > 0) {
+    changes.push({
+      id: "Every requirement",
+      kind: "changed",
+      isShared: true,
+      scenario: "the files every scenario loads",
+      details: sharedDetails,
+    })
+  }
+
   const ids = new Set([
     ...Object.keys(before.requirements ?? {}),
     ...Object.keys(after.requirements ?? {}),
@@ -624,22 +678,9 @@ export const describeChanges = (before, after) => {
       details.push("spec: the steps or examples changed")
     }
 
-    const oldCode = new Set(old.code)
-    const currentCode = new Set(current.code)
-
-    for (const key of current.code) {
-      if (!oldCode.has(key)) {
-        details.push(`now reaches: ${key}`)
-      } else if (before.code?.[key] !== after.code?.[key]) {
-        details.push(`code changed: ${key}`)
-      }
-    }
-
-    for (const key of old.code) {
-      if (!currentCode.has(key)) {
-        details.push(`no longer reaches: ${key}`)
-      }
-    }
+    details.push(
+      ...codeDetails(old.code, current.code, before, after),
+    )
 
     if (
       details.length === 0 &&
@@ -672,6 +713,35 @@ export const describeChanges = (before, after) => {
   }
 
   return changes
+}
+
+/**
+ * @param {string[]} oldKeys
+ * @param {string[]} currentKeys
+ * @param {RequirementsLock} before
+ * @param {RequirementsLock} after
+ */
+const codeDetails = (
+  oldKeys,
+  currentKeys,
+  before,
+  after,
+) => {
+  const oldSet = new Set(oldKeys)
+  const currentSet = new Set(currentKeys)
+
+  return [
+    ...currentKeys.flatMap((key) =>
+      !oldSet.has(key)
+        ? [`now loads: ${key}`]
+        : before.code?.[key] !== after.code?.[key]
+          ? [`code changed: ${key}`]
+          : [],
+    ),
+    ...oldKeys
+      .filter((key) => !currentSet.has(key))
+      .map((key) => `no longer loads: ${key}`),
+  ]
 }
 
 /**

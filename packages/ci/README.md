@@ -135,7 +135,7 @@ and finishes in about a second.
 
 ```sh
 charcuterie-requirements check --root packages/docs/requirements
-charcuterie-requirements which button.feature:41 --root …   # definition + every file it reaches
+charcuterie-requirements which button.feature:41 --root …   # definition, the helpers it calls, the files it loads
 charcuterie-requirements lock --root …                      # after an intended change
 charcuterie-requirements lock --retire REQ-UI-5 --reason "…" --root …
 charcuterie-requirements diff --base origin/master --summary --root …
@@ -147,11 +147,12 @@ the `import.meta.glob` in `entry`), `runtime` (files every scenario passes throu
 whole; a literal path may point outside the root), `subjects` (the code under test, never
 hashed; `!` excludes), `allowedTags`, and `command` (how messages name the CLI). It also
 holds the generated `requirements.lock.json`. The lock lists each requirement's steps,
-tags, and every code unit they reach, so a weakened helper is reported as a changed
-requirement. `diff` exits non-zero when a requirement or a retirement entry from the base
+tags, and every file they load, found through esbuild's import graph, so a weakened
+helper is reported as a changed requirement. Files every scenario loads are listed once,
+under `shared`. `diff` exits non-zero when a requirement or a retirement entry from the base
 commit is gone, or a retired ID returns. It reads the base lock through the base commit's own config and
-rejects a lock in the wrong shape. The lock is a static tripwire, not a proof: it follows
-code by name without running it. Steps must be literal
+rejects a lock in the wrong shape. The lock is a static tripwire, not a proof: it hashes
+files without running them. Steps must be literal
 Cucumber expressions registered through the repo's own `stepModule` wrapper, because a
 pattern built at runtime cannot be traced. The full rule list and the reasons are in
 Charcuterie's [`docs/gherkin-requirements.md`](../../docs/gherkin-requirements.md).

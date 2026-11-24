@@ -18,6 +18,7 @@
     "../vitest.requirements.shared.ts",
     "../vitest.requirements.config.ts",
     "../vitest.requirements-responsive.config.ts",
+    "../../../vitest.config.ts",
     "../vitest.ui.setup.ts",
     "../../storybook-config/package.json",
     "../../vitest-config/package.json"
@@ -25,15 +26,16 @@
   "subjects": [
     "../../ui/src/**/*.tsx",
     "../../ui/src/**/*Styles.ts",
+    "../../ui/src/**/*.css",
+    "../../logic/src/**",
+    "../../tokens/src/**",
     "!../../ui/src/**/*.stories.tsx",
-    "!../../ui/src/**/*.storyHelpers.tsx"
+    "!../../ui/src/**/*.storyHelpers.tsx",
+    "!../../ui/src/**/*.testHelpers.tsx",
+    "!../../ui/src/testing/**"
   ],
   "allowedTags": ["@responsive", "@todo"],
   "pendingTags": ["@todo"],
   "lock": "requirements.lock.json",
-  "command": "pnpm requirements:",
-  "packages": {
-    "@charcuterie/storybook-config": "../../storybook-config",
-    "@charcuterie/vitest-config": "../../vitest-config"
-  }
+  "command": "pnpm requirements:"
 }

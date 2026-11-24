@@ -29,7 +29,6 @@ import {
  *   entry: string,
  *   runtime: string[],
  *   subjects: string[],
- *   packages: Record<string, string>,
  *   command: string,
  *   allowedTags: string[],
  *   pendingTags: string[],
@@ -72,9 +71,6 @@ const defaults = {
   // A `!` pattern excludes, so stories can be fixtures while the
   // components beside them are subjects.
   subjects: [],
-  // Workspace packages to follow by name: package name -> directory,
-  // relative to the root.
-  packages: {},
   // How problem messages name the CLI.
   command: "charcuterie-requirements",
   allowedTags: [],
