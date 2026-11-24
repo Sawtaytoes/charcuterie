@@ -22,7 +22,7 @@ import {
   replaceText,
   typeText,
 } from "./input.ts"
-import { byRole, scopeOf } from "./queries.ts"
+import { byRole, type Role, scopeOf } from "./queries.ts"
 import {
   expectAbsent,
   expectAccessible,
@@ -427,6 +427,132 @@ describe("presence", () => {
         ?.getAttribute("aria-hidden"),
     ).toBe("true")
   })
+
+  /**
+   * Each element's one true name, and names it must not answer to:
+   * its name with the decorative parts, or text that is not its name.
+   */
+  const names: {
+    label: string
+    html: string
+    role: Role
+    name: string
+    /** Hidden from assistive technology, but still in view. */
+    isHidden: boolean
+    notNames: string[]
+  }[] = [
+    {
+      label: "a visible button with an aria-hidden mark",
+      html: '<button type="button">Close <span aria-hidden="true">×</span></button>',
+      role: "button",
+      name: "Close",
+      isHidden: false,
+      notNames: ["Close ×"],
+    },
+    {
+      label: "a visible button with a part hidden by CSS",
+      html: '<button type="button">Close<span style="display: none"> now</span></button>',
+      role: "button",
+      name: "Close",
+      isHidden: false,
+      notNames: ["Close now"],
+    },
+    {
+      label: "a hidden dialog labelled by a span",
+      html: '<div role="dialog" aria-labelledby="s1" aria-hidden="true" inert><span id="s1">Title <span aria-hidden="true">*</span></span></div>',
+      role: "dialog",
+      name: "Title",
+      isHidden: true,
+      notNames: ["Title *"],
+    },
+    {
+      label: "a hidden button named by wrapped content",
+      html: '<button type="button" aria-hidden="true"><span>Save</span> <span aria-hidden="true">→</span><span style="display: none"> now</span></button>',
+      role: "button",
+      name: "Save",
+      isHidden: true,
+      notNames: ["Save →", "Save now"],
+    },
+    {
+      label: "a hidden field named by its label",
+      html: '<label for="f1">Disc label <span aria-hidden="true">*</span></label><input id="f1" type="text" aria-hidden="true" />',
+      role: "textbox",
+      name: "Disc label",
+      isHidden: true,
+      notNames: ["Disc label *"],
+    },
+    {
+      label: "a dialog hidden by the hidden attribute",
+      html: '<div role="dialog" hidden aria-labelledby="h1"><h2 id="h1">Title <span aria-hidden="true">*</span></h2></div>',
+      role: "dialog",
+      name: "Title",
+      // `hidden` removes it from view, which is more than the
+      // assistive-technology check asks for.
+      isHidden: false,
+      notNames: ["Title *"],
+    },
+    {
+      label: "a hidden dialog labelled by several parts",
+      html: '<div role="dialog" aria-hidden="true" aria-labelledby="p1 p2 p3"><span id="p1">Part 1</span><span id="p2"></span><span id="p3">Part 2 <span aria-hidden="true">*</span></span></div>',
+      role: "dialog",
+      name: "Part 1 Part 2",
+      isHidden: true,
+      notNames: ["Part 1  Part 2", "Part 1 Part 2 *"],
+    },
+    {
+      label:
+        "a hidden dialog with aria-labelledby and aria-label",
+      html: '<div role="dialog" aria-hidden="true" aria-label="Fallback" aria-labelledby="h2"><h2 id="h2">Real Title <span aria-hidden="true">*</span></h2></div>',
+      role: "dialog",
+      name: "Real Title",
+      isHidden: true,
+      notNames: ["Fallback", "Real Title *"],
+    },
+    {
+      label: "a hidden dialog with no name",
+      html: '<div role="dialog" aria-hidden="true"><button type="button">Close</button> Body text</div>',
+      role: "dialog",
+      name: "",
+      isHidden: true,
+      notNames: ["Close", "Close Body text"],
+    },
+  ]
+
+  for (const example of names) {
+    test(`reads one name for ${example.label}`, (context) => {
+      const world = makeWorld(context, example.html)
+      const before = document.body.innerHTML
+
+      expect(() =>
+        expectAbsent(world, example.role, example.name),
+      ).toThrow(/in the document/)
+
+      for (const notName of example.notNames) {
+        expectAbsent(world, example.role, notName)
+      }
+
+      if (example.isHidden) {
+        expectHiddenFromAssistiveTechnology(
+          world,
+          example.role,
+          example.name,
+        )
+
+        for (const notName of example.notNames) {
+          expect(() =>
+            expectHiddenFromAssistiveTechnology(
+              world,
+              example.role,
+              notName,
+            ),
+          ).toThrow()
+        }
+      }
+
+      // The names are read without changing the document.
+      expect(document.body.innerHTML).toBe(before)
+    })
+  }
 
   test("expectAbsent does not wait for an element to leave", (context) => {
     const world = makeWorld(

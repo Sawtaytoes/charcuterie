@@ -98,7 +98,7 @@ Feature: Dialog
       When I press Escape
       Then every listbox has closed
       When I press Escape
-      Then the dialog named "Edit a draft" has closed
+      Then every dialog has closed
 
     @REQ-UI-014
     Scenario: A click elsewhere in a dialog closes only its picker, which still opens and chooses
@@ -115,7 +115,7 @@ Feature: Dialog
       Then the dialog named "Edit a draft" is visible
       And the button named "Draft parent: Another draft" has focus
       When I press Escape
-      Then the dialog named "Edit a draft" has closed
+      Then every dialog has closed
 
     @REQ-UI-015
     Scenario: Choosing an option keeps the dialog open, and the next Escape closes it
@@ -125,4 +125,4 @@ Feature: Dialog
       Then the dialog named "Edit a draft" is visible
       And the button named "Draft parent: Another draft" has focus
       When I press Escape
-      Then the dialog named "Edit a draft" has closed
+      Then every dialog has closed
