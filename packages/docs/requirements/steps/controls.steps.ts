@@ -132,7 +132,11 @@ Then(
   },
 )
 
-/** Nothing in the document has this role and name, now; checked once, without waiting. */
+/**
+ * Nothing in the accessibility tree has this role and name, and no hidden
+ * element the scenario saw by this name is left; checked once, without
+ * waiting.
+ */
 Then(
   "there is no {role} named {string}",
   (world, role: Role, name: string) => {

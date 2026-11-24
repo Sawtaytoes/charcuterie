@@ -206,10 +206,11 @@ The walk stops at three kinds of import:
 - npm packages: anything resolved inside `node_modules`. The pnpm lockfile covers their
   versions. Workspace packages resolve through their `node_modules` link to their source,
   so they are followed.
-- a package's build output that is not built yet, such as `@charcuterie/tokens/theme.css`.
-  Workspace packages resolve with Vite's browser conditions (`development`, `module`,
-  `browser`) plus `source`, so the lock hashes the source that `pnpm build` compiles into
-  `dist`.
+- build output: any file git ignores, such as `@charcuterie/tokens/theme.css` in
+  `packages/tokens/dist`. It exists only after `pnpm build`, so the lock skips it, built or
+  not, and reads the same in a built checkout and in CI. Workspace packages resolve with
+  Vite's browser conditions (`development`, `module`, `browser`) plus `source`, so the lock
+  hashes the source that `pnpm build` compiles into `dist`.
 
 Adding a component's feature, step file, and stories changes no existing requirement. A
 change to a story file marks the requirements whose step file imports it. A change to a

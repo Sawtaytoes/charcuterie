@@ -2425,6 +2425,88 @@ export const Desk = { args: { name: "Desk" } }
     ])
   })
 
+  test("rejects a worker with no script or a URL from another base, but not a ?worker import", async () => {
+    const root = await makeProject({
+      "lamp.feature": feature,
+      "helpers/lamp.ts": `export const work = () => [new Worker(), new Worker(new URL("./worker.ts", location.href))]\n${helpers}`,
+      "helpers/worker.ts": "postMessage(1)\n",
+      "steps/lamp.steps.ts": stepsCalling("work"),
+    })
+    const analysis = await analyzeProject(root)
+
+    expect(
+      analysis.problems.map((problem) => problem.message),
+    ).toEqual([
+      expect.stringContaining("new Worker(…) needs"),
+      expect.stringContaining("new Worker(…) needs"),
+    ])
+
+    const shadowed = await lockedLamp({
+      "helpers/lamp.ts": `import Worker from "./worker.ts?worker"\n\nexport const work = () => new Worker()\n${helpers}`,
+      "helpers/worker.ts": "postMessage(1)\n",
+      "steps/lamp.steps.ts": stepsCalling("work"),
+    })
+
+    expect(await detailsOf(shadowed)).toEqual([])
+  })
+
+  test("a CSS url() with a worker query is still an asset", async () => {
+    const root = await lockedLamp({
+      "helpers/lamp.ts": `import css from "./lamp.css?inline"\n\nexport const assets = () => css\n${helpers}`,
+      "helpers/lamp.css":
+        '.lamp { background: url("../assets/data.ts?worker"); }\n',
+      "assets/data.ts":
+        'import { reply } from "./child.ts"\n\nexport const value = reply\n',
+      "assets/child.ts": "export const reply = 1\n",
+      "steps/lamp.steps.ts": stepsCalling("assets"),
+    })
+
+    await writeFile(
+      join(root, "assets/child.ts"),
+      "export const reply = 2\n",
+    )
+
+    expect(await detailsOf(root)).toEqual([])
+  })
+
+  test("build output git ignores is outside the lock, built or not", async () => {
+    const root = await makeProject({
+      "lamp.feature": feature,
+      "../.gitignore": "dist/\n",
+      "../kit/package.json": JSON.stringify({
+        name: "@test/kit",
+        exports: {
+          "./theme.css": { style: "./dist/theme.css" },
+        },
+      }),
+      "../kit/dist/theme.css": ".lamp { color: red; }\n",
+      "helpers/lamp.ts": `import "@test/kit/theme.css"\n\nexport const asset = () => new URL("../dist/data.json", import.meta.url)\n${helpers}`,
+      "dist/data.json": '{ "on": true }\n',
+      "steps/lamp.steps.ts": stepsCalling("asset"),
+    })
+
+    execFileSync("git", ["init", "-q"], {
+      cwd: dirname(root),
+    })
+    await linkKit(root)
+
+    const analysis = await analyzeProject(root)
+
+    expect(analysis.problems).toEqual([])
+    await writeLock(
+      analysis,
+      buildLock(analysis, await readLock(analysis)),
+    )
+    expect(
+      JSON.stringify(await readLock(analysis)),
+    ).not.toContain("dist/")
+
+    await rm(join(root, "../kit/dist"), { recursive: true })
+    await rm(join(root, "dist"), { recursive: true })
+
+    expect(await detailsOf(root)).toEqual([])
+  })
+
   test("a browser map that redirects a relative import counts", async () => {
     const root = await lockedLamp({
       "package.json": JSON.stringify({

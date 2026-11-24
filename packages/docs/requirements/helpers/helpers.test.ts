@@ -468,6 +468,39 @@ describe("presence", () => {
     ).toThrow()
   })
 
+  test("expectClosed refuses a named panel the scenario never saw", async (context) => {
+    const world = makeWorld(
+      context,
+      '<div role="dialog" aria-label="Stuck" aria-hidden="true"></div>',
+    )
+
+    await expect(
+      expectClosed(world, "dialog", "Stuck"),
+    ).rejects.toThrow(
+      /never found the dialog named "Stuck"/,
+    )
+  })
+
+  test("a renamed control no longer answers to its old name", (context) => {
+    const world = makeWorld(
+      context,
+      '<button type="button">Before</button>',
+    )
+    const button = byRole(world, "button", "Before")
+
+    button.textContent = "After"
+    expectAbsent(world, "button", "Before")
+
+    byRole(world, "button", "After").setAttribute(
+      "aria-hidden",
+      "true",
+    )
+    expectAbsent(world, "button", "Before")
+    expect(() =>
+      expectAbsent(world, "button", "After"),
+    ).toThrow(/every button named "After"/)
+  })
+
   test("expectClosed waits for a panel that leaves", async (context) => {
     const world = makeWorld(
       context,
@@ -500,9 +533,13 @@ describe("presence", () => {
   test("expectHiddenFromAssistiveTechnology rejects a live dialog", (context) => {
     const world = makeWorld(
       context,
-      '<div role="dialog" aria-label="Live"></div><div role="dialog" aria-label="Lower" inert></div><div role="dialog" aria-label="Hidden"></div>',
+      '<div role="dialog" aria-label="Live"></div><div role="dialog" aria-label="Lower"></div><div role="dialog" aria-label="Hidden"></div>',
     )
 
+    byRole(world, "dialog", "Lower").setAttribute(
+      "inert",
+      "",
+    )
     byRole(world, "dialog", "Hidden").setAttribute(
       "aria-hidden",
       "true",

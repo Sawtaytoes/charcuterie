@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process"
 import {
   existsSync,
   readFileSync,
@@ -244,8 +245,8 @@ const scriptKinds = /** @type {const} */ ({
  * marks `new Worker(new URL(…))` and `new SharedWorker(new URL(…))`,
  * which Vite builds as code. Any other URL is an asset, read as bytes.
  * `isIndirectWorker` marks a `new Worker(…)` whose script is not a
- * `new URL(…)` written inside it, such as a variable, which the lock
- * cannot follow.
+ * `new URL(…, import.meta.url)` written inside it, such as a variable,
+ * another base, or no script at all, which the lock cannot follow.
  */
 
 /**
@@ -293,6 +294,17 @@ const urlImportsIn = (file) => {
     (node.expression.text === "Worker" ||
       node.expression.text === "SharedWorker")
 
+  // A `?worker` import named `Worker` shadows the global, and its
+  // constructor takes no script.
+  const isWorkerImported = source.statements.some(
+    (statement) =>
+      ts.isImportDeclaration(statement) &&
+      statement.importClause !== undefined &&
+      (statement.importClause.name?.text === "Worker" ||
+        statement.importClause.name?.text ===
+          "SharedWorker"),
+  )
+
   /** @param {ts.Node} node */
   const isUrlCall = (node) =>
     ts.isNewExpression(node) &&
@@ -304,8 +316,20 @@ const urlImportsIn = (file) => {
     if (
       ts.isNewExpression(node) &&
       isWorkerCall(node) &&
-      node.arguments?.[0] &&
-      !isUrlCall(node.arguments[0])
+      !isWorkerImported &&
+      !(
+        node.arguments?.[0] &&
+        isUrlCall(node.arguments[0]) &&
+        /** @type {ts.NewExpression} */ (node.arguments[0])
+          .arguments?.length === 2 &&
+        isImportMetaUrl(
+          /** @type {ts.Expression} */ (
+            /** @type {ts.NewExpression} */ (
+              node.arguments[0]
+            ).arguments?.[1]
+          ),
+        )
+      )
     ) {
       const position = source.getLineAndCharacterOfPosition(
         node.getStart(source),
@@ -363,6 +387,33 @@ const urlImportsIn = (file) => {
  * @returns {string | null}
  */
 const browserMapOf = (file) => {
+  const cached = browserMaps.get(dirname(file))
+
+  if (cached !== undefined) {
+    return cached
+  }
+
+  const found = findBrowserMap(file)
+
+  browserMaps.set(dirname(file), found)
+
+  return found
+}
+
+/**
+ * Browser-map lookups by folder, for one process. A requirements
+ * check reads each manifest once; a test that rewrites a manifest
+ * runs in a fresh `readGraph`, which clears this.
+ *
+ * @type {Map<string, string | null>}
+ */
+const browserMaps = new Map()
+
+/**
+ * @param {string} file
+ * @returns {string | null}
+ */
+const findBrowserMap = (file) => {
   for (
     let directory = dirname(file);
     directory !== dirname(directory);
@@ -390,6 +441,99 @@ const browserMapOf = (file) => {
 }
 
 /**
+ * Whether git ignores a file, such as a package's `dist` build. Build
+ * output is not in the repo, so whether it exists depends on whether
+ * someone ran `pnpm build`; the lock must read the same either way.
+ * Like an npm package, it stands for code the lock does not hash. Git
+ * lists ignored paths once per repository, a folder once for all it
+ * holds. Outside a repository nothing is ignored.
+ *
+ * @param {Map<string, string[] | null>} listings ignored paths by folder
+ * @param {string} path
+ */
+const isIgnoredByGit = (listings, path) => {
+  const directory = dirname(path)
+
+  if (!listings.has(directory)) {
+    const topLevel = spawnSync(
+      "git",
+      ["rev-parse", "--show-toplevel"],
+      { cwd: directory, encoding: "utf8" },
+    )
+
+    if (topLevel.status !== 0) {
+      listings.set(directory, null)
+    } else {
+      const top = topLevel.stdout.trim()
+      const cached = listings.get(top)
+
+      if (cached !== undefined) {
+        listings.set(directory, cached)
+      } else {
+        const ignored = spawnSync(
+          "git",
+          [
+            "ls-files",
+            "--others",
+            "--ignored",
+            "--exclude-standard",
+            "--directory",
+            "-z",
+          ],
+          {
+            cwd: top,
+            encoding: "utf8",
+            maxBuffer: 64 * 1024 * 1024,
+          },
+        )
+        const paths =
+          ignored.status === 0
+            ? ignored.stdout
+                .split("\0")
+                .filter(Boolean)
+                .map((entry) => join(top, entry))
+            : null
+
+        listings.set(top, paths)
+        listings.set(directory, paths)
+      }
+    }
+  }
+
+  const ignoredPaths = listings.get(directory)
+
+  return (
+    ignoredPaths?.some((ignored) =>
+      ignored.endsWith("/")
+        ? path.startsWith(ignored)
+        : path === ignored,
+    ) ?? false
+  )
+}
+
+/**
+ * Whether git's ignore rules cover a path, whether or not it exists,
+ * so a `new URL` into an unbuilt `dist` reads the same as a built one.
+ *
+ * @param {string} path
+ */
+const isIgnoredPattern = (path) => {
+  let directory = dirname(path)
+
+  while (!existsSync(directory)) {
+    directory = dirname(directory)
+  }
+
+  return (
+    spawnSync(
+      "git",
+      ["check-ignore", "-q", "--no-index", "--", path],
+      { cwd: directory },
+    ).status === 0
+  )
+}
+
+/**
  * @param {{
  *   root: string,
  *   subjects: string[],
@@ -401,6 +545,11 @@ export const readGraph = async (
   { root, subjects },
   entries,
 ) => {
+  browserMaps.clear()
+
+  /** @type {Map<string, string[] | null>} */
+  const ignoredListings = new Map()
+
   /** @type {Map<string, Map<string, string>>} */
   const imports = new Map()
   /** @type {Set<string>} */
@@ -472,10 +621,11 @@ export const readGraph = async (
 
         const specifier = args.path.replace(querySuffix, "")
         // A CSS `url()` reads the file as an asset, as `?url` does.
+        // A CSS `url()` is always an asset, whatever its query.
         const isBytes =
-          !workerQuery.test(args.path) &&
-          (byteQuery.test(args.path) ||
-            args.kind === "url-token")
+          args.kind === "url-token" ||
+          (!workerQuery.test(args.path) &&
+            byteQuery.test(args.path))
         const result = await plugin.resolve(specifier, {
           kind: args.kind,
           importer: args.importer,
@@ -495,6 +645,7 @@ export const readGraph = async (
         if (
           result.external ||
           result.path.includes("/node_modules/") ||
+          isIgnoredByGit(ignoredListings, result.path) ||
           (isSubject(result.path) && !isBytes)
         ) {
           return { path: args.path, external: true }
@@ -718,6 +869,11 @@ export const readGraph = async (
         }
 
         const target = resolve(dirname(file), specifier)
+
+        if (isIgnoredPattern(target)) {
+          // Build output: it is not in the repo, built or not.
+          continue
+        }
 
         if (!existsSync(target)) {
           report(
