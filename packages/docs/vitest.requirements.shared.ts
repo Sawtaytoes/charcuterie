@@ -83,6 +83,9 @@ export const createRequirementsConfig = ({
         "@storybook/addon-docs/blocks",
         "@tanstack/react-virtual",
         "react-router",
+        // `storyNamed` maps sidebar names with it. Discovered mid-run,
+        // it reloads the page and the feature fails to import.
+        "storybook/internal/csf",
         "tailwind-merge",
       ],
     },

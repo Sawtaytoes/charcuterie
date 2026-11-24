@@ -77,6 +77,30 @@ const normalizeCss = (text) =>
 const parseJson = (text) =>
   JSON.parse(text.replace(/^\uFEFF/, ""))
 
+/** A JSON file that parses, but is not the object it must be. */
+class NotAnObjectError extends Error {}
+
+/**
+ * A `package.json` parsed, which must be an object. `null`, an array,
+ * or a bare value parses as JSON, but no tool can read fields from it.
+ *
+ * @param {string} text
+ * @returns {Record<string, any>}
+ */
+const parseManifest = (text) => {
+  const manifest = parseJson(text)
+
+  if (
+    typeof manifest !== "object" ||
+    manifest === null ||
+    Array.isArray(manifest)
+  ) {
+    throw new NotAnObjectError()
+  }
+
+  return manifest
+}
+
 /**
  * Only the fields that decide which code runs. A release bumps
  * `version` in every package.json; that must not mark requirements
@@ -86,7 +110,7 @@ const parseJson = (text) =>
  * @param {string} text
  */
 const packageManifestText = (text) => {
-  const manifest = parseJson(text)
+  const manifest = parseManifest(text)
 
   return JSON.stringify(
     [
@@ -436,11 +460,63 @@ const declaresName = (sourceFile, name) =>
       ts.isNamedExports(statement.exportClause) &&
       statement.exportClause.elements.some(
         (element) =>
+          !element.isTypeOnly &&
           element.name.text === name &&
           (element.propertyName ?? element.name).text ===
-            name,
+            name &&
+          !isTypeOnlyLocal(sourceFile, name),
       ),
   )
+
+/**
+ * A local name that only a type or an interface declares. TypeScript
+ * erases `export { name }` for it, so it exports no value, and an
+ * `export *` in the same file still supplies the runtime name.
+ *
+ * @param {ts.SourceFile} sourceFile
+ * @param {string} name
+ */
+const isTypeOnlyLocal = (sourceFile, name) => {
+  /** @param {ts.Node} statement */
+  const isTypeDeclaration = (statement) =>
+    (ts.isInterfaceDeclaration(statement) ||
+      ts.isTypeAliasDeclaration(statement)) &&
+    statement.name.text === name
+
+  /** @param {ts.Node} statement */
+  const isValueDeclaration = (statement) =>
+    ((ts.isFunctionDeclaration(statement) ||
+      ts.isClassDeclaration(statement) ||
+      ts.isEnumDeclaration(statement) ||
+      ts.isModuleDeclaration(statement)) &&
+      statement.name?.text === name) ||
+    (ts.isVariableStatement(statement) &&
+      statement.declarationList.declarations.some(
+        (declaration) =>
+          ts.isIdentifier(declaration.name) &&
+          declaration.name.text === name,
+      )) ||
+    (ts.isImportDeclaration(statement) &&
+      !statement.importClause?.isTypeOnly &&
+      (statement.importClause?.name?.text === name ||
+        (statement.importClause?.namedBindings !==
+          undefined &&
+          (ts.isNamespaceImport(
+            statement.importClause.namedBindings,
+          )
+            ? statement.importClause.namedBindings.name
+                .text === name
+            : statement.importClause.namedBindings.elements.some(
+                (element) =>
+                  !element.isTypeOnly &&
+                  element.name.text === name,
+              )))))
+
+  return (
+    sourceFile.statements.some(isTypeDeclaration) &&
+    !sourceFile.statements.some(isValueDeclaration)
+  )
+}
 
 /**
  * @typedef {{
@@ -1345,11 +1421,11 @@ export const readSources = (project) => {
     let manifest
 
     try {
-      manifest = parseJson(
+      manifest = parseManifest(
         readFileSync(manifestPath, "utf8"),
       )
-    } catch {
-      reportMalformedJson(toKey(manifestPath))
+    } catch (error) {
+      reportMalformedJson(toKey(manifestPath), error)
 
       return null
     }
@@ -1437,8 +1513,11 @@ export const readSources = (project) => {
   /** @type {Set<string>} */
   const reportedMalformed = new Set()
 
-  /** @param {string} key */
-  const reportMalformedJson = (key) => {
+  /**
+   * @param {string} key
+   * @param {unknown} [error] what parsing threw
+   */
+  const reportMalformedJson = (key, error) => {
     if (reportedMalformed.has(key)) {
       return
     }
@@ -1449,7 +1528,10 @@ export const readSources = (project) => {
       line: 1,
       column: 1,
       rule: "malformed-json",
-      message: `${key} is not valid JSON, so Vite cannot load it. Fix the file.`,
+      message:
+        error instanceof NotAnObjectError
+          ? `${key} is valid JSON but not a JSON object, so no tool can read a field from it. Fix the file.`
+          : `${key} is not valid JSON, so Vite cannot load it. Fix the file.`,
     })
   }
 
@@ -1468,8 +1550,8 @@ export const readSources = (project) => {
           ? packageManifestText(text)
           : JSON.stringify(parseJson(text)),
       )
-    } catch {
-      reportMalformedJson(key)
+    } catch (error) {
+      reportMalformedJson(key, error)
 
       return hashText(text)
     }
@@ -1648,6 +1730,31 @@ export const readSources = (project) => {
       absolutePath,
       readFileSync(absolutePath, "utf8"),
     )
+
+    // Vite loads every module a file re-exports, even when the search
+    // finds the name before it reaches that module, so malformed JSON
+    // there fails the import.
+    for (const statement of sourceFile.statements) {
+      if (
+        ts.isExportDeclaration(statement) &&
+        statement.moduleSpecifier &&
+        ts.isStringLiteral(statement.moduleSpecifier) &&
+        statement.moduleSpecifier.text.endsWith(".json")
+      ) {
+        const target = resolveSpecifier(
+          absolutePath,
+          statement.moduleSpecifier.text,
+        )
+
+        if (target) {
+          try {
+            parseJson(readFileSync(target, "utf8"))
+          } catch (error) {
+            reportMalformedJson(toKey(target), error)
+          }
+        }
+      }
+    }
 
     if (declaresName(sourceFile, importedName)) {
       return here(true)

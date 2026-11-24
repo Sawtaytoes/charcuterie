@@ -14,11 +14,14 @@ export type Canvas = ReturnType<typeof within>
  * function a step reaches. Keep this class small.
  */
 export class RequirementsWorld extends QuickPickleWorld {
-  /** The story's own canvas. Set by `openStory`. */
-  canvas?: Canvas
-
-  /** `document.body`, for panels that portal out of the canvas. */
+  /**
+   * `document.body`, where every query looks: a dialog or a listbox
+   * portals out of the story's canvas. Set by `openStory`.
+   */
   page?: Canvas
+
+  /** The story's own canvas element, for an audit of the story alone. */
+  storyRoot?: HTMLElement
 
   /**
    * Activation counts, keyed by the accessible name of the control
@@ -26,4 +29,12 @@ export class RequirementsWorld extends QuickPickleWorld {
    * named X has been activated" can only ever count X.
    */
   activations = new Map<string, number>()
+
+  /**
+   * Every element a step found by role and name, keyed by both. A
+   * panel that closes is often hidden before it leaves, and a hidden
+   * element has no accessible name to find it by. So "has closed"
+   * watches the element the scenario saw while it was open.
+   */
+  seen = new Map<string, Set<Element>>()
 }

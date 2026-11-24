@@ -19,6 +19,6 @@ import type { Role } from "../helpers/queries.ts"
 defineParameterType({
   name: "role",
   regexp:
-    /button|checkbox|combobox|dialog|link|listbox|menuitem|option|radio|status|switch|tab|textbox/,
+    /button|checkbox|combobox|dialog|group|link|listbox|menuitem|option|radio|spinbutton|status|switch|tab|textbox|tooltip/,
   transformer: (role: string) => role as Role,
 })

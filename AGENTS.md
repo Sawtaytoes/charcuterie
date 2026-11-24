@@ -185,10 +185,12 @@ pull request is what ships the library**; a merged feature pull request publishe
 
 ## Where a component's files live
 
-**Button's behavior suite is Gherkin.** Its six scenarios live in
-`packages/docs/requirements/button.feature`. Generic steps are in `steps/controls.steps.ts`,
-Button's fixtures are in `steps/button.steps.ts`, and the helpers they call are in
-`helpers/`. Do not recreate `Button.test.tsx`. **Read
+**Button, Dialog, and Field behavior is Gherkin.** Their scenarios live in
+`packages/docs/requirements/button.feature`, `dialog.feature`, and `field.feature`. Generic
+steps are in `steps/controls.steps.ts`, each component's fixtures are in
+`steps/<component>.steps.ts`, and the helpers they call are in `helpers/`. Do not recreate
+`Button.test.tsx`, and do not move a scenario's behavior back into `Dialog.test.tsx` or
+`Field.test.tsx`, which keep only layout, paint, ids, and prop routing. **Read
 [`docs/gherkin-requirements.md`](docs/gherkin-requirements.md) before you touch a
 `.feature` file, a step, or a helper.** Three rules matter most:
 
@@ -209,7 +211,8 @@ Requirement scenarios run once, in `wide`. A scenario tagged `@responsive` runs 
 windows ([locked IDs](docs/decisions/2026-11-22-requirements-are-locked-by-id-and-checked-before-the-browser.md),
 [one window](docs/decisions/2026-11-22-requirement-scenarios-run-in-one-window-unless-tagged-responsive.md)).
 This is the scoped exception to the `.test.tsx` convention below
-([decision](docs/decisions/2026-10-14-button-behavior-tests-are-gherkin-scenarios.md)).
+([Button](docs/decisions/2026-10-14-button-behavior-tests-are-gherkin-scenarios.md),
+[Dialog and Field](docs/decisions/2026-11-23-dialog-and-field-behavior-tests-are-gherkin-scenarios.md)).
 
 `packages/ui/src/<Name>/` holds `<Name>.tsx`, `<Name>.stories.tsx`, `<Name>.mdx`,
 `<Name>.test.tsx` as siblings — matching mux-magic. Shared helpers sit at `src/` root with a
