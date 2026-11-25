@@ -332,6 +332,12 @@ both the default branch and the actual commit; otherwise preflight fails. For
 that merged side-branch key only, selection derives a reviewed predecessor from
 the event or Git history and revalidates its first-parent membership and ancestry.
 The feature snapshot itself is never eligible.
+A stacked branch is the one other exception. When another branch forks from one
+of the change's own unmerged commits, the plugin intersects at that commit. It
+precedes the actual commit but is not on the default branch. The selector treats
+it as no intersection and derives the reviewed predecessor the same way. Before
+this, one pushed stacked branch failed every preflight of the pull request below
+it. A plugin base that does not precede the actual commit still fails.
 If that base has no complete published snapshot (for example,
 after a documentation-only merge), the selector walks its first-parent ancestors
 and uses the nearest complete one. Every candidate must lie on the default

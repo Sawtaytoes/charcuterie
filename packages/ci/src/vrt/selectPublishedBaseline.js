@@ -37,6 +37,22 @@ const git = (cwd, ...args) =>
     maxBuffer: GIT_MAX_BUFFER,
     stdio: ["ignore", "pipe", "pipe"],
   }).trim()
+/** `git merge-base --is-ancestor`: exit 1 means no; any other failure is an error. */
+const isAncestor = (cwd, ancestor, descendant) => {
+  try {
+    git(
+      cwd,
+      "merge-base",
+      "--is-ancestor",
+      ancestor,
+      descendant,
+    )
+    return true
+  } catch (error) {
+    if (error?.status === 1) return false
+    throw error
+  }
+}
 
 /** The branch whose first-parent history holds reviewed baselines. */
 export const resolveReviewedBranch = (
@@ -265,6 +281,17 @@ export const selectPublishedBaseline = async ({
   // Preserve a reviewed first-parent plugin base, including older release bases.
   // A normal merge may instead intersect its feature second parent. Validate that
   // original candidate before deriving a default predecessor; never inspect its store.
+  // A stacked branch that forks from this change's own unmerged commits makes the
+  // plugin intersect there: that commit precedes the actual commit but is not on
+  // the reviewed branch. Treat it as no intersection. An unrelated base still fails.
+  if (
+    baseKey != null &&
+    baseKey !== actualKey &&
+    /^[0-9a-f]{40}$/.test(baseKey) &&
+    isAncestor(cwd, baseKey, actualKey) &&
+    !isAncestor(cwd, baseKey, reviewedRef)
+  )
+    baseKey = null
   if (baseKey != null) validateBase(baseKey)
   if (baseKey == null || !reviewedHistory.has(baseKey))
     baseKey = deriveReviewedBase(
