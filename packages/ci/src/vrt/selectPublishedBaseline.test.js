@@ -413,6 +413,82 @@ describe("published baseline ancestry", () => {
       ).rejects.toThrow("first-parent history")
     }
   })
+  it("uses the reviewed predecessor when a stacked branch forks from the change's own unmerged commit", async () => {
+    const repo = repository()
+    // The plugin picks the oldest branch intersection by committer time, so
+    // commits in one second would tie. Date the stacked history later.
+    const now = Math.floor(Date.now() / 1000)
+    const commitAt = (value, offset) => {
+      writeFileSync(join(repo.cwd, "README.md"), value)
+      repo.git("add", ".")
+      execFileSync("git", ["commit", "-qm", value], {
+        cwd: repo.cwd,
+        env: {
+          ...process.env,
+          GIT_AUTHOR_DATE: `@${now + offset} +0000`,
+          GIT_COMMITTER_DATE: `@${now + offset} +0000`,
+        },
+        stdio: "pipe",
+      })
+      return repo.git("rev-parse", "HEAD")
+    }
+    const forkPoint = commitAt("feature fork point", 100)
+    repo.git("checkout", "-qb", "stacked")
+    const stacked = commitAt("stacked UI", 200)
+    repo.git("checkout", "-q", "feature")
+    const actualKey = commitAt("feature follow-up", 300)
+    const previousCwd = process.cwd()
+    let baseKey
+    let pluginActual
+    try {
+      process.chdir(repo.cwd)
+      const {
+        CommitExplorer,
+      } = require("reg-keygen-git-hash-plugin/lib/commit-explorer.js")
+      const explorer = new CommitExplorer()
+      baseKey = explorer.getBaseCommitHash()
+      pluginActual = explorer.getCurrentCommitHash()
+    } finally {
+      process.chdir(previousCwd)
+    }
+    expect(baseKey).toBe(forkPoint)
+    expect(pluginActual).toBe(actualKey)
+    for (const event of [
+      {
+        pull_request: {
+          base: { ref: "main", sha: repo.baseKey },
+        },
+      },
+      {},
+    ]) {
+      const fixture = store({
+        [repo.baseKey]: complete(),
+        [forkPoint]: complete(),
+        [stacked]: complete(),
+      })
+      const requested = []
+      const listItems = fixture.publisher.listItems
+      fixture.publisher.listItems = (marker, prefix) => {
+        requested.push(prefix)
+        return listItems(marker, prefix)
+      }
+      expect(
+        await selectPublishedBaseline({
+          ...repo,
+          baseKey,
+          actualKey,
+          event,
+          ...fixture,
+        }),
+      ).toEqual({
+        actualKey,
+        expectedKey: repo.baseKey,
+        baseKey: repo.baseKey,
+        isInitialBaseline: false,
+      })
+      expect(requested).toEqual([`${repo.baseKey}/`])
+    }
+  })
   it("does not replace a nonancestor plugin base with an otherwise valid event predecessor", async () => {
     const repo = repository()
     repo.git(
