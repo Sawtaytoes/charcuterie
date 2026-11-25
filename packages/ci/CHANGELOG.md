@@ -1,5 +1,29 @@
 # @charcuterie/ci
 
+## 0.3.0
+
+### Minor Changes
+
+- 5184a63: `charcuterie-requirements` now hashes whole files, found through esbuild's import graph,
+  instead of resolving imports by hand and hashing single declarations. The lock moves to
+  version 2: files every scenario loads are listed once under `shared`, and each
+  requirement lists only the files its step files add. Adding a component no longer marks
+  existing requirements as changed. The `packages` config field is gone, because workspace
+  packages are followed through `node_modules`. The `quickpickle` hook ban and the glob,
+  JSX pragma, and `import()` rules now apply to every loaded file. `which` prints the
+  helpers a definition calls and the files its step file loads. A version 1 lock on the base
+  branch is still read by `diff`. Run `charcuterie-requirements lock` once to upgrade.
+
+### Patch Changes
+
+- c3f3266: `charcuterie-requirements` skips files git ignores, such as a workspace package's `dist`
+  build, so a checkout that ran `pnpm build` no longer reports a stale lock. It rejects
+  `new Worker()` without an inline `new URL(…, import.meta.url)` script, unless `Worker` is
+  a `?worker` import, and treats a CSS `url()` as an asset whatever its query.
+- 2d36814: The requirements checker reports a `package.json` that is valid JSON but not an object, such as `null`, as `malformed-json` instead of crashing. It reports malformed JSON that any `export *` names, even when the name is found first. A local `export { type name }`, or an `export { name }` of an interface or a type alias, no longer hides the runtime value that an `export *` in the same file supplies. The lock missed that value's code before.
+- 862735f: `shared-docs-only-changes.yml` and `shared-docs-lint.yml` take an optional `runsOn` input, a JSON list of runner labels. The default stays `["ubuntu-latest"]`, so current callers are unchanged. A repo with its own runner lane can now keep these jobs off the shared runner.
+- 32cdc4f: The VRT baseline preflight no longer fails when another branch is stacked on a pull request's branch. The Git plugin then picks the commit where the stacked branch forks off. That commit is on the pull request but not on the base branch. The selector now ignores it and uses the pull request's base, as it does when the plugin finds no branch point.
+
 ## 0.2.0
 
 ### Minor Changes
