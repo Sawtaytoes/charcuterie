@@ -629,7 +629,11 @@ test("the barrel is the only place components are re-exported", async () => {
   // CommandPalette composes Modal and SearchInput into the launcher.
   // ColorPicker composes Combobox and Swatch with a custom-color panel;
   // `ColorPickerCustomPanel.tsx` is its member.
-  expect(componentNames.length).toBe(80)
+  // CatalogPicker browses a large catalog by group on a rail, or
+  // searches all of it; `CatalogPickerPanel.tsx`, `CatalogPickerRail.tsx`,
+  // `CatalogPickerOption.tsx`, `CatalogPickerMark.tsx`,
+  // `catalogPickerView.ts` and `catalogPickerDrawings.tsx` are its members.
+  expect(componentNames.length).toBe(81)
 
   for (const name of componentNames) {
     expect(barrel).toContain(`export { ${name} }`)
