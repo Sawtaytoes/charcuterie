@@ -1,0 +1,123 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks"
+
+import * as CatalogPickerStories from "./CatalogPicker.stories.tsx"
+
+<Meta of={CatalogPickerStories} />
+
+# CatalogPicker
+
+A picker over a large catalog — forty AI models from six providers, say — that you can
+**browse by group** on a rail or **search across everything** at once.
+
+<Canvas of={CatalogPickerStories.Playground} />
+
+## When to use it, and when not
+
+| You have | Use |
+| --- | --- |
+| A short list, no typing needed | `Picker` |
+| One flat list that wants a filter | `Combobox` |
+| A long list that falls into groups people think in — providers, accounts, vendors — and whose rows look alike until you read the end | **`CatalogPicker`** |
+
+`Picker` has no filter, and `Combobox` filters one flat list with no way to look at just
+one part of it. A catalog of models named "Provider · Model · slug" is exactly where both
+fall short: every row starts the same way, and finding one means reading all of them.
+The rail answers "show me this provider's models", and the search answers "I know the
+name" without making the person know the provider first.
+
+## The shape
+
+- **The trigger** shows the chosen item's mark and label, and is named
+  `"<label>: <chosen label>"`, as `Picker`'s is. Query it as
+  `getByRole("button", { name: /^Agent: / })`.
+- **The rail**, on the inline start: a **Favorites** star first (only when `favorites`
+  resolves to at least one item), then one button per group, in `groups` order. A group
+  with no rows is left off. Each button's accessible name and tooltip is the group's
+  `label`.
+- **The search field** at the top of the list, then **the list** for the current tab.
+  Each row shows the mark, the label, the optional `description`, a small star on a
+  favorite, and a check mark on the chosen row. The star and the check are drawn in CSS,
+  not typed, because a symbol character renders as nothing where the font lacks it.
+- **Pinned rows** (`pinned: "start"` or `"end"`) appear at the top or bottom of every
+  tab and of the search results when they match — a "Default" that belongs to no group.
+
+## Searching
+
+Typing searches **every item**, whatever tab is current. The match is a case-insensitive
+substring on the label, the description and the group's label, and **every word must
+match**: `work lumen` finds the Lumen rows of the "Contoso (Work)" account and not the
+others. Results sit under one heading per group, in rail order; favorites are found under
+their group, not in a section of their own. While a query is live, no rail button is
+pressed, because no one group is being shown.
+
+This is not `CommandPalette`'s word-prefix match. A model's slug (`ct-lumen-4`) and a
+version number (`4.5`) are things people type the middle of.
+
+<Canvas of={CatalogPickerStories.AllStates} />
+
+## Opening
+
+The panel opens on **Favorites** when the chosen value is a favorite or a pinned row;
+otherwise on the **chosen row's group**; otherwise on Favorites; otherwise on the first
+group. The chosen row is highlighted and **centred** in the list — the rule a `Combobox`
+follows when it opens on its chosen option. Focus goes to the search field.
+
+## Keyboard
+
+| Where | Key | Does |
+| --- | --- | --- |
+| Search | ArrowDown / ArrowUp | Move the highlight, skipping disabled rows |
+| Search | Home / End | First / last enabled row |
+| Search | Enter | Choose the highlighted row and close |
+| Search | Escape | Clear the query; on an empty query, close |
+| Search | Tab / Shift+Tab | To the rail |
+| Rail | ArrowDown / ArrowUp, Home / End | Move between groups (wraps) |
+| Rail | Enter / Space | Show that group |
+| Rail | Tab / Shift+Tab | Back to the search field |
+| Rail | Escape | As in the search field |
+
+Closing with Enter or Escape returns focus to the trigger.
+
+<Canvas of={CatalogPickerStories.Interactive} />
+
+## The ARIA shape, and why the rail is not a `tablist`
+
+The trigger opens a `role="dialog"` named by the trigger. The search field is a
+`role="combobox"` that keeps focus and moves `aria-activedescendant` through a
+`role="listbox"` — the `Combobox` contract — and search results are labelled
+`role="group"`s inside that listbox.
+
+The rail looks like tabs but is a vertical **`role="toolbar"` of `aria-pressed`
+buttons**. A tablist has to have a selected tab, and while a search runs none of them is
+true; and a tab controls a tab panel, while what the rail changes is a listbox that the
+search field drives too. A toolbar of toggle buttons says what is true — switches that
+change what the list shows — and brings the APG keyboard contract with it: one tab stop,
+the arrows move, Enter and Space press.
+
+A mouse click on a rail button does not take focus from the search field, so a person can
+click a group and keep typing or arrowing.
+
+## Icons, badges and accent colors
+
+Charcuterie ships no icons. Pass the app's own provider logos as `icon` on a group (or on
+one item, to override its group's). A group without an icon gets an **initials badge**:
+the first letter of its first two words, so "Tailspin Labs" is "TL".
+
+`accentColor` (any CSS color) draws a **ring** around the mark. It is how two accounts of
+one provider are told apart. It is never the fill behind text or the text itself, so a
+consumer's color cannot fail the contrast gate.
+
+## Sizes and narrow windows
+
+`size` sets the trigger and every row in the panel, as a `Combobox`'s `itemSize` sets its
+search field and its options; a short window steps the rows down on its own. The panel is
+26rem wide and 28rem tall, capped to the space the window leaves, so on a 384px phone the
+rail stays and the list narrows beside it.
+
+<Canvas of={CatalogPickerStories.Responsive} />
+
+## Not windowed
+
+Every row of the current view renders. `Combobox` windows only above 100 rows and the
+catalogs this was built for are 40 to 60. A catalog large enough to need windowing is a
+change to this component, not a prop.
